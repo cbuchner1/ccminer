@@ -179,9 +179,8 @@ static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
-                          scrypt    scrypt(1024, 1, 1) (default)\n\
-                          sha256d   SHA-256d\n\
-                          heavy     Heavycoin hash\n\
+                        fugue256  Fuguecoin hash\n\
+                        heavy     Heavycoin hash\n\
   -v, --vote=VOTE       block reward vote\n\
   -m, --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
   -o, --url=URL         URL of mining server\n\
@@ -190,7 +189,7 @@ Options:\n\
   -p, --pass=PASSWORD   password for mining server\n\
       --cert=FILE       certificate for mining server using SSL\n\
   -x, --proxy=[PROTOCOL://]HOST[:PORT]  connect through a proxy\n\
-  -t, --threads=N       number of miner threads (default: number of processors)\n\
+  -t, --threads=N       number of miner threads (default: number of nVidia GPUs)\n\
   -r, --retries=N       number of times to retry if a network call fails\n\
                           (default: retry indefinitely)\n\
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 30)\n\
@@ -666,13 +665,13 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+		fugue256_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY)
 			heavycoin_hash(merkle_root, merkle_root, 64);
 		else
-			sha256d(merkle_root, merkle_root, 64);
+			fugue256_hash(merkle_root, merkle_root, 64);
 	}
 	
 	/* Increment extranonce2 */
@@ -811,6 +810,7 @@ static void *miner_thread(void *userdata)
 
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
+			/*
 		case ALGO_SCRYPT:
 			rc = scanhash_scrypt(thr_id, work.data, scratchbuf, work.target,
 			                     max_nonce, &hashes_done);
@@ -820,7 +820,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_sha256d(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
-
+			*/
 		case ALGO_HEAVY:
 			rc = scanhash_heavy(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done, work.maxvote);

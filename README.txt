@@ -1,5 +1,5 @@
 
-HeavyCUDA release Mar 18th 2014 - Initial Release
+ccMiner release Mar 18th 2014 - Initial Release
 -------------------------------------------------------------
 
 ***************************************************************
@@ -108,7 +108,7 @@ and also many thanks to anyone else who contributed to the original
 cpuminer application (Jeff Garzik, pooler), it's original HVC-fork
 and the HVC-fork available at hvc.1gh.com
 
-Source code is included to satisfy GNU GPL V2 requirements.
+Source code is included to satisfy GNU GPL V3 requirements.
 
 
 With kind regards,

@@ -72,3 +72,11 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	*hashes_done = pdata[19] - start_nonce + 1;
 	return 0;
 }
+
+void fugue256_hash(unsigned char* output, const unsigned char* input, int len)
+{
+	sph_fugue256_context ctx;
+	sph_fugue256_init(&ctx);
+    sph_fugue256(&ctx, input, len);    
+    sph_fugue256_close(&ctx, (void *)output);
+}
