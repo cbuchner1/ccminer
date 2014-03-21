@@ -35,11 +35,3 @@ ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -f
 
 .cu.o:
 	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
-
-## Thrust needs Compute 2.0 minimum
-#heavy.o: heavy.cu
-#	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
-#
-#cuda_hefty1.o: cuda_hefty1.cu
-#	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
-

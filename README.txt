@@ -1,5 +1,5 @@
 
-ccMiner release Mar 18th 2014 - Initial Release
+ccMiner release 0.2 (Mar 21th 2014) - Pool Mining Release
 -------------------------------------------------------------
 
 ***************************************************************
@@ -80,6 +80,12 @@ Example for Fuguecoin solo-mining with 4 gpu's in your system and a Fuguecoin-wa
 
 cudaminer.exe -q -s 1 -t 4 -a fugue256 -o http://localhost:9089 -u <<myusername>> -p <<mypassword>>
 
+
+Example for Fuguecoin pool mining on dwarfpool.com with all your GPUs
+
+-q -a fugue256 -o stratum+tcp://erebor.dwarfpool.com:3340 -u YOURWALLETADDRESS.1 -p YOUREMAILADDRESS
+
+
 For solo-mining you typically use -o 127.0.0.1:xxxx where xxxx represents
 the RPC portnumber specified in your wallet's .conf file and you have to
 pass the same username and password with -O as specified in the wallet's
@@ -94,6 +100,12 @@ This code should be running on nVidia GPUs ranging from compute capability
 from your old clunkers.
 
 >>> RELEASE HISTORY <<<
+
+  March, 21 2014 use of shared memory in Fugue256 kernel boosts hash rates
+                 on Fermi and Maxwell devices. Kepler may suffer slightly
+                 (3-5%)
+
+                 Fixed Stratum for Fuguecoin. Tested on dwarfpool.
 
   March, 18 2014 initial release.
 

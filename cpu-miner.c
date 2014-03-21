@@ -35,8 +35,14 @@
 #endif
 #include <jansson.h>
 #include <curl/curl.h>
+#include <openssl/sha.h>
 #include "compat.h"
 #include "miner.h"
+
+#ifdef WIN32
+#include <Mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+#endif
 
 #define PROGRAM_NAME		"minerd"
 #define LP_SCANTIME		60
@@ -109,15 +115,11 @@ struct workio_cmd {
 };
 
 typedef enum {
-	ALGO_SCRYPT,		/* scrypt(1024,1,1) */
-	ALGO_SHA256D,		/* SHA-256d */
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_FUGUE256,		/* Fugue256 */
 } sha256_algos;
 
 static const char *algo_names[] = {
-	"scrypt",
-	"sha256d",
 	"heavy",
 	"fugue256"
 };
@@ -398,14 +400,14 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		/* build hex string */
 
-                if (opt_algo != ALGO_HEAVY) {
-                    for (i = 0; i < ARRAY_SIZE(work->data); i++)
-			le32enc(work->data + i, work->data[i]);
-                }
-		str = bin2hex((unsigned char *)work->data, sizeof(work->data));
-		if (unlikely(!str)) {
-			applog(LOG_ERR, "submit_upstream_work OOM");
-			goto out;
+		if (opt_algo != ALGO_HEAVY) {
+			for (i = 0; i < ARRAY_SIZE(work->data); i++)
+				le32enc(work->data + i, work->data[i]);
+			}
+			str = bin2hex((unsigned char *)work->data, sizeof(work->data));
+			if (unlikely(!str)) {
+				applog(LOG_ERR, "submit_upstream_work OOM");
+				goto out;
 		}
 
 		/* build JSON-RPC request */
@@ -665,13 +667,13 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-		fugue256_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY)
 			heavycoin_hash(merkle_root, merkle_root, 64);
 		else
-			fugue256_hash(merkle_root, merkle_root, 64);
+			sha256d(merkle_root, merkle_root, 64);
 	}
 	
 	/* Increment extranonce2 */
@@ -711,8 +713,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
-	if (opt_algo == ALGO_SCRYPT)
-		diff_to_target(work->target, sctx->job.diff / 65536.0);
+	if (opt_algo == ALGO_FUGUE256)
+		diff_to_target(work->target, sctx->job.diff / 256.0);
 	else
 		diff_to_target(work->target, sctx->job.diff);
 }
@@ -745,11 +747,6 @@ static void *miner_thread(void *userdata)
 			applog(LOG_INFO, "Binding thread %d to cpu %d",
 			       thr_id, thr_id % num_processors);
 		affine_to_cpu(thr_id, thr_id % num_processors);
-	}
-
-	if (opt_algo == ALGO_SCRYPT)
-	{
-		scratchbuf = scrypt_buffer_alloc();
 	}
 
 	while (1) {
@@ -799,8 +796,8 @@ static void *miner_thread(void *userdata)
 			      - time(NULL);
 		max64 *= (int64_t)thr_hashrates[thr_id];
 		if (max64 <= 0)
-			max64 = opt_algo == ALGO_SCRYPT ? 0xfffLL : 0x1fffffLL;
-		if (work.data[19] + max64 > end_nonce)
+			max64 = 0x1fffffLL;
+		if ((int64_t)work.data[19] + max64 > end_nonce)
 			max_nonce = end_nonce;
 		else
 			max_nonce = (uint32_t)(work.data[19] + max64);
@@ -810,17 +807,7 @@ static void *miner_thread(void *userdata)
 
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
-			/*
-		case ALGO_SCRYPT:
-			rc = scanhash_scrypt(thr_id, work.data, scratchbuf, work.target,
-			                     max_nonce, &hashes_done);
-			break;
 
-		case ALGO_SHA256D:
-			rc = scanhash_sha256d(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-			*/
 		case ALGO_HEAVY:
 			rc = scanhash_heavy(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done, work.maxvote);
@@ -931,7 +918,7 @@ start:
 			goto out;
 		}
 		if (likely(val)) {
-			applog(LOG_INFO, "LONGPOLL detected new block");
+			if (!opt_quiet) applog(LOG_INFO, "LONGPOLL detected new block");
 			soval = json_object_get(json_object_get(val, "result"), "submitold");
 			submit_old = soval ? json_is_true(soval) : false;
 			pthread_mutex_lock(&g_work_lock);
@@ -1041,7 +1028,7 @@ static void *stratum_thread(void *userdata)
 			time(&g_work_time);
 			pthread_mutex_unlock(&g_work_lock);
 			if (stratum.job.clean) {
-				applog(LOG_INFO, "Stratum detected new block");
+				if (!opt_quiet) applog(LOG_INFO, "Stratum detected new block");
 				restart_threads();
 			}
 		}
@@ -1295,10 +1282,10 @@ static void parse_config(void)
 				options[i].name);
 	}
 
-        if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
-            fprintf(stderr, "Heavycoin hash requires block reward vote parameter (see --vote)\n");
-            show_usage_and_exit(1);
-        }
+	if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
+		fprintf(stderr, "Heavycoin hash requires block reward vote parameter (see --vote)\n");
+		show_usage_and_exit(1);
+	}
 }
 
 static void parse_cmdline(int argc, char *argv[])
@@ -1322,11 +1309,11 @@ static void parse_cmdline(int argc, char *argv[])
 		show_usage_and_exit(1);
 	}
 
-        if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
+	if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
 		fprintf(stderr, "%s: Heavycoin hash requires block reward vote parameter (see --vote)\n",
 			argv[0]);
 		show_usage_and_exit(1);
-        }
+	}
 
 	parse_config();
 }
@@ -1350,7 +1337,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.1"
+#define PROGRAM_VERSION "0.2"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
@@ -1514,8 +1501,16 @@ int main(int argc, char *argv[])
 		opt_n_threads,
 		algo_names[opt_algo]);
 
+#ifdef WIN32
+	timeBeginPeriod(1); // enable high timer precision (similar to Google Chrome Trick)
+#endif
+
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
+
+#ifdef WIN32
+	timeEndPeriod(1); // be nice and forego high timer precision
+#endif
 
 	applog(LOG_INFO, "workio thread dead, exiting.");
 

@@ -23,7 +23,7 @@ sph_fugue256_context  ctx_fugue_const[8];
 extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {	
-	uint32_t start_nonce = pdata[19];
+	uint32_t start_nonce = pdata[19]++;
 	const uint32_t Htarg = ptarget[7];
 	const uint32_t throughPut = 4096 * 128;
 
@@ -57,19 +57,23 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			sph_fugue256 (&ctx_fugue, endiandata, 80);
 			sph_fugue256_close(&ctx_fugue, &hash);
 
-			pdata[19] = foundNounce;
-			*hashes_done = SWAP32(foundNounce) - start_nonce + 1;
-			return 1;
+			if (hash[7] <= Htarg && fulltest(hash, ptarget))
+			{
+				pdata[19] = foundNounce;
+				*hashes_done = foundNounce - start_nonce;
+				return 1;
+			} else {
+				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
+			}
 		}
 
 		if (pdata[19] + throughPut < pdata[19])
 			pdata[19] = max_nonce;
 		else pdata[19] += throughPut;
 
-
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 	
-	*hashes_done = pdata[19] - start_nonce + 1;
+	*hashes_done = pdata[19] - start_nonce;
 	return 0;
 }
 

@@ -95,12 +95,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CInterleavedPTX>true</CInterleavedPTX>
     </CudaCompile>
     <CudaCompile>
-      <MaxRegCount>128</MaxRegCount>
+      <MaxRegCount>63</MaxRegCount>
     </CudaCompile>
     <CudaCompile>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_35,sm_35</CodeGeneration>
+      <CodeGeneration>compute_20,sm_20</CodeGeneration>
       <Include>
       </Include>
       <AdditionalOptions>-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -127,12 +127,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CInterleavedPTX>true</CInterleavedPTX>
     </CudaCompile>
     <CudaCompile>
-      <MaxRegCount>128</MaxRegCount>
+      <MaxRegCount>63</MaxRegCount>
     </CudaCompile>
     <CudaCompile>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_35,sm_35</CodeGeneration>
+      <CodeGeneration>compute_20,sm_20</CodeGeneration>
       <Include>
       </Include>
       <AdditionalOptions>-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -163,12 +163,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CInterleavedPTX>true</CInterleavedPTX>
     </CudaCompile>
     <CudaCompile>
-      <MaxRegCount>128</MaxRegCount>
+      <MaxRegCount>63</MaxRegCount>
     </CudaCompile>
     <CudaCompile>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_35,sm_35</CodeGeneration>
+      <CodeGeneration>compute_20,sm_20</CodeGeneration>
       <Include>
       </Include>
       <AdditionalOptions>-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -199,12 +199,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <CInterleavedPTX>true</CInterleavedPTX>
     </CudaCompile>
     <CudaCompile>
-      <MaxRegCount>128</MaxRegCount>
+      <MaxRegCount>63</MaxRegCount>
     </CudaCompile>
     <CudaCompile>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_35,sm_35</CodeGeneration>
+      <CodeGeneration>compute_20,sm_20</CodeGeneration>
       <Include>
       </Include>
       <AdditionalOptions>-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -274,12 +274,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="cuda_combine.cu" />
     <CudaCompile Include="cuda_fugue256.cu" />
     <CudaCompile Include="cuda_groestl512.cu" />
-    <CudaCompile Include="cuda_hefty1.cu">
-      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">compute_10,sm_10</CodeGeneration>
-      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">compute_10,sm_10</CodeGeneration>
-      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compute_10,sm_10</CodeGeneration>
-      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compute_10,sm_10</CodeGeneration>
-    </CudaCompile>
+    <CudaCompile Include="cuda_hefty1.cu" />
     <CudaCompile Include="cuda_keccak512.cu" />
     <CudaCompile Include="cuda_sha256.cu" />
     <CudaCompile Include="heavy.cu" />

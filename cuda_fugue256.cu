@@ -9,6 +9,8 @@
 
 #include "sph_fugue.h"
 
+#define USE_SHARED 1
+
 // heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
@@ -26,20 +28,22 @@ uint32_t *d_resultNonce[8];
 __constant__ uint32_t GPUstate[30]; // Single GPU
 __constant__ uint32_t pTarget[8]; // Single GPU
 
-//__constant__ uint32_t mixtab0[256]; // 1K
-//__constant__ uint32_t mixtab1[256]; // 1K
-//__constant__ uint32_t mixtab2[256]; // 1K
-//__constant__ uint32_t mixtab3[256]; // 1K
-
 texture<unsigned int, 1, cudaReadModeElementType> mixTab0Tex;
 texture<unsigned int, 1, cudaReadModeElementType> mixTab1Tex;
 texture<unsigned int, 1, cudaReadModeElementType> mixTab2Tex;
 texture<unsigned int, 1, cudaReadModeElementType> mixTab3Tex;
 
+#if USE_SHARED
+#define mixtab0(x) (*((uint32_t*)mixtabs + (    (x))))
+#define mixtab1(x) (*((uint32_t*)mixtabs + (256+(x))))
+#define mixtab2(x) (*((uint32_t*)mixtabs + (512+(x))))
+#define mixtab3(x) (*((uint32_t*)mixtabs + (768+(x))))
+#else
 #define mixtab0(x) tex1Dfetch(mixTab0Tex, x)
 #define mixtab1(x) tex1Dfetch(mixTab1Tex, x)
 #define mixtab2(x) tex1Dfetch(mixTab2Tex, x)
 #define mixtab3(x) tex1Dfetch(mixTab3Tex, x)
+#endif
 
 /* TABELLEN */
 static const uint32_t mixtab0_cpu[] = {
@@ -553,8 +557,22 @@ static const uint32_t mixtab3_cpu[] = {
 #define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 /* GPU - FUNKTIONEN */
 
-__global__ void fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
+#if USE_SHARED
+__global__ void  __launch_bounds__(256)
+#else
+__global__ void
+#endif
+fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
+#if USE_SHARED
+	extern __shared__ char mixtabs[];
+
+	*((uint32_t*)mixtabs + (    threadIdx.x)) = tex1Dfetch(mixTab0Tex, threadIdx.x);
+	*((uint32_t*)mixtabs + (256+threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
+	*((uint32_t*)mixtabs + (512+threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
+	*((uint32_t*)mixtabs + (768+threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
+#endif
+
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -572,7 +590,7 @@ __global__ void fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce,
 		// Bei Byte 80 laufen die Teilrunden: 4-0-1 (hier fest)
 
 		// Teilrunde 4
-		q = SWAB32(nounce);
+		q = nounce;
 		TIX2(q, S06, S07, S14, S16, S00);
 		CMIX30(S03, S04, S05, S07, S08, S09, S18, S19, S20);
 		SMIX(S03, S04, S05, S06);
@@ -695,8 +713,8 @@ __global__ void fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce,
 
 		if(rc == true)
 		{
-			if(resNounce[0] > SWAB32(nounce))
-				resNounce[0] = SWAB32(nounce);
+			if(resNounce[0] > nounce)
+				resNounce[0] = nounce;
 		}
 	}
 }
@@ -709,7 +727,7 @@ __global__ void fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce,
 	texname.filterMode = cudaFilterModePoint; \
 	texname.addressMode[0] = cudaAddressModeClamp; \
 	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
-	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
+	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
 
 
 void fugue256_cpu_init(int thr_id, int threads)
@@ -717,24 +735,11 @@ void fugue256_cpu_init(int thr_id, int threads)
 	cudaSetDevice(thr_id);
 
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
-	/*
-	cudaMemcpyToSymbol(	mixtab0,
-						mixtab0_cpu,
-						sizeof(uint32_t) * 256 );
-	cudaMemcpyToSymbol(	mixtab1,
-						mixtab1_cpu,
-						sizeof(uint32_t) * 256 );
-	cudaMemcpyToSymbol(	mixtab2,
-						mixtab2_cpu,
-						sizeof(uint32_t) * 256 );
-	cudaMemcpyToSymbol(	mixtab3,
-						mixtab3_cpu,
-						sizeof(uint32_t) * 256 );
-	*/
 	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
 	texDef(mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
 	texDef(mixTab2Tex, mixTab2m, mixtab2_cpu, sizeof(uint32_t)*256);
 	texDef(mixTab3Tex, mixTab3m, mixtab3_cpu, sizeof(uint32_t)*256);
+
 	// Speicher für alle Ergebnisse belegen
 	cudaMalloc(&d_fugue256_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads);
 	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 
@@ -760,16 +765,21 @@ __host__ void fugue256_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 
 __host__ void fugue256_cpu_hash(int thr_id, int threads, int startNounce, void *outputHashes, uint32_t *nounce)
 {
-	const int threadsperblock = 512;
-
+#if USE_SHARED
+	const int threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
+#else
+	const int threadsperblock = 512; // so einstellen wie gewünscht ;-)
+#endif
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
 	// Größe des dynamischen Shared Memory Bereichs (abhängig von der Threadanzahl)
-	//size_t shared_size = W_ALIGNMENT*sizeof(uint32_t)*threadsperblock;  // ein uint32_t eingefügt gegen Bank Konflikte
+#if USE_SHARED
+	size_t shared_size = 4 * 256 * sizeof(uint32_t);
+#else
 	size_t shared_size = 0;
-
+#endif
 	fugue256_gpu_hash<<<grid, block, shared_size>>>(thr_id, threads, startNounce, d_fugue256_hashoutput[thr_id], d_resultNonce[thr_id]);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
