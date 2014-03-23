@@ -25,13 +25,20 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  cuda_hefty1.cu cuda_hefty1.h \
 			  cuda_keccak512.cu cuda_keccak512.h \
 			  cuda_sha256.cu cuda_sha256.h \
-			  cuda_fugue256.cu \
-			  fuguecoin.cpp fugue.c sph_fugue.h uint256.h
-			  
+			  fuguecoin.cpp cuda_fugue256.cu fugue.c sph_fugue.h uint256.h \
+			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
 ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
 .cu.o:
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_35 --maxrregcount=124 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+
+## Thrust needs Compute 2.0 minimum
+#heavy.o: heavy.cu
+#	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+#
+#cuda_hefty1.o: cuda_hefty1.cu
+#	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+

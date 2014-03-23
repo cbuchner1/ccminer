@@ -1,5 +1,5 @@
 
-ccMiner release 0.2 (Mar 21th 2014) - Pool Mining Release
+ccMiner release 0.3 (Mar 23th 2014) - Groestlcoin Release
 -------------------------------------------------------------
 
 ***************************************************************
@@ -36,6 +36,7 @@ its command line interface and options.
   -a, --algo=ALGO       specify the algorithm to use
                           heavy       use to mine Heavycoin
                           fugue256    use to mine Fuguecoin
+                          groestl     use to mine Groestlcoin
 
   -o, --url=URL         URL of mining server (default: " DEF_RPC_URL ")
   -O, --userpass=U:P    username:password pair for mining server
@@ -66,24 +67,29 @@ its command line interface and options.
 
 Example for Heavycoin Mining on heavycoinpool.com with a single gpu in your system
 
-cudaminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 512
+ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 512
 
 
 
 Example for Heavycoin Mining on hvc.1gh.com with a dual gpu in your system
 
-cudaminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 512
+ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 512
 
 
 
 Example for Fuguecoin solo-mining with 4 gpu's in your system and a Fuguecoin-wallet running on localhost
 
-cudaminer.exe -q -s 1 -t 4 -a fugue256 -o http://localhost:9089 -u <<myusername>> -p <<mypassword>>
+ccminer.exe -q -s 1 -t 4 -a fugue256 -o http://localhost:9089 -u <<myusername>> -p <<mypassword>>
 
 
 Example for Fuguecoin pool mining on dwarfpool.com with all your GPUs
 
--q -a fugue256 -o stratum+tcp://erebor.dwarfpool.com:3340 -u YOURWALLETADDRESS.1 -p YOUREMAILADDRESS
+ccminer.exe -q -a fugue256 -o stratum+tcp://erebor.dwarfpool.com:3340 -u YOURWALLETADDRESS.1 -p YOUREMAILADDRESS
+
+
+Example for Groestlcoin solo mining
+
+ccminer.exe -q -s 1 -a groestl -o http://127.0.0.1:1441 -u USERNAME -p PASSWORD
 
 
 For solo-mining you typically use -o 127.0.0.1:xxxx where xxxx represents
@@ -100,6 +106,9 @@ This code should be running on nVidia GPUs ranging from compute capability
 from your old clunkers.
 
 >>> RELEASE HISTORY <<<
+
+  Match, 23 2014 added Groestlcoin support. stratum status unknown
+                 (the only pool is currently down for fixing issues)
 
   March, 21 2014 use of shared memory in Fugue256 kernel boosts hash rates
                  on Fermi and Maxwell devices. Kepler may suffer slightly

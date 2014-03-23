@@ -90,6 +90,9 @@
     <ClCompile Include="fuguecoin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="groestlcoin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -158,6 +161,9 @@
     <ClInclude Include="uint256.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_groestlcoin.h">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_sha256.cu">
@@ -182,6 +188,9 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_fugue256.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_groestlcoin.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
   </ItemGroup>

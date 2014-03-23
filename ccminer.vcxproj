@@ -229,6 +229,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="fugue.c" />
     <ClCompile Include="fuguecoin.cpp" />
     <ClCompile Include="groestl.c" />
+    <ClCompile Include="groestlcoin.cpp" />
     <ClCompile Include="hefty1.c" />
     <ClCompile Include="keccak.c" />
     <ClCompile Include="scrypt.c" />
@@ -256,6 +257,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="cuda_blake512.h" />
     <ClInclude Include="cuda_combine.h" />
     <ClInclude Include="cuda_groestl512.h" />
+    <ClInclude Include="cuda_groestlcoin.h" />
     <ClInclude Include="cuda_hefty1.h" />
     <ClInclude Include="cuda_keccak512.h" />
     <ClInclude Include="cuda_sha256.h" />
@@ -274,6 +276,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="cuda_combine.cu" />
     <CudaCompile Include="cuda_fugue256.cu" />
     <CudaCompile Include="cuda_groestl512.cu" />
+    <CudaCompile Include="cuda_groestlcoin.cu" />
     <CudaCompile Include="cuda_hefty1.cu" />
     <CudaCompile Include="cuda_keccak512.cu" />
     <CudaCompile Include="cuda_sha256.cu" />

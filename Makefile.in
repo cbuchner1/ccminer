@@ -60,8 +60,9 @@ am_ccminer_OBJECTS = ccminer-cpu-miner.$(OBJEXT) \
 	ccminer-sha2.$(OBJEXT) heavy.$(OBJEXT) cuda_blake512.$(OBJEXT) \
 	cuda_combine.$(OBJEXT) cuda_groestl512.$(OBJEXT) \
 	cuda_hefty1.$(OBJEXT) cuda_keccak512.$(OBJEXT) \
-	cuda_sha256.$(OBJEXT) cuda_fugue256.$(OBJEXT) \
-	ccminer-fuguecoin.$(OBJEXT) ccminer-fugue.$(OBJEXT)
+	cuda_sha256.$(OBJEXT) ccminer-fuguecoin.$(OBJEXT) \
+	cuda_fugue256.$(OBJEXT) ccminer-fugue.$(OBJEXT) \
+	ccminer-groestlcoin.$(OBJEXT) cuda_groestlcoin.$(OBJEXT)
 ccminer_OBJECTS = $(am_ccminer_OBJECTS)
 ccminer_DEPENDENCIES =
 ccminer_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(ccminer_LDFLAGS) \
@@ -275,8 +276,8 @@ ccminer_SOURCES = elist.h miner.h compat.h \
 			  cuda_hefty1.cu cuda_hefty1.h \
 			  cuda_keccak512.cu cuda_keccak512.h \
 			  cuda_sha256.cu cuda_sha256.h \
-			  cuda_fugue256.cu \
-			  fuguecoin.cpp fugue.c sph_fugue.h uint256.h
+			  fuguecoin.cpp cuda_fugue256.cu fugue.c sph_fugue.h uint256.h \
+			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h
 
 ccminer_LDFLAGS = $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD = @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
@@ -387,6 +388,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-fugue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-fuguecoin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-groestl.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-groestlcoin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-hefty1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-keccak.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-scrypt.Po@am__quote@
@@ -560,6 +562,20 @@ ccminer-fuguecoin.obj: fuguecoin.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='fuguecoin.cpp' object='ccminer-fuguecoin.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ccminer-fuguecoin.obj `if test -f 'fuguecoin.cpp'; then $(CYGPATH_W) 'fuguecoin.cpp'; else $(CYGPATH_W) '$(srcdir)/fuguecoin.cpp'; fi`
+
+ccminer-groestlcoin.o: groestlcoin.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ccminer-groestlcoin.o -MD -MP -MF $(DEPDIR)/ccminer-groestlcoin.Tpo -c -o ccminer-groestlcoin.o `test -f 'groestlcoin.cpp' || echo '$(srcdir)/'`groestlcoin.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/ccminer-groestlcoin.Tpo $(DEPDIR)/ccminer-groestlcoin.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='groestlcoin.cpp' object='ccminer-groestlcoin.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ccminer-groestlcoin.o `test -f 'groestlcoin.cpp' || echo '$(srcdir)/'`groestlcoin.cpp
+
+ccminer-groestlcoin.obj: groestlcoin.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ccminer-groestlcoin.obj -MD -MP -MF $(DEPDIR)/ccminer-groestlcoin.Tpo -c -o ccminer-groestlcoin.obj `if test -f 'groestlcoin.cpp'; then $(CYGPATH_W) 'groestlcoin.cpp'; else $(CYGPATH_W) '$(srcdir)/groestlcoin.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/ccminer-groestlcoin.Tpo $(DEPDIR)/ccminer-groestlcoin.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='groestlcoin.cpp' object='ccminer-groestlcoin.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ccminer-groestlcoin.obj `if test -f 'groestlcoin.cpp'; then $(CYGPATH_W) 'groestlcoin.cpp'; else $(CYGPATH_W) '$(srcdir)/groestlcoin.cpp'; fi`
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run `make' without going through this Makefile.
@@ -1018,7 +1034,7 @@ uninstall-am: uninstall-binPROGRAMS
 
 
 .cu.o:
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=sm_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_35 --maxrregcount=124 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 #heavy.o: heavy.cu
 #	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -arch=compute_20 --maxrregcount=63 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<

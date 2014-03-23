@@ -1,5 +1,3 @@
-#if 1
-/* Diese Funktion ist auf 84+32 Byte groﬂe Eingabedaten ausgerichtet (Heavycoin) */
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
@@ -571,6 +569,8 @@ fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHas
 	*((uint32_t*)mixtabs + (256+threadIdx.x)) = tex1Dfetch(mixTab1Tex, threadIdx.x);
 	*((uint32_t*)mixtabs + (512+threadIdx.x)) = tex1Dfetch(mixTab2Tex, threadIdx.x);
 	*((uint32_t*)mixtabs + (768+threadIdx.x)) = tex1Dfetch(mixTab3Tex, threadIdx.x);
+
+	__syncthreads();
 #endif
 
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -788,5 +788,3 @@ __host__ void fugue256_cpu_hash(int thr_id, int threads, int startNounce, void *
 	//cudaMemcpy(outputHashes, d_fugue256_hashoutput[thr_id], 8 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }
-
-#endif

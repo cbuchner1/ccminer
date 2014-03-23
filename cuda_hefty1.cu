@@ -1,4 +1,3 @@
-/* Diese Funktion ist auf 84-Byte groﬂe Eingabedaten ausgerichtet (Heavycoin) */
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"

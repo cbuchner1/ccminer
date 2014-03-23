@@ -117,11 +117,13 @@ struct workio_cmd {
 typedef enum {
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_FUGUE256,		/* Fugue256 */
+	ALGO_GROESTL,
 } sha256_algos;
 
 static const char *algo_names[] = {
 	"heavy",
-	"fugue256"
+	"fugue256",
+	"groestl"
 };
 
 bool opt_debug = false;
@@ -667,7 +669,11 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
+	if (opt_algo == ALGO_FUGUE256)
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
+	else
+		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY)
@@ -817,7 +823,10 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_fugue256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
-
+		case ALGO_GROESTL:
+			rc = scanhash_groestlcoin(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
 		default:
 			/* should never happen */
 			goto out;

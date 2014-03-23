@@ -29,7 +29,7 @@
  *
  * @author   Thomas Pornin <thomas.pornin@cryptolog.com>
  */
-
+#include <stdio.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -2986,12 +2986,13 @@ groestl_big_close(sph_groestl_big_context *sc,
 #endif
 	}
 	memset(pad + 1, 0, pad_len - 9);
+	//fprintf(stderr, "%x\n", pad_len);
 #if SPH_64
 	sph_enc64be(pad + pad_len - 8, count);
 #else
 	sph_enc64be(pad + pad_len - 8, count_high);
 	sph_enc64be(pad + pad_len - 4, count_low);
-#endif
+#endif	
 	groestl_big_core(sc, pad, pad_len);
 	READ_STATE_BIG(sc);
 	FINAL_BIG;

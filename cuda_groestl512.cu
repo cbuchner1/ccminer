@@ -1,13 +1,9 @@
-/* Diese Funktion ist auf 84+32-Byte groﬂe Eingabedaten ausgerichtet (Heavycoin) */
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
 #include <stdio.h>
 #include <memory.h>
-
-#define USE_SHARED 0
-#define W_ALIGNMENT 65
 
 // Folgende Definitionen sp‰ter durch header ersetzen
 typedef unsigned char uint8_t;
@@ -60,7 +56,7 @@ texture<unsigned int, 1, cudaReadModeElementType> t2dn;
 texture<unsigned int, 1, cudaReadModeElementType> t3up;
 texture<unsigned int, 1, cudaReadModeElementType> t3dn;
 
-static const uint32_t T0up_cpu[] = {
+uint32_t T0up_cpu[] = {
 	C32e(0xc632f4a5), C32e(0xf86f9784), C32e(0xee5eb099), C32e(0xf67a8c8d),
 	C32e(0xffe8170d), C32e(0xd60adcbd), C32e(0xde16c8b1), C32e(0x916dfc54),
 	C32e(0x6090f050), C32e(0x02070503), C32e(0xce2ee0a9), C32e(0x56d1877d),
@@ -127,7 +123,7 @@ static const uint32_t T0up_cpu[] = {
 	C32e(0x7b3d46cb), C32e(0xa8b71ffc), C32e(0x6d0c61d6), C32e(0x2c624e3a)
 };
 
-static const uint32_t T0dn_cpu[] = {
+uint32_t T0dn_cpu[] = {
 	C32e(0xf497a5c6), C32e(0x97eb84f8), C32e(0xb0c799ee), C32e(0x8cf78df6),
 	C32e(0x17e50dff), C32e(0xdcb7bdd6), C32e(0xc8a7b1de), C32e(0xfc395491),
 	C32e(0xf0c05060), C32e(0x05040302), C32e(0xe087a9ce), C32e(0x87ac7d56),
@@ -194,7 +190,7 @@ static const uint32_t T0dn_cpu[] = {
 	C32e(0x46f6cb7b), C32e(0x1f4bfca8), C32e(0x61dad66d), C32e(0x4e583a2c)
 };
 
-static const uint32_t T1up_cpu[] = {
+uint32_t T1up_cpu[] = {
 	C32e(0xc6c632f4), C32e(0xf8f86f97), C32e(0xeeee5eb0), C32e(0xf6f67a8c),
 	C32e(0xffffe817), C32e(0xd6d60adc), C32e(0xdede16c8), C32e(0x91916dfc),
 	C32e(0x606090f0), C32e(0x02020705), C32e(0xcece2ee0), C32e(0x5656d187),
@@ -261,7 +257,7 @@ static const uint32_t T1up_cpu[] = {
 	C32e(0x7b7b3d46), C32e(0xa8a8b71f), C32e(0x6d6d0c61), C32e(0x2c2c624e)
 };
 
-static const uint32_t T1dn_cpu[] = {
+uint32_t T1dn_cpu[] = {
 	C32e(0xa5f497a5), C32e(0x8497eb84), C32e(0x99b0c799), C32e(0x8d8cf78d),
 	C32e(0x0d17e50d), C32e(0xbddcb7bd), C32e(0xb1c8a7b1), C32e(0x54fc3954),
 	C32e(0x50f0c050), C32e(0x03050403), C32e(0xa9e087a9), C32e(0x7d87ac7d),
@@ -328,7 +324,7 @@ static const uint32_t T1dn_cpu[] = {
 	C32e(0xcb46f6cb), C32e(0xfc1f4bfc), C32e(0xd661dad6), C32e(0x3a4e583a)
 };
 
-static const uint32_t T2up_cpu[] = {
+uint32_t T2up_cpu[] = {
 	C32e(0xa5c6c632), C32e(0x84f8f86f), C32e(0x99eeee5e), C32e(0x8df6f67a),
 	C32e(0x0dffffe8), C32e(0xbdd6d60a), C32e(0xb1dede16), C32e(0x5491916d),
 	C32e(0x50606090), C32e(0x03020207), C32e(0xa9cece2e), C32e(0x7d5656d1),
@@ -395,7 +391,7 @@ static const uint32_t T2up_cpu[] = {
 	C32e(0xcb7b7b3d), C32e(0xfca8a8b7), C32e(0xd66d6d0c), C32e(0x3a2c2c62)
 };
 
-static const uint32_t T2dn_cpu[] = {
+uint32_t T2dn_cpu[] = {
 	C32e(0xf4a5f497), C32e(0x978497eb), C32e(0xb099b0c7), C32e(0x8c8d8cf7),
 	C32e(0x170d17e5), C32e(0xdcbddcb7), C32e(0xc8b1c8a7), C32e(0xfc54fc39),
 	C32e(0xf050f0c0), C32e(0x05030504), C32e(0xe0a9e087), C32e(0x877d87ac),
@@ -462,7 +458,7 @@ static const uint32_t T2dn_cpu[] = {
 	C32e(0x46cb46f6), C32e(0x1ffc1f4b), C32e(0x61d661da), C32e(0x4e3a4e58)
 };
 
-static const uint32_t T3up_cpu[] = {
+uint32_t T3up_cpu[] = {
 	C32e(0x97a5c6c6), C32e(0xeb84f8f8), C32e(0xc799eeee), C32e(0xf78df6f6),
 	C32e(0xe50dffff), C32e(0xb7bdd6d6), C32e(0xa7b1dede), C32e(0x39549191),
 	C32e(0xc0506060), C32e(0x04030202), C32e(0x87a9cece), C32e(0xac7d5656),
@@ -529,7 +525,7 @@ static const uint32_t T3up_cpu[] = {
 	C32e(0xf6cb7b7b), C32e(0x4bfca8a8), C32e(0xdad66d6d), C32e(0x583a2c2c)
 };
 
-static const uint32_t T3dn_cpu[] = {
+uint32_t T3dn_cpu[] = {
 	C32e(0x32f4a5f4), C32e(0x6f978497), C32e(0x5eb099b0), C32e(0x7a8c8d8c),
 	C32e(0xe8170d17), C32e(0x0adcbddc), C32e(0x16c8b1c8), C32e(0x6dfc54fc),
 	C32e(0x90f050f0), C32e(0x07050305), C32e(0x2ee0a9e0), C32e(0xd1877d87),
@@ -685,15 +681,8 @@ __global__ void groestl512_gpu_hash(int threads, uint32_t startNounce, void *out
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-#if USE_SHARED
-		extern __shared__ unsigned char s[];
-		uint32_t offset = W_ALIGNMENT * sizeof(uint32_t) * threadIdx.x;
-		uint32_t *message = (uint32_t*)(&s[offset + 0]); // 128 Byte
-		uint32_t *state = (uint32_t*)(&s[offset + 128]); // 128 Byte
-#else
 		uint32_t message[32];
 		uint32_t state[32];
-#endif
 
 		// lese message ein & verkn¸pfe diese mit dem hash1 von hefty1
 		// lese den state ein
@@ -825,11 +814,7 @@ __host__ void groestl512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
 	dim3 block(threadsperblock);
 
 	// Grˆﬂe des dynamischen Shared Memory Bereichs (abh‰ngig von der Threadanzahl)
-#if USE_SHARED
-	size_t shared_size = W_ALIGNMENT*sizeof(uint32_t)*threadsperblock;  // ein uint32_t eingef¸gt gegen Bank Konflikte
-#else
 	size_t shared_size = 0;
-#endif
 
 //	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
