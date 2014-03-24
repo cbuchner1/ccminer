@@ -136,12 +136,14 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
 			uint32_t tmpHash[8];
 			endiandata[19] = SWAP32(foundNounce);
 			groestlhash(tmpHash, endiandata);
-			if (((tmpHash[7]&0xFFFFFF00)==0) && 
+			if (tmpHash[7] <= Htarg && 
 					fulltest(tmpHash, ptarget)) {
 						pdata[19] = foundNounce;
 						*hashes_done = foundNounce - start_nonce;
 						free(outputHash);
 				return true;
+			} else {
+				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
 			}
 
 			foundNounce = 0xffffffff;

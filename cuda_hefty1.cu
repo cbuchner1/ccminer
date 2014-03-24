@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define USE_SHARED 0
-#define W_ALIGNMENT 65
-
 // Folgende Definitionen später durch header ersetzen
 typedef unsigned int uint32_t;
 typedef unsigned char uint8_t;

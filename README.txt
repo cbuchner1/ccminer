@@ -1,5 +1,5 @@
 
-ccMiner release 0.3 (Mar 23th 2014) - Groestlcoin Release
+ccMiner release 0.4 (Mar 24th 2014) - Groestlcoin Pool Release
 -------------------------------------------------------------
 
 ***************************************************************
@@ -107,7 +107,13 @@ from your old clunkers.
 
 >>> RELEASE HISTORY <<<
 
-  Match, 23 2014 added Groestlcoin support. stratum status unknown
+  March, 24 2014 fixed Groestl pool support
+
+                 went back to Compute 1.x for cuda_hefty1.cu kernel by
+                 default after numerous reports of ccminer v0.2/v0.3
+                 not working with HeavyCoin for some people.
+
+  March, 23 2014 added Groestlcoin support. stratum status unknown
                  (the only pool is currently down for fixing issues)
 
   March, 21 2014 use of shared memory in Fugue256 kernel boosts hash rates

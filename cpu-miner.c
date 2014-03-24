@@ -669,7 +669,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-	if (opt_algo == ALGO_FUGUE256)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	else
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -719,7 +719,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
-	if (opt_algo == ALGO_FUGUE256)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
 		diff_to_target(work->target, sctx->job.diff / 256.0);
 	else
 		diff_to_target(work->target, sctx->job.diff);
@@ -1346,7 +1346,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.2"
+#define PROGRAM_VERSION "0.4"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;

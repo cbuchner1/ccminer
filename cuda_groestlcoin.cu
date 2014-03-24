@@ -82,8 +82,6 @@ extern uint32_t T2up_cpu[];
 extern uint32_t T2dn_cpu[];
 extern uint32_t T3up_cpu[];
 extern uint32_t T3dn_cpu[];
-extern uint32_t sha256_cpu_hashTable[];
-extern uint32_t sha256_cpu_constantTable[];
 
 #define S(x, n)			(((x) >> (n)) | ((x) << (32 - (n))))
 #define R(x, n)			((x) >> (n))
@@ -212,15 +210,14 @@ __global__ void
 		// GROESTL
 		uint32_t message[32];
 		uint32_t state[32];
-
-		// SHA
-		// jeder thread in diesem  Block bekommt sein eigenes W Array im Shared memory
 		uint32_t g[32];
 
 
 #pragma unroll 32
 		for(int k=0;k<32;k++)
 		{
+                        // TODO: die Vorbelegung mit Nullen braucht nicht zwingend aus dem
+                        //       constant Memory zu lesen. Das ist Verschwendung von Bandbreite.
 			state[k] = groestlcoin_gpu_state[k];
 			message[k] = groestlcoin_gpu_msg[k];
 		}
@@ -230,12 +227,12 @@ __global__ void
 
 #pragma unroll 32
 		for(int u=0;u<32;u++)
-			g[u] = message[u] ^ state[u];
+			g[u] = message[u] ^ state[u];  // TODO: state ist fast ueberall 0.
 
 		// Perm
 #if USE_SHARED
-		groestlcoin_perm_P(g, mixtabs);
-		groestlcoin_perm_Q(message, mixtabs);
+		groestlcoin_perm_P(g, mixtabs);        // TODO: g[] entspricht fast genau message[]
+		groestlcoin_perm_Q(message, mixtabs);  //       kann man das ausnutzen?
 #else
 		groestlcoin_perm_P(g, NULL);
 		groestlcoin_perm_Q(message, NULL);
@@ -244,6 +241,8 @@ __global__ void
 #pragma unroll 32
 		for(int u=0;u<32;u++)
 		{
+                        // TODO: kann man evtl. das xor mit g[u] vorziehen hinter die groestlcoin_perm_P Funktion
+                        //       was den Registerbedarf senken koennte?
 			state[u] ^= g[u] ^ message[u];
 			g[u] = state[u];
 		}
@@ -373,17 +372,10 @@ __host__ void groestlcoin_cpu_init(int thr_id, int threads)
 	texDef(t3up1, d_T3up, T3up_cpu, sizeof(uint32_t)*256);
 	texDef(t3dn1, d_T3dn, T3dn_cpu, sizeof(uint32_t)*256);
 
-	// Kopiere die Hash-Tabellen in den GPU-Speicher
-	cudaMemcpyToSymbol(	sha256coin_gpu_constantTable,
-						sha256_cpu_constantTable,
-						sizeof(uint32_t) * 64 );
-
-	// Startvektor
-	cudaMemcpyToSymbol(	sha256coin_gpu_register,
-						sha256_cpu_hashTable,
-						sizeof(uint32_t) * 8 );
-
 	// setze register 
+        // TODO: fast vollstaendige Vorbelegung mit Nullen.
+        //       da besteht doch Optimierungspotenzial im GPU Kernel
+        //       denn mit Nullen braucht man nicht wirklich rechnen.
 	uint32_t groestl_state_init[32];
 	memset(groestl_state_init, 0, sizeof(uint32_t) * 32);
 	groestl_state_init[31] = 0x20000;
