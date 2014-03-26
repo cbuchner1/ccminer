@@ -51,8 +51,13 @@
 // from heavy.cu
 #ifdef __cplusplus
 extern "C"
+{
 #endif
 int cuda_num_devices();
+int cuda_finddevice(char *name);
+#ifdef __cplusplus
+}
+#endif
 
 
 #ifdef __linux /* Linux specific policy and affinity management */
@@ -144,10 +149,11 @@ static int opt_scantime = 5;
 static json_t *opt_config;
 static const bool opt_time = true;
 static sha256_algos opt_algo = ALGO_HEAVY;
-static int opt_n_threads;
+static int opt_n_threads = 0;
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 static int num_processors;
+int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
 static char *rpc_url;
 static char *rpc_userpass;
 static char *rpc_user, *rpc_pass;
@@ -185,7 +191,11 @@ Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
                         fugue256  Fuguecoin hash\n\
                         heavy     Heavycoin hash\n\
-  -v, --vote=VOTE       block reward vote\n\
+  -d, --devices         takes a comma separated list of CUDA devices to use.\n\
+                        Device IDs start counting from 0! Alternatively takes\n\
+                        string names of your cards like gtx780ti or gt640#2\n\
+                        (matching 2nd gt640 in the PC)\n\
+  -v, --vote=VOTE       block reward vote (for HeavyCoin)\n\
   -m, --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
   -o, --url=URL         URL of mining server\n\
   -O, --userpass=U:P    username:password pair for mining server\n\
@@ -227,7 +237,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vmv:";
+	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:mv:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -259,6 +269,7 @@ static struct option const options[] = {
 	{ "user", 1, NULL, 'u' },
 	{ "userpass", 1, NULL, 'O' },
 	{ "version", 0, NULL, 'V' },
+	{ "devices", 1, NULL, 'd' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -1251,6 +1262,32 @@ static void parse_arg (int key, char *arg)
 	case 'S':
 		use_syslog = true;
 		break;
+	case 'd': // CB
+		{
+			char * pch = strtok (arg,",");
+			opt_n_threads = 0;
+			while (pch != NULL) {
+				if (pch[0] >= '0' && pch[0] <= '9' && pch[1] == '\0')
+				{
+					if (atoi(pch) < num_processors)
+						device_map[opt_n_threads++] = atoi(pch);
+					else {
+						applog(LOG_ERR, "Non-existant CUDA device #%d specified in -d option", atoi(pch));
+						exit(1);
+					}
+				} else {
+					int device = cuda_finddevice(pch);
+					if (device >= 0 && device < num_processors)
+						device_map[opt_n_threads++] = device;
+					else {
+						applog(LOG_ERR, "Non-existant CUDA device '%s' specified in -d option", pch);
+						exit(1);
+					}
+				}
+				pch = strtok (NULL, ",");
+			}
+		}
+		break;
 	case 'V':
 		show_version_and_exit();
 	case 'h':
@@ -1346,7 +1383,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.4"
+#define PROGRAM_VERSION "0.5"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
@@ -1370,6 +1407,9 @@ int main(int argc, char *argv[])
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
 
+	pthread_mutex_init(&applog_lock, NULL);
+	num_processors = cuda_num_devices();
+
 	/* parse command line */
 	parse_cmdline(argc, argv);
 
@@ -1385,7 +1425,6 @@ int main(int argc, char *argv[])
 		sprintf(rpc_userpass, "%s:%s", rpc_user, rpc_pass);
 	}
 
-	pthread_mutex_init(&applog_lock, NULL);
 	pthread_mutex_init(&stats_lock, NULL);
 	pthread_mutex_init(&g_work_lock, NULL);
 	pthread_mutex_init(&stratum.sock_lock, NULL);
@@ -1416,7 +1455,6 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	num_processors = cuda_num_devices();
 	if (num_processors == 0)
 	{
 		applog(LOG_ERR, "No CUDA devices found! terminating.");

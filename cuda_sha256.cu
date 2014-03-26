@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define W_ALIGNMENT 65
-
 // Folgende Definitionen später durch header ersetzen
 typedef unsigned int uint32_t;
 
@@ -59,8 +57,6 @@ __global__ void sha256_gpu_hash(int threads, uint32_t startNounce, void *outputH
 		nonceVector[thread] = nounce;
 	
 		// jeder thread in diesem  Block bekommt sein eigenes W Array im Shared memory
-		//extern __shared__ unsigned char s[];
-		//uint32_t *W = (uint32_t *)(&s[W_ALIGNMENT * sizeof(uint32_t) * threadIdx.x]);
 		uint32_t W1[16];
 		uint32_t W2[16];
 
@@ -257,14 +253,13 @@ __host__ void sha256_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashe
 
 __host__ void sha256_cpu_hash(int thr_id, int threads, int startNounce)
 {
-	const int threadsperblock = 128;
+	const int threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs (abhängig von der Threadanzahl)
-	//size_t shared_size = W_ALIGNMENT*sizeof(uint32_t)*threadsperblock;  // ein uint32_t eingefügt gegen Bank Konflikte
+	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
 //	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);

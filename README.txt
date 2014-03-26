@@ -1,5 +1,5 @@
 
-ccMiner release 0.4 (Mar 24th 2014) - Groestlcoin Pool Release
+ccMiner release 0.5 (Mar 27th 2014) - "Hefty Optimization"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -38,6 +38,11 @@ its command line interface and options.
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
 
+  -d, --devices         gives a comma separated list of CUDA device IDs
+                        to operate on. Device IDs start counting from 0!
+                        Alternatively give string names of your card like
+                        gtx780ti or gt640#2 (matching 2nd gt640 in the PC).
+
   -o, --url=URL         URL of mining server (default: " DEF_RPC_URL ")
   -O, --userpass=U:P    username:password pair for mining server
   -u, --user=USERNAME   username for mining server
@@ -63,7 +68,9 @@ its command line interface and options.
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
 
+
 >>> Examples <<<
+
 
 Example for Heavycoin Mining on heavycoinpool.com with a single gpu in your system
 
@@ -107,22 +114,33 @@ from your old clunkers.
 
 >>> RELEASE HISTORY <<<
 
-  March, 24 2014 fixed Groestl pool support
+  March, 27 2014  Heavycoin exchange rates soar, and as a result this coin
+                  gets some love: We greatly optimized the Hefty1 kernel
+                  for speed. Expect some hefty gains, especially on 750Ti's!
 
-                 went back to Compute 1.x for cuda_hefty1.cu kernel by
-                 default after numerous reports of ccminer v0.2/v0.3
-                 not working with HeavyCoin for some people.
+                  By popular demand, we added the -d option as known from
+                  cudaminer.
 
-  March, 23 2014 added Groestlcoin support. stratum status unknown
-                 (the only pool is currently down for fixing issues)
+                  different compute capability builds are now provided until
+                  we figure out how to pack everything into a single executable
+                  in a Windows build.
 
-  March, 21 2014 use of shared memory in Fugue256 kernel boosts hash rates
-                 on Fermi and Maxwell devices. Kepler may suffer slightly
-                 (3-5%)
+  March, 24 2014  fixed Groestl pool support
 
-                 Fixed Stratum for Fuguecoin. Tested on dwarfpool.
+                  went back to Compute 1.x for cuda_hefty1.cu kernel by
+                  default after numerous reports of ccminer v0.2/v0.3
+                  not working with HeavyCoin for some people.
 
-  March, 18 2014 initial release.
+  March, 23 2014  added Groestlcoin support. stratum status unknown
+                  (the only pool is currently down for fixing issues)
+
+  March, 21 2014  use of shared memory in Fugue256 kernel boosts hash rates
+                  on Fermi and Maxwell devices. Kepler may suffer slightly
+                  (3-5%)
+
+                  Fixed Stratum for Fuguecoin. Tested on dwarfpool.
+
+  March, 18 2014  initial release.
 
 
 >>> AUTHORS <<<

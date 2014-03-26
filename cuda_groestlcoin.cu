@@ -9,6 +9,10 @@
 
 #define USE_SHARED 1
 
+// aus cpu-miner.c
+extern int device_map[8];
+
+// aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // Folgende Definitionen später durch header ersetzen
@@ -20,13 +24,7 @@ typedef unsigned long long uint64_t;
 __constant__ uint32_t pTarget[8]; // Single GPU
 extern uint32_t *d_resultNonce[8];
 
-// globaler Speicher für unsere Ergebnisse
-uint32_t *d_hashGROESTLCOINoutput[8];
-
-__constant__ uint32_t groestlcoin_gpu_state[32];
 __constant__ uint32_t groestlcoin_gpu_msg[32];
-__constant__ uint32_t sha256coin_gpu_constantTable[64];
-__constant__ uint32_t sha256coin_gpu_register[8];
 
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
@@ -83,7 +81,13 @@ extern uint32_t T2dn_cpu[];
 extern uint32_t T3up_cpu[];
 extern uint32_t T3dn_cpu[];
 
-#define S(x, n)			(((x) >> (n)) | ((x) << (32 - (n))))
+#if __CUDA_ARCH__ < 350 
+    // Kepler (Compute 3.0)
+    #define S(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
+#else
+    // Kepler (Compute 3.5)
+    #define S(x, n) __funnelshift_r( x, x, n );
+#endif
 #define R(x, n)			((x) >> (n))
 #define Ch(x, y, z)		((x & (y ^ z)) ^ z)
 #define Maj(x, y, z)	((x & (y | z)) | (y & z))
@@ -95,18 +99,57 @@ extern uint32_t T3dn_cpu[];
 #define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 
 
-__device__ void groestlcoin_perm_P(uint32_t *a, char *mixtabs)
+__device__ __forceinline__ void groestlcoin_perm_P(uint32_t *a, char *mixtabs)
 {
 	uint32_t t[32];
 
 //#pragma unroll 14
 	for(int r=0;r<14;r++)
 	{
-#pragma unroll 16
-		for(int k=0;k<16;k++)
+		switch(r)
 		{
-			a[(k*2)+0] ^= PC32up(k * 0x10, r);
-			//a[(k<<1)+1] ^= PC32dn(k * 0x10, r);
+			case 0:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 0); break;
+			case 1:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 1); break;
+			case 2:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 2); break;
+			case 3:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 3); break;
+			case 4:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 4); break;
+			case 5:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 5); break;
+			case 6:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 6); break;
+			case 7:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 7); break;
+			case 8:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 8); break;
+			case 9:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 9); break;
+			case 10:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 10); break;
+			case 11:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 11); break;
+			case 12:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 12); break;
+			case 13:
+#pragma unroll 16
+				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 13); break;
 		}
 
 		// RBTT
@@ -137,18 +180,57 @@ __device__ void groestlcoin_perm_P(uint32_t *a, char *mixtabs)
 	}
 }
 
-__device__ void groestlcoin_perm_Q(uint32_t *a, char *mixtabs)
+__device__ __forceinline__ void groestlcoin_perm_Q(uint32_t *a, char *mixtabs)
 {	
 //#pragma unroll 14
 	for(int r=0;r<14;r++)
 	{
 		uint32_t t[32];
 
-#pragma unroll 16
-		for(int k=0;k<16;k++)
+		switch(r)
 		{
-			a[(k*2)+0] ^= QC32up(k * 0x10, r);
-			a[(k*2)+1] ^= QC32dn(k * 0x10, r);
+			case 0:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 0); a[(k*2)+1] ^= QC32dn(k * 0x10, 0);} break;
+			case 1:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 1); a[(k*2)+1] ^= QC32dn(k * 0x10, 1);} break;
+			case 2:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 2); a[(k*2)+1] ^= QC32dn(k * 0x10, 2);} break;
+			case 3:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 3); a[(k*2)+1] ^= QC32dn(k * 0x10, 3);} break;
+			case 4:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 4); a[(k*2)+1] ^= QC32dn(k * 0x10, 4);} break;
+			case 5:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 5); a[(k*2)+1] ^= QC32dn(k * 0x10, 5);} break;
+			case 6:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 6); a[(k*2)+1] ^= QC32dn(k * 0x10, 6);} break;
+			case 7:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 7); a[(k*2)+1] ^= QC32dn(k * 0x10, 7);} break;
+			case 8:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 8); a[(k*2)+1] ^= QC32dn(k * 0x10, 8);} break;
+			case 9:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 9); a[(k*2)+1] ^= QC32dn(k * 0x10, 9);} break;
+			case 10:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 10); a[(k*2)+1] ^= QC32dn(k * 0x10, 10);} break;
+			case 11:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 11); a[(k*2)+1] ^= QC32dn(k * 0x10, 11);} break;
+			case 12:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 12); a[(k*2)+1] ^= QC32dn(k * 0x10, 12);} break;
+			case 13:
+	#pragma unroll 16
+				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 13); a[(k*2)+1] ^= QC32dn(k * 0x10, 13);} break;
 		}
 
 		// RBTT
@@ -179,12 +261,12 @@ __device__ void groestlcoin_perm_Q(uint32_t *a, char *mixtabs)
 	}
 }
 #if USE_SHARED
-__global__ void  __launch_bounds__(256) 
+__global__ void  /* __launch_bounds__(256) */
 #else
 __global__ void 
 #endif
 
- groestlcoin_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
+ groestlcoin_gpu_hash(int threads, uint32_t startNounce, uint32_t *resNounce)
 {
 #if USE_SHARED
 	extern __shared__ char mixtabs[];
@@ -204,146 +286,111 @@ __global__ void
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-	/////
-	///// Lieber groestl, mach, dass es abgeht!!!
-	/////
 		// GROESTL
 		uint32_t message[32];
 		uint32_t state[32];
-		uint32_t g[32];
-
 
 #pragma unroll 32
-		for(int k=0;k<32;k++)
-		{
-                        // TODO: die Vorbelegung mit Nullen braucht nicht zwingend aus dem
-                        //       constant Memory zu lesen. Das ist Verschwendung von Bandbreite.
-			state[k] = groestlcoin_gpu_state[k];
-			message[k] = groestlcoin_gpu_msg[k];
-		}
+		for(int k=0;k<32;k++) message[k] = groestlcoin_gpu_msg[k];
 
 		uint32_t nounce = startNounce + thread;
 		message[19] = SWAB32(nounce);
 
 #pragma unroll 32
-		for(int u=0;u<32;u++)
-			g[u] = message[u] ^ state[u];  // TODO: state ist fast ueberall 0.
+		for(int u=0;u<32;u++) state[u] = message[u];
+		state[31] ^= 0x20000;
 
 		// Perm
 #if USE_SHARED
-		groestlcoin_perm_P(g, mixtabs);        // TODO: g[] entspricht fast genau message[]
-		groestlcoin_perm_Q(message, mixtabs);  //       kann man das ausnutzen?
+		groestlcoin_perm_P(state, mixtabs);
+		state[31] ^= 0x20000;
+		groestlcoin_perm_Q(message, mixtabs);
 #else
-		groestlcoin_perm_P(g, NULL);
+		groestlcoin_perm_P(state, NULL);
+		state[31] ^= 0x20000;
 		groestlcoin_perm_Q(message, NULL);
 #endif
-		
 #pragma unroll 32
-		for(int u=0;u<32;u++)
-		{
-                        // TODO: kann man evtl. das xor mit g[u] vorziehen hinter die groestlcoin_perm_P Funktion
-                        //       was den Registerbedarf senken koennte?
-			state[u] ^= g[u] ^ message[u];
-			g[u] = state[u];
-		}
+		for(int u=0;u<32;u++) state[u] ^= message[u];
+
+#pragma unroll 32
+		for(int u=0;u<32;u++) message[u] = state[u];
 
 #if USE_SHARED
-		groestlcoin_perm_P(g, mixtabs);
+		groestlcoin_perm_P(message, mixtabs);
 #else
-		groestlcoin_perm_P(g, NULL);
+		groestlcoin_perm_P(message, NULL);
 #endif
 
 #pragma unroll 32
-		for(int u=0;u<32;u++)
-			state[u] ^= g[u];
+		for(int u=0;u<32;u++) state[u] ^= message[u];
 
 		////
 		//// 2. Runde groestl
 		////
 #pragma unroll 16
-		for(int k=0;k<16;k++)
-			message[k] = state[k + 16];
-
-#pragma unroll 32
-		for(int k=0;k<32;k++)
-			state[k] = groestlcoin_gpu_state[k];
-
-#pragma unroll 16
-		for(int k=0;k<16;k++)
+		for(int k=0;k<16;k++) message[k] = state[k + 16];
+#pragma unroll 14
+		for(int k=1;k<15;k++)
 			message[k+16] = 0;
 
-		message[16] = 0x80;		
+		message[16] = 0x80;
 		message[31] = 0x01000000;
 
 #pragma unroll 32
 		for(int u=0;u<32;u++)
-			g[u] = message[u] ^ state[u];
+			state[u] = message[u];
+		state[31] ^= 0x20000;
 
 		// Perm
 #if USE_SHARED
-		groestlcoin_perm_P(g, mixtabs);
+		groestlcoin_perm_P(state, mixtabs);
+		state[31] ^= 0x20000;
 		groestlcoin_perm_Q(message, mixtabs);
 #else
-		groestlcoin_perm_P(g, NULL);
+		groestlcoin_perm_P(state, NULL);
+		state[31] ^= 0x20000;
 		groestlcoin_perm_Q(message, NULL);
 #endif
 		
 #pragma unroll 32
-		for(int u=0;u<32;u++)
-		{
-			state[u] ^= g[u] ^ message[u];
-			g[u] = state[u];
-		}
+		for(int u=0;u<32;u++) state[u] ^= message[u];
+
+#pragma unroll 32
+		for(int u=0;u<32;u++) message[u] = state[u];
 
 #if USE_SHARED
-		groestlcoin_perm_P(g, mixtabs);
+		groestlcoin_perm_P(message, mixtabs);
 #else
-		groestlcoin_perm_P(g, NULL);
+		groestlcoin_perm_P(message, NULL);
 #endif
 
 #pragma unroll 32
-		for(int u=0;u<32;u++)
-			state[u] ^= g[u];
-		
-/*
-	#pragma unroll 8
-		for(int k=0;k<8;k++)
-			hash[k] = state[k+16];
-*/
+		for(int u=0;u<32;u++) state[u] ^= message[u];
 
 		// kopiere Ergebnis
-		/*
-#pragma unroll 16
-		for(int k=0;k<16;k++)
-			((uint32_t*)outputHash)[16*thread+k] = state[k + 16];
-			*/
-		int i;
+		int i, position = -1;
 		bool rc = true;
-	
+
+#pragma unroll 8
 		for (i = 7; i >= 0; i--) {
 			if (state[i+16] > pTarget[i]) {
-				rc = false;
-				break;
-			}
-			if (state[i+16] < pTarget[i]) {
-				rc = true;
-				break;
-			}
+				if(position < i) {
+					position = i;
+					rc = false;
+				}
+	 		}
+	 		if (state[i+16] < pTarget[i]) {
+				if(position < i) {
+					position = i;
+					rc = true;
+				}
+	 		}
 		}
 
 		if(rc == true)
-		{
 			if(resNounce[0] > nounce)
-			{
 				resNounce[0] = nounce;
-				/*
-				#pragma unroll 8
-				for(int k=0;k<8;k++)					
-					((uint32_t*)outputHash)[k] = (hash[k]);
-				*/
-			}
-		}
-
 	}
 }
 
@@ -360,7 +407,7 @@ __global__ void
 // Setup-Funktionen
 __host__ void groestlcoin_cpu_init(int thr_id, int threads)
 {
-	cudaSetDevice(thr_id);
+    cudaSetDevice(device_map[thr_id]);
 	cudaDeviceSetCacheConfig( cudaFuncCachePreferShared );
 // Texturen mit obigem Makro initialisieren
 	texDef(t0up1, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
@@ -372,23 +419,8 @@ __host__ void groestlcoin_cpu_init(int thr_id, int threads)
 	texDef(t3up1, d_T3up, T3up_cpu, sizeof(uint32_t)*256);
 	texDef(t3dn1, d_T3dn, T3dn_cpu, sizeof(uint32_t)*256);
 
-	// setze register 
-        // TODO: fast vollstaendige Vorbelegung mit Nullen.
-        //       da besteht doch Optimierungspotenzial im GPU Kernel
-        //       denn mit Nullen braucht man nicht wirklich rechnen.
-	uint32_t groestl_state_init[32];
-	memset(groestl_state_init, 0, sizeof(uint32_t) * 32);
-	groestl_state_init[31] = 0x20000;
-
-	// state speichern
-	cudaMemcpyToSymbol(	groestlcoin_gpu_state,
-						groestl_state_init,
-						128);
-
+	// Speicher für Gewinner-Nonce belegen
 	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 
-
-	// Speicher für alle Ergebnisse belegen (nur für Debug)
-	cudaMalloc(&d_hashGROESTLCOINoutput[thr_id], 8 * sizeof(uint32_t) * threads);
 }
 
 __host__ void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
@@ -430,7 +462,7 @@ __host__ void groestlcoin_cpu_hash(int thr_id, int threads, uint32_t startNounce
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs (abhängig von der Threadanzahl)
+	// Größe des dynamischen Shared Memory Bereichs
 #if USE_SHARED
 	size_t shared_size = 8 * 256 * sizeof(uint32_t);
 #else
@@ -440,16 +472,10 @@ __host__ void groestlcoin_cpu_hash(int thr_id, int threads, uint32_t startNounce
 //	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 	//fprintf(stderr, "ThrID: %d\n", thr_id);
 	cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
-	groestlcoin_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, d_hashGROESTLCOINoutput[thr_id], d_resultNonce[thr_id]);
+	groestlcoin_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, d_resultNonce[thr_id]);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
 	MyStreamSynchronize(NULL, 0, thr_id);
 
 	cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-
-	/// Debug
-	//cudaMemcpy(outputHashes, d_hashGROESTLCOINoutput[thr_id], 8 * sizeof(uint32_t) * threads, cudaMemcpyDeviceToHost);
-
-	// Nounce
-	//cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

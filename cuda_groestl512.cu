@@ -813,7 +813,7 @@ __host__ void groestl512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs (abhängig von der Threadanzahl)
+	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
 //	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);

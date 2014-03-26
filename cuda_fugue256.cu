@@ -9,7 +9,10 @@
 
 #define USE_SHARED 1
 
-// heavy.cu
+// aus cpu-miner.c
+extern int device_map[8];
+
+// aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // Folgende Definitionen später durch header ersetzen
@@ -732,7 +735,7 @@ fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHas
 
 void fugue256_cpu_init(int thr_id, int threads)
 {
-	cudaSetDevice(thr_id);
+    cudaSetDevice(device_map[thr_id]);
 
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
@@ -774,7 +777,7 @@ __host__ void fugue256_cpu_hash(int thr_id, int threads, int startNounce, void *
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs (abhängig von der Threadanzahl)
+	// Größe des dynamischen Shared Memory Bereichs
 #if USE_SHARED
 	size_t shared_size = 4 * 256 * sizeof(uint32_t);
 #else
