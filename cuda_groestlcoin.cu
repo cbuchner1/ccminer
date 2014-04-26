@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <memory.h>
 
+// IMPORTANT: leave this enabled!
 #define USE_SHARED 1
 
 // aus cpu-miner.c
@@ -15,10 +16,16 @@ extern int device_map[8];
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
+// aus driver.c
+extern "C" void set_device(int device);
+
 // Folgende Definitionen später durch header ersetzen
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
 typedef unsigned long long uint64_t;
+
+// diese Struktur wird in der Init Funktion angefordert
+static cudaDeviceProp props;
 
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
@@ -26,6 +33,7 @@ extern uint32_t *d_resultNonce[8];
 
 __constant__ uint32_t groestlcoin_gpu_msg[32];
 
+#define SPH_C32(x)    ((uint32_t)(x ## U))
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
 #define PC32up(j, r)   ((uint32_t)((j) + (r)))
@@ -33,17 +41,16 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #define QC32up(j, r)   0xFFFFFFFF
 #define QC32dn(j, r)   (((uint32_t)(r) << 24) ^ SPH_T32(~((uint32_t)(j) << 24)))
 
-#define B32_0(x)    ((x) & 0xFF)
-#define B32_1(x)    (((x) >> 8) & 0xFF)
-#define B32_2(x)    (((x) >> 16) & 0xFF)
-#define B32_3(x)    ((x) >> 24)
+#define B32_0(x)    __byte_perm(x, 0, 0x4440)
+//((x) & 0xFF)
+#define B32_1(x)    __byte_perm(x, 0, 0x4441)
+//(((x) >> 8) & 0xFF)
+#define B32_2(x)    __byte_perm(x, 0, 0x4442)
+//(((x) >> 16) & 0xFF)
+#define B32_3(x)    __byte_perm(x, 0, 0x4443)
+//((x) >> 24)
 
-#define SPH_C32(x)	((uint32_t)(x ## U))
-#define C32e(x)     ((SPH_C32(x) >> 24) \
-                    | ((SPH_C32(x) >>  8) & SPH_C32(0x0000FF00)) \
-                    | ((SPH_C32(x) <<  8) & SPH_C32(0x00FF0000)) \
-                    | ((SPH_C32(x) << 24) & SPH_C32(0xFF000000)))
-
+#if 0
 #if USE_SHARED
 #define T0up(x) (*((uint32_t*)mixtabs + (    (x))))
 #define T0dn(x) (*((uint32_t*)mixtabs + (256+(x))))
@@ -63,6 +70,18 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #define T3up(x) tex1Dfetch(t3up1, x)
 #define T3dn(x) tex1Dfetch(t3dn1, x)
 #endif
+#endif
+
+// a healthy mix between shared and textured access provides the highest speed!
+#define T0up(x) (*((uint32_t*)mixtabs + (    (x))))
+#define T0dn(x) tex1Dfetch(t0dn1, x)
+#define T1up(x) tex1Dfetch(t1up1, x)
+#define T1dn(x) (*((uint32_t*)mixtabs + (768+(x))))
+#define T2up(x) tex1Dfetch(t2up1, x)
+#define T2dn(x) (*((uint32_t*)mixtabs + (1280+(x))))
+#define T3up(x) (*((uint32_t*)mixtabs + (1536+(x))))
+#define T3dn(x) tex1Dfetch(t3dn1, x)
+
 texture<unsigned int, 1, cudaReadModeElementType> t0up1;
 texture<unsigned int, 1, cudaReadModeElementType> t0dn1;
 texture<unsigned int, 1, cudaReadModeElementType> t1up1;
@@ -80,21 +99,6 @@ extern uint32_t T2up_cpu[];
 extern uint32_t T2dn_cpu[];
 extern uint32_t T3up_cpu[];
 extern uint32_t T3dn_cpu[];
-
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define S(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define S(x, n) __funnelshift_r( x, x, n );
-#endif
-#define R(x, n)			((x) >> (n))
-#define Ch(x, y, z)		((x & (y ^ z)) ^ z)
-#define Maj(x, y, z)	((x & (y | z)) | (y & z))
-#define S0(x)			(S(x, 2) ^ S(x, 13) ^ S(x, 22))
-#define S1(x)			(S(x, 6) ^ S(x, 11) ^ S(x, 25))
-#define s0(x)			(S(x, 7) ^ S(x, 18) ^ R(x, 3))
-#define s1(x)			(S(x, 17) ^ S(x, 19) ^ R(x, 10))
 
 #define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 
@@ -152,32 +156,25 @@ __device__ __forceinline__ void groestlcoin_perm_P(uint32_t *a, char *mixtabs)
 				for(int k=0;k<16;k++) a[(k*2)+0] ^= PC32up(k * 0x10, 13); break;
 		}
 
-		// RBTT
+        // RBTT
 #pragma unroll 16
-		for(int k=0;k<32;k+=2)
-		{
-			t[k + 0] =	T0up( B32_0(a[k & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 2) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 4) & 0x1f]) ) ^ 
-						T3up( B32_3(a[(k + 6) & 0x1f]) ) ^ 
-						T0dn( B32_0(a[(k + 9) & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 11) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 13) & 0x1f]) ) ^ 
-						T3dn( B32_3(a[(k + 23) & 0x1f]) );
+        for(int k=0;k<32;k+=2)
+        {
+            uint32_t t0_0 = B32_0(a[(k     ) & 0x1f]), t9_0  = B32_0(a[(k +  9) & 0x1f]);
+            uint32_t t2_1 = B32_1(a[(k +  2) & 0x1f]), t11_1 = B32_1(a[(k + 11) & 0x1f]);
+            uint32_t t4_2 = B32_2(a[(k +  4) & 0x1f]), t13_2 = B32_2(a[(k + 13) & 0x1f]);
+            uint32_t t6_3 = B32_3(a[(k +  6) & 0x1f]), t23_3 = B32_3(a[(k + 23) & 0x1f]);
+        
+            t[k + 0] =  T0up( t0_0 ) ^ T1up(  t2_1 ) ^ T2up(  t4_2 ) ^ T3up(  t6_3 ) ^ 
+                        T0dn( t9_0 ) ^ T1dn( t11_1 ) ^ T2dn( t13_2 ) ^ T3dn( t23_3 );
 
-			t[k + 1] =	T0dn( B32_0(a[k & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 2) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 4) & 0x1f]) ) ^ 
-						T3dn( B32_3(a[(k + 6) & 0x1f]) ) ^ 
-						T0up( B32_0(a[(k + 9) & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 11) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 13) & 0x1f]) ) ^ 
-						T3up( B32_3(a[(k + 23) & 0x1f]) );
-		}
+            t[k + 1] =  T0dn( t0_0 ) ^ T1dn(  t2_1 ) ^ T2dn(  t4_2 ) ^ T3dn(  t6_3 ) ^ 
+                        T0up( t9_0 ) ^ T1up( t11_1 ) ^ T2up( t13_2 ) ^ T3up( t23_3 );
+        }
 #pragma unroll 32
-		for(int k=0;k<32;k++)
-			a[k] = t[k];
-	}
+        for(int k=0;k<32;k++)
+            a[k] = t[k];
+    }
 }
 
 __device__ __forceinline__ void groestlcoin_perm_Q(uint32_t *a, char *mixtabs)
@@ -233,32 +230,25 @@ __device__ __forceinline__ void groestlcoin_perm_Q(uint32_t *a, char *mixtabs)
 				for(int k=0;k<16;k++) { a[(k*2)+0] ^= QC32up(k * 0x10, 13); a[(k*2)+1] ^= QC32dn(k * 0x10, 13);} break;
 		}
 
-		// RBTT
+        // RBTT
 #pragma unroll 16
-		for(int k=0;k<32;k+=2)
-		{
-			t[k + 0] =	T0up( B32_0(a[(k + 2) & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 6) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 10) & 0x1f]) ) ^ 
-						T3up( B32_3(a[(k + 22) & 0x1f]) ) ^ 
-						T0dn( B32_0(a[(k + 1) & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 5) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 9) & 0x1f]) ) ^ 
-						T3dn( B32_3(a[(k + 13) & 0x1f]) );
+        for(int k=0;k<32;k+=2)
+        {
+            uint32_t t2_0  = B32_0(a[(k +  2) & 0x1f]), t1_0  = B32_0(a[(k +  1) & 0x1f]);
+            uint32_t t6_1  = B32_1(a[(k +  6) & 0x1f]), t5_1  = B32_1(a[(k +  5) & 0x1f]);
+            uint32_t t10_2 = B32_2(a[(k + 10) & 0x1f]), t9_2  = B32_2(a[(k +  9) & 0x1f]);
+            uint32_t t22_3 = B32_3(a[(k + 22) & 0x1f]), t13_3 = B32_3(a[(k + 13) & 0x1f]);
+        
+            t[k + 0] =  T0up( t2_0 ) ^ T1up( t6_1 ) ^ T2up( t10_2 ) ^ T3up( t22_3 ) ^ 
+                        T0dn( t1_0 ) ^ T1dn( t5_1 ) ^ T2dn(  t9_2 ) ^ T3dn( t13_3 );
 
-			t[k + 1] =	T0dn( B32_0(a[(k + 2) & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 6) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 10) & 0x1f]) ) ^ 
-						T3dn( B32_3(a[(k + 22) & 0x1f]) ) ^ 
-						T0up( B32_0(a[(k + 1) & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 5) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 9) & 0x1f]) ) ^ 
-						T3up( B32_3(a[(k + 13) & 0x1f]) );
-		}
+            t[k + 1] =  T0dn( t2_0 ) ^ T1dn( t6_1 ) ^ T2dn( t10_2 ) ^ T3dn( t22_3 ) ^ 
+                        T0up( t1_0 ) ^ T1up( t5_1 ) ^ T2up(  t9_2 ) ^ T3up( t13_3 );
+        }
 #pragma unroll 32
-		for(int k=0;k<32;k++)
-			a[k] = t[k];
-	}
+        for(int k=0;k<32;k++)
+            a[k] = t[k];
+    }
 }
 #if USE_SHARED
 __global__ void  /* __launch_bounds__(256) */
@@ -271,14 +261,17 @@ __global__ void
 #if USE_SHARED
 	extern __shared__ char mixtabs[];
 
-	*((uint32_t*)mixtabs + (    threadIdx.x)) = tex1Dfetch(t0up1, threadIdx.x);
-	*((uint32_t*)mixtabs + (256+threadIdx.x)) = tex1Dfetch(t0dn1, threadIdx.x);
-	*((uint32_t*)mixtabs + (512+threadIdx.x)) = tex1Dfetch(t1up1, threadIdx.x);
-	*((uint32_t*)mixtabs + (768+threadIdx.x)) = tex1Dfetch(t1dn1, threadIdx.x);
-	*((uint32_t*)mixtabs + (1024+threadIdx.x)) = tex1Dfetch(t2up1, threadIdx.x);
-	*((uint32_t*)mixtabs + (1280+threadIdx.x)) = tex1Dfetch(t2dn1, threadIdx.x);
-	*((uint32_t*)mixtabs + (1536+threadIdx.x)) = tex1Dfetch(t3up1, threadIdx.x);
-	*((uint32_t*)mixtabs + (1792+threadIdx.x)) = tex1Dfetch(t3dn1, threadIdx.x);
+	if (threadIdx.x < 256)
+	{
+		*((uint32_t*)mixtabs + (    threadIdx.x)) = tex1Dfetch(t0up1, threadIdx.x);
+		*((uint32_t*)mixtabs + (256+threadIdx.x)) = tex1Dfetch(t0dn1, threadIdx.x);
+		*((uint32_t*)mixtabs + (512+threadIdx.x)) = tex1Dfetch(t1up1, threadIdx.x);
+		*((uint32_t*)mixtabs + (768+threadIdx.x)) = tex1Dfetch(t1dn1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1024+threadIdx.x)) = tex1Dfetch(t2up1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1280+threadIdx.x)) = tex1Dfetch(t2dn1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1536+threadIdx.x)) = tex1Dfetch(t3up1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1792+threadIdx.x)) = tex1Dfetch(t3dn1, threadIdx.x);
+	}
 
 	__syncthreads();
 #endif
@@ -407,8 +400,11 @@ __global__ void
 // Setup-Funktionen
 __host__ void groestlcoin_cpu_init(int thr_id, int threads)
 {
-    cudaSetDevice(device_map[thr_id]);
-	cudaDeviceSetCacheConfig( cudaFuncCachePreferShared );
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaGetDeviceProperties(&props, device_map[thr_id]);
+
+	cudaDeviceSetCacheConfig( cudaFuncCachePreferL1 );
 // Texturen mit obigem Makro initialisieren
 	texDef(t0up1, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
 	texDef(t0dn1, d_T0dn, T0dn_cpu, sizeof(uint32_t)*256);
@@ -452,11 +448,9 @@ __host__ void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 
 __host__ void groestlcoin_cpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
 {
-#if USE_SHARED
-	const int threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
-#else
-	const int threadsperblock = 512; // so einstellen wie gewünscht ;-)
-#endif
+	// Compute 3.x und 5.x Geräte am besten mit 768 Threads ansteuern,
+	// alle anderen mit 512 Threads.
+	int threadsperblock = (props.major >= 3) ? 768 : 512;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
