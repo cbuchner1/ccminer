@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <memory.h>
 
-// IMPORTANT: leave this enabled!
-#define USE_SHARED 1
+// it's unfortunate that this is a compile time constant.
+#define MAXWELL_OR_FERMI 0
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -50,7 +50,9 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #define B32_3(x)    __byte_perm(x, 0, 0x4443)
 //((x) >> 24)
 
-#if 0
+#if MAXWELL_OR_FEMRI
+#define USE_SHARED 1
+// Maxwell and Fermi cards get the best speed with SHARED access it seems.
 #if USE_SHARED
 #define T0up(x) (*((uint32_t*)mixtabs + (    (x))))
 #define T0dn(x) (*((uint32_t*)mixtabs + (256+(x))))
@@ -70,9 +72,9 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #define T3up(x) tex1Dfetch(t3up1, x)
 #define T3dn(x) tex1Dfetch(t3dn1, x)
 #endif
-#endif
-
-// a healthy mix between shared and textured access provides the highest speed!
+#else
+#define USE_SHARED 1
+// a healthy mix between shared and textured access provides the highest speed on Compute 3.0 and 3.5!
 #define T0up(x) (*((uint32_t*)mixtabs + (    (x))))
 #define T0dn(x) tex1Dfetch(t0dn1, x)
 #define T1up(x) tex1Dfetch(t1up1, x)
@@ -81,6 +83,7 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #define T2dn(x) (*((uint32_t*)mixtabs + (1280+(x))))
 #define T3up(x) (*((uint32_t*)mixtabs + (1536+(x))))
 #define T3dn(x) tex1Dfetch(t3dn1, x)
+#endif
 
 texture<unsigned int, 1, cudaReadModeElementType> t0up1;
 texture<unsigned int, 1, cudaReadModeElementType> t0dn1;
@@ -404,8 +407,7 @@ __host__ void groestlcoin_cpu_init(int thr_id, int threads)
 
 	cudaGetDeviceProperties(&props, device_map[thr_id]);
 
-	cudaDeviceSetCacheConfig( cudaFuncCachePreferL1 );
-// Texturen mit obigem Makro initialisieren
+	// Texturen mit obigem Makro initialisieren
 	texDef(t0up1, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
 	texDef(t0dn1, d_T0dn, T0dn_cpu, sizeof(uint32_t)*256);
 	texDef(t1up1, d_T1up, T1up_cpu, sizeof(uint32_t)*256);

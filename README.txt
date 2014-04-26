@@ -1,5 +1,5 @@
 
-ccMiner release 0.5 (Mar 27th 2014) - "Hefty Optimization"
+ccMiner release 0.6 (April 27th 2014) - "Jackpot"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -37,6 +37,8 @@ its command line interface and options.
                           heavy       use to mine Heavycoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
+                          myr-gr      use to mine Myriad-Groestl
+                          jackpot     use to mine Jackpotcoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!
@@ -113,6 +115,11 @@ This code should be running on nVidia GPUs ranging from compute capability
 from your old clunkers.
 
 >>> RELEASE HISTORY <<<
+
+  April, 27 2014  this release adds Myriad-Groestl and Jackpot Coin.
+                  we apply an optimization to Jackpot that turns this
+                  into a Keccak-only CUDA coin ;) Jackpot is tested with
+                  solo--mining only at the moment.
 
   March, 27 2014  Heavycoin exchange rates soar, and as a result this coin
                   gets some love: We greatly optimized the Hefty1 kernel

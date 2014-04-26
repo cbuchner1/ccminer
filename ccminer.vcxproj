@@ -211,7 +211,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="blake.c" />
     <ClCompile Include="compat\getopt\getopt_long.c" />
     <ClCompile Include="compat\gettimeofday.c" />
     <ClCompile Include="compat\jansson\dump.c" />
@@ -226,12 +225,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">/TP %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/TP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <ClCompile Include="fugue.c" />
     <ClCompile Include="fuguecoin.cpp" />
-    <ClCompile Include="groestl.c" />
     <ClCompile Include="groestlcoin.cpp" />
     <ClCompile Include="hefty1.c" />
-    <ClCompile Include="keccak.c" />
+    <ClCompile Include="myriadgroestl.cpp" />
     <ClCompile Include="scrypt.c" />
     <ClCompile Include="sha2.c">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">/TP %(AdditionalOptions)</AdditionalOptions>
@@ -239,6 +236,19 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">/TP %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/TP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <ClCompile Include="sph\aes_helper.c" />
+    <ClCompile Include="sph\blake.c" />
+    <ClCompile Include="sph\bmw.c" />
+    <ClCompile Include="sph\cubehash.c" />
+    <ClCompile Include="sph\echo.c" />
+    <ClCompile Include="sph\fugue.c" />
+    <ClCompile Include="sph\groestl.c" />
+    <ClCompile Include="sph\jh.c" />
+    <ClCompile Include="sph\keccak.c" />
+    <ClCompile Include="sph\luffa.c" />
+    <ClCompile Include="sph\shavite.c" />
+    <ClCompile Include="sph\simd.c" />
+    <ClCompile Include="sph\skein.c" />
     <ClCompile Include="util.c">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">/TP %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/TP %(AdditionalOptions)</AdditionalOptions>
@@ -264,6 +274,19 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="elist.h" />
     <ClInclude Include="hefty1.h" />
     <ClInclude Include="miner.h" />
+    <ClInclude Include="sph\sph_blake.h" />
+    <ClInclude Include="sph\sph_bmw.h" />
+    <ClInclude Include="sph\sph_cubehash.h" />
+    <ClInclude Include="sph\sph_echo.h" />
+    <ClInclude Include="sph\sph_fugue.h" />
+    <ClInclude Include="sph\sph_groestl.h" />
+    <ClInclude Include="sph\sph_jh.h" />
+    <ClInclude Include="sph\sph_keccak.h" />
+    <ClInclude Include="sph\sph_luffa.h" />
+    <ClInclude Include="sph\sph_shavite.h" />
+    <ClInclude Include="sph\sph_simd.h" />
+    <ClInclude Include="sph\sph_skein.h" />
+    <ClInclude Include="sph\sph_types.h" />
     <ClInclude Include="sph_blake.h" />
     <ClInclude Include="sph_fugue.h" />
     <ClInclude Include="sph_groestl.h" />
@@ -279,8 +302,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="cuda_groestlcoin.cu" />
     <CudaCompile Include="cuda_hefty1.cu" />
     <CudaCompile Include="cuda_keccak512.cu" />
+    <CudaCompile Include="cuda_myriadgroestl.cu" />
     <CudaCompile Include="cuda_sha256.cu" />
     <CudaCompile Include="heavy.cu" />
+    <CudaCompile Include="JHA\cuda_jha_keccak512.cu" />
+    <CudaCompile Include="JHA\jackpotcoin.cu" />
+    <CudaCompile Include="quark\cuda_quark_checkhash.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

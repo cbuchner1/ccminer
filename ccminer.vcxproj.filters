@@ -34,6 +34,18 @@
     <Filter Include="Source Files\CUDA\jansson">
       <UniqueIdentifier>{17b56151-79ec-4a32-bac3-9d94ae7f68fe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\JHA">
+      <UniqueIdentifier>{d8f2e173-a0a5-455b-8efc-42511b585156}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CUDA\quark">
+      <UniqueIdentifier>{dd0822bd-27cc-4d5c-8e2f-cf7d9b00feb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\sph">
+      <UniqueIdentifier>{0dc051db-f833-476f-b3f4-c69fd03b9348}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\sph">
+      <UniqueIdentifier>{7c2a98c6-064c-4a69-b803-d6f6ff5edd0b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -69,28 +81,58 @@
     <ClCompile Include="cpu-miner.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="blake.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="groestl.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="hefty1.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="keccak.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="scrypt.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="fugue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="fuguecoin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="groestlcoin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\aes_helper.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\blake.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\bmw.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\cubehash.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\echo.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\fugue.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\groestl.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\jh.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\keccak.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\luffa.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\shavite.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\simd.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\skein.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="myriadgroestl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -164,6 +206,45 @@
     <ClInclude Include="cuda_groestlcoin.h">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="sph\sph_blake.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_bmw.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_cubehash.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_echo.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_fugue.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_groestl.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_jh.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_keccak.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_luffa.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_shavite.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_simd.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_skein.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_types.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_sha256.cu">
@@ -191,6 +272,18 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_groestlcoin.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
+      <Filter>Source Files\CUDA\JHA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="JHA\jackpotcoin.cu">
+      <Filter>Source Files\CUDA\JHA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_quark_checkhash.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_myriadgroestl.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
   </ItemGroup>

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include "sph_fugue.h"
+#include "sph/sph_fugue.h"
 
 #define USE_SHARED 1
 

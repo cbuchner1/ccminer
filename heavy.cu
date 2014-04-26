@@ -18,9 +18,9 @@
 #include "miner.h"
 
 #include "hefty1.h"
-#include "sph_keccak.h"
-#include "sph_blake.h"
-#include "sph_groestl.h"
+#include "sph/sph_keccak.h"
+#include "sph/sph_blake.h"
+#include "sph/sph_groestl.h"
 
 #include "cuda_hefty1.h"
 #include "cuda_sha256.h"

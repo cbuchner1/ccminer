@@ -123,17 +123,21 @@ typedef enum {
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
+	ALGO_MYR_GR,
+	ALGO_JACKPOT
 } sha256_algos;
 
 static const char *algo_names[] = {
 	"heavy",
 	"fugue256",
-	"groestl"
+	"groestl",
+	"myr-gr",
+	"jackpot"
 };
 
 bool opt_debug = false;
 bool opt_protocol = false;
-static bool opt_benchmark = false;
+bool opt_benchmark = false;
 bool want_longpoll = true;
 bool have_longpoll = false;
 bool want_stratum = true;
@@ -191,6 +195,9 @@ Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
                         fugue256  Fuguecoin hash\n\
                         heavy     Heavycoin hash\n\
+                        groestl   Groestlcoin hash\n\
+                        myr-gr    Myriad-Groestl hash\n\
+                        jackpot   Jackpot hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -730,7 +737,9 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
+	if (opt_algo == ALGO_JACKPOT)
+		diff_to_target(work->target, sctx->job.diff / 65536.0);
+	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
 		diff_to_target(work->target, sctx->job.diff / 256.0);
 	else
 		diff_to_target(work->target, sctx->job.diff);
@@ -813,7 +822,7 @@ static void *miner_thread(void *userdata)
 			      - time(NULL);
 		max64 *= (int64_t)thr_hashrates[thr_id];
 		if (max64 <= 0)
-			max64 = 0x1fffffLL;
+			max64 = (opt_algo == ALGO_JACKPOT) ? 0x1fffLL : 0xfffffLL;
 		if ((int64_t)work.data[19] + max64 > end_nonce)
 			max_nonce = end_nonce;
 		else
@@ -834,10 +843,22 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_fugue256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
+
 		case ALGO_GROESTL:
 			rc = scanhash_groestlcoin(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
+
+		case ALGO_MYR_GR:
+			rc = scanhash_myriad(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_JACKPOT:
+			rc = scanhash_jackpot(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
 		default:
 			/* should never happen */
 			goto out;
@@ -1383,7 +1404,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.5"
+#define PROGRAM_VERSION "0.6"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;

@@ -53,16 +53,21 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
+am__dirstamp = $(am__leading_dot)dirstamp
 am_ccminer_OBJECTS = ccminer-cpu-miner.$(OBJEXT) \
 	ccminer-util.$(OBJEXT) ccminer-blake.$(OBJEXT) \
-	ccminer-groestl.$(OBJEXT) ccminer-hefty1.$(OBJEXT) \
-	ccminer-keccak.$(OBJEXT) ccminer-scrypt.$(OBJEXT) \
+	ccminer-groestl.$(OBJEXT) ccminer-keccak.$(OBJEXT) \
+	ccminer-hefty1.$(OBJEXT) ccminer-scrypt.$(OBJEXT) \
 	ccminer-sha2.$(OBJEXT) heavy.$(OBJEXT) cuda_blake512.$(OBJEXT) \
 	cuda_combine.$(OBJEXT) cuda_groestl512.$(OBJEXT) \
 	cuda_hefty1.$(OBJEXT) cuda_keccak512.$(OBJEXT) \
 	cuda_sha256.$(OBJEXT) ccminer-fuguecoin.$(OBJEXT) \
 	cuda_fugue256.$(OBJEXT) ccminer-fugue.$(OBJEXT) \
-	ccminer-groestlcoin.$(OBJEXT) cuda_groestlcoin.$(OBJEXT)
+	ccminer-groestlcoin.$(OBJEXT) cuda_groestlcoin.$(OBJEXT) \
+	JHA/jackpotcoin.$(OBJEXT) JHA/cuda_jha_keccak512.$(OBJEXT) \
+	ccminer-jh.$(OBJEXT) ccminer-skein.$(OBJEXT) \
+	quark/cuda_quark_checkhash.$(OBJEXT) \
+	ccminer-myriadgroestl.$(OBJEXT) cuda_myriadgroestl.$(OBJEXT)
 ccminer_OBJECTS = $(am_ccminer_OBJECTS)
 ccminer_DEPENDENCIES =
 ccminer_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(ccminer_LDFLAGS) \
@@ -267,8 +272,8 @@ SUBDIRS = compat
 ccminer_SOURCES = elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
-			  cpu-miner.c util.c blake.c groestl.c hefty1.c keccak.c scrypt.c sha2.c \
-			  sph_blake.h sph_groestl.h sph_keccak.h sph_types.h \
+			  cpu-miner.c util.c sph/blake.c sph/groestl.c sph/keccak.c hefty1.c scrypt.c sha2.c \
+			  sph/sph_blake.h sph/sph_groestl.h sph/sph_keccak.h sph/sph_types.h \
 			  heavy.cu \
 			  cuda_blake512.cu cuda_blake512.h \
 			  cuda_combine.cu cuda_combine.h \
@@ -276,8 +281,11 @@ ccminer_SOURCES = elist.h miner.h compat.h \
 			  cuda_hefty1.cu cuda_hefty1.h \
 			  cuda_keccak512.cu cuda_keccak512.h \
 			  cuda_sha256.cu cuda_sha256.h \
-			  fuguecoin.cpp cuda_fugue256.cu fugue.c sph_fugue.h uint256.h \
-			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h
+			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
+			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
+			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu sph/jh.c sph/skein.c \
+			  sph/sph_jh.h sph/sph_skein.h quark/cuda_quark_checkhash.cu \
+			  myriadgroestl.cpp cuda_myriadgroestl.cu
 
 ccminer_LDFLAGS = $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD = @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
@@ -373,12 +381,33 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+JHA/$(am__dirstamp):
+	@$(MKDIR_P) JHA
+	@: > JHA/$(am__dirstamp)
+JHA/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) JHA/$(DEPDIR)
+	@: > JHA/$(DEPDIR)/$(am__dirstamp)
+JHA/jackpotcoin.$(OBJEXT): JHA/$(am__dirstamp) \
+	JHA/$(DEPDIR)/$(am__dirstamp)
+JHA/cuda_jha_keccak512.$(OBJEXT): JHA/$(am__dirstamp) \
+	JHA/$(DEPDIR)/$(am__dirstamp)
+quark/$(am__dirstamp):
+	@$(MKDIR_P) quark
+	@: > quark/$(am__dirstamp)
+quark/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) quark/$(DEPDIR)
+	@: > quark/$(DEPDIR)/$(am__dirstamp)
+quark/cuda_quark_checkhash.$(OBJEXT): quark/$(am__dirstamp) \
+	quark/$(DEPDIR)/$(am__dirstamp)
 ccminer$(EXEEXT): $(ccminer_OBJECTS) $(ccminer_DEPENDENCIES) $(EXTRA_ccminer_DEPENDENCIES) 
 	@rm -f ccminer$(EXEEXT)
 	$(ccminer_LINK) $(ccminer_OBJECTS) $(ccminer_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f JHA/cuda_jha_keccak512.$(OBJEXT)
+	-rm -f JHA/jackpotcoin.$(OBJEXT)
+	-rm -f quark/cuda_quark_checkhash.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -390,9 +419,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-groestl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-groestlcoin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-hefty1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-jh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-keccak.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-myriadgroestl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-scrypt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-sha2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-skein.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccminer-util.Po@am__quote@
 
 .c.o:
@@ -437,33 +469,47 @@ ccminer-util.obj: util.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-util.obj `if test -f 'util.c'; then $(CYGPATH_W) 'util.c'; else $(CYGPATH_W) '$(srcdir)/util.c'; fi`
 
-ccminer-blake.o: blake.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-blake.o -MD -MP -MF $(DEPDIR)/ccminer-blake.Tpo -c -o ccminer-blake.o `test -f 'blake.c' || echo '$(srcdir)/'`blake.c
+ccminer-blake.o: sph/blake.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-blake.o -MD -MP -MF $(DEPDIR)/ccminer-blake.Tpo -c -o ccminer-blake.o `test -f 'sph/blake.c' || echo '$(srcdir)/'`sph/blake.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-blake.Tpo $(DEPDIR)/ccminer-blake.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='blake.c' object='ccminer-blake.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/blake.c' object='ccminer-blake.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-blake.o `test -f 'blake.c' || echo '$(srcdir)/'`blake.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-blake.o `test -f 'sph/blake.c' || echo '$(srcdir)/'`sph/blake.c
 
-ccminer-blake.obj: blake.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-blake.obj -MD -MP -MF $(DEPDIR)/ccminer-blake.Tpo -c -o ccminer-blake.obj `if test -f 'blake.c'; then $(CYGPATH_W) 'blake.c'; else $(CYGPATH_W) '$(srcdir)/blake.c'; fi`
+ccminer-blake.obj: sph/blake.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-blake.obj -MD -MP -MF $(DEPDIR)/ccminer-blake.Tpo -c -o ccminer-blake.obj `if test -f 'sph/blake.c'; then $(CYGPATH_W) 'sph/blake.c'; else $(CYGPATH_W) '$(srcdir)/sph/blake.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-blake.Tpo $(DEPDIR)/ccminer-blake.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='blake.c' object='ccminer-blake.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/blake.c' object='ccminer-blake.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-blake.obj `if test -f 'blake.c'; then $(CYGPATH_W) 'blake.c'; else $(CYGPATH_W) '$(srcdir)/blake.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-blake.obj `if test -f 'sph/blake.c'; then $(CYGPATH_W) 'sph/blake.c'; else $(CYGPATH_W) '$(srcdir)/sph/blake.c'; fi`
 
-ccminer-groestl.o: groestl.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-groestl.o -MD -MP -MF $(DEPDIR)/ccminer-groestl.Tpo -c -o ccminer-groestl.o `test -f 'groestl.c' || echo '$(srcdir)/'`groestl.c
+ccminer-groestl.o: sph/groestl.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-groestl.o -MD -MP -MF $(DEPDIR)/ccminer-groestl.Tpo -c -o ccminer-groestl.o `test -f 'sph/groestl.c' || echo '$(srcdir)/'`sph/groestl.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-groestl.Tpo $(DEPDIR)/ccminer-groestl.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='groestl.c' object='ccminer-groestl.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/groestl.c' object='ccminer-groestl.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-groestl.o `test -f 'groestl.c' || echo '$(srcdir)/'`groestl.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-groestl.o `test -f 'sph/groestl.c' || echo '$(srcdir)/'`sph/groestl.c
 
-ccminer-groestl.obj: groestl.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-groestl.obj -MD -MP -MF $(DEPDIR)/ccminer-groestl.Tpo -c -o ccminer-groestl.obj `if test -f 'groestl.c'; then $(CYGPATH_W) 'groestl.c'; else $(CYGPATH_W) '$(srcdir)/groestl.c'; fi`
+ccminer-groestl.obj: sph/groestl.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-groestl.obj -MD -MP -MF $(DEPDIR)/ccminer-groestl.Tpo -c -o ccminer-groestl.obj `if test -f 'sph/groestl.c'; then $(CYGPATH_W) 'sph/groestl.c'; else $(CYGPATH_W) '$(srcdir)/sph/groestl.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-groestl.Tpo $(DEPDIR)/ccminer-groestl.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='groestl.c' object='ccminer-groestl.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/groestl.c' object='ccminer-groestl.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-groestl.obj `if test -f 'groestl.c'; then $(CYGPATH_W) 'groestl.c'; else $(CYGPATH_W) '$(srcdir)/groestl.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-groestl.obj `if test -f 'sph/groestl.c'; then $(CYGPATH_W) 'sph/groestl.c'; else $(CYGPATH_W) '$(srcdir)/sph/groestl.c'; fi`
+
+ccminer-keccak.o: sph/keccak.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-keccak.o -MD -MP -MF $(DEPDIR)/ccminer-keccak.Tpo -c -o ccminer-keccak.o `test -f 'sph/keccak.c' || echo '$(srcdir)/'`sph/keccak.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-keccak.Tpo $(DEPDIR)/ccminer-keccak.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/keccak.c' object='ccminer-keccak.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-keccak.o `test -f 'sph/keccak.c' || echo '$(srcdir)/'`sph/keccak.c
+
+ccminer-keccak.obj: sph/keccak.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-keccak.obj -MD -MP -MF $(DEPDIR)/ccminer-keccak.Tpo -c -o ccminer-keccak.obj `if test -f 'sph/keccak.c'; then $(CYGPATH_W) 'sph/keccak.c'; else $(CYGPATH_W) '$(srcdir)/sph/keccak.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-keccak.Tpo $(DEPDIR)/ccminer-keccak.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/keccak.c' object='ccminer-keccak.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-keccak.obj `if test -f 'sph/keccak.c'; then $(CYGPATH_W) 'sph/keccak.c'; else $(CYGPATH_W) '$(srcdir)/sph/keccak.c'; fi`
 
 ccminer-hefty1.o: hefty1.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-hefty1.o -MD -MP -MF $(DEPDIR)/ccminer-hefty1.Tpo -c -o ccminer-hefty1.o `test -f 'hefty1.c' || echo '$(srcdir)/'`hefty1.c
@@ -478,20 +524,6 @@ ccminer-hefty1.obj: hefty1.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='hefty1.c' object='ccminer-hefty1.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-hefty1.obj `if test -f 'hefty1.c'; then $(CYGPATH_W) 'hefty1.c'; else $(CYGPATH_W) '$(srcdir)/hefty1.c'; fi`
-
-ccminer-keccak.o: keccak.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-keccak.o -MD -MP -MF $(DEPDIR)/ccminer-keccak.Tpo -c -o ccminer-keccak.o `test -f 'keccak.c' || echo '$(srcdir)/'`keccak.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-keccak.Tpo $(DEPDIR)/ccminer-keccak.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='keccak.c' object='ccminer-keccak.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-keccak.o `test -f 'keccak.c' || echo '$(srcdir)/'`keccak.c
-
-ccminer-keccak.obj: keccak.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-keccak.obj -MD -MP -MF $(DEPDIR)/ccminer-keccak.Tpo -c -o ccminer-keccak.obj `if test -f 'keccak.c'; then $(CYGPATH_W) 'keccak.c'; else $(CYGPATH_W) '$(srcdir)/keccak.c'; fi`
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-keccak.Tpo $(DEPDIR)/ccminer-keccak.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='keccak.c' object='ccminer-keccak.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-keccak.obj `if test -f 'keccak.c'; then $(CYGPATH_W) 'keccak.c'; else $(CYGPATH_W) '$(srcdir)/keccak.c'; fi`
 
 ccminer-scrypt.o: scrypt.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-scrypt.o -MD -MP -MF $(DEPDIR)/ccminer-scrypt.Tpo -c -o ccminer-scrypt.o `test -f 'scrypt.c' || echo '$(srcdir)/'`scrypt.c
@@ -521,19 +553,47 @@ ccminer-sha2.obj: sha2.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-sha2.obj `if test -f 'sha2.c'; then $(CYGPATH_W) 'sha2.c'; else $(CYGPATH_W) '$(srcdir)/sha2.c'; fi`
 
-ccminer-fugue.o: fugue.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-fugue.o -MD -MP -MF $(DEPDIR)/ccminer-fugue.Tpo -c -o ccminer-fugue.o `test -f 'fugue.c' || echo '$(srcdir)/'`fugue.c
+ccminer-fugue.o: sph/fugue.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-fugue.o -MD -MP -MF $(DEPDIR)/ccminer-fugue.Tpo -c -o ccminer-fugue.o `test -f 'sph/fugue.c' || echo '$(srcdir)/'`sph/fugue.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-fugue.Tpo $(DEPDIR)/ccminer-fugue.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fugue.c' object='ccminer-fugue.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/fugue.c' object='ccminer-fugue.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-fugue.o `test -f 'fugue.c' || echo '$(srcdir)/'`fugue.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-fugue.o `test -f 'sph/fugue.c' || echo '$(srcdir)/'`sph/fugue.c
 
-ccminer-fugue.obj: fugue.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-fugue.obj -MD -MP -MF $(DEPDIR)/ccminer-fugue.Tpo -c -o ccminer-fugue.obj `if test -f 'fugue.c'; then $(CYGPATH_W) 'fugue.c'; else $(CYGPATH_W) '$(srcdir)/fugue.c'; fi`
+ccminer-fugue.obj: sph/fugue.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-fugue.obj -MD -MP -MF $(DEPDIR)/ccminer-fugue.Tpo -c -o ccminer-fugue.obj `if test -f 'sph/fugue.c'; then $(CYGPATH_W) 'sph/fugue.c'; else $(CYGPATH_W) '$(srcdir)/sph/fugue.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-fugue.Tpo $(DEPDIR)/ccminer-fugue.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fugue.c' object='ccminer-fugue.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/fugue.c' object='ccminer-fugue.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-fugue.obj `if test -f 'fugue.c'; then $(CYGPATH_W) 'fugue.c'; else $(CYGPATH_W) '$(srcdir)/fugue.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-fugue.obj `if test -f 'sph/fugue.c'; then $(CYGPATH_W) 'sph/fugue.c'; else $(CYGPATH_W) '$(srcdir)/sph/fugue.c'; fi`
+
+ccminer-jh.o: sph/jh.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-jh.o -MD -MP -MF $(DEPDIR)/ccminer-jh.Tpo -c -o ccminer-jh.o `test -f 'sph/jh.c' || echo '$(srcdir)/'`sph/jh.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-jh.Tpo $(DEPDIR)/ccminer-jh.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/jh.c' object='ccminer-jh.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-jh.o `test -f 'sph/jh.c' || echo '$(srcdir)/'`sph/jh.c
+
+ccminer-jh.obj: sph/jh.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-jh.obj -MD -MP -MF $(DEPDIR)/ccminer-jh.Tpo -c -o ccminer-jh.obj `if test -f 'sph/jh.c'; then $(CYGPATH_W) 'sph/jh.c'; else $(CYGPATH_W) '$(srcdir)/sph/jh.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-jh.Tpo $(DEPDIR)/ccminer-jh.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/jh.c' object='ccminer-jh.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-jh.obj `if test -f 'sph/jh.c'; then $(CYGPATH_W) 'sph/jh.c'; else $(CYGPATH_W) '$(srcdir)/sph/jh.c'; fi`
+
+ccminer-skein.o: sph/skein.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-skein.o -MD -MP -MF $(DEPDIR)/ccminer-skein.Tpo -c -o ccminer-skein.o `test -f 'sph/skein.c' || echo '$(srcdir)/'`sph/skein.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-skein.Tpo $(DEPDIR)/ccminer-skein.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/skein.c' object='ccminer-skein.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-skein.o `test -f 'sph/skein.c' || echo '$(srcdir)/'`sph/skein.c
+
+ccminer-skein.obj: sph/skein.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ccminer-skein.obj -MD -MP -MF $(DEPDIR)/ccminer-skein.Tpo -c -o ccminer-skein.obj `if test -f 'sph/skein.c'; then $(CYGPATH_W) 'sph/skein.c'; else $(CYGPATH_W) '$(srcdir)/sph/skein.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ccminer-skein.Tpo $(DEPDIR)/ccminer-skein.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sph/skein.c' object='ccminer-skein.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ccminer-skein.obj `if test -f 'sph/skein.c'; then $(CYGPATH_W) 'sph/skein.c'; else $(CYGPATH_W) '$(srcdir)/sph/skein.c'; fi`
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -576,6 +636,20 @@ ccminer-groestlcoin.obj: groestlcoin.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='groestlcoin.cpp' object='ccminer-groestlcoin.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ccminer-groestlcoin.obj `if test -f 'groestlcoin.cpp'; then $(CYGPATH_W) 'groestlcoin.cpp'; else $(CYGPATH_W) '$(srcdir)/groestlcoin.cpp'; fi`
+
+ccminer-myriadgroestl.o: myriadgroestl.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ccminer-myriadgroestl.o -MD -MP -MF $(DEPDIR)/ccminer-myriadgroestl.Tpo -c -o ccminer-myriadgroestl.o `test -f 'myriadgroestl.cpp' || echo '$(srcdir)/'`myriadgroestl.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/ccminer-myriadgroestl.Tpo $(DEPDIR)/ccminer-myriadgroestl.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='myriadgroestl.cpp' object='ccminer-myriadgroestl.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ccminer-myriadgroestl.o `test -f 'myriadgroestl.cpp' || echo '$(srcdir)/'`myriadgroestl.cpp
+
+ccminer-myriadgroestl.obj: myriadgroestl.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ccminer-myriadgroestl.obj -MD -MP -MF $(DEPDIR)/ccminer-myriadgroestl.Tpo -c -o ccminer-myriadgroestl.obj `if test -f 'myriadgroestl.cpp'; then $(CYGPATH_W) 'myriadgroestl.cpp'; else $(CYGPATH_W) '$(srcdir)/myriadgroestl.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/ccminer-myriadgroestl.Tpo $(DEPDIR)/ccminer-myriadgroestl.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='myriadgroestl.cpp' object='ccminer-myriadgroestl.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ccminer_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ccminer-myriadgroestl.obj `if test -f 'myriadgroestl.cpp'; then $(CYGPATH_W) 'myriadgroestl.cpp'; else $(CYGPATH_W) '$(srcdir)/myriadgroestl.cpp'; fi`
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run `make' without going through this Makefile.
@@ -936,6 +1010,10 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f JHA/$(DEPDIR)/$(am__dirstamp)
+	-rm -f JHA/$(am__dirstamp)
+	-rm -f quark/$(DEPDIR)/$(am__dirstamp)
+	-rm -f quark/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -1035,7 +1113,7 @@ uninstall-am: uninstall-binPROGRAMS
 
 # we're now targeting all major compute architectures within one binary.
 .cu.o:
-	$(NVCC) @CFLAGS@ -Xptxas "-abi=no -v" -gencode=arch=compute_20,code=\"sm_20,compute_20\" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -I . -Xptxas "-abi=no -v" -gencode=arch=compute_20,code=\"sm_20,compute_20\" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

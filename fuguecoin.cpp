@@ -1,5 +1,5 @@
 #include "uint256.h"
-#include "sph_fugue.h"
+#include "sph/sph_fugue.h"
 
 #include "cpuminer-config.h"
 #include "miner.h"

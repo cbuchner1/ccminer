@@ -1,5 +1,5 @@
 #include "uint256.h"
-#include "sph_groestl.h"
+#include "sph/sph_groestl.h"
 
 #include "cpuminer-config.h"
 #include "miner.h"
