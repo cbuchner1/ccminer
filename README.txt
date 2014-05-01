@@ -119,6 +119,7 @@ from your old clunkers.
   May 1st 2014    adapt the Jackpot algorithms to changes made by the
                   coin developers. We keep our unique nVidia advantage
                   because we have a way to break up the divergence.
+                  NOTE: Jackpot Hash now requires Compute 3.0 or later.
 
   April, 27 2014  this release adds Myriad-Groestl and Jackpot Coin.
                   we apply an optimization to Jackpot that turns this

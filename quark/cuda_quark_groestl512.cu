@@ -8,7 +8,7 @@
 #include <memory.h>
 
 // it's unfortunate that this is a compile time constant.
-#define MAXWELL_OR_FERMI 0
+#define MAXWELL_OR_FERMI 1
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -41,7 +41,7 @@ static cudaDeviceProp props[8];
 #define B32_3(x)    __byte_perm(x, 0, 0x4443)
 //((x) >> 24)
 
-#if MAXWELL_OR_FEMRI
+#if MAXWELL_OR_FERMI
 #define USE_SHARED 1
 // Maxwell and Fermi cards get the best speed with SHARED access it seems.
 #if USE_SHARED

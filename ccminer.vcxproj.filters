@@ -164,18 +164,6 @@
     <ClInclude Include="cpuminer-config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sph_blake.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sph_types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sph_groestl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sph_keccak.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="hefty1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -196,9 +184,6 @@
     </ClInclude>
     <ClInclude Include="cuda_groestl512.h">
       <Filter>Header Files\CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="sph_fugue.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="uint256.h">
       <Filter>Header Files</Filter>

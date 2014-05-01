@@ -287,11 +287,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="sph\sph_simd.h" />
     <ClInclude Include="sph\sph_skein.h" />
     <ClInclude Include="sph\sph_types.h" />
-    <ClInclude Include="sph_blake.h" />
-    <ClInclude Include="sph_fugue.h" />
-    <ClInclude Include="sph_groestl.h" />
-    <ClInclude Include="sph_keccak.h" />
-    <ClInclude Include="sph_types.h" />
     <ClInclude Include="uint256.h" />
   </ItemGroup>
   <ItemGroup>
