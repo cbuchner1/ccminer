@@ -39,3 +39,7 @@ ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -f
 # we're now targeting all major compute architectures within one binary.
 .cu.o:
 	$(NVCC) @CFLAGS@ -I . -Xptxas "-abi=no -v" -gencode=arch=compute_20,code=\"sm_20,compute_20\" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+
+# this module doesn't compile with Compute 2.0 unfortunately
+JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
+	$(NVCC) @CFLAGS@ -I . -Xptxas "-abi=no -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
