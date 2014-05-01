@@ -1,3 +1,5 @@
+
+
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
@@ -132,7 +134,7 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
     }
 }
 
-__global__ void jackpot_keccak512_gpu_hash_88(int threads, uint32_t startNounce, uint64_t *g_hash)
+__global__ void jackpot_keccak512_gpu_hash(int threads, uint32_t startNounce, uint64_t *g_hash)
 {
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -518,9 +520,9 @@ void KeccakF( tKeccakLane * state, const tKeccakLane *in, int laneCount )
     }
 }
 
-__host__ void jackpot_keccak512_cpu_setBlock_88(void *pdata)
+// inlen kann 72...143 betragen
+__host__ void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
 {
-    unsigned long long inlen = 88;
     const unsigned char *in = (const unsigned char*)pdata;
 
     tKeccakLane    state[5 * 5];
@@ -554,7 +556,7 @@ __host__ void jackpot_keccak512_cpu_setBlock_88(void *pdata)
                         0, cudaMemcpyHostToDevice);
 }
 
-__host__ void jackpot_keccak512_cpu_hash_88(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order)
+__host__ void jackpot_keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order)
 {
     const int threadsperblock = 256;
 
@@ -567,6 +569,6 @@ __host__ void jackpot_keccak512_cpu_hash_88(int thr_id, int threads, uint32_t st
 
 //    fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
-    jackpot_keccak512_gpu_hash_88<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash);
+    jackpot_keccak512_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash);
     MyStreamSynchronize(NULL, order, thr_id);
 }

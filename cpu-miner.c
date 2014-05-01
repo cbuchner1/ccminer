@@ -1404,7 +1404,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.6"
+#define PROGRAM_VERSION "0.7"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;

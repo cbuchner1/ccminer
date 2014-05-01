@@ -1,5 +1,5 @@
 
-ccMiner release 0.6 (April 27th 2014) - "Jackpot"
+ccMiner release 0.7 (May 01th 2014) - "Jackpot II"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -115,6 +115,10 @@ This code should be running on nVidia GPUs ranging from compute capability
 from your old clunkers.
 
 >>> RELEASE HISTORY <<<
+
+  May 1st 2014    adapt the Jackpot algorithms to changes made by the
+                  coin developers. We keep our unique nVidia advantage
+                  because we have a way to break up the divergence.
 
   April, 27 2014  this release adds Myriad-Groestl and Jackpot Coin.
                   we apply an optimization to Jackpot that turns this

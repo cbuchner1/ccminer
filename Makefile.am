@@ -16,8 +16,8 @@ bin_PROGRAMS	= ccminer
 ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
-			  cpu-miner.c util.c sph/blake.c sph/groestl.c sph/keccak.c hefty1.c scrypt.c sha2.c \
-			  sph/sph_blake.h sph/sph_groestl.h sph/sph_keccak.h sph/sph_types.h \
+			  cpu-miner.c util.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c hefty1.c scrypt.c sha2.c \
+			  sph/sph_blake.h sph/sph_groestl.h sph/sph_jh.h sph/sph_keccak.h sph/sph_skein.h sph/sph_types.h \
 			  heavy.cu \
 			  cuda_blake512.cu cuda_blake512.h \
 			  cuda_combine.cu cuda_combine.h \
@@ -27,8 +27,9 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  cuda_sha256.cu cuda_sha256.h \
 			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
-			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu sph/jh.c sph/skein.c \
-			  sph/sph_jh.h sph/sph_skein.h quark/cuda_quark_checkhash.cu \
+			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
+			  JHA/cuda_jha_compactionTest.cu quark/cuda_quark_checkhash.cu \
+			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
 			  myriadgroestl.cpp cuda_myriadgroestl.cu
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@

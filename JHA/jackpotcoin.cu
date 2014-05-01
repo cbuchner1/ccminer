@@ -6,9 +6,9 @@ extern "C"
 #include "sph/sph_groestl.h"
 #include "sph/sph_jh.h"
 #include "sph/sph_skein.h"
+#include "miner.h"
 }
 
-#include "miner.h"
 #include <stdint.h>
 
 // aus cpu-miner.c
@@ -19,12 +19,35 @@ extern bool opt_benchmark;
 static uint32_t *d_hash[8];
 
 extern void jackpot_keccak512_cpu_init(int thr_id, int threads);
-extern void jackpot_keccak512_cpu_setBlock_88(void *pdata);
-extern void jackpot_keccak512_cpu_hash_88(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen);
+extern void jackpot_keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+
+extern void quark_blake512_cpu_init(int thr_id, int threads);
+extern void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void quark_groestl512_cpu_init(int thr_id, int threads);
+extern void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void quark_jh512_cpu_init(int thr_id, int threads);
+extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void quark_skein512_cpu_init(int thr_id, int threads);
+extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_check_cpu_init(int thr_id, int threads);
 extern void quark_check_cpu_setTarget(const void *ptarget);
 extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+
+extern void jackpot_compactTest_cpu_init(int thr_id, int threads);
+extern void jackpot_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, 
+											uint32_t *d_nonces1, size_t *nrm1,
+											uint32_t *d_nonces2, size_t *nrm2,
+											int order);
+
+// Speicher zur Generierung der Noncevektoren für die bedingten Hashes
+static uint32_t *d_jackpotNonces[8];
+static uint32_t *d_branch1Nonces[8];
+static uint32_t *d_branch2Nonces[8];
 
 // Original jackpothash Funktion aus einem miner Quelltext
 inline unsigned int jackpothash(void *state, const void *input)
@@ -38,54 +61,37 @@ inline unsigned int jackpothash(void *state, const void *input)
     uint32_t hash[16];
 
     sph_keccak512_init(&ctx_keccak);
-    sph_keccak512 (&ctx_keccak, input, 88);
+    sph_keccak512 (&ctx_keccak, input, 80);
     sph_keccak512_close(&ctx_keccak, hash);
 
-    unsigned int round_mask = (
-       (unsigned int)(((unsigned char *)input)[84]) <<  0 |
-       (unsigned int)(((unsigned char *)input)[85]) <<  8 |
-       (unsigned int)(((unsigned char *)input)[86]) << 16 |
-       (unsigned int)(((unsigned char *)input)[87]) << 24 );
-    unsigned int round_max  = hash[0] & round_mask;
     unsigned int round;
-    for (round = 0; round < round_max; round++) {
-        switch (hash[0] & 3) {
-          case 0:
-               sph_blake512_init(&ctx_blake);
-               sph_blake512 (&ctx_blake, hash, 64);
-               sph_blake512_close(&ctx_blake, hash);
-               break;
-          case 1:
-               sph_groestl512_init(&ctx_groestl);
-               sph_groestl512 (&ctx_groestl, hash, 64);
-               sph_groestl512_close(&ctx_groestl, hash);
-               break;
-          case 2:
-               sph_jh512_init(&ctx_jh);
-               sph_jh512 (&ctx_jh, hash, 64);
-               sph_jh512_close(&ctx_jh, hash);
-               break;
-          case 3:
-               sph_skein512_init(&ctx_skein);
-               sph_skein512 (&ctx_skein, hash, 64);
-               sph_skein512_close(&ctx_skein, hash);
-               break;
+    for (round = 0; round < 3; round++) {
+        if (hash[0] & 0x01) {
+           sph_groestl512_init(&ctx_groestl);
+           sph_groestl512 (&ctx_groestl, (&hash), 64);
+           sph_groestl512_close(&ctx_groestl, (&hash));
+        }
+        else {
+           sph_skein512_init(&ctx_skein);
+           sph_skein512 (&ctx_skein, (&hash), 64);
+           sph_skein512_close(&ctx_skein, (&hash));
+        }
+        if (hash[0] & 0x01) {
+           sph_blake512_init(&ctx_blake);
+           sph_blake512 (&ctx_blake, (&hash), 64);
+           sph_blake512_close(&ctx_blake, (&hash));
+        }
+        else {
+           sph_jh512_init(&ctx_jh);
+           sph_jh512 (&ctx_jh, (&hash), 64);
+           sph_jh512_close(&ctx_jh, (&hash));
         }
     }
     memcpy(state, hash, 32);
 
-    return round_max;
+    return round;
 }
 
-
-static int bit_population(uint32_t n){
-  int c =0;
-  while(n){
-    c += n&1;
-    n = n>>1;
-  }
-  return c;
-}
 
 extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -94,10 +100,8 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	// TODO: entfernen für eine Release! Ist nur zum Testen!
-	if (opt_benchmark) {
-		((uint32_t*)ptarget)[7] = 0x00000f;
-		((uint32_t*)pdata)[21] = 0x07000000;  // round_mask von 7 vorgeben
-    }
+	if (opt_benchmark)
+		((uint32_t*)ptarget)[7] = 0x0000ff;
 
 	const uint32_t Htarg = ptarget[7];
 
@@ -111,7 +115,15 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
 		jackpot_keccak512_cpu_init(thr_id, throughput);
+		jackpot_compactTest_cpu_init(thr_id, throughput);
+		quark_blake512_cpu_init(thr_id, throughput);
+		quark_groestl512_cpu_init(thr_id, throughput);
+		quark_jh512_cpu_init(thr_id, throughput);
+		quark_skein512_cpu_init(thr_id, throughput);
 		quark_check_cpu_init(thr_id, throughput);
+		cudaMalloc(&d_jackpotNonces[thr_id], sizeof(uint32_t)*throughput);
+		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput);
+		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput);
 		init[thr_id] = true;
 	}
 
@@ -119,27 +131,41 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 	for (int k=0; k < 22; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
-	unsigned int round_mask = (
-		(unsigned int)(((unsigned char *)endiandata)[84]) <<  0 |
-		(unsigned int)(((unsigned char *)endiandata)[85]) <<  8 |
-		(unsigned int)(((unsigned char *)endiandata)[86]) << 16 |
-		(unsigned int)(((unsigned char *)endiandata)[87]) << 24 );
-
-	// Zählen wie viele Bits in round_mask gesetzt sind
-	int bitcount = bit_population(round_mask);
-
-	jackpot_keccak512_cpu_setBlock_88((void*)endiandata);
+	jackpot_keccak512_cpu_setBlock((void*)endiandata, 80);
 	quark_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
 
-		// erstes Blake512 Hash mit CUDA
-		jackpot_keccak512_cpu_hash_88(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		// erstes Keccak512 Hash mit CUDA
+		jackpot_keccak512_cpu_hash(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
-		// TODO: hier fehlen jetzt natürlich noch die anderen Hashrunden.
-		// bei round_mask=7 haben wir eine 1:8 Chance, dass das Hash dennoch
-		// die Kriterien erfüllt wenn hash[0] & round_mask  zufällig 0 ist.
+		for (int round=0; round < 3; round++)
+		{
+			size_t nrm1, nrm2;
+
+			// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
+			jackpot_compactTest_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id],
+				d_branch1Nonces[thr_id], &nrm1,
+				d_branch2Nonces[thr_id], &nrm2,
+				order++);
+
+			if (nrm1+nrm2 == throughput) {
+				quark_groestl512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
+				quark_skein512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
+			}
+
+			// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
+			jackpot_compactTest_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id],
+				d_branch1Nonces[thr_id], &nrm1,
+				d_branch2Nonces[thr_id], &nrm2,
+				order++);
+
+			if (nrm1+nrm2 == throughput) {
+				quark_blake512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
+				quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
+			}
+		}
 
 		// Scan nach Gewinner Hashes auf der GPU
 		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
@@ -148,19 +174,16 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 
-			// diese jackpothash Funktion gibt die Zahl der zusätzlichen Runden zurück
+			// diese jackpothash Funktion gibt die Zahl der Runden zurück
 			unsigned int rounds = jackpothash(vhash64, endiandata);
 
-			// wir akzeptieren nur solche Hashes wo ausschliesslich Keccak verwendet wurde
-			if (rounds == 0) {
-				if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
+			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
 
-					pdata[19] = foundNonce;
-					*hashes_done = (foundNonce - first_nonce + 1) / (1 << bitcount);
-					return 1;
-				} else {
-					applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU (%d rounds)!", thr_id, foundNonce, rounds);
-				}
+				pdata[19] = foundNonce;
+				*hashes_done = (foundNonce - first_nonce + 1);
+				return 1;
+			} else {
+				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU (%d rounds)!", thr_id, foundNonce, rounds);
 			}
 		}
 
@@ -168,6 +191,6 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = (pdata[19] - first_nonce + 1) / (1 << bitcount);
+	*hashes_done = (pdata[19] - first_nonce + 1);
 	return 0;
 }

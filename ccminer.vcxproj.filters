@@ -286,5 +286,20 @@
     <CudaCompile Include="cuda_myriadgroestl.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="JHA\cuda_jha_compactionTest.cu">
+      <Filter>Source Files\CUDA\JHA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_jh512.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_quark_blake512.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_quark_groestl512.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_skein512.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

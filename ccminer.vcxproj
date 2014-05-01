@@ -305,9 +305,14 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="cuda_myriadgroestl.cu" />
     <CudaCompile Include="cuda_sha256.cu" />
     <CudaCompile Include="heavy.cu" />
+    <CudaCompile Include="JHA\cuda_jha_compactionTest.cu" />
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu" />
     <CudaCompile Include="JHA\jackpotcoin.cu" />
+    <CudaCompile Include="quark\cuda_jh512.cu" />
+    <CudaCompile Include="quark\cuda_quark_blake512.cu" />
     <CudaCompile Include="quark\cuda_quark_checkhash.cu" />
+    <CudaCompile Include="quark\cuda_quark_groestl512.cu" />
+    <CudaCompile Include="quark\cuda_skein512.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
