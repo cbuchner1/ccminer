@@ -427,7 +427,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		/* build hex string */
 
-		if (opt_algo != ALGO_HEAVY) {
+		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
 			for (i = 0; i < ARRAY_SIZE(work->data); i++)
 				le32enc(work->data + i, work->data[i]);
 			}
@@ -719,8 +719,14 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 	work->data[17] = le32dec(sctx->job.ntime);
 	work->data[18] = le32dec(sctx->job.nbits);
+	if (opt_algo == ALGO_MJOLLNIR)
+	{
+		for (i = 0; i < 20; i++)
+			work->data[i] = be32dec((uint32_t *)&work->data[i]);
+	}
+
 	work->data[20] = 0x80000000;
-	work->data[31] = 0x00000280;
+	work->data[31] = (opt_algo == ALGO_MJOLLNIR) ? 0x000002A0 : 0x00000280;
 
 	// HeavyCoin
 	if (opt_algo == ALGO_HEAVY) {
