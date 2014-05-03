@@ -20,6 +20,8 @@ uint32_t *d_hash5output[8];
 // die Message (112 bzw. 116 Bytes) mit Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage[16]; // padded message (80/84+32 bytes + padding)
 
+#include "cuda_helper.h"
+
 // ---------------------------- BEGIN CUDA blake512 functions ------------------------------------
 
 __constant__ uint8_t c_sigma[16][16];
@@ -135,8 +137,6 @@ template <int BLOCKSIZE> __device__ void blake512_compress( uint64_t *h, const u
 #pragma unroll 16
     for( i = 0; i < 16; ++i )  h[i % 8] ^= v[i];
 }
-
-#include "cuda_helper.h"
 
 template <int BLOCKSIZE> __global__ void blake512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
