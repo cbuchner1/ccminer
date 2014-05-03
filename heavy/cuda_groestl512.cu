@@ -676,7 +676,7 @@ __device__ void groestl512_perm_Q(uint32_t *a)
 	}
 }
 
-__global__ void groestl512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -706,7 +706,7 @@ __global__ void groestl512_gpu_hash(int threads, uint32_t startNounce, void *out
 		uint32_t *heftyHash = &heftyHashes[8 * hashPosition];
 #pragma unroll 8
 		for (int k=0; k<8; ++k)
-			message[21+k] = heftyHash[k];
+			message[BLOCKSIZE/4+k] = heftyHash[k];
 		
 		uint32_t g[32];
 #pragma unroll 32
@@ -764,21 +764,27 @@ __host__ void groestl512_cpu_init(int thr_id, int threads)
 	cudaMalloc(&d_hash4output[thr_id], 16 * sizeof(uint32_t) * threads);
 }
 
-__host__ void groestl512_cpu_setBlock(void *data)
-	// data muss 84-Byte haben!
+static int BLOCKSIZE = 84;
+
+__host__ void groestl512_cpu_setBlock(void *data, int len)
+	// data muss 80/84-Byte haben!
 	// heftyHash hat 32-Byte
 {
 	// Nachricht expandieren und setzen
 	uint32_t msgBlock[32];
 
 	memset(msgBlock, 0, sizeof(uint32_t) * 32);
-	memcpy(&msgBlock[0], data, 84);
+	memcpy(&msgBlock[0], data, len);
 
 	// Erweitere die Nachricht auf den Nachrichtenblock (padding)
-	// Unsere Nachricht hat 116 Byte
-	msgBlock[29] = 0x80;
-	msgBlock[31] = 0x01000000;
-
+	// Unsere Nachricht hat 112/116 Byte
+	if (len == 84) {
+		msgBlock[29] = 0x80;
+		msgBlock[31] = 0x01000000;
+	} else if (len == 80) {
+		msgBlock[28] = 0x80;
+		msgBlock[31] = 0x01000000;
+	}
 	// groestl512 braucht hierfür keinen CPU-Code (die einzige Runde wird
 	// auf der GPU ausgeführt)
 
@@ -796,6 +802,8 @@ __host__ void groestl512_cpu_setBlock(void *data)
 	cudaMemcpyToSymbol(	groestl_gpu_msg,
 						msgBlock,
 						128);
+	
+	BLOCKSIZE = len;
 }
 
 __host__ void groestl512_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
@@ -818,5 +826,8 @@ __host__ void groestl512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
 
 //	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
-	groestl512_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);	
+	if (BLOCKSIZE == 84)
+		groestl512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);	
+	else if (BLOCKSIZE == 80)
+		groestl512_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);	
 }

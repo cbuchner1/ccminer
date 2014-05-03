@@ -18,13 +18,13 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
 			  cpu-miner.c util.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c hefty1.c scrypt.c sha2.c \
 			  sph/sph_blake.h sph/sph_groestl.h sph/sph_jh.h sph/sph_keccak.h sph/sph_skein.h sph/sph_types.h \
-			  heavy.cu \
-			  cuda_blake512.cu cuda_blake512.h \
-			  cuda_combine.cu cuda_combine.h \
-			  cuda_groestl512.cu cuda_groestl512.h \
-			  cuda_hefty1.cu cuda_hefty1.h \
-			  cuda_keccak512.cu cuda_keccak512.h \
-			  cuda_sha256.cu cuda_sha256.h \
+			  heavy/heavy.cu \
+			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
+			  heavy/cuda_combine.cu heavy/cuda_combine.h \
+			  heavy/cuda_groestl512.cu heavy/cuda_groestl512.h \
+			  heavy/cuda_hefty1.cu heavy/cuda_hefty1.h \
+			  heavy/cuda_keccak512.cu heavy/cuda_keccak512.h \
+			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
 			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \

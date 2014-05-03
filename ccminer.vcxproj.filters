@@ -46,6 +46,12 @@
     <Filter Include="Header Files\sph">
       <UniqueIdentifier>{7c2a98c6-064c-4a69-b803-d6f6ff5edd0b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\heavy">
+      <UniqueIdentifier>{c3222908-22ba-4586-a637-6363f455b06d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CUDA\heavy">
+      <UniqueIdentifier>{3281db48-f394-49ea-a1ef-6ebd09828d50}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -167,24 +173,6 @@
     <ClInclude Include="hefty1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_sha256.h">
-      <Filter>Header Files\CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_hefty1.h">
-      <Filter>Header Files\CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_keccak512.h">
-      <Filter>Header Files\CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_combine.h">
-      <Filter>Header Files\CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_blake512.h">
-      <Filter>Header Files\CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="cuda_groestl512.h">
-      <Filter>Header Files\CUDA</Filter>
-    </ClInclude>
     <ClInclude Include="uint256.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -230,29 +218,29 @@
     <ClInclude Include="sph\sph_types.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
+    <ClInclude Include="heavy\cuda_blake512.h">
+      <Filter>Header Files\CUDA\heavy</Filter>
+    </ClInclude>
+    <ClInclude Include="heavy\cuda_combine.h">
+      <Filter>Header Files\CUDA\heavy</Filter>
+    </ClInclude>
+    <ClInclude Include="heavy\cuda_groestl512.h">
+      <Filter>Header Files\CUDA\heavy</Filter>
+    </ClInclude>
+    <ClInclude Include="heavy\cuda_hefty1.h">
+      <Filter>Header Files\CUDA\heavy</Filter>
+    </ClInclude>
+    <ClInclude Include="heavy\cuda_keccak512.h">
+      <Filter>Header Files\CUDA\heavy</Filter>
+    </ClInclude>
+    <ClInclude Include="heavy\cuda_sha256.h">
+      <Filter>Header Files\CUDA\heavy</Filter>
+    </ClInclude>
+    <ClInclude Include="cuda_helper.h">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="cuda_sha256.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_blake512.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_groestl512.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_hefty1.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_keccak512.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_combine.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="heavy.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
     <CudaCompile Include="cuda_fugue256.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
@@ -285,6 +273,27 @@
     </CudaCompile>
     <CudaCompile Include="quark\cuda_skein512.cu">
       <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\cuda_blake512.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\cuda_combine.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\cuda_groestl512.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\cuda_hefty1.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\cuda_keccak512.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\cuda_sha256.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\heavy.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

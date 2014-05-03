@@ -47,7 +47,7 @@ uint32_t sha256_cpu_constantTable[] = {
 #define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 
 // Die Hash-Funktion
-__global__ void sha256_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -82,11 +82,10 @@ __global__ void sha256_gpu_hash(int threads, uint32_t startNounce, void *outputH
 		uint32_t offset = 8 * (blockDim.x * blockIdx.x + threadIdx.x);
 #pragma unroll 8
 		for(int k=0;k<8;k++)
-			W1[5+k] = heftyHashes[offset + k];
-
+			W1[((BLOCKSIZE-64)/4)+k] = heftyHashes[offset + k];
 
 #pragma unroll 8
-		for (int i=5; i <5+8; ++i) W1[i] = SWAB32(W1[i]); // die Hefty1 Hashes brauchen eine Drehung ;)
+		for (int i=((BLOCKSIZE-64)/4); i < ((BLOCKSIZE-64)/4)+8; ++i) W1[i] = SWAB32(W1[i]); // die Hefty1 Hashes brauchen eine Drehung ;)
 		W1[3] = SWAB32(nounce);
 
 // Progress W1
@@ -178,18 +177,26 @@ __host__ void sha256_cpu_init(int thr_id, int threads)
 	cudaMalloc(&d_hash2output[thr_id], 8 * sizeof(uint32_t) * threads);
 }
 
-__host__ void sha256_cpu_setBlock(void *data)
-	// data muss 84-Byte haben!
+static int BLOCKSIZE = 84;
+
+__host__ void sha256_cpu_setBlock(void *data, int len)
+	// data muss 80/84-Byte haben!
 	// heftyHash hat 32-Byte
 {
 	// Nachricht expandieren und setzen
 	uint32_t msgBlock[32];
 
 	memset(msgBlock, 0, sizeof(uint32_t) * 32);
-	memcpy(&msgBlock[0], data, 84);
-	memset(&msgBlock[21], 0, 32); // vorläufig  Nullen anstatt der Hefty1 Hashes einfüllen
-	msgBlock[29] |= 0x80;
-	msgBlock[31] = 928; // bitlen
+	memcpy(&msgBlock[0], data, len);
+	if (len == 84) {
+		memset(&msgBlock[21], 0, 32); // vorläufig  Nullen anstatt der Hefty1 Hashes einfüllen
+		msgBlock[29] |= 0x80;
+		msgBlock[31] = 928; // bitlen
+	} else if (len == 80) {
+		memset(&msgBlock[20], 0, 32); // vorläufig  Nullen anstatt der Hefty1 Hashes einfüllen
+		msgBlock[28] |= 0x80;
+		msgBlock[31] = 896; // bitlen
+	}
 	
 	for(int i=0;i<31;i++) // Byteorder drehen
 		msgBlock[i] = SWAB32(msgBlock[i]);
@@ -209,7 +216,7 @@ __host__ void sha256_cpu_setBlock(void *data)
 	uint32_t hash[8];
 
 	// pre
-    for (int k=0; k < 8; k++)
+	for (int k=0; k < 8; k++)
 	{
 		regs[k] = sha256_cpu_hashTable[k];
 		hash[k] = regs[k];
@@ -242,6 +249,8 @@ __host__ void sha256_cpu_setBlock(void *data)
 	cudaMemcpyToSymbol(	sha256_gpu_blockHeader,
 						&msgBlock[16],
 						64);
+
+	BLOCKSIZE = len;
 }
 
 __host__ void sha256_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
@@ -263,6 +272,9 @@ __host__ void sha256_cpu_hash(int thr_id, int threads, int startNounce)
 	size_t shared_size = 0;
 
 //	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
-
-	sha256_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
+	if (BLOCKSIZE == 84)
+		sha256_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
+	else if (BLOCKSIZE == 80) {
+		sha256_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
+	}
 }

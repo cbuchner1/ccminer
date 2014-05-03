@@ -205,7 +205,7 @@ extern int scanhash_scrypt(int thr_id, uint32_t *pdata,
 
 extern int scanhash_heavy(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done, uint32_t maxvote);
+	unsigned long *hashes_done, uint32_t maxvote, int blocklen);
 
 extern int scanhash_fugue256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,

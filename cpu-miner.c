@@ -47,6 +47,7 @@
 #define PROGRAM_NAME		"minerd"
 #define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
+#define MNR_BLKHDR_SZ 80
 
 // from heavy.cu
 #ifdef __cplusplus
@@ -121,6 +122,7 @@ struct workio_cmd {
 
 typedef enum {
 	ALGO_HEAVY,		/* Heavycoin hash */
+	ALGO_MJOLLNIR,		/* Mjollnir hash */
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
 	ALGO_MYR_GR,
@@ -129,6 +131,7 @@ typedef enum {
 
 static const char *algo_names[] = {
 	"heavy",
+	"mjollnir",
 	"fugue256",
 	"groestl",
 	"myr-gr",
@@ -154,6 +157,7 @@ static json_t *opt_config;
 static const bool opt_time = true;
 static sha256_algos opt_algo = ALGO_HEAVY;
 static int opt_n_threads = 0;
+static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 static int num_processors;
@@ -195,6 +199,7 @@ Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
                         fugue256  Fuguecoin hash\n\
                         heavy     Heavycoin hash\n\
+                        mjollnir  Mjollnircoin hash\n\
                         groestl   Groestlcoin hash\n\
                         myr-gr    Myriad-Groestl hash\n\
                         jackpot   Jackpot hash\n\
@@ -244,7 +249,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:mv:";
+	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -277,6 +282,7 @@ static struct option const options[] = {
 	{ "userpass", 1, NULL, 'O' },
 	{ "version", 0, NULL, 'V' },
 	{ "devices", 1, NULL, 'd' },
+	{ "diff", 1, NULL, 'f' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -684,7 +690,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
 	/* Generate merkle root */
-	if (opt_algo == ALGO_HEAVY)
+	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
 	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
@@ -694,7 +700,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
-		if (opt_algo == ALGO_HEAVY)
+		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 			heavycoin_hash(merkle_root, merkle_root, 64);
 		else
 			sha256d(merkle_root, merkle_root, 64);
@@ -738,11 +744,11 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	}
 
 	if (opt_algo == ALGO_JACKPOT)
-		diff_to_target(work->target, sctx->job.diff / 65536.0);
+		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
-		diff_to_target(work->target, sctx->job.diff / 256.0);
+		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 	else
-		diff_to_target(work->target, sctx->job.diff);
+		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }
 
 static void *miner_thread(void *userdata)
@@ -836,7 +842,12 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_HEAVY:
 			rc = scanhash_heavy(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done, work.maxvote);
+			                      max_nonce, &hashes_done, work.maxvote, HEAVYCOIN_BLKHDR_SZ);
+			break;
+
+		case ALGO_MJOLLNIR:
+			rc = scanhash_heavy(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done, 0, MNR_BLKHDR_SZ);
 			break;
 
 		case ALGO_FUGUE256:
@@ -1112,6 +1123,7 @@ static void parse_arg (int key, char *arg)
 {
 	char *p;
 	int v, i;
+	double d;
 
 	switch(key) {
 	case 'a':
@@ -1309,6 +1321,12 @@ static void parse_arg (int key, char *arg)
 			}
 		}
 		break;
+	case 'f': // CH - Divisor for Difficulty
+		d = atof(arg);
+		if (d == 0)	/* sanity check */
+			show_usage_and_exit(1);
+		opt_difficulty = d;
+		break;
 	case 'V':
 		show_version_and_exit();
 	case 'h':
@@ -1404,7 +1422,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.7"
+#define PROGRAM_VERSION "0.8"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;

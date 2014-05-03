@@ -16,9 +16,6 @@ extern int device_map[8];
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-// aus driver.c
-extern "C" void set_device(int device);
-
 // Folgende Definitionen später durch header ersetzen
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;

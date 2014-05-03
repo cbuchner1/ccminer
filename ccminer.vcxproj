@@ -264,14 +264,15 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="compat\sys\time.h" />
     <ClInclude Include="compat\unistd.h" />
     <ClInclude Include="cpuminer-config.h" />
-    <ClInclude Include="cuda_blake512.h" />
-    <ClInclude Include="cuda_combine.h" />
-    <ClInclude Include="cuda_groestl512.h" />
     <ClInclude Include="cuda_groestlcoin.h" />
-    <ClInclude Include="cuda_hefty1.h" />
-    <ClInclude Include="cuda_keccak512.h" />
-    <ClInclude Include="cuda_sha256.h" />
+    <ClInclude Include="cuda_helper.h" />
     <ClInclude Include="elist.h" />
+    <ClInclude Include="heavy\cuda_blake512.h" />
+    <ClInclude Include="heavy\cuda_combine.h" />
+    <ClInclude Include="heavy\cuda_groestl512.h" />
+    <ClInclude Include="heavy\cuda_hefty1.h" />
+    <ClInclude Include="heavy\cuda_keccak512.h" />
+    <ClInclude Include="heavy\cuda_sha256.h" />
     <ClInclude Include="hefty1.h" />
     <ClInclude Include="miner.h" />
     <ClInclude Include="sph\sph_blake.h" />
@@ -290,16 +291,16 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="uint256.h" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="cuda_blake512.cu" />
-    <CudaCompile Include="cuda_combine.cu" />
     <CudaCompile Include="cuda_fugue256.cu" />
-    <CudaCompile Include="cuda_groestl512.cu" />
     <CudaCompile Include="cuda_groestlcoin.cu" />
-    <CudaCompile Include="cuda_hefty1.cu" />
-    <CudaCompile Include="cuda_keccak512.cu" />
     <CudaCompile Include="cuda_myriadgroestl.cu" />
-    <CudaCompile Include="cuda_sha256.cu" />
-    <CudaCompile Include="heavy.cu" />
+    <CudaCompile Include="heavy\cuda_blake512.cu" />
+    <CudaCompile Include="heavy\cuda_combine.cu" />
+    <CudaCompile Include="heavy\cuda_groestl512.cu" />
+    <CudaCompile Include="heavy\cuda_hefty1.cu" />
+    <CudaCompile Include="heavy\cuda_keccak512.cu" />
+    <CudaCompile Include="heavy\cuda_sha256.cu" />
+    <CudaCompile Include="heavy\heavy.cu" />
     <CudaCompile Include="JHA\cuda_jha_compactionTest.cu" />
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu" />
     <CudaCompile Include="JHA\jackpotcoin.cu" />

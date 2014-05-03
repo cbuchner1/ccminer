@@ -12,9 +12,8 @@ If you find this tool useful and like to support its continued
    VTC donation address: VrjeFzMgvteCGarLw85KivBzmsiH9fqp4a
    MAX donation address: mHrhQP9EFArechWxTFJ97s9D3jvcCvEEnt
   DOGE donation address: DT9ghsGmez6ojVdEZgvaZbT2Z3TruXG6yP
- PANDA donation address: PvgtxJ2ZKaudRogCXfUMLXVaWUMcKQgRed
-   MRC donation address: 1Lxc4JPDpQRJB8BN4YwhmSQ3Rcu8gjj2Kd
    HVC donation address: HNN3PyyTMkDo4RkEjkWSGMwqia1yD8mwJN
+   GRS donation address: FmJKJAhvyHWPeEVeLQHefr2naqgWc9ABTM
 ***************************************************************
 
 >>> Introduction <<<
@@ -35,6 +34,7 @@ its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
                           heavy       use to mine Heavycoin
+                          mjollnir    use to mine Mjollnircoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
                           myr-gr      use to mine Myriad-Groestl
@@ -45,11 +45,12 @@ its command line interface and options.
                         Alternatively give string names of your card like
                         gtx780ti or gt640#2 (matching 2nd gt640 in the PC).
 
+  -f, --diff            Divide difficulty by this factor (std is 1) \n\
+  -v, --vote            Heavycoin block vote (default: 512)
   -o, --url=URL         URL of mining server (default: " DEF_RPC_URL ")
   -O, --userpass=U:P    username:password pair for mining server
   -u, --user=USERNAME   username for mining server
   -p, --pass=PASSWORD   password for mining server
-  -v, --vote		Heavycoin block vote (default: 512)
       --cert=FILE       certificate for mining server using SSL
   -x, --proxy=[PROTOCOL://]HOST[:PORT]  connect through a proxy
   -t, --threads=N       number of miner threads (default: number of nVidia GPUs in your system)
@@ -115,6 +116,13 @@ This code should be running on nVidia GPUs ranging from compute capability
 from your old clunkers.
 
 >>> RELEASE HISTORY <<<
+
+  May 3rd 2014    add the MjollnirCoin hash algorithm for the upcomin
+                  MjollnirCoin relaunch.
+
+                  Add the -f (--diff) option to adjust the difficulty
+                  e.g. for the erebor Dwarfpool myr-gr SaffronCoin pool.
+                  Use -f 256 there.
 
   May 1st 2014    adapt the Jackpot algorithms to changes made by the
                   coin developers. We keep our unique nVidia advantage
