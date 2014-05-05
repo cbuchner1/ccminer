@@ -326,7 +326,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         //cudaThreadSynchronize();
 
         // Hier ist die längste CPU Wartephase. Deshalb ein strategisches MyStreamSynchronize() hier.
-        MyStreamSynchronize(NULL, 0, thr_id);
+        MyStreamSynchronize(NULL, 1, thr_id);
 
         ////// Compaction
         devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*((uint64_t*)target2), d_hash2output[thr_id], 8, pdata[19]));
