@@ -1,5 +1,5 @@
 
-ccMiner release 0.7 (May 01th 2014) - "Jackpot II"
+ccMiner release 0.9 (May 06th 2014) - "Say Hi to Quark, Anime"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -14,6 +14,8 @@ If you find this tool useful and like to support its continued
   DOGE donation address: DT9ghsGmez6ojVdEZgvaZbT2Z3TruXG6yP
    HVC donation address: HNN3PyyTMkDo4RkEjkWSGMwqia1yD8mwJN
    GRS donation address: FmJKJAhvyHWPeEVeLQHefr2naqgWc9ABTM
+   JPC donation address: JYFBypVDkk583yKWY4M46TG5vXG8hfgD2U
+   MNC donation address: MShgNUSYwybEbXLvJUtdNg1a7rUeiNgooK
 ***************************************************************
 
 >>> Introduction <<<
@@ -39,6 +41,8 @@ its command line interface and options.
                           groestl     use to mine Groestlcoin
                           myr-gr      use to mine Myriad-Groestl
                           jackpot     use to mine Jackpotcoin
+                          quark       use to mine Quarkcoin
+                          anime       use to mine Animecoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!
@@ -116,6 +120,8 @@ This code should be running on nVidia GPUs ranging from compute capability
 from your old clunkers.
 
 >>> RELEASE HISTORY <<<
+
+  May 6th 2014    this adds the quark and animecoin algorithms.
 
   May 3rd 2014    add the MjollnirCoin hash algorithm for the upcomin
                   MjollnirCoin relaunch.

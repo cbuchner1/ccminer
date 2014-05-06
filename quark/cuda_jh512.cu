@@ -73,9 +73,11 @@ const unsigned char h_E8_bitslice_roundconstant[42][32]={
 /*swapping bits 8i||8i+1||8i+2||8i+3 with bits 8i+4||8i+5||8i+6||8i+7 of 32-bit x*/
 #define SWAP4(x)   (x) = ((((x) & 0x0f0f0f0fUL) << 4) | (((x) & 0xf0f0f0f0UL) >> 4));
 /*swapping bits 16i||16i+1||......||16i+7  with bits 16i+8||16i+9||......||16i+15 of 32-bit x*/
-#define SWAP8(x)   (x) = ((((x) & 0x00ff00ffUL) << 8) | (((x) & 0xff00ff00UL) >> 8));
+//#define SWAP8(x)   (x) = ((((x) & 0x00ff00ffUL) << 8) | (((x) & 0xff00ff00UL) >> 8));
+#define SWAP8(x) (x) = __byte_perm(x, x, 0x2301);
 /*swapping bits 32i||32i+1||......||32i+15 with bits 32i+16||32i+17||......||32i+31 of 32-bit x*/
-#define SWAP16(x)  (x) = ((((x) & 0x0000ffffUL) << 16) | (((x) & 0xffff0000UL) >> 16));
+//#define SWAP16(x)  (x) = ((((x) & 0x0000ffffUL) << 16) | (((x) & 0xffff0000UL) >> 16));
+#define SWAP16(x) (x) = __byte_perm(x, x, 0x1032);
 
 /*The MDS transform*/
 #define L(m0,m1,m2,m3,m4,m5,m6,m7) \
