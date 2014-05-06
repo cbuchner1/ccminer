@@ -14,15 +14,31 @@ If you find this tool useful and like to support its continued
   DOGE donation address: DT9ghsGmez6ojVdEZgvaZbT2Z3TruXG6yP
    HVC donation address: HNN3PyyTMkDo4RkEjkWSGMwqia1yD8mwJN
    GRS donation address: FmJKJAhvyHWPeEVeLQHefr2naqgWc9ABTM
+   MYR donation address: MNHM7Q7HVfGpKDJgVJrY8ofwvmeugNewyf
    JPC donation address: JYFBypVDkk583yKWY4M46TG5vXG8hfgD2U
+   SFR donation address: SR4b87aEnPfTs77bo9NnnaV21fiF6jQpAp
    MNC donation address: MShgNUSYwybEbXLvJUtdNg1a7rUeiNgooK
+   BTQ donation address: 13GFwLiZL2DaA9XeE733PNrQX5QYLFsonS
 ***************************************************************
 
 >>> Introduction <<<
 
 This is a CUDA accelerated mining application for use with
-HeavyCoin and FugueCoin. We did not take effort on usability,
-so please set your parameters carefuly.
+
+HeavyCoin & MjollnirCoin
+FugueCoin
+GroestlCoin & Myriad-Groestl
+JackpotCoin
+QuarkCoin family & AnimeCoin
+
+where some of these coins have a VERY NOTABLE nVidia advantage
+over competing AMD (OpenCL) implementations.
+
+X11 algo is being worked on. It will be released when we
+have achieved a nice nVidia advantage.
+
+We did not take a big effort on improving usability, so please set
+your parameters carefuly.
 
 THIS PROGRAMM IS PROVIDED "AS-IS", USE IT AT YOUR OWN RISK!
 
@@ -81,13 +97,13 @@ its command line interface and options.
 
 Example for Heavycoin Mining on heavycoinpool.com with a single gpu in your system
 
-ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 512
+ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 8
 
 
 
 Example for Heavycoin Mining on hvc.1gh.com with a dual gpu in your system
 
-ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 512
+ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 8
 
 
 
@@ -116,8 +132,9 @@ the server flag in the wallet's .conf file set to 1
 >>> Additional Notes <<<
 
 This code should be running on nVidia GPUs ranging from compute capability
-2.0 up to compute capability 3.5. Just don't expect any hashing miracles
-from your old clunkers.
+3.0 up to compute capability 3.5. Support for Compute 2.0 has been dropped
+so we can more efficiently implement new algorithms using the latest hardware
+features.
 
 >>> RELEASE HISTORY <<<
 
