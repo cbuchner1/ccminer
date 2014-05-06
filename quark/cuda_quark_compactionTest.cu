@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 // aus cpu-miner.c
-extern "C" int device_map[8];
+extern int device_map[8];
 
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];

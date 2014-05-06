@@ -295,5 +295,20 @@
     <CudaCompile Include="heavy\heavy.cu">
       <Filter>Source Files\CUDA\heavy</Filter>
     </CudaCompile>
+    <CudaCompile Include="quark\animecoin.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_bmw512.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_quark_compactionTest.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_quark_keccak512.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\quarkcoin.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
