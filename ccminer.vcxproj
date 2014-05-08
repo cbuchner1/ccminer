@@ -305,6 +305,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="cuda_nist5.cu">
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
+    </CudaCompile>
     <CudaCompile Include="heavy\cuda_blake512.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>

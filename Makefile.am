@@ -27,12 +27,13 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
 			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
+			  myriadgroestl.cpp cuda_myriadgroestl.cu \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
 			  JHA/cuda_jha_compactionTest.cu quark/cuda_quark_checkhash.cu \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
 			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu quark/quarkcoin.cu quark/animecoin.cu \
 			  quark/cuda_quark_compactionTest.cu \
-			  myriadgroestl.cpp cuda_myriadgroestl.cu
+			  cuda_nist5.cu
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@

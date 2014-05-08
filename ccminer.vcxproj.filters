@@ -310,5 +310,8 @@
     <CudaCompile Include="quark\quarkcoin.cu">
       <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
+    <CudaCompile Include="cuda_nist5.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
