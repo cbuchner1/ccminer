@@ -1,5 +1,5 @@
 
-ccMiner release 0.9 (May 06th 2014) - "Say Hi to Quark, Anime"
+ccMiner release 1.0 (May 10th 2014) - "Did anyone say X11?"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -59,6 +59,8 @@ its command line interface and options.
                           jackpot     use to mine Jackpotcoin
                           quark       use to mine Quarkcoin
                           anime       use to mine Animecoin
+                          nist5       use to mine TalkCoin
+                          x11         use to mine DarkCoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!
@@ -137,6 +139,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  May 10th 2014   added X11, but without the bells & whistles
+                  (no killer Groestl, SIMD hash quite slow still)
 
   May 6th 2014    this adds the quark and animecoin algorithms.
 

@@ -129,7 +129,8 @@ typedef enum {
 	ALGO_JACKPOT,
 	ALGO_QUARK,
 	ALGO_ANIME,
-	ALGO_NIST5
+	ALGO_NIST5,
+	ALGO_X11
 } sha256_algos;
 
 static const char *algo_names[] = {
@@ -141,7 +142,8 @@ static const char *algo_names[] = {
 	"jackpot",
 	"quark",
 	"anime",
-	"nist5"
+	"nist5",
+	"x11"
 };
 
 bool opt_debug = false;
@@ -212,6 +214,7 @@ Options:\n\
                         quark     Quark hash\n\
                         anime     Animecoin hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
+                        x11       X11 (DarkCoin) hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -901,6 +904,11 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_X11:
+			rc = scanhash_x11(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
 		default:
 			/* should never happen */
 			goto out;
@@ -1453,7 +1461,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.9"
+#define PROGRAM_VERSION "1.0"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;

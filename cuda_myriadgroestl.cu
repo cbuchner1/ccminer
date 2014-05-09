@@ -1,4 +1,4 @@
-// Auf Myriadcoin spezialisierte Version von Groestl inkl. Bitslice
+// Auf Myriadcoin spezialisierte Version von Groestl
 
 #include <cuda.h>
 #include "cuda_runtime.h"

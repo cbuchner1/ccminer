@@ -52,6 +52,9 @@
     <Filter Include="Header Files\CUDA\heavy">
       <UniqueIdentifier>{3281db48-f394-49ea-a1ef-6ebd09828d50}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\x11">
+      <UniqueIdentifier>{dd751f2d-bfd6-42c1-8f9b-cbe94e539353}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -312,6 +315,27 @@
     </CudaCompile>
     <CudaCompile Include="cuda_nist5.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_aes.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_cubehash512.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_echo.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_luffa512.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_shavite512.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_simd512.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\x11.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>
