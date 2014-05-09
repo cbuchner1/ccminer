@@ -36,7 +36,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  cuda_nist5.cu \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/shavite.c sph/simd.c \
 			  x11/x11.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
-			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu \
+			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
