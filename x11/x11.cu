@@ -168,7 +168,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	const uint32_t Htarg = ptarget[7];
 
-	const int throughput = 256*256; // 100;
+	const int throughput = 256*256*16;
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])

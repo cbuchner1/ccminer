@@ -44,79 +44,6 @@ const int h_FFT[256] =
 -93, -125, 125, -86, 86, 117, -117, -91, 91, 42, -42, 87, -87, -117, 117, 102, -102
 };
 
-__constant__ int c_P4[32][4];
-static const int h_P4[32][4] = {
-{ 2, 34, 18, 50 },
-{ 6, 38, 22, 54 },
-{ 0, 32, 16, 48 },
-{ 4, 36, 20, 52 },
-{ 14, 46, 30, 62 },
-{ 10, 42, 26, 58 },
-{ 12, 44, 28, 60 },
-{ 8, 40, 24, 56 },
-{ 15, 47, 31, 63 },
-{ 13, 45, 29, 61 },
-{ 3, 35, 19, 51 },
-{ 1, 33, 17, 49 },
-{ 9, 41, 25, 57 },
-{ 11, 43, 27, 59 },
-{ 5, 37, 21, 53 },
-{ 7, 39, 23, 55 },
-{ 8, 40, 24, 56 },
-{ 4, 36, 20, 52 },
-{ 14, 46, 30, 62 },
-{ 2, 34, 18, 50 },
-{ 6, 38, 22, 54 },
-{ 10, 42, 26, 58 },
-{ 0, 32, 16, 48 },
-{ 12, 44, 28, 60 },
-{ 70, 102, 86, 118 },
-{ 64, 96, 80, 112 },
-{ 72, 104, 88, 120 },
-{ 78, 110, 94, 126 },
-{ 76, 108, 92, 124 },
-{ 74, 106, 90, 122 },
-{ 66, 98, 82, 114 },
-{ 68, 100, 84, 116 }
-};
-
-__constant__ int c_Q4[32][4];
-static const int h_Q4[32][4] = {
-{ 66, 98, 82, 114 },
-{ 70, 102, 86, 118 },
-{ 64, 96, 80, 112 },
-{ 68, 100, 84, 116 },
-{ 78, 110, 94, 126 },
-{ 74, 106, 90, 122 },
-{ 76, 108, 92, 124 },
-{ 72, 104, 88, 120 },
-{ 79, 111, 95, 127 },
-{ 77, 109, 93, 125 },
-{ 67, 99, 83, 115 },
-{ 65, 97, 81, 113 },
-{ 73, 105, 89, 121 },
-{ 75, 107, 91, 123 },
-{ 69, 101, 85, 117 },
-{ 71, 103, 87, 119 },
-{ 9, 41, 25, 57 },
-{ 5, 37, 21, 53 },
-{ 15, 47, 31, 63 },
-{ 3, 35, 19, 51 },
-{ 7, 39, 23, 55 },
-{ 11, 43, 27, 59 },
-{ 1, 33, 17, 49 },
-{ 13, 45, 29, 61 },
-{ 71, 103, 87, 119 },
-{ 65, 97, 81, 113 },
-{ 73, 105, 89, 121 },
-{ 79, 111, 95, 127 },
-{ 77, 109, 93, 125 },
-{ 75, 107, 91, 123 },
-{ 67, 99, 83, 115 },
-{ 69, 101, 85, 117 }
-};
-
-
 __constant__ int c_P8[32][8];
 static const int h_P8[32][8] = {
 { 2, 66, 34, 98, 18, 82, 50, 114 },
@@ -188,49 +115,6 @@ static const int h_Q8[32][8] = {
 { 131, 195, 163, 227, 147, 211, 179, 243 },
 { 133, 197, 165, 229, 149, 213, 181, 245 },
 };
-
-  __constant__ int c_FFT64_8_8_Twiddle[64];
-  static const int h_FFT64_8_8_Twiddle[64] = {
-    1, 1, 1, 1, 1, 1, 1, 1,
-    1, 2, 4, 8, 16, 32, 64, 128,
-    1, 60, 2, 120, 4, -17, 8, -34,
-    1, 120, 8, -68, 64, -30, -2, 17,
-    1, 46, 60, -67, 2, 92, 120, 123,
-    1, 92, -17, -22, 32, 117, -30, 67,
-    1, -67, 120, -73, 8, -22, -68, -70,
-    1, 123, -34, -70, 128, 67, 17, 35,
-  };
-
- __constant__ int c_FFT128_2_64_Twiddle[64];
- static const int h_FFT128_2_64_Twiddle[64] = {
-    1, -118, 46, -31, 60, 116, -67, -61,
-    2, 21, 92, -62, 120, -25, 123, -122,
-    4, 42, -73, -124, -17, -50, -11, 13,
-    8, 84, 111, 9, -34, -100, -22, 26,
-   16, -89, -35, 18, -68, 57, -44, 52,
-   32, 79, -70, 36, 121, 114, -88, 104,
-   64, -99, 117, 72, -15, -29, 81, -49,
-  128, 59, -23, -113, -30, -58, -95, -98
-  };
-
-__constant__ int c_FFT128_16_8_Twiddle[128];
-static const int h_FFT128_16_8_Twiddle[128] = {
-1, 1, 1, 1, 1, 1, 1, 1,
-1, 2, 4, 8, 16, 32, 64, 128,
-1, 60, 2, 120, 4, -17, 8, -34,
-1, 120, 8, -68, 64, -30, -2, 17,
-1, 46, 60, -67, 2, 92, 120, 123,
-1, 92, -17, -22, 32, 117, -30, 67,
-1, -67, 120, -73, 8, -22, -68, -70,
-1, 123, -34, -70, 128, 67, 17, 35,
-1, -118, 46, -31, 60, 116, -67, -61,
-1, 21, -73, 9, -68, 114, 81, -98,
-1, 116, 92, -122, -17, 84, -22, 18,
-1, -25, 111, 52, -15, 118, -123, -9,
-1, -31, -67, 21, 120, -122, -73, -50,
-1, -62, -11, -89, 121, -49, -46, 25,
-1, -61, 123, -50, -34, 18, -70, -99,
-1, -122, -22, 114, -30, 62, -111, -79 };
 
  __constant__ int c_FFT128_8_16_Twiddle[128];
  static const int h_FFT128_8_16_Twiddle[128] = {
@@ -309,7 +193,7 @@ __device__ __forceinline__ void STEP8_MAJ(const uint32_t *w, const int i, const 
     }
 }
 
-__device__ __forceinline__ void Round8(uint32_t A[128], const int y[128], int i,
+__device__ __forceinline__ void Round8(uint32_t A[32], const int y[256], int i,
            int r, int s, int t, int u) {
   int code = i<2? 185: 233;
   uint32_t w[8][8];
@@ -464,32 +348,36 @@ X(j) = (u-v) << n; \
     DO_REDUCE(15);
 
     BUTTERFLY( 0, 4, 0);
-    BUTTERFLY( 8, 12, 0);
     BUTTERFLY( 1, 5, 2);
-    BUTTERFLY( 9, 13, 2);
     BUTTERFLY( 2, 6, 4);
-    BUTTERFLY(10, 14, 4);
     BUTTERFLY( 3, 7, 6);
+
+    BUTTERFLY( 8, 12, 0);
+    BUTTERFLY( 9, 13, 2);
+    BUTTERFLY(10, 14, 4);
     BUTTERFLY(11, 15, 6);
 
     DO_REDUCE(5);
     DO_REDUCE(7);
-    DO_REDUCE(13);
+    DO_REDUCE(13); 
     DO_REDUCE(15);
     
     BUTTERFLY( 0, 2, 0);
+    BUTTERFLY( 1, 3, 4);
     BUTTERFLY( 4, 6, 0);
+    BUTTERFLY( 5, 7, 4);
+
     BUTTERFLY( 8, 10, 0);
     BUTTERFLY(12, 14, 0);
-    BUTTERFLY( 1, 3, 4);
-    BUTTERFLY( 5, 7, 4);
     BUTTERFLY( 9, 11, 4);
     BUTTERFLY(13, 15, 4);
+
 
     BUTTERFLY( 0, 1, 0);
     BUTTERFLY( 2, 3, 0);
     BUTTERFLY( 4, 5, 0);
     BUTTERFLY( 6, 7, 0);
+
     BUTTERFLY( 8, 9, 0);
     BUTTERFLY(10, 11, 0);
     BUTTERFLY(12, 13, 0);
@@ -518,65 +406,6 @@ X(j) = (u-v) << n; \
 #undef BUTTERFLY
 }
 
-__device__ __forceinline__ void FFT_64(int *y) {
-  
-  /*
-   * FFT_64 using w=46 as 64th root of unity
-   * decimation in frequency (DIF) radix-8 NTT.
-   * Output data is in revbin_permuted order.
-   */
-
-  int i;
- 
-  /*
-   * Begin with 8 parallels DIF FFT_8.
-   */
-#pragma unroll 8
-  for (i=0; i<8; i++) {
-    FFT_8(y+i,8);
-  }
-
-  /*
-   * Multiply by twiddle factors
-   */
-#pragma unroll 56
-  for (i=8; i<64; i++)
-    if (i & 7) y[i] = REDUCE(y[i]*c_FFT64_8_8_Twiddle[i]);
-
-  /*
-   * Finish with 8 paralles DIF FFT_8.
-   */
-#pragma unroll 8
-  for (i=0; i<8; i++) {
-    FFT_8(y+8*i,1);
-  }
-
-}
-
-__device__ __forceinline__ void FFT_128_halfzero(int *y) {
-
-  /*
-   * FFT_128 using w=139 as 128th root of unity.
-   * Decimation in frequency (DIF) NTT.
-   * Output data is in revbin_permuted order.
-   * In place.
-   */
-
-  const int tmp = y[63];
-  int i;
- 
-#pragma unroll 63
-  for (i=0; i<63; i++)
-    y[64+i] = REDUCE(y[i] * c_FFT128_2_64_Twiddle[i]);
-
-  /* handle X^127 */
-  y[63] = REDUCE(tmp + 1);
-  y[127] = REDUCE((tmp - 1) * c_FFT128_2_64_Twiddle[63]);
-
-  FFT_64(y);
-  FFT_64(y+64);
-}
-
 __device__ __forceinline__ void FFT_128_full(int *y) {
   int i;
  
@@ -596,7 +425,7 @@ __device__ __forceinline__ void FFT_128_full(int *y) {
 }
 
 
-__device__ __forceinline__ void FFT_256_halfzero(int *y) {
+__device__ __forceinline__ void FFT_256_halfzero(int y[256]) {
 
    int i;
 
@@ -621,7 +450,7 @@ __device__ __forceinline__ void FFT_256_halfzero(int *y) {
 }
 
 
-__device__ __forceinline__ void SIMD_Compress(uint32_t A[128], const int *expanded, const uint32_t *M) {
+__device__ __forceinline__ void SIMD_Compress(uint32_t A[32], const int *expanded, const uint32_t *M) {
   
   uint32_t IV[4][8];
   int i;
@@ -666,7 +495,7 @@ __device__ __forceinline__ void SIMD_Compress(uint32_t A[128], const int *expand
 
 __device__ __forceinline__ void SIMDHash(const uint32_t *data, uint32_t *hashval) {
 
-  uint32_t A[128];
+  uint32_t A[32];
   int i;
 
   uint32_t buffer[16];
@@ -699,7 +528,7 @@ __device__ __forceinline__ void SIMDHash(const uint32_t *data, uint32_t *hashval
   }
 
   /* Compression Function */
-  SIMD_Compress(A, expanded, buffer);
+   SIMD_Compress(A, expanded, buffer);
 
   /* Padding Round with known input (hence the FFT can be precomputed) */
   buffer[0] = 512;
@@ -735,13 +564,8 @@ __host__ void x11_simd512_cpu_init(int thr_id, int threads)
 {
     cudaMemcpyToSymbol( c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol( c_FFT, h_FFT, sizeof(h_FFT), 0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol( c_P4, h_P4, sizeof(h_P4), 0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol( c_Q4, h_Q4, sizeof(h_Q4), 0, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol( c_P8, h_P8, sizeof(h_P8), 0, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol( c_Q8, h_Q8, sizeof(h_Q8), 0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol( c_FFT64_8_8_Twiddle, h_FFT64_8_8_Twiddle, sizeof(h_FFT64_8_8_Twiddle), 0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol( c_FFT128_2_64_Twiddle, h_FFT128_2_64_Twiddle, sizeof(h_FFT128_2_64_Twiddle), 0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol( c_FFT128_16_8_Twiddle, h_FFT128_16_8_Twiddle, sizeof(h_FFT128_16_8_Twiddle), 0, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol( c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol( c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
 }
