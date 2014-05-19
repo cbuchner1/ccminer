@@ -164,6 +164,30 @@ extern "C" int cuda_num_devices()
     return GPU_N;
 }
 
+// Gerätenamen holen
+extern char *device_name[8];
+extern int device_map[8];
+
+extern "C" void cuda_devicenames()
+{
+    cudaError_t err;
+    int GPU_N;
+    err = cudaGetDeviceCount(&GPU_N);
+    if (err != cudaSuccess)
+    {
+        applog(LOG_ERR, "Unable to query number of CUDA devices! Is an nVidia driver installed?");
+        exit(1);
+    }
+
+    for (int i=0; i < GPU_N; i++)
+    {
+        cudaDeviceProp props;
+        cudaGetDeviceProperties(&props, device_map[i]);
+
+        device_name[i] = strdup(props.name);
+    }
+}
+
 static bool substringsearch(const char *haystack, const char *needle, int &match)
 {
     int hlen = strlen(haystack);
