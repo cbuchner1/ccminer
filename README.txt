@@ -1,5 +1,5 @@
 
-ccMiner release 0.7 (May 01th 2014) - "Jackpot II"
+ccMiner release 1.0 (May 10th 2014) - "Did anyone say X11?"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -12,16 +12,33 @@ If you find this tool useful and like to support its continued
    VTC donation address: VrjeFzMgvteCGarLw85KivBzmsiH9fqp4a
    MAX donation address: mHrhQP9EFArechWxTFJ97s9D3jvcCvEEnt
   DOGE donation address: DT9ghsGmez6ojVdEZgvaZbT2Z3TruXG6yP
- PANDA donation address: PvgtxJ2ZKaudRogCXfUMLXVaWUMcKQgRed
-   MRC donation address: 1Lxc4JPDpQRJB8BN4YwhmSQ3Rcu8gjj2Kd
    HVC donation address: HNN3PyyTMkDo4RkEjkWSGMwqia1yD8mwJN
+   GRS donation address: FmJKJAhvyHWPeEVeLQHefr2naqgWc9ABTM
+   MYR donation address: MNHM7Q7HVfGpKDJgVJrY8ofwvmeugNewyf
+   JPC donation address: JYFBypVDkk583yKWY4M46TG5vXG8hfgD2U
+   SFR donation address: SR4b87aEnPfTs77bo9NnnaV21fiF6jQpAp
+   MNC donation address: MShgNUSYwybEbXLvJUtdNg1a7rUeiNgooK
+   BTQ donation address: 13GFwLiZL2DaA9XeE733PNrQX5QYLFsonS
 ***************************************************************
 
 >>> Introduction <<<
 
 This is a CUDA accelerated mining application for use with
-HeavyCoin and FugueCoin. We did not take effort on usability,
-so please set your parameters carefuly.
+
+HeavyCoin & MjollnirCoin
+FugueCoin
+GroestlCoin & Myriad-Groestl
+JackpotCoin
+QuarkCoin family & AnimeCoin
+
+where some of these coins have a VERY NOTABLE nVidia advantage
+over competing AMD (OpenCL) implementations.
+
+X11 algo is being worked on. It will be released when we
+have achieved a nice nVidia advantage.
+
+We did not take a big effort on improving usability, so please set
+your parameters carefuly.
 
 THIS PROGRAMM IS PROVIDED "AS-IS", USE IT AT YOUR OWN RISK!
 
@@ -35,21 +52,27 @@ its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
                           heavy       use to mine Heavycoin
+                          mjollnir    use to mine Mjollnircoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
                           myr-gr      use to mine Myriad-Groestl
                           jackpot     use to mine Jackpotcoin
+                          quark       use to mine Quarkcoin
+                          anime       use to mine Animecoin
+                          nist5       use to mine TalkCoin
+                          x11         use to mine DarkCoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!
                         Alternatively give string names of your card like
                         gtx780ti or gt640#2 (matching 2nd gt640 in the PC).
 
+  -f, --diff            Divide difficulty by this factor (std is 1) \n\
+  -v, --vote            Heavycoin block vote (default: 512)
   -o, --url=URL         URL of mining server (default: " DEF_RPC_URL ")
   -O, --userpass=U:P    username:password pair for mining server
   -u, --user=USERNAME   username for mining server
   -p, --pass=PASSWORD   password for mining server
-  -v, --vote		Heavycoin block vote (default: 512)
       --cert=FILE       certificate for mining server using SSL
   -x, --proxy=[PROTOCOL://]HOST[:PORT]  connect through a proxy
   -t, --threads=N       number of miner threads (default: number of nVidia GPUs in your system)
@@ -76,13 +99,13 @@ its command line interface and options.
 
 Example for Heavycoin Mining on heavycoinpool.com with a single gpu in your system
 
-ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 512
+ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 8
 
 
 
 Example for Heavycoin Mining on hvc.1gh.com with a dual gpu in your system
 
-ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 512
+ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 8
 
 
 
@@ -111,10 +134,23 @@ the server flag in the wallet's .conf file set to 1
 >>> Additional Notes <<<
 
 This code should be running on nVidia GPUs ranging from compute capability
-2.0 up to compute capability 3.5. Just don't expect any hashing miracles
-from your old clunkers.
+3.0 up to compute capability 3.5. Support for Compute 2.0 has been dropped
+so we can more efficiently implement new algorithms using the latest hardware
+features.
 
 >>> RELEASE HISTORY <<<
+
+  May 10th 2014   added X11, but without the bells & whistles
+                  (no killer Groestl, SIMD hash quite slow still)
+
+  May 6th 2014    this adds the quark and animecoin algorithms.
+
+  May 3rd 2014    add the MjollnirCoin hash algorithm for the upcomin
+                  MjollnirCoin relaunch.
+
+                  Add the -f (--diff) option to adjust the difficulty
+                  e.g. for the erebor Dwarfpool myr-gr SaffronCoin pool.
+                  Use -f 256 there.
 
   May 1st 2014    adapt the Jackpot algorithms to changes made by the
                   coin developers. We keep our unique nVidia advantage

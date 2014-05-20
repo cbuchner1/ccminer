@@ -47,6 +47,7 @@
 #define PROGRAM_NAME		"minerd"
 #define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
+#define MNR_BLKHDR_SZ 80
 
 // from heavy.cu
 #ifdef __cplusplus
@@ -54,6 +55,7 @@ extern "C"
 {
 #endif
 int cuda_num_devices();
+void cuda_devicenames();
 int cuda_finddevice(char *name);
 #ifdef __cplusplus
 }
@@ -121,18 +123,28 @@ struct workio_cmd {
 
 typedef enum {
 	ALGO_HEAVY,		/* Heavycoin hash */
+	ALGO_MJOLLNIR,		/* Mjollnir hash */
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
 	ALGO_MYR_GR,
-	ALGO_JACKPOT
+	ALGO_JACKPOT,
+	ALGO_QUARK,
+	ALGO_ANIME,
+	ALGO_NIST5,
+	ALGO_X11
 } sha256_algos;
 
 static const char *algo_names[] = {
 	"heavy",
+	"mjollnir",
 	"fugue256",
 	"groestl",
 	"myr-gr",
-	"jackpot"
+	"jackpot",
+	"quark",
+	"anime",
+	"nist5",
+	"x11"
 };
 
 bool opt_debug = false;
@@ -154,10 +166,12 @@ static json_t *opt_config;
 static const bool opt_time = true;
 static sha256_algos opt_algo = ALGO_HEAVY;
 static int opt_n_threads = 0;
+static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 static int num_processors;
 int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
+char *device_name[8]; // CB
 static char *rpc_url;
 static char *rpc_userpass;
 static char *rpc_user, *rpc_pass;
@@ -195,13 +209,19 @@ Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
                         fugue256  Fuguecoin hash\n\
                         heavy     Heavycoin hash\n\
+                        mjollnir  Mjollnircoin hash\n\
                         groestl   Groestlcoin hash\n\
                         myr-gr    Myriad-Groestl hash\n\
                         jackpot   Jackpot hash\n\
+                        quark     Quark hash\n\
+                        anime     Animecoin hash\n\
+                        nist5     NIST5 (TalkCoin) hash\n\
+                        x11       X11 (DarkCoin) hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
                         (matching 2nd gt640 in the PC)\n\
+  -f, --diff            Divide difficulty by this factor (std is 1) \n\
   -v, --vote=VOTE       block reward vote (for HeavyCoin)\n\
   -m, --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
   -o, --url=URL         URL of mining server\n\
@@ -244,7 +264,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:mv:";
+	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -277,6 +297,7 @@ static struct option const options[] = {
 	{ "userpass", 1, NULL, 'O' },
 	{ "version", 0, NULL, 'V' },
 	{ "devices", 1, NULL, 'd' },
+	{ "diff", 1, NULL, 'f' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -420,7 +441,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		/* build hex string */
 
-		if (opt_algo != ALGO_HEAVY) {
+		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
 			for (i = 0; i < ARRAY_SIZE(work->data); i++)
 				le32enc(work->data + i, work->data[i]);
 			}
@@ -684,7 +705,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
 	/* Generate merkle root */
-	if (opt_algo == ALGO_HEAVY)
+	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
 	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
@@ -694,7 +715,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
-		if (opt_algo == ALGO_HEAVY)
+		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 			heavycoin_hash(merkle_root, merkle_root, 64);
 		else
 			sha256d(merkle_root, merkle_root, 64);
@@ -712,8 +733,14 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 	work->data[17] = le32dec(sctx->job.ntime);
 	work->data[18] = le32dec(sctx->job.nbits);
+	if (opt_algo == ALGO_MJOLLNIR)
+	{
+		for (i = 0; i < 20; i++)
+			work->data[i] = be32dec((uint32_t *)&work->data[i]);
+	}
+
 	work->data[20] = 0x80000000;
-	work->data[31] = 0x00000280;
+	work->data[31] = (opt_algo == ALGO_MJOLLNIR) ? 0x000002A0 : 0x00000280;
 
 	// HeavyCoin
 	if (opt_algo == ALGO_HEAVY) {
@@ -738,11 +765,11 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	}
 
 	if (opt_algo == ALGO_JACKPOT)
-		diff_to_target(work->target, sctx->job.diff / 65536.0);
+		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
-		diff_to_target(work->target, sctx->job.diff / 256.0);
+		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 	else
-		diff_to_target(work->target, sctx->job.diff);
+		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }
 
 static void *miner_thread(void *userdata)
@@ -755,6 +782,7 @@ static void *miner_thread(void *userdata)
 	unsigned char *scratchbuf = NULL;
 	char s[16];
 	int i;
+    static int rounds = 0;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
@@ -836,7 +864,12 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_HEAVY:
 			rc = scanhash_heavy(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done, work.maxvote);
+			                      max_nonce, &hashes_done, work.maxvote, HEAVYCOIN_BLKHDR_SZ);
+			break;
+
+		case ALGO_MJOLLNIR:
+			rc = scanhash_heavy(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done, 0, MNR_BLKHDR_SZ);
 			break;
 
 		case ALGO_FUGUE256:
@@ -859,10 +892,33 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_QUARK:
+			rc = scanhash_quark(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_ANIME:
+			rc = scanhash_anime(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_NIST5:
+			rc = scanhash_nist5(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_X11:
+			rc = scanhash_x11(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
 		default:
 			/* should never happen */
 			goto out;
 		}
+
+        if (opt_benchmark)
+            if (++rounds == 1) exit(0);
 
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
@@ -876,8 +932,10 @@ static void *miner_thread(void *userdata)
 		if (!opt_quiet) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
-			applog(LOG_INFO, "thread %d: %lu hashes, %s khash/s",
-				thr_id, hashes_done, s);
+			applog(LOG_INFO, "GPU #%d: %s, %s khash/s",
+				device_map[thr_id], device_name[thr_id], s);
+//			applog(LOG_INFO, "thread %d: %lu hashes, %s khash/s",
+//				thr_id, hashes_done, s);
 		}
 		if (opt_benchmark && thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
@@ -1112,6 +1170,7 @@ static void parse_arg (int key, char *arg)
 {
 	char *p;
 	int v, i;
+	double d;
 
 	switch(key) {
 	case 'a':
@@ -1309,6 +1368,12 @@ static void parse_arg (int key, char *arg)
 			}
 		}
 		break;
+	case 'f': // CH - Divisor for Difficulty
+		d = atof(arg);
+		if (d == 0)	/* sanity check */
+			show_usage_and_exit(1);
+		opt_difficulty = d;
+		break;
 	case 'V':
 		show_version_and_exit();
 	case 'h':
@@ -1404,7 +1469,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "0.7"
+#define PROGRAM_VERSION "1.0"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
@@ -1433,6 +1498,8 @@ int main(int argc, char *argv[])
 
 	/* parse command line */
 	parse_cmdline(argc, argv);
+
+	cuda_devicenames();
 
 	if (!opt_benchmark && !rpc_url) {
 		fprintf(stderr, "%s: no URL supplied\n", argv[0]);

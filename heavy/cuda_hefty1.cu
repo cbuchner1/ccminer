@@ -2,13 +2,16 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-// aus cpu-miner.c
-extern int device_map[8];
-
 #include <stdio.h>
 #include <memory.h>
 
 #define USE_SHARED 1
+
+// aus cpu-miner.c
+extern int device_map[8];
+
+// aus heavy.cu
+extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // Folgende Definitionen später durch header ersetzen
 typedef unsigned int uint32_t;
@@ -16,7 +19,7 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 
 // diese Struktur wird in der Init Funktion angefordert
-static cudaDeviceProp props;
+static cudaDeviceProp props[8];
 
 // globaler Speicher für alle HeftyHashes aller Threads
 uint32_t *d_heftyHashes[8];
@@ -286,7 +289,7 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
             for(int j=0;j<16;j++)
             {
                 Absorb(sponge, regs[3] + regs[7]);
-                hefty_gpu_round(regs, W2[j], heftyLookUp(j + 16 * (k+1)), sponge);
+                hefty_gpu_round(regs, W2[j], heftyLookUp(j + ((k+1)<<4)), sponge);
             }
     #pragma unroll 16
             for(int j=0;j<16;j++)
@@ -299,7 +302,7 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
 
 #pragma unroll 8
         for(int k=0;k<8;k++)
-            ((uint32_t*)outputHash)[8*thread+k] = SWAB32(hash[k]);
+            ((uint32_t*)outputHash)[(thread<<3)+k] = SWAB32(hash[k]);
     }
 }
 
@@ -308,7 +311,7 @@ __host__ void hefty_cpu_init(int thr_id, int threads)
 {
     cudaSetDevice(device_map[thr_id]);
 
-    cudaGetDeviceProperties(&props, device_map[thr_id]);
+    cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
 
     // Kopiere die Hash-Tabellen in den GPU-Speicher
     cudaMemcpyToSymbol(    hefty_gpu_constantTable,
@@ -319,16 +322,21 @@ __host__ void hefty_cpu_init(int thr_id, int threads)
     cudaMalloc(&d_heftyHashes[thr_id], 8 * sizeof(uint32_t) * threads);
 }
 
-__host__ void hefty_cpu_setBlock(int thr_id, int threads, void *data)
-    // data muss 84-Byte haben!
+__host__ void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
+// data muss 80/84-Byte haben!
 {
     // Nachricht expandieren und setzen
     uint32_t msgBlock[32];
 
     memset(msgBlock, 0, sizeof(uint32_t) * 32);
-    memcpy(&msgBlock[0], data, 84);
-    msgBlock[21] |= 0x80;
-    msgBlock[31] = 672; // bitlen
+    memcpy(&msgBlock[0], data, len);
+    if (len == 84) {
+        msgBlock[21] |= 0x80;
+        msgBlock[31] = 672; // bitlen
+    } else if (len == 80) {
+        msgBlock[20] |= 0x80;
+        msgBlock[31] = 640; // bitlen
+    }
     
     for(int i=0;i<31;i++) // Byteorder drehen
         msgBlock[i] = SWAB32(msgBlock[i]);
@@ -395,7 +403,7 @@ __host__ void hefty_cpu_hash(int thr_id, int threads, int startNounce)
 {
     // Compute 3.x und 5.x Geräte am besten mit 768 Threads ansteuern,
     // alle anderen mit 512 Threads.
-    int threadsperblock = (props.major >= 3) ? 768 : 512;
+    int threadsperblock = (props[thr_id].major >= 3) ? 768 : 512;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -411,4 +419,7 @@ __host__ void hefty_cpu_hash(int thr_id, int threads, int startNounce)
 //    fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
     hefty_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (void*)d_heftyHashes[thr_id]);
+
+    // Strategisches Sleep Kommando zur Senkung der CPU Last
+    MyStreamSynchronize(NULL, 0, thr_id);
 }

@@ -17,8 +17,10 @@ extern uint32_t *d_nonceVector[8];
 // globaler Speicher für unsere Ergebnisse
 uint32_t *d_hash5output[8];
 
-// die Message (116 Bytes) mit Padding zur Berechnung auf der GPU
-__constant__ uint64_t c_PaddedMessage[16]; // padded message (84+32 bytes + padding)
+// die Message (112 bzw. 116 Bytes) mit Padding zur Berechnung auf der GPU
+__constant__ uint64_t c_PaddedMessage[16]; // padded message (80/84+32 bytes + padding)
+
+#include "cuda_helper.h"
 
 // ---------------------------- BEGIN CUDA blake512 functions ------------------------------------
 
@@ -44,10 +46,12 @@ const uint8_t host_sigma[16][16] =
   { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 }
 };
 
+// Diese Makros besser nur für Compile Time Konstanten verwenden. Sie sind langsam.
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
+// Diese Makros besser nur für Compile Time Konstanten verwenden. Sie sind langsam.
 #define SWAP64(x) \
     ((uint64_t)((((uint64_t)(x) & 0xff00000000000000ULL) >> 56) | \
                 (((uint64_t)(x) & 0x00ff000000000000ULL) >> 40) | \
@@ -58,11 +62,11 @@ const uint8_t host_sigma[16][16] =
                 (((uint64_t)(x) & 0x000000000000ff00ULL) << 40) | \
                 (((uint64_t)(x) & 0x00000000000000ffULL) << 56)))
 
-__constant__ uint64_t c_SecondRound[16];
+__constant__ uint64_t c_SecondRound[15];
 
-const uint64_t host_SecondRound[16] =
+const uint64_t host_SecondRound[15] =
 {
-  0,0,0,0,0,0,0,0,0,0,0,0,0,SWAP64(1),0,SWAP64(0x3A0)
+  0,0,0,0,0,0,0,0,0,0,0,0,0,SWAP64(1),0
 };
 
 __constant__ uint64_t c_u512[16];
@@ -80,24 +84,22 @@ const uint64_t host_u512[16] =
 };
 
 
-#define ROTR(x,n) (((x)<<(64-n))|( (x)>>(n)))
-
 #define G(a,b,c,d,e)          \
     v[a] += (m[sigma[i][e]] ^ u512[sigma[i][e+1]]) + v[b];\
-    v[d] = ROTR( v[d] ^ v[a],32);        \
+    v[d] = ROTR64( v[d] ^ v[a],32);        \
     v[c] += v[d];           \
-    v[b] = ROTR( v[b] ^ v[c],25);        \
+    v[b] = ROTR64( v[b] ^ v[c],25);        \
     v[a] += (m[sigma[i][e+1]] ^ u512[sigma[i][e]])+v[b];  \
-    v[d] = ROTR( v[d] ^ v[a],16);        \
+    v[d] = ROTR64( v[d] ^ v[a],16);        \
     v[c] += v[d];           \
-    v[b] = ROTR( v[b] ^ v[c],11);
+    v[b] = ROTR64( v[b] ^ v[c],11);
 
-__device__ void blake512_compress( uint64_t *h, const uint64_t *block, int nullt, const uint8_t ((*sigma)[16]), const uint64_t *u512 )
+template <int BLOCKSIZE> __device__ void blake512_compress( uint64_t *h, const uint64_t *block, int nullt, const uint8_t ((*sigma)[16]), const uint64_t *u512 )
 {
     uint64_t v[16], m[16], i;
 
 #pragma unroll 16
-    for( i = 0; i < 16; ++i )  m[i] = SWAP64(block[i]);
+    for( i = 0; i < 16; ++i )  m[i] = cuda_swab64(block[i]);
 
 #pragma unroll 8
     for( i = 0; i < 8; ++i )  v[i] = h[i];
@@ -113,11 +115,11 @@ __device__ void blake512_compress( uint64_t *h, const uint64_t *block, int nullt
 
     /* don't xor t when the block is only padding */
     if ( !nullt ) {
-        v[12] ^= 928;
-        v[13] ^= 928;
+        v[12] ^= 8*(BLOCKSIZE+32);
+        v[13] ^= 8*(BLOCKSIZE+32);
     }
 
-#pragma unroll 16
+//#pragma unroll 16
     for( i = 0; i < 16; ++i )
     {
         /* column step */
@@ -136,49 +138,7 @@ __device__ void blake512_compress( uint64_t *h, const uint64_t *block, int nullt
     for( i = 0; i < 16; ++i )  h[i % 8] ^= v[i];
 }
 
-// Endian Drehung für 32 Bit Typen
-static __device__ uint32_t cuda_swab32(uint32_t x)
-{
-    return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
-          | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
-}
-
-// Endian Drehung für 64 Bit Typen
-static __device__ uint64_t cuda_swab64(uint64_t x) {
-    uint32_t h = (x >> 32);
-    uint32_t l = (x & 0xFFFFFFFFULL);
-    return (((uint64_t)cuda_swab32(l)) << 32) | ((uint64_t)cuda_swab32(h));
-}
-
-// das Hi Word aus einem 64 Bit Typen extrahieren
-static __device__ uint32_t HIWORD(const uint64_t &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2hiint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x >> 32);
-#endif
-}
-
-// das Hi Word in einem 64 Bit Typen ersetzen
-static __device__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32ULL);
-}
-
-// das Lo Word aus einem 64 Bit Typen extrahieren
-static __device__ uint32_t LOWORD(const uint64_t &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2loint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x & 0xFFFFFFFFULL);
-#endif
-}
-
-// das Lo Word in einem 64 Bit Typen ersetzen
-static __device__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFF00000000ULL) | ((uint64_t)y);
-}
-
-__global__ void blake512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void blake512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -211,40 +171,40 @@ __global__ void blake512_gpu_hash(int threads, uint32_t startNounce, void *outpu
 		// die Nounce durch die thread-spezifische ersetzen
 		buf[9] = REPLACE_HIWORD(buf[9], nounce);
 
-		// den thread-spezifischen Hefty1 hash einsetzen
 		uint32_t *hefty = heftyHashes + 8 * hashPosition;
-		buf[10] = REPLACE_HIWORD(buf[10], hefty[0]);
-		buf[11] = REPLACE_LOWORD(buf[11], hefty[1]);
-		buf[11] = REPLACE_HIWORD(buf[11], hefty[2]);
-		buf[12] = REPLACE_LOWORD(buf[12], hefty[3]);
-		buf[12] = REPLACE_HIWORD(buf[12], hefty[4]);
-		buf[13] = REPLACE_LOWORD(buf[13], hefty[5]);
-		buf[13] = REPLACE_HIWORD(buf[13], hefty[6]);
-		buf[14] = REPLACE_LOWORD(buf[14], hefty[7]);
+		if (BLOCKSIZE == 84) {
+			// den thread-spezifischen Hefty1 hash einsetzen
+			// aufwändig, weil das nicht mit uint64_t Wörtern aligned ist.
+			buf[10] = REPLACE_HIWORD(buf[10], hefty[0]);
+			buf[11] = REPLACE_LOWORD(buf[11], hefty[1]);
+			buf[11] = REPLACE_HIWORD(buf[11], hefty[2]);
+			buf[12] = REPLACE_LOWORD(buf[12], hefty[3]);
+			buf[12] = REPLACE_HIWORD(buf[12], hefty[4]);
+			buf[13] = REPLACE_LOWORD(buf[13], hefty[5]);
+			buf[13] = REPLACE_HIWORD(buf[13], hefty[6]);
+			buf[14] = REPLACE_LOWORD(buf[14], hefty[7]);
+		}
+		else if (BLOCKSIZE == 80) {
+			buf[10] = MAKE_ULONGLONG(hefty[0], hefty[1]);
+			buf[11] = MAKE_ULONGLONG(hefty[2], hefty[3]);
+			buf[12] = MAKE_ULONGLONG(hefty[4], hefty[5]);
+			buf[13] = MAKE_ULONGLONG(hefty[6], hefty[7]);
+		}
 
 		// erste Runde
-		blake512_compress( h, buf, 0, c_sigma, c_u512 );
-
+		blake512_compress<BLOCKSIZE>( h, buf, 0, c_sigma, c_u512 );
+		
+		
 		// zweite Runde
-#pragma unroll 16
-		for (int i=0; i < 16; ++i) buf[i] = c_SecondRound[i];
-		blake512_compress( h, buf, 1, c_sigma, c_u512 );
-
+#pragma unroll 15
+		for (int i=0; i < 15; ++i) buf[i] = c_SecondRound[i];
+		buf[15] = SWAP64(8*(BLOCKSIZE+32)); // Blocksize in Bits einsetzen
+		blake512_compress<BLOCKSIZE>( h, buf, 1, c_sigma, c_u512 );
+		
 		// Hash rauslassen
-#if 0
-		// ausschliesslich 32 bit Operationen sofern die SM1.3 double intrinsics verfügbar sind
-		uint32_t *outHash = (uint32_t *)outputHash + 16 * hashPosition;
-#pragma unroll 8
-		for (int i=0; i < 8; ++i) {
-			outHash[2*i+0] = cuda_swab32( HIWORD(h[i]) );
-			outHash[2*i+1] = cuda_swab32( LOWORD(h[i]) );
-		}
-#else
-		// in dieser Version passieren auch ein paar 64 Bit Shifts
 		uint64_t *outHash = (uint64_t *)outputHash + 8 * hashPosition;
 #pragma unroll 8
 		for (int i=0; i < 8; ++i) outHash[i] = cuda_swab64( h[i] );
-#endif
 	}
 }
 
@@ -274,21 +234,29 @@ __host__ void blake512_cpu_init(int thr_id, int threads)
 	cudaMalloc(&d_hash5output[thr_id], 16 * sizeof(uint32_t) * threads);
 }
 
-__host__ void blake512_cpu_setBlock(void *pdata)
+static int BLOCKSIZE = 84;
+
+__host__ void blake512_cpu_setBlock(void *pdata, int len)
 	// data muss 84-Byte haben!
 	// heftyHash hat 32-Byte
 {
-	// Message mit Padding für erste Runde bereitstellen
 	unsigned char PaddedMessage[128];
-	memcpy(PaddedMessage, pdata, 84);
-	memset(PaddedMessage+84, 0, 32); // leeres Hefty Hash einfüllen
-	memset(PaddedMessage+116, 0, 12);
-	PaddedMessage[116] = 0x80;
-
+	if (len == 84) {
+		// Message mit Padding für erste Runde bereitstellen
+		memcpy(PaddedMessage, pdata, 84);
+		memset(PaddedMessage+84, 0, 32); // leeres Hefty Hash einfüllen
+		memset(PaddedMessage+116, 0, 12);
+		PaddedMessage[116] = 0x80;
+	} else if (len == 80) {
+		memcpy(PaddedMessage, pdata, 80);
+		memset(PaddedMessage+80, 0, 32); // leeres Hefty Hash einfüllen
+		memset(PaddedMessage+112, 0, 16);
+		PaddedMessage[112] = 0x80;
+	}
 	// die Message (116 Bytes) ohne Padding zur Berechnung auf der GPU
 	cudaMemcpyToSymbol( c_PaddedMessage, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	BLOCKSIZE = len;
 }
-
 
 __host__ void blake512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
 {
@@ -303,5 +271,8 @@ __host__ void blake512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
 
 //	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
-	blake512_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, d_hash5output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
+	if (BLOCKSIZE == 80)
+		blake512_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash5output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
+	else if (BLOCKSIZE == 84)
+		blake512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash5output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
 }

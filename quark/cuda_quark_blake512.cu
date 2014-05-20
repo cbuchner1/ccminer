@@ -70,30 +70,6 @@ static __device__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t &y) 
 	return (x & 0xFFFFFFFF00000000ULL) | ((uint64_t)y);
 }
 
-/*
-#define SWAP32(x) \
-    ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
-      (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
-
-#define SWAP64(x) \
-    ((uint64_t)((((uint64_t)(x) & 0xff00000000000000ULL) >> 56) | \
-                (((uint64_t)(x) & 0x00ff000000000000ULL) >> 40) | \
-                (((uint64_t)(x) & 0x0000ff0000000000ULL) >> 24) | \
-                (((uint64_t)(x) & 0x000000ff00000000ULL) >>  8) | \
-                (((uint64_t)(x) & 0x00000000ff000000ULL) <<  8) | \
-                (((uint64_t)(x) & 0x0000000000ff0000ULL) << 24) | \
-                (((uint64_t)(x) & 0x000000000000ff00ULL) << 40) | \
-                (((uint64_t)(x) & 0x00000000000000ffULL) << 56)))
-*/
-
-/*
-__device__ __forceinline__ void SWAP32(uint32_t *x)
-{
-	// Input:	33221100
-	// Output:	00112233
-	x[0] = __byte_perm(x[0], 0, 0x0123);
-}
-*/
 __device__ __forceinline__ uint64_t SWAP64(uint64_t x)
 {
 	// Input:	77665544 33221100
@@ -154,9 +130,9 @@ __device__ void quark_blake512_compress( uint64_t *h, const uint64_t *block, con
 
 #pragma unroll 16
     for( i = 0; i < 16; ++i )
-	{
-		m[i] = SWAP64(block[i]);		
-	}
+    {
+        m[i] = SWAP64(block[i]);
+    }
 
 #pragma unroll 8
     for( i = 0; i < 8; ++i )  v[i] = h[i];
@@ -197,11 +173,8 @@ __device__ void quark_blake512_compress( uint64_t *h, const uint64_t *block, con
 static __device__ uint32_t cuda_swab32(uint32_t x)
 {
 	return __byte_perm(x, 0, 0x0123);
-	/*
-    return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
-          | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
-		  */
 }
+
 /*
 // Endian Drehung für 64 Bit Typen
 static __device__ uint64_t cuda_swab64(uint64_t x) {
@@ -234,7 +207,7 @@ static const uint64_t h_constHashPadding[8] = {
 	0,
 	0x0002000000000000ull };
 
-__global__ void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
+__global__ __launch_bounds__(256, 2) void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -313,7 +286,7 @@ __global__ void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, ui
 		for (int i=0; i < 8; ++i)
 		{
 			//outHash[i] = cuda_swab64( h[i] );
-			outHash[i] = SWAP64(h[i]);		
+			outHash[i] = SWAP64(h[i]);
 		}
 #endif
 	}
@@ -371,7 +344,7 @@ __global__ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, vo
 		for (int i=0; i < 8; ++i)
 		{
 			//outHash[i] = cuda_swab64( h[i] );
-			outHash[i] = SWAP64(h[i]);			
+			outHash[i] = SWAP64(h[i]);
 		}
 #endif
 	}
@@ -395,14 +368,14 @@ __host__ void quark_blake512_cpu_init(int thr_id, int threads)
 						0, cudaMemcpyHostToDevice);
 
 	cudaMemcpyToSymbol( d_constMem,
-                        h_constMem,
-                        sizeof(h_constMem),
-                        0, cudaMemcpyHostToDevice);
+						h_constMem,
+						sizeof(h_constMem),
+						0, cudaMemcpyHostToDevice);
 
 	cudaMemcpyToSymbol( d_constHashPadding,
-                        h_constHashPadding,
-                        sizeof(h_constHashPadding),
-                        0, cudaMemcpyHostToDevice);
+						h_constHashPadding,
+						sizeof(h_constHashPadding),
+						0, cudaMemcpyHostToDevice);
 }
 
 // Blake512 für 80 Byte grosse Eingangsdaten
@@ -421,27 +394,6 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 	// die Message zur Berechnung auf der GPU
 	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }
-
-#if 0
-// Blake512 für 64 Byte grosse Eingangsdaten
-// evtl. macht es gar keinen Sinn, das alles ins Constant Memory to schicken. Es sind hier sowieso
-// nur die letzten 64 Bytes des Blocks konstant, und die meisten Bytes davon sind 0. Das kann mnan
-// auch im Kernel initialisieren.
-__host__ void quark_blake512_cpu_setBlock_64(void *pdata)
-{
-	// Message mit Padding bereitstellen
-	unsigned char PaddedMessage[128];
-	memcpy(PaddedMessage, pdata, 64);  // Hinweis: diese 64 Bytes sind nonce-spezifisch und ändern sich KOMPLETT für jede Nonce!
-	memset(PaddedMessage+64, 0, 64);
-	PaddedMessage[64] = 0x80;
-	PaddedMessage[111] = 1;
-	PaddedMessage[126] = 0x02;
-	PaddedMessage[127] = 0x00;
-
-	// die Message zur Berechnung auf der GPU
-	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-}
-#endif
 
 __host__ void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
 {

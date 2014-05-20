@@ -16,9 +16,6 @@ extern int device_map[8];
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-// aus driver.c
-extern "C" void set_device(int device);
-
 // Folgende Definitionen später durch header ersetzen
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
@@ -27,7 +24,6 @@ typedef unsigned long long uint64_t;
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props;
 
-// globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
 extern uint32_t *d_resultNonce[8];
 

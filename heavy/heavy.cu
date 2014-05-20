@@ -22,12 +22,12 @@
 #include "sph/sph_blake.h"
 #include "sph/sph_groestl.h"
 
-#include "cuda_hefty1.h"
-#include "cuda_sha256.h"
-#include "cuda_keccak512.h"
-#include "cuda_groestl512.h"
-#include "cuda_blake512.h"
-#include "cuda_combine.h"
+#include "heavy/cuda_hefty1.h"
+#include "heavy/cuda_sha256.h"
+#include "heavy/cuda_keccak512.h"
+#include "heavy/cuda_groestl512.h"
+#include "heavy/cuda_blake512.h"
+#include "heavy/cuda_combine.h"
 
 extern uint32_t *d_hash2output[8];
 extern uint32_t *d_hash3output[8];
@@ -35,6 +35,7 @@ extern uint32_t *d_hash4output[8];
 extern uint32_t *d_hash5output[8];
 
 #define HEAVYCOIN_BLKHDR_SZ        84
+#define MNR_BLKHDR_SZ		       80
 
 // nonce-array für die threads
 uint32_t *d_nonceVector[8];
@@ -163,6 +164,30 @@ extern "C" int cuda_num_devices()
     return GPU_N;
 }
 
+// Gerätenamen holen
+extern char *device_name[8];
+extern int device_map[8];
+
+extern "C" void cuda_devicenames()
+{
+    cudaError_t err;
+    int GPU_N;
+    err = cudaGetDeviceCount(&GPU_N);
+    if (err != cudaSuccess)
+    {
+        applog(LOG_ERR, "Unable to query number of CUDA devices! Is an nVidia driver installed?");
+        exit(1);
+    }
+
+    for (int i=0; i < GPU_N; i++)
+    {
+        cudaDeviceProp props;
+        cudaGetDeviceProperties(&props, device_map[i]);
+
+        device_name[i] = strdup(props.name);
+    }
+}
+
 static bool substringsearch(const char *haystack, const char *needle, int &match)
 {
     int hlen = strlen(haystack);
@@ -230,23 +255,28 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 
 int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
  const uint32_t *ptarget, uint32_t max_nonce,
- unsigned long *hashes_done, uint32_t maxvote);
+ unsigned long *hashes_done, uint32_t maxvote, int blocklen);
 
 extern "C"
 int scanhash_heavy(int thr_id, uint32_t *pdata,
  const uint32_t *ptarget, uint32_t max_nonce,
- unsigned long *hashes_done, uint32_t maxvote)
+ unsigned long *hashes_done, uint32_t maxvote, int blocklen)
 {
  return scanhash_heavy_cpp(thr_id, pdata,
-  ptarget, max_nonce, hashes_done, maxvote);
+  ptarget, max_nonce, hashes_done, maxvote, blocklen);
 }
+
+extern bool opt_benchmark;
 
 int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
  const uint32_t *ptarget, uint32_t max_nonce,
- unsigned long *hashes_done, uint32_t maxvote)
+ unsigned long *hashes_done, uint32_t maxvote, int blocklen)
 {
     // CUDA will process thousands of threads.
     const int throughput = 4096 * 128;
+
+    if (opt_benchmark)
+        ((uint32_t*)ptarget)[7] = 0x000000ff;
 
     int rc = 0;
     uint32_t *hash = NULL;
@@ -258,7 +288,6 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
     memset(nrmCalls, 0, sizeof(int) * 6);
 
     uint32_t start_nonce = pdata[19];    
-    uint16_t *ext = (uint16_t *)&pdata[20];
 
     // für jeden Hash ein individuelles Target erstellen basierend
     // auf dem höchsten Bit, das in ptarget gesetzt ist.
@@ -282,26 +311,30 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         cudaMalloc(&d_nonceVector[thr_id], sizeof(uint32_t) * throughput);
     }
 
+    if (blocklen == HEAVYCOIN_BLKHDR_SZ)
+    {
+        uint16_t *ext = (uint16_t *)&pdata[20];
 
-    if (opt_vote > maxvote) {
-        printf("Warning: Your block reward vote (%hu) exceeds "
-                "the maxvote reported by the pool (%hu).\n",
-                opt_vote, maxvote);
-    }
+        if (opt_vote > maxvote) {
+            printf("Warning: Your block reward vote (%hu) exceeds "
+                    "the maxvote reported by the pool (%hu).\n",
+                    opt_vote, maxvote);
+        }
 
-    if (opt_trust_pool && opt_vote > maxvote) {
-        printf("Warning: Capping block reward vote to maxvote reported by pool.\n");
-        ext[0] = maxvote;
+        if (opt_trust_pool && opt_vote > maxvote) {
+            printf("Warning: Capping block reward vote to maxvote reported by pool.\n");
+            ext[0] = maxvote;
+        }
+        else
+            ext[0] = opt_vote;
     }
-    else
-        ext[0] = opt_vote;
 
     // Setze die Blockdaten
-    hefty_cpu_setBlock(thr_id, throughput, pdata);
-    sha256_cpu_setBlock(pdata);
-    keccak512_cpu_setBlock(pdata);
-    groestl512_cpu_setBlock(pdata);
-    blake512_cpu_setBlock(pdata);
+    hefty_cpu_setBlock(thr_id, throughput, pdata, blocklen);
+    sha256_cpu_setBlock(pdata, blocklen);
+    keccak512_cpu_setBlock(pdata, blocklen);
+    groestl512_cpu_setBlock(pdata, blocklen);
+    blake512_cpu_setBlock(pdata, blocklen);
 
     do {
         int i;
@@ -317,7 +350,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         //cudaThreadSynchronize();
 
         // Hier ist die längste CPU Wartephase. Deshalb ein strategisches MyStreamSynchronize() hier.
-        MyStreamSynchronize(NULL, 0, thr_id);
+        MyStreamSynchronize(NULL, 1, thr_id);
 
         ////// Compaction
         devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*((uint64_t*)target2), d_hash2output[thr_id], 8, pdata[19]));
@@ -370,7 +403,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
                     if (fulltest(foundhash, ptarget)) {
                         uint32_t verification[8];
                         pdata[19] += nonce - pdata[19];
-                        heavycoin_hash((unsigned char *)verification, (const unsigned char *)pdata, HEAVYCOIN_BLKHDR_SZ);
+                        heavycoin_hash((unsigned char *)verification, (const unsigned char *)pdata, blocklen);
                         if (memcmp(verification, foundhash, 8*sizeof(uint32_t))) {
                             applog(LOG_ERR, "hash for nonce=$%08X does not validate on CPU!\n", nonce);
                         }
