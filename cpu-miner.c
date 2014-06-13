@@ -917,8 +917,8 @@ static void *miner_thread(void *userdata)
 			goto out;
 		}
 
-        if (opt_benchmark)
-            if (++rounds == 1) exit(0);
+//        if (opt_benchmark)
+//            if (++rounds == 1) exit(0);
 
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
@@ -1469,7 +1469,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "1.0"
+#define PROGRAM_VERSION "1.1"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;

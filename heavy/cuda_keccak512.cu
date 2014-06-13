@@ -279,7 +279,6 @@ __host__ void keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
-//	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 	if (BLOCKSIZE==84)
 		keccak512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash3output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
 	else if (BLOCKSIZE==80)

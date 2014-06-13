@@ -1,5 +1,5 @@
 
-ccMiner release 1.0 (May 10th 2014) - "Did anyone say X11?"
+ccMiner release 1.1 (June 14th 2014) - "Killer Groestl!"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -30,12 +30,11 @@ FugueCoin
 GroestlCoin & Myriad-Groestl
 JackpotCoin
 QuarkCoin family & AnimeCoin
+TalkCoin
+DarkCoin and other X11 coins
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL) implementations.
-
-X11 algo is being worked on. It will be released when we
-have achieved a nice nVidia advantage.
 
 We did not take a big effort on improving usability, so please set
 your parameters carefuly.
@@ -139,6 +138,12 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  June 14th 2014  released Killer Groestl quad version which I deem
+                  sufficiently hard to port over to AMD. It isn't
+                  the fastest option for Compute 3.5 and 5.0 cards,
+                  but it is still much faster than the table based
+                  versions.
 
   May 10th 2014   added X11, but without the bells & whistles
                   (no killer Groestl, SIMD hash quite slow still)

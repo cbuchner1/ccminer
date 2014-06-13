@@ -416,8 +416,6 @@ __host__ void hefty_cpu_hash(int thr_id, int threads, int startNounce)
     size_t shared_size = 0;
 #endif
 
-//    fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
-
     hefty_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (void*)d_heftyHashes[thr_id]);
 
     // Strategisches Sleep Kommando zur Senkung der CPU Last

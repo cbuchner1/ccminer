@@ -406,8 +406,6 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t start
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
-//	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
-
 	quark_blake512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
@@ -424,8 +422,6 @@ __host__ void quark_blake512_cpu_hash_80(int thr_id, int threads, uint32_t start
 
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
-
-//	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
 	quark_blake512_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
 

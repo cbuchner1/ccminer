@@ -35,17 +35,19 @@ static void myriadhash(void *state, const void *input)
     memcpy(state, hashB, 32);
 }
 
-
+extern bool opt_benchmark;
 
 extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {	
-	uint32_t start_nonce = pdata[19]++;	
+    if (opt_benchmark)
+        ((uint32_t*)ptarget)[7] = 0x000000ff;
+
+	uint32_t start_nonce = pdata[19]++;
 	const uint32_t throughPut = 128 * 1024;
-//	const uint32_t throughPut = 1;
+
 	uint32_t *outputHash = (uint32_t*)malloc(throughPut * 16 * sizeof(uint32_t));
 
-	// TODO: entfernen für eine Release! Ist nur zum Testen!
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
