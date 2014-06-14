@@ -101,14 +101,12 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 
-	// TODO: entfernen für eine Release! Ist nur zum Testen!
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
 	const uint32_t Htarg = ptarget[7];
 
 	const int throughput = 256*4096*4; // 100;
-	//const int throughput = 256*256*2+100; // 100;
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
@@ -167,16 +165,18 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 		}
 
-		// Runde 2 (ohne Gröstl)
+		// Runde 3 (komplett)
 
 		// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
 		jackpot_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
-			d_branch3Nonces[thr_id], &nrm3,
+			d_branch2Nonces[thr_id], &nrm2,
 			order++);
 
-		// verfolge den skein-pfad weiter
-		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		if (nrm1+nrm2 == nrm3) {
+			quark_groestl512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
+			quark_skein512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
+		}
 
 		// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
 		jackpot_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
@@ -226,7 +226,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
 
 				pdata[19] = foundNonce;
-				*hashes_done = (foundNonce - first_nonce + 1)/4;
+				*hashes_done = (foundNonce - first_nonce + 1)/2;
 				//applog(LOG_INFO, "GPU #%d: result for nonce $%08X does validate on CPU (%d rounds)!", thr_id, foundNonce, rounds);
 				return 1;
 			} else {
@@ -238,6 +238,6 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = (pdata[19] - first_nonce + 1)/4;
+	*hashes_done = (pdata[19] - first_nonce + 1)/2;
 	return 0;
 }

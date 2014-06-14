@@ -271,7 +271,6 @@ __host__ void sha256_cpu_hash(int thr_id, int threads, int startNounce)
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
-//	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 	if (BLOCKSIZE == 84)
 		sha256_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
 	else if (BLOCKSIZE == 80) {

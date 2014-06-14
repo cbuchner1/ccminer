@@ -141,8 +141,6 @@ void combine_cpu_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *h
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
-//	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
-
 	combine_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, d_hashoutput[thr_id], d_hash2output[thr_id], d_hash3output[thr_id], d_hash4output[thr_id], d_hash5output[thr_id], d_nonceVector[thr_id]);
 
 	// da die Hash Auswertung noch auf der CPU erfolgt, müssen die Ergebnisse auf jeden Fall zum Host kopiert werden

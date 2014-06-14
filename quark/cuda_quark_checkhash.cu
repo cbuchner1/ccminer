@@ -89,8 +89,6 @@ __host__ uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t star
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
-//	fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
-
 	quark_check_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, d_inputHash, d_resNounce[thr_id]);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
