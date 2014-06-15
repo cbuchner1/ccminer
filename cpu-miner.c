@@ -131,7 +131,9 @@ typedef enum {
 	ALGO_QUARK,
 	ALGO_ANIME,
 	ALGO_NIST5,
-	ALGO_X11
+	ALGO_X11,
+	ALGO_X13,
+	ALGO_DMD_GR,
 } sha256_algos;
 
 static const char *algo_names[] = {
@@ -144,7 +146,9 @@ static const char *algo_names[] = {
 	"quark",
 	"anime",
 	"nist5",
-	"x11"
+	"x11",
+	"x13",
+	"dmd-gr",
 };
 
 bool opt_debug = false;
@@ -217,6 +221,8 @@ Options:\n\
                         anime     Animecoin hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
+                        x13       X13 (MaruCoin) hash\n\
+                        dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -766,7 +772,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	if (opt_algo == ALGO_JACKPOT)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
-	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
+	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
@@ -878,6 +884,7 @@ static void *miner_thread(void *userdata)
 			break;
 
 		case ALGO_GROESTL:
+		case ALGO_DMD_GR:
 			rc = scanhash_groestlcoin(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
@@ -909,6 +916,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_X11:
 			rc = scanhash_x11(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_X13:
+			rc = scanhash_x13(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

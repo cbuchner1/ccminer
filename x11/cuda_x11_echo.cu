@@ -198,7 +198,11 @@ __global__ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint6
 		for(int i=0;i<16;i++)
 			W[i] ^= Hash[i];
 
-		W[8] ^= 0x10;
+		// tsiv: I feel	iffy about removing	this, but it seems to break	the	full hash
+		// fortunately for X11 the flipped bit lands outside the first 32 bytes	used as	the	final X11 hash
+		// try chaining	more algos after echo (X13)	and	boom
+		//W[8] ^= 0x10;
+
 		W[27] ^= 0x02000000;
 		W[28] ^= k0;
 
@@ -224,6 +228,8 @@ __host__ void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNou
 
     // Größe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
+
+//    fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
     x11_echo512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
     MyStreamSynchronize(NULL, order, thr_id);

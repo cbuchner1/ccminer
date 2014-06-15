@@ -55,6 +55,9 @@
     <Filter Include="Source Files\CUDA\x11">
       <UniqueIdentifier>{dd751f2d-bfd6-42c1-8f9b-cbe94e539353}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\x13">
+      <UniqueIdentifier>{d67a2af7-4851-4d21-910e-87791bc8ee35}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -143,6 +146,12 @@
     </ClCompile>
     <ClCompile Include="myriadgroestl.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\hamsi.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\hamsi_helper.c">
+      <Filter>Source Files\sph</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -242,6 +251,9 @@
     <ClInclude Include="cuda_helper.h">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="sph\sph_hamsi.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_fugue256.cu">
@@ -340,11 +352,14 @@
     <CudaCompile Include="x11\simd_functions.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
-    <CudaCompile Include="bitslice_transformations_quad.cu">
-      <Filter>Source Files\CUDA</Filter>
+    <CudaCompile Include="x13\cuda_x13_fugue512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
-    <CudaCompile Include="groestl_functions_quad.cu">
-      <Filter>Source Files\CUDA</Filter>
+    <CudaCompile Include="x13\cuda_x13_hamsi512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\x13.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>
