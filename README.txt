@@ -1,5 +1,5 @@
 
-ccMiner release 1.1 (June 14th 2014) - "Killer Groestl!"
+ccMiner release 1.2 (June 15th 2014) - "Killer Groestl + X13"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -138,6 +138,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  June 15th 2014  add X13 and Diamond Groestl support.
+                  Thanks to tsiv and to Bombadil for the contributions!
 
   June 14th 2014  released Killer Groestl quad version which I deem
                   sufficiently hard to port over to AMD. It isn't
