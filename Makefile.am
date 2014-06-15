@@ -35,6 +35,8 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  quark/cuda_quark_compactionTest.cu \
 			  cuda_nist5.cu \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/shavite.c sph/simd.c \
+			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \
+			  x13/x13.cu x13/cuda_x13_hamsi512.cu x13/cuda_x13_fugue512.cu \
 			  x11/x11.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
 			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu
 
