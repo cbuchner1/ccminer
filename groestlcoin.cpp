@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "cuda_groestlcoin.h"
 #include <openssl/sha.h>
 

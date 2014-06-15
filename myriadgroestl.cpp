@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <openssl/sha.h>
 
 extern bool opt_benchmark;
