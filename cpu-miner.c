@@ -133,6 +133,7 @@ typedef enum {
 	ALGO_NIST5,
 	ALGO_X11,
 	ALGO_X13,
+	ALGO_X15,
 	ALGO_DMD_GR,
 } sha256_algos;
 
@@ -148,6 +149,7 @@ static const char *algo_names[] = {
 	"nist5",
 	"x11",
 	"x13",
+	"x15",
 	"dmd-gr",
 };
 
@@ -222,6 +224,7 @@ Options:\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
+						x15       X15 (BitBlock) hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
@@ -921,6 +924,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_X13:
 			rc = scanhash_x13(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+        case ALGO_X15:
+			rc = scanhash_x15(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

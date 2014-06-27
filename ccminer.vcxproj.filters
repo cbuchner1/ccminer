@@ -153,6 +153,12 @@
     <ClCompile Include="sph\hamsi_helper.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="sph\whirlpool.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\shabal.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -203,9 +209,6 @@
     <ClInclude Include="sph\sph_echo.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
-    <ClInclude Include="sph\sph_fugue.h">
-      <Filter>Header Files\sph</Filter>
-    </ClInclude>
     <ClInclude Include="sph\sph_groestl.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
@@ -252,6 +255,9 @@
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_hamsi.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_whirlpool.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
@@ -359,6 +365,15 @@
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
     <CudaCompile Include="x13\x13.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\cuda_shabal512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\cuda_whirlpool512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\x15.cu">
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
   </ItemGroup>
