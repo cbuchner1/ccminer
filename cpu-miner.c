@@ -130,9 +130,11 @@ typedef enum {
 	ALGO_JACKPOT,
 	ALGO_QUARK,
 	ALGO_ANIME,
+	ALGO_QUBIT,
 	ALGO_NIST5,
 	ALGO_X11,
 	ALGO_X13,
+	ALGO_X14,
 	ALGO_X15,
 	ALGO_DMD_GR,
 } sha256_algos;
@@ -146,9 +148,11 @@ static const char *algo_names[] = {
 	"jackpot",
 	"quark",
 	"anime",
+	"qubit",
 	"nist5",
 	"x11",
 	"x13",
+	"x14",
 	"x15",
 	"dmd-gr",
 };
@@ -221,9 +225,11 @@ Options:\n\
                         jackpot   Jackpot hash\n\
                         quark     Quark hash\n\
                         anime     Animecoin hash\n\
+						qubit     qubitcoin hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
+						x14       X14 (MoronCoin) hash\n\
 						x15       X15 (BitBlock) hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
@@ -911,7 +917,10 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_anime(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
-
+		case ALGO_QUBIT:
+			rc = scanhash_qubit(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
 		case ALGO_NIST5:
 			rc = scanhash_nist5(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
@@ -924,6 +933,10 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_X13:
 			rc = scanhash_x13(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+        case ALGO_X14:
+			rc = scanhash_x14(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
