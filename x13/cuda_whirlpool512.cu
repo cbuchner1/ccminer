@@ -43,6 +43,8 @@
 #include <stdint.h>
 #include <memory.h>
 
+#define USE_SHARED 1
+
 #define SPH_C64(x)    ((uint64_t)(x ## ULL))
 #define SPH_C32(x)    ((uint32_t)(x ## U))
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
@@ -55,64 +57,19 @@
     #define SPH_ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
 #endif
 
-// das Hi Word aus einem 64 Bit Typen extrahieren
-static __device__ uint32_t HIWORD(const unsigned long long &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2hiint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x >> 32);
-#endif
-}
 
-// das Hi Word in einem 64 Bit Typen ersetzen
-static __device__ unsigned long long REPLACE_HIWORD(const unsigned long long &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFFULL) | (((unsigned long long)y) << 32ULL);
-}
-
-// das Lo Word aus einem 64 Bit Typen extrahieren
-static __device__ uint32_t LOWORD(const unsigned long long &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2loint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x & 0xFFFFFFFFULL);
-#endif
-}
-
-static __device__ unsigned long long MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
-{
-#if __CUDA_ARCH__ >= 130
-    return __double_as_longlong(__hiloint2double(HI, LO));
-#else
-	return (unsigned long long)LO | (((unsigned long long)HI) << 32ULL);
-#endif
-}
-
-// das Lo Word in einem 64 Bit Typen ersetzen
-static __device__ unsigned long long REPLACE_LOWORD(const unsigned long long &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFF00000000ULL) | ((unsigned long long)y);
-}
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-#define mixtob_T0(x) tex1Dfetch(mixTob0Tox,x)
-#define mixtob_T1(x) tex1Dfetch(mixTob1Tox,x)
-#define mixtob_T2(x) tex1Dfetch(mixTob2Tox,x)
-#define mixtob_T3(x) tex1Dfetch(mixTob3Tox,x)
-#define mixtob_T4(x) tex1Dfetch(mixTob4Tox,x)
-#define mixtob_T5(x) tex1Dfetch(mixTob5Tox,x)
-#define mixtob_T6(x) tex1Dfetch(mixTob6Tox,x)
-#define mixtob_T7(x) tex1Dfetch(mixTob7Tox,x)
-
-texture<unsigned int, 1, cudaReadModeElementType> mixTob0Tox;
-texture<unsigned int, 1, cudaReadModeElementType> mixTob1Tox;
-texture<unsigned int, 1, cudaReadModeElementType> mixTob2Tox;
-texture<unsigned int, 1, cudaReadModeElementType> mixTob3Tox;
-texture<unsigned int, 1, cudaReadModeElementType> mixTob4Tox;
-texture<unsigned int, 1, cudaReadModeElementType> mixTob5Tox;
-texture<unsigned int, 1, cudaReadModeElementType> mixTob6Tox;
-texture<unsigned int, 1, cudaReadModeElementType> mixTob7Tox;
-
+static __constant__ uint64_t mixTob0Tox[256];
+static __constant__ uint64_t mixTob1Tox[256];
+static __constant__ uint64_t mixTob2Tox[256];
+static __constant__ uint64_t mixTob3Tox[256];
+static __constant__ uint64_t mixTob4Tox[256];
+static __constant__ uint64_t mixTob5Tox[256];
+static __constant__ uint64_t mixTob6Tox[256];
+static __constant__ uint64_t mixTob7Tox[256];
 
 static const uint64_t plain_T0[256] = {
 	SPH_C64(0xD83078C018601818), SPH_C64(0x2646AF05238C2323),
@@ -1184,17 +1141,28 @@ static const uint64_t plain_RC[10] = {
 
 #define BYTE(x, n)     ((unsigned)((x) >> (8 * (n))) & 0xFF)
 
-
-#define ROUND_ELT(table, in, i0, i1, i2, i3, i4, i5, i6, i7) \
-	(MAKE_ULONGLONG(table ## 0(2*BYTE(in ## i0, 0)),table ## 0(2*BYTE(in ## i0, 0)+1)) \
-	^ MAKE_ULONGLONG(table ## 1(2*BYTE(in ## i1, 1)),table ## 1(2*BYTE(in ## i1, 1)+1)) \
-	^ MAKE_ULONGLONG(table ## 2(2*BYTE(in ## i2, 2)),table ## 2(2*BYTE(in ## i2, 2)+1)) \
-	^ MAKE_ULONGLONG(table ## 3(2*BYTE(in ## i3, 3)),table ## 3(2*BYTE(in ## i3, 3)+1)) \
-	^ MAKE_ULONGLONG(table ## 4(2*BYTE(in ## i4, 4)),table ## 4(2*BYTE(in ## i4, 4)+1)) \
-	^ MAKE_ULONGLONG(table ## 5(2*BYTE(in ## i5, 5)),table ## 5(2*BYTE(in ## i5, 5)+1)) \
-	^ MAKE_ULONGLONG(table ## 6(2*BYTE(in ## i6, 6)),table ## 6(2*BYTE(in ## i6, 6)+1)) \
-	^ MAKE_ULONGLONG(table ## 7(2*BYTE(in ## i7, 7)),table ## 7(2*BYTE(in ## i7, 7)+1)))
-	
+static __device__ __forceinline__ uint64_t ROUND_ELT(const uint64_t* __restrict__ sharedMemory,uint64_t in[8],int i0,int i1,int i2,int i3,int i4,int i5,int i6,int i7) 
+{
+uint32_t idx0, idx1, idx2, idx3, idx4, idx5, idx6, idx7;
+uint64_t result;
+idx0 = BYTE(in[i0], 0);
+idx1 = BYTE(in[i1], 1) + 256;
+idx2 = BYTE(in[i2], 2) + 512;
+idx3 = BYTE(in[i3], 3) + 768;
+idx4 = BYTE(in[i4], 4) + 1024;
+idx5 = BYTE(in[i5], 5) + 1280;
+idx6 = BYTE(in[i6], 6) + 1536;
+idx7 = BYTE(in[i7], 7) + 1792;
+     result = sharedMemory[idx0]^
+		      sharedMemory[idx1]^
+			  sharedMemory[idx2]^
+			  sharedMemory[idx3]^
+			  sharedMemory[idx4]^
+		      sharedMemory[idx5]^
+			  sharedMemory[idx6]^
+			  sharedMemory[idx7];
+	 return result;
+}
 #define ROUND(table, in, out, c0, c1, c2, c3, c4, c5, c6, c7)    { \
 		out ## 0 = ROUND_ELT(table, in, 0, 7, 6, 5, 4, 3, 2, 1) ^ c0; \
 		out ## 1 = ROUND_ELT(table, in, 1, 0, 7, 6, 5, 4, 3, 2) ^ c1; \
@@ -1206,22 +1174,19 @@ static const uint64_t plain_RC[10] = {
 		out ## 7 = ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0) ^ c7; \
 	} 
 
-#define ROUND_KSCHED(table, in, out, c) \
-	ROUND(table, in, out, c, 0, 0, 0, 0, 0, 0, 0)
+#define ROUND_KSCHED(table, in, out, c) ROUND(table, in, out, c, 0, 0, 0, 0, 0, 0, 0)
 
-#define ROUND_WENC(table, in, key, out) \
-	ROUND(table, in, out, key ## 0, key ## 1, key ## 2, \
-		key ## 3, key ## 4, key ## 5, key ## 6, key ## 7)
+#define ROUND_WENC(table, in, key, out) ROUND(table, in, out, key[0], key[1], key[2],key[3], key[4], key[5], key[6], key[7])
 
 #define TRANSFER(dst, src)   { \
-		dst ## 0 = src ## 0; \
-		dst ## 1 = src ## 1; \
-		dst ## 2 = src ## 2; \
-		dst ## 3 = src ## 3; \
-		dst ## 4 = src ## 4; \
-		dst ## 5 = src ## 5; \
-		dst ## 6 = src ## 6; \
-		dst ## 7 = src ## 7; \
+		dst[0] = src ## 0; \
+		dst[1] = src ## 1; \
+		dst[2] = src ## 2; \
+		dst[3] = src ## 3; \
+		dst[4] = src ## 4; \
+		dst[5] = src ## 5; \
+		dst[6] = src ## 6; \
+		dst[7] = src ## 7; \
 	} 
 
 
@@ -1232,7 +1197,18 @@ __global__ void
 #endif
 x13_whirlpool512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
-	
+	__shared__ uint64_t sharedMemory[2048];
+	if(threadIdx.x < 256)
+	{
+		sharedMemory[threadIdx.x]      = mixTob0Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+256]  = mixTob1Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+512]  = mixTob2Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+768]  = mixTob3Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1024] = mixTob4Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1280] = mixTob5Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1536] = mixTob6Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1792] = mixTob7Tox[threadIdx.x];
+	}
 
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -1254,89 +1230,65 @@ uint64_t h8[8];
 		for (int i=0;i<16;i++) {
 			hash.h4[i]= inpHash[i];}
 
-    uint64_t n0, n1, n2, n3, n4, n5, n6, n7; 
-    uint64_t h0, h1, h2, h3, h4, h5, h6, h7;
     uint64_t state[8];
+	uint64_t n[8];
+	uint64_t h[8];
+    n[0] = (hash.h8[0]);
+    n[1] = (hash.h8[1]);
+    n[2] = (hash.h8[2]);
+    n[3] = (hash.h8[3]);
+    n[4] = (hash.h8[4]);
+    n[5] = (hash.h8[5]);
+    n[6] = (hash.h8[6]); 
+    n[7] = (hash.h8[7]);
 
-    n0 = (hash.h8[0]);
-    n1 = (hash.h8[1]);
-    n2 = (hash.h8[2]);
-    n3 = (hash.h8[3]);
-    n4 = (hash.h8[4]);
-    n5 = (hash.h8[5]);
-    n6 = (hash.h8[6]);
-    n7 = (hash.h8[7]);
-
-    h0 = h1 = h2 = h3 = h4 = h5 = h6 = h7 = 0;
-
-    n0 ^= h0;
-    n1 ^= h1;
-    n2 ^= h2;
-    n3 ^= h3;
-    n4 ^= h4;
-    n5 ^= h5;
-    n6 ^= h6;
-    n7 ^= h7;
+          #pragma unroll 8
+          for (int i=0;i<8;i++){
+	       h[i] = 0;
+	       n[i] ^= h[i];}
 
     #pragma unroll 10
     for (unsigned r = 0; r < 10; r ++) {
 	uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 
-	ROUND_KSCHED(mixtob_T, h, tmp,InitVector_RC[r]);
+	ROUND_KSCHED(sharedMemory, h, tmp,InitVector_RC[r]);
 	TRANSFER(h, tmp);
-	ROUND_WENC(mixtob_T, n, h, tmp);
+	ROUND_WENC(sharedMemory, n, h, tmp);
 	TRANSFER(n, tmp);
-    }
+	}
+	
+#pragma unroll 8
+	for (int i=0;i<8;i++) {
+		state[i] = n[i] ^ (hash.h8[i]);
+	        n[i]=0;}
 
-    state[0] = n0 ^ (hash.h8[0]);
-    state[1] = n1 ^ (hash.h8[1]);
-    state[2] = n2 ^ (hash.h8[2]);
-    state[3] = n3 ^ (hash.h8[3]);
-    state[4] = n4 ^ (hash.h8[4]);
-    state[5] = n5 ^ (hash.h8[5]);
-    state[6] = n6 ^ (hash.h8[6]);
-    state[7] = n7 ^ (hash.h8[7]);
+    n[0] = 0x80;
+    n[7] = 0x2000000000000;
 
-    n0 = 0x80;
-    n1 = n2 = n3 = n4 = n5 = n6 = 0;
-    n7 = 0x2000000000000;
-
-    h0 = state[0];
-    h1 = state[1];
-    h2 = state[2];
-    h3 = state[3];
-    h4 = state[4];
-    h5 = state[5];
-    h6 = state[6];
-    h7 = state[7];
-
-    n0 ^= h0;
-    n1 ^= h1;
-    n2 ^= h2;
-    n3 ^= h3;
-    n4 ^= h4;
-    n5 ^= h5;
-    n6 ^= h6;
-    n7 ^= h7;
+#pragma unroll 8
+	for (int i=0;i<8;i++) {
+		h[i] = state[i];
+		n[i] ^= h[i];}
+	
 
     #pragma unroll 10
     for (unsigned r = 0; r < 10; r ++) {
 	uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 
-	ROUND_KSCHED(mixtob_T, h, tmp, InitVector_RC[r]);
+	ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
 	TRANSFER(h, tmp);
-	ROUND_WENC(mixtob_T, n, h, tmp);
+	ROUND_WENC(sharedMemory, n, h, tmp);
 	TRANSFER(n, tmp);
     }
 
-    state[0] ^= n0 ^ 0x80;
-    state[1] ^= n1;
-    state[2] ^= n2;
-    state[3] ^= n3;
-    state[4] ^= n4;
-    state[5] ^= n5;
-    state[6] ^= n6;
-    state[7] ^= n7 ^ 0x2000000000000;	
+    state[0] ^= n[0] ^ 0x80;
+    state[1] ^= n[1];
+    state[2] ^= n[2];
+    state[3] ^= n[3];
+    state[4] ^= n[4];
+    state[5] ^= n[5];
+    state[6] ^= n[6];
+    state[7] ^= n[7] ^ 0x2000000000000;	
     
     #pragma unroll 8
 	for (unsigned i = 0; i < 8; i ++)
@@ -1345,37 +1297,22 @@ uint64_t h8[8];
       #pragma unroll 16
       for (int u = 0; u < 16; u ++) 
             inpHash[u] = hash.h4[u];    
+
  }
-
-
-}
-
-#define texDef(texname, texmem, texsource, texsize) \
-	unsigned int *texmem; \
-	cudaMalloc(&texmem, texsize); \
-	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
-	texname.normalized = 0; \
-	texname.filterMode = cudaFilterModePoint; \
-	texname.addressMode[0] = cudaAddressModeClamp; \
-	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
-	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
-
-
+ }
+   
 void x13_whirlpool512_cpu_init(int thr_id, int threads)
 {
     
+	cudaMemcpyToSymbol(mixTob0Tox,plain_T0,sizeof(plain_T0),0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(mixTob1Tox,plain_T1,sizeof(plain_T1),0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(mixTob2Tox,plain_T2,sizeof(plain_T2),0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(mixTob3Tox,plain_T3,sizeof(plain_T3),0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(mixTob4Tox,plain_T4,sizeof(plain_T4),0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(mixTob5Tox,plain_T5,sizeof(plain_T5),0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(mixTob6Tox,plain_T6,sizeof(plain_T6),0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(mixTob7Tox,plain_T7,sizeof(plain_T7),0, cudaMemcpyHostToDevice);
 
-	texDef(mixTob0Tox, mixtob_T0m, plain_T0, sizeof(uint64_t)*256);
-	texDef(mixTob1Tox, mixtob_T1m, plain_T1, sizeof(uint64_t)*256);
-	texDef(mixTob2Tox, mixtob_T2m, plain_T2, sizeof(uint64_t)*256);
-	texDef(mixTob3Tox, mixtob_T3m, plain_T3, sizeof(uint64_t)*256);
-	texDef(mixTob4Tox, mixtob_T4m, plain_T4, sizeof(uint64_t)*256);
-	texDef(mixTob5Tox, mixtob_T5m, plain_T5, sizeof(uint64_t)*256);
-	texDef(mixTob6Tox, mixtob_T6m, plain_T6, sizeof(uint64_t)*256);
-	texDef(mixTob7Tox, mixtob_T7m, plain_T7, sizeof(uint64_t)*256);
-
-	
-	
 	cudaMemcpyToSymbol(InitVector_RC,plain_RC,sizeof(plain_RC),0, cudaMemcpyHostToDevice);
 
 }
@@ -1390,6 +1327,7 @@ __host__ void x13_whirlpool512_cpu_hash_64(int thr_id, int threads, uint32_t sta
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
+	
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 8 * 256 * sizeof(uint64_t);
 	
