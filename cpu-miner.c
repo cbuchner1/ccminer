@@ -131,6 +131,7 @@ typedef enum {
 	ALGO_QUARK,
 	ALGO_ANIME,
 	ALGO_QUBIT,
+	ALGO_FRESH,
 	ALGO_NIST5,
 	ALGO_X11,
 	ALGO_X13,
@@ -149,6 +150,7 @@ static const char *algo_names[] = {
 	"quark",
 	"anime",
 	"qubit",
+	"fresh",
 	"nist5",
 	"x11",
 	"x13",
@@ -226,6 +228,7 @@ Options:\n\
                         quark     Quark hash\n\
                         anime     Animecoin hash\n\
 						qubit     qubitcoin hash\n\
+						fresh     freshcoin hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
@@ -919,6 +922,10 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_QUBIT:
 			rc = scanhash_qubit(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+        case ALGO_FRESH:
+			rc = scanhash_fresh(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 		case ALGO_NIST5:
