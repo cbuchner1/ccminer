@@ -411,5 +411,5 @@ __host__ void x13_shabal512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 
 	x13_shabal512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 
-	MyStreamSynchronize(NULL, 0, thr_id);
+	MyStreamSynchronize(NULL, order, thr_id);
 }
