@@ -137,6 +137,7 @@ typedef enum {
 	ALGO_X13,
 	ALGO_X14,
 	ALGO_X15,
+	ALGO_WHIRLCOIN,
 	ALGO_DMD_GR,
 } sha256_algos;
 
@@ -156,6 +157,7 @@ static const char *algo_names[] = {
 	"x13",
 	"x14",
 	"x15",
+	"whirlcoin",
 	"dmd-gr",
 };
 
@@ -234,6 +236,7 @@ Options:\n\
                         x13       X13 (MaruCoin) hash\n\
 						x14       X14 (MoronCoin) hash\n\
 						x15       X15 (BitBlock) hash\n\
+						whirlcoin   whirlcoin hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
@@ -952,6 +955,10 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+        case ALGO_WHIRLCOIN:
+			rc = scanhash_test(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
 		default:
 			/* should never happen */
 			goto out;

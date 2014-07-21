@@ -78,8 +78,8 @@ extern void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 extern void x13_shabal512_cpu_init(int thr_id, int threads);
 extern void x13_shabal512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void x13_whirlpool512_cpu_init(int thr_id, int threads);
-extern void x13_whirlpool512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void whirlpool512_cpu_init(int thr_id, int threads,int flag);
+extern void whirlpool512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_check_cpu_init(int thr_id, int threads);
 extern void quark_check_cpu_setTarget(const void *ptarget);
@@ -225,7 +225,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
 		x13_shabal512_cpu_init(thr_id, throughput);
-		x13_whirlpool512_cpu_init(thr_id, throughput);
+		whirlpool512_cpu_init(thr_id, throughput,0);
 
 
 		quark_check_cpu_init(thr_id, throughput);
@@ -284,7 +284,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 
 		x13_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		
-		x13_whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 	
 		// Scan nach Gewinner Hashes auf der GPU
 		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
