@@ -64,7 +64,7 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #include "cuda_helper.h"
 
 // aus heavy.cu
-__forceinline__ __device__ uint64_t xor(uint64_t a, uint64_t b) {
+__forceinline__ __device__ uint64_t xor1(uint64_t a, uint64_t b) {
 	uint64_t result;
 	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a) ,"l"(b));
 	return result;
@@ -2320,19 +2320,19 @@ idx7 = BYTE(in[i7], 7) + 1792;
 return xor8(sharedMemory[idx0],sharedMemory[idx1],sharedMemory[idx2],sharedMemory[idx3],
 		    sharedMemory[idx4],sharedMemory[idx5],sharedMemory[idx6],sharedMemory[idx7]);
 /*
-return xor(sharedMemory[idx0],xor(sharedMemory[idx1],xor(sharedMemory[idx2],xor(sharedMemory[idx3],
-	   xor(sharedMemory[idx4],xor(sharedMemory[idx5],xor(sharedMemory[idx6],sharedMemory[idx7])))))));
+return xor1(sharedMemory[idx0],xor1(sharedMemory[idx1],xor1(sharedMemory[idx2],xor1(sharedMemory[idx3],
+	   xor1(sharedMemory[idx4],xor1(sharedMemory[idx5],xor1(sharedMemory[idx6],sharedMemory[idx7])))))));
 */
 }
 #define ROUND(table, in, out, c0, c1, c2, c3, c4, c5, c6, c7)    { \
-		out ## 0 = xor(ROUND_ELT(table, in, 0, 7, 6, 5, 4, 3, 2, 1),c0); \
-		out ## 1 = xor(ROUND_ELT(table, in, 1, 0, 7, 6, 5, 4, 3, 2),c1); \
-		out ## 2 = xor(ROUND_ELT(table, in, 2, 1, 0, 7, 6, 5, 4, 3),c2); \
-		out ## 3 = xor(ROUND_ELT(table, in, 3, 2, 1, 0, 7, 6, 5, 4),c3); \
-		out ## 4 = xor(ROUND_ELT(table, in, 4, 3, 2, 1, 0, 7, 6, 5),c4); \
-		out ## 5 = xor(ROUND_ELT(table, in, 5, 4, 3, 2, 1, 0, 7, 6),c5); \
-		out ## 6 = xor(ROUND_ELT(table, in, 6, 5, 4, 3, 2, 1, 0, 7),c6); \
-		out ## 7 = xor(ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0),c7); \
+		out ## 0 = xor1(ROUND_ELT(table, in, 0, 7, 6, 5, 4, 3, 2, 1),c0); \
+		out ## 1 = xor1(ROUND_ELT(table, in, 1, 0, 7, 6, 5, 4, 3, 2),c1); \
+		out ## 2 = xor1(ROUND_ELT(table, in, 2, 1, 0, 7, 6, 5, 4, 3),c2); \
+		out ## 3 = xor1(ROUND_ELT(table, in, 3, 2, 1, 0, 7, 6, 5, 4),c3); \
+		out ## 4 = xor1(ROUND_ELT(table, in, 4, 3, 2, 1, 0, 7, 6, 5),c4); \
+		out ## 5 = xor1(ROUND_ELT(table, in, 5, 4, 3, 2, 1, 0, 7, 6),c5); \
+		out ## 6 = xor1(ROUND_ELT(table, in, 6, 5, 4, 3, 2, 1, 0, 7),c6); \
+		out ## 7 = xor1(ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0),c7); \
 	} 
 
 #define ROUND_KSCHED(table, in, out, c) ROUND(table, in, out, c, 0, 0, 0, 0, 0, 0, 0)
@@ -2389,7 +2389,7 @@ uint64_t h8[8];
           for (int i=0;i<8;i++){
            n[i] = c_PaddedMessage80[i];  //read data
 	       h[i] = 0;                     // read state
-		   n[i] = xor(n[i],h[i]);}
+		   n[i] = xor1(n[i],h[i]);}
 //		   n[i] ^= h[i];}                // round 0
      
     #pragma unroll 10
@@ -2403,7 +2403,7 @@ uint64_t h8[8];
 	
 #pragma unroll 8
 	for (int i=0;i<8;i++) {
-		state[i] = xor(n[i],c_PaddedMessage80[i]);  
+		state[i] = xor1(n[i],c_PaddedMessage80[i]);  
 	        n[i]=0;}
 	
 	/// round 2 ///////
@@ -2417,7 +2417,7 @@ uint64_t h8[8];
 #pragma unroll 8
 	for (int i=0;i<8;i++) {
 		h[i] = state[i];   //read state
-		n[i] = xor(n[i],h[i]);}
+		n[i] = xor1(n[i],h[i]);}
 
 	
 	
@@ -2434,10 +2434,10 @@ uint64_t h8[8];
 	state[0] = xor3(state[0],n[0],c_PaddedMessage80[8]);
     state[1] = xor3(state[1],n[1],REPLACE_HIWORD(c_PaddedMessage80[9],cuda_swab32(nounce)));
     state[2] = xor3(state[2],n[2],0x0000000000000080);// whirlpool
-    state[3] = xor(state[3],n[3]);
-    state[4] = xor(state[4],n[4]);
-    state[5] = xor(state[5],n[5]);
-    state[6] = xor(state[6],n[6]);
+    state[3] = xor1(state[3],n[3]);
+    state[4] = xor1(state[4],n[4]);
+    state[5] = xor1(state[5],n[5]);
+    state[6] = xor1(state[6],n[6]);
     state[7] = xor3(state[7],n[7],0x8002000000000000);
     #pragma unroll 8
 	for (unsigned i = 0; i < 8; i ++)
@@ -2503,7 +2503,7 @@ uint64_t h8[8];
           for (int i=0;i<8;i++){
            n[i] = hash.h8[i];
 	       h[i] = 0;
-	       n[i] = xor(n[i],h[i]);}
+	       n[i] = xor1(n[i],h[i]);}
 
     #pragma unroll 10
     for (unsigned r = 0; r < 10; r ++) {
@@ -2517,7 +2517,7 @@ uint64_t h8[8];
 	
 #pragma unroll 8
 	for (int i=0;i<8;i++) {
-		state[i] = xor(n[i],hash.h8[i]);
+		state[i] = xor1(n[i],hash.h8[i]);
 	        n[i]=0;}
 
     n[0] = 0x80;
@@ -2526,7 +2526,7 @@ uint64_t h8[8];
 #pragma unroll 8
 	for (int i=0;i<8;i++) {
 		h[i] = state[i];
-		n[i] = xor(n[i],h[i]);}
+		n[i] = xor1(n[i],h[i]);}
 	
 
     #pragma unroll 10
@@ -2540,12 +2540,12 @@ uint64_t h8[8];
     }
 
     state[0] = xor3(state[0],n[0],0x80);
-    state[1] = xor(state[1],n[1]);
-    state[2] = xor(state[2],n[2]);
-	state[3] = xor(state[3],n[3]);
-    state[4] = xor(state[4],n[4]);
-	state[5] = xor(state[5],n[5]);
-    state[6] = xor(state[6],n[6]);
+    state[1] = xor1(state[1],n[1]);
+    state[2] = xor1(state[2],n[2]);
+	state[3] = xor1(state[3],n[3]);
+    state[4] = xor1(state[4],n[4]);
+	state[5] = xor1(state[5],n[5]);
+    state[6] = xor1(state[6],n[6]);
     state[7] = xor3(state[7],n[7],0x2000000000000);	
     
     #pragma unroll 8
