@@ -88,6 +88,93 @@ __forceinline__ __device__ uint64_t ROTL64(const uint64_t value, const int offse
 #define ROTL64(x, n)        (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
 
+__forceinline__ __device__ uint64_t xor1(uint64_t a, uint64_t b) {
+	uint64_t result;
+	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a) ,"l"(b));
+	return result;
+}
+__forceinline__ __device__ uint64_t xor3(uint64_t a, uint64_t b, uint64_t c) {
+	uint64_t result;
+	asm("{\n\t"
+		" .reg .u64 t1;\n\t"
+		"xor.b64 t1, %2, %3;\n\t"
+		"xor.b64 %0, %1, t1;\n\t" 
+		"}"
+		: "=l"(result) : "l"(a) ,"l"(b),"l"(c));
+	return result;
+}
+
+__forceinline__ __device__ uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t f,uint64_t g, uint64_t h) {
+	uint64_t result;
+	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(g) ,"l"(h));
+	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(f));
+	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(e));
+	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(d));
+	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(c));
+	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(b));
+	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(a));
+	return result;
+}
+
+__forceinline__ __device__ uint64_t xandx(uint64_t a, uint64_t b, uint64_t c)
+{
+	uint64_t result;
+	asm("{\n\t"
+		".reg .u64 m,n;\n\t"
+		"xor.b64 m, %2,%3;\n\t"
+		"and.b64 n, m,%1;\n\t"
+		"xor.b64 %0, n,%3;\n\t"
+		"}\n\t"
+		: "=l"(result) : "l"(a), "l"(b), "l"(c));
+	return result;
+
+}
+__forceinline__ __device__ uint64_t sph_t64(uint64_t x)
+{
+uint64_t result;
+asm("{\n\t"
+    "and.b64 %0,%1,0xFFFFFFFFFFFFFFFF;\n\t"
+    "}\n\t"
+	: "=l"(result) : "l"(x));
+	return result;
+}
+
+__forceinline__ __device__ uint64_t andor(uint64_t a, uint64_t b, uint64_t c)
+{
+	uint64_t result;
+	asm("{\n\t"
+		".reg .u64 m,n,o;\n\t"
+		"and.b64 m,  %1, %2;\n\t"
+		" or.b64 n,  %1, %2;\n\t"
+		"and.b64 o,   n, %3;\n\t"
+		" or.b64 %0,  m, o ;\n\t"
+		"}\n\t"
+		: "=l"(result) : "l"(a), "l"(b), "l"(c));
+	return result;
+
+}
+__forceinline__ __device__ uint64_t shr_t64(uint64_t x,uint32_t n)
+{
+uint64_t result;
+asm("{\n\t"
+	".reg .u64 m;\n\t"
+	"shr.b64 m,%1,%2;\n\t"
+    "and.b64 %0,m,0xFFFFFFFFFFFFFFFF;\n\t"
+    "}\n\t"
+	: "=l"(result) : "l"(x), "r"(n));
+	return result;
+}
+__forceinline__ __device__ uint64_t shl_t64(uint64_t x,uint32_t n)
+{
+uint64_t result;
+asm("{\n\t"
+	".reg .u64 m;\n\t"
+	"shl.b64 m,%1,%2;\n\t"
+    "and.b64 %0,m,0xFFFFFFFFFFFFFFFF;\n\t"
+    "}\n\t"
+	: "=l"(result) : "l"(x), "r"(n));
+	return result;
+}
 
 
 #endif // #ifndef CUDA_HELPER_H
