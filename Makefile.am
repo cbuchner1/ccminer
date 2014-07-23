@@ -16,7 +16,7 @@ bin_PROGRAMS	= ccminer
 ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
-			  cpu-miner.c util.c sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c hefty1.c scrypt.c sha2.c sha2big.c haval.c \
+			  cpu-miner.c util.c sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c hefty1.c scrypt.c sha2.c sph/sha2big.c sph/haval.c \
 			  sph/bmw.h sph/sph_blake.h sph/sph_groestl.h sph/sph_jh.h sph/sph_keccak.h sph/sph_skein.h sph/sph_types.h \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
