@@ -162,6 +162,12 @@
     <ClCompile Include="sph\shabal.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="sph\haval.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\sha2big.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -261,6 +267,12 @@
       <Filter>Header Files\sph</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_whirlpool.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_haval.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_sha2.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
@@ -387,6 +399,21 @@
     </CudaCompile>
     <CudaCompile Include="qubit\qubit_luffa512.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\cuda_haval512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\cuda_sha512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\whirlcoin.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\x17.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\fresh.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>
