@@ -47,7 +47,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 5.5.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -240,9 +240,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="sph\echo.c" />
     <ClCompile Include="sph\fugue.c" />
     <ClCompile Include="sph\groestl.c" />
+    <ClCompile Include="sph\haval.c" />
     <ClCompile Include="sph\jh.c" />
     <ClCompile Include="sph\keccak.c" />
     <ClCompile Include="sph\luffa.c" />
+    <ClCompile Include="sph\sha2big.c" />
     <ClCompile Include="sph\shabal.c" />
     <ClCompile Include="sph\shavite.c" />
     <ClCompile Include="sph\simd.c" />
@@ -281,9 +283,11 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="sph\sph_cubehash.h" />
     <ClInclude Include="sph\sph_echo.h" />
     <ClInclude Include="sph\sph_groestl.h" />
+    <ClInclude Include="sph\sph_haval.h" />
     <ClInclude Include="sph\sph_jh.h" />
     <ClInclude Include="sph\sph_keccak.h" />
     <ClInclude Include="sph\sph_luffa.h" />
+    <ClInclude Include="sph\sph_sha2.h" />
     <ClInclude Include="sph\sph_shavite.h" />
     <ClInclude Include="sph\sph_simd.h" />
     <ClInclude Include="sph\sph_skein.h" />
@@ -507,6 +511,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="x13\cuda_haval512.cu" />
+    <CudaCompile Include="x13\cuda_sha512.cu" />
     <CudaCompile Include="x13\cuda_shabal512.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -551,6 +557,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="x13\x17.cu" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -561,6 +568,6 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 5.5.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
   </ImportGroup>
 </Project>
