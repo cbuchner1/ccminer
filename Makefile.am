@@ -16,7 +16,7 @@ bin_PROGRAMS	= ccminer
 ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
-			  cpu-miner.c util.c sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c hefty1.c scrypt.c sha2.c  \
+			  cpu-miner.c util.c sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c hefty1.c scrypt.c sha2.c \
 			  sph/bmw.h sph/sph_blake.h sph/sph_groestl.h sph/sph_jh.h sph/sph_keccak.h sph/sph_skein.h sph/sph_types.h \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
@@ -25,9 +25,9 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  heavy/cuda_hefty1.cu heavy/cuda_hefty1.h \
 			  heavy/cuda_keccak512.cu heavy/cuda_keccak512.h \
 			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
-			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
-			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
-			  myriadgroestl.cpp cuda_myriadgroestl.cu \
+			  fuguecoin.cpp Algo256/cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
+			  groestlcoin.cpp Algo256/cuda_groestlcoin.cu cuda_groestlcoin.h \
+			  myriadgroestl.cpp Algo256/cuda_myriadgroestl.cu \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
 			  JHA/cuda_jha_compactionTest.cu quark/cuda_quark_checkhash.cu \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
@@ -37,11 +37,10 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \
 			  sph/shabal.c sph/whirlpool.c sph/sph_shabal.h sph/sph_whirlpool.h \
-			  sph/sha2big.c sph/haval.c sph/sph_sha2.h sph/sph_haval.h \
-			  qubit/qubit.cu qubit/qubit_luffa512.cu x13/x14.cu x13/fresh.cu \
+			  qubit/qubit.cu qubit/qubit_luffa512.cu x13/x14.cu x13/fresh.cu x13/x17.cu \
 			  x13/x13.cu x13/cuda_x13_hamsi512.cu x13/cuda_x13_fugue512.cu x13/x15.cu x13/cuda_shabal512.cu x13/cuda_whirlpool512.cu \
-			  x11/x11.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu x13/whirlcoin.cu \
-			  x13/x17.cu x13/cuda_sha512.cu x13/cuda_haval512.cu \
+			  x13/whirlcoin.cu Algo256/cuda_keccak256.cu Algo256/keccak256.cu
+			  x11/x11.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
 			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@

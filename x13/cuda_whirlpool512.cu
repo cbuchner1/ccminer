@@ -1,8 +1,6 @@
 /*
- * Quick and dirty addition of Whirlpool for X15
- * 
  * Built on cbuchner1's implementation, actual hashing code
- * heavily based on phm's sgminer
+ * based on sphlib 3.0
  *
  */
 /*
@@ -10,7 +8,8 @@
  *
  * ==========================(LICENSE BEGIN)============================
  *
- * Copyright (c) 2014  phm
+ * Copyright (c) 2014  djm34
+ *                     
  * 
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -33,7 +32,7 @@
  *
  * ===========================(LICENSE END)=============================
  *
- * @author   phm <phm@inbox.com>
+ * @author   djm34
  */
 #include <cuda.h>
 #include "cuda_runtime.h"
@@ -53,19 +52,15 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define SPH_C32(x)    ((uint32_t)(x ## U))
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define SPH_ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define SPH_ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
-
 #include "cuda_helper.h"
+
+// aus heavy.cu
 
 
  __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
-
+ __constant__ uint32_t pTarget[8];
+uint32_t *d_wnounce[8];
+uint32_t *d_WNonce[8];
 
 static __constant__ uint64_t mixTob0Tox[256];
 static __constant__ uint64_t mixTob1Tox[256];
@@ -2301,7 +2296,6 @@ uint64_t h8[8];
            n[i] = c_PaddedMessage80[i];  //read data
 	       h[i] = 0;                     // read state
 		   n[i] = xor1(n[i],h[i]);}
-//		   n[i] ^= h[i];}                // round 0
      
     #pragma unroll 10
     for (unsigned r = 0; r < 10; r ++) {
@@ -2329,7 +2323,7 @@ uint64_t h8[8];
 	for (int i=0;i<8;i++) {
 		h[i] = state[i];   //read state
 		n[i] = xor1(n[i],h[i]);}
-
+//		n[i] ^= h[i];}     // round 0
 	
 	
     #pragma unroll 10
@@ -2365,12 +2359,8 @@ uint64_t h8[8];
 
 }
 
-// #if USE_SHARED
-// __global__ void  __launch_bounds__(512)
-// #else
-__global__ void
-//#endif
-whirlpool512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+
+__global__ void whirlpool512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint64_t sharedMemory[2048];
 	if(threadIdx.x < 256)
@@ -2410,6 +2400,7 @@ uint64_t h8[8];
 	uint64_t n[8];
 	uint64_t h[8];
 	
+
           #pragma unroll 8
           for (int i=0;i<8;i++){
            n[i] = hash.h8[i];
@@ -2463,6 +2454,7 @@ uint64_t h8[8];
 	for (unsigned i = 0; i < 8; i ++)
 	hash.h8[i] = state[i];
     
+	
       #pragma unroll 16
       for (int u = 0; u < 16; u ++) 
             inpHash[u] = hash.h4[u];    
@@ -2470,6 +2462,123 @@ uint64_t h8[8];
  } 
  }
    
+ __global__ void whirlpool512_gpu_finalhash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *resNounce)
+{
+	__shared__ uint64_t sharedMemory[2048];
+	if(threadIdx.x < 256)
+	{
+		sharedMemory[threadIdx.x]      = mixTob0Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+256]  = mixTob1Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+512]  = mixTob2Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+768]  = mixTob3Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1024] = mixTob4Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1280] = mixTob5Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1536] = mixTob6Tox[threadIdx.x];
+		sharedMemory[threadIdx.x+1792] = mixTob7Tox[threadIdx.x];
+	}
+	//__syncthreads();
+    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    if (thread < threads)
+    {
+        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+
+        int hashPosition = nounce - startNounce;
+        uint32_t *inpHash = (uint32_t*)&g_hash[8 * hashPosition];
+		
+ 
+
+union {
+uint8_t h1[64];
+uint32_t h4[16];
+uint64_t h8[8];
+} hash;  
+
+
+	    #pragma unroll 16
+		for (int i=0;i<16;i++) {
+			hash.h4[i]= inpHash[i];}
+
+    uint64_t state[8];
+	uint64_t n[8];
+	uint64_t h[8];
+	
+
+          #pragma unroll 8
+          for (int i=0;i<8;i++){
+           n[i] = hash.h8[i];
+	       h[i] = 0;
+	       n[i] = xor1(n[i],h[i]);}
+
+    #pragma unroll 10
+    for (unsigned r = 0; r < 10; r ++) {
+	uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+
+	ROUND_KSCHED(sharedMemory, h, tmp,InitVector_RC[r]);
+	TRANSFER(h, tmp);
+	ROUND_WENC(sharedMemory, n, h, tmp);
+	TRANSFER(n, tmp);
+	}
+	
+#pragma unroll 8
+	for (int i=0;i<8;i++) {
+		state[i] = xor1(n[i],hash.h8[i]);
+	        n[i]=0;}
+
+    n[0] = 0x80;
+    n[7] = 0x2000000000000;
+
+#pragma unroll 8
+	for (int i=0;i<8;i++) {
+		h[i] = state[i];
+		n[i] = xor1(n[i],h[i]);}
+	
+
+    #pragma unroll 10
+    for (unsigned r = 0; r < 10; r ++) {
+	uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+
+	ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
+	TRANSFER(h, tmp);
+	ROUND_WENC(sharedMemory, n, h, tmp);
+	TRANSFER(n, tmp);
+    }
+
+    state[0] = xor3(state[0],n[0],0x80);
+    state[1] = xor1(state[1],n[1]);
+    state[2] = xor1(state[2],n[2]);
+	state[3] = xor1(state[3],n[3]);
+    state[4] = xor1(state[4],n[4]);
+	state[5] = xor1(state[5],n[5]);
+    state[6] = xor1(state[6],n[6]);
+    state[7] = xor3(state[7],n[7],0x2000000000000);	
+    
+    #pragma unroll 8
+	for (unsigned i = 0; i < 8; i ++)
+	hash.h8[i] = state[i];
+    
+	
+		bool rc = true;
+	
+		for (int i = 7; i >= 0; i--) {
+			if (hash.h4[i] > pTarget[i]) {
+				rc = false;
+				break;
+			}
+			if (hash.h4[i] < pTarget[i]) {
+				rc = true;
+				break;
+			}
+		}
+
+		if(rc == true)
+		{
+			if(resNounce[0] > nounce)
+				resNounce[0] = nounce;
+		}
+
+ } 
+ }
+
 void whirlpool512_cpu_init(int thr_id, int threads, int flag)
 {
 
@@ -2496,6 +2605,9 @@ void whirlpool512_cpu_init(int thr_id, int threads, int flag)
 
 	cudaMemcpyToSymbol(InitVector_RC,plain_RC,sizeof(plain_RC),0, cudaMemcpyHostToDevice);
 	}
+    cudaMalloc(&d_WNonce[thr_id], sizeof(uint32_t)); 
+	cudaMallocHost(&d_wnounce[thr_id], 1*sizeof(uint32_t));
+
 } 
 
 
@@ -2516,6 +2628,31 @@ __host__ void whirlpool512_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
+__host__ uint32_t whirlpool512_cpu_finalhash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+{
+    uint32_t result = 0xffffffff;
+	cudaMemset(d_WNonce[thr_id], 0xff, sizeof(uint32_t));
+	const int threadsperblock = 512; // Alignment mit mixtob Grösse. NICHT ÄNDERN
+
+	// berechne wie viele Thread Blocks wir brauchen
+	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 block(threadsperblock);
+
+	size_t shared_size = 0;
+	
+	
+	whirlpool512_gpu_finalhash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector,d_WNonce[thr_id]);
+
+	MyStreamSynchronize(NULL, order, thr_id);
+	cudaMemcpy(d_wnounce[thr_id], d_WNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	//cudaThreadSynchronize();
+	result = *d_wnounce[thr_id];
+
+	return result;
+
+
+}
+
 __host__ void whirlpool512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
 
@@ -2531,11 +2668,12 @@ __host__ void whirlpool512_cpu_hash_80(int thr_id, int threads, uint32_t startNo
 
 	MyStreamSynchronize(NULL, order, thr_id);
 }
-__host__ void whirlpool512_setBlock_80(void *pdata)
+__host__ void whirlpool512_setBlock_80(void *pdata, const void *ptarget)
 {
 	unsigned char PaddedMessage[128];
 	memcpy(PaddedMessage, pdata, 80);
 	memset(PaddedMessage+80, 0, 48);
-
+	cudaMemcpyToSymbol( pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+
 }

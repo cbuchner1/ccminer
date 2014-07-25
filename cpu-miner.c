@@ -138,7 +138,8 @@ typedef enum {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
-	ALGO_WHIRLCOIN,
+	ALGO_WH,
+	ALGO_KECCAK,
 	ALGO_DMD_GR,
 } sha256_algos;
 
@@ -160,6 +161,7 @@ static const char *algo_names[] = {
 	"x15",
 	"x17",
 	"whirlcoin",
+	"keccak",
 	"dmd-gr",
 };
 
@@ -238,8 +240,9 @@ Options:\n\
                         x13       X13 (MaruCoin) hash\n\
 						x14       X14 (MoronCoin) hash\n\
 						x15       X15 (BitBlock) hash\n\
-						x17       X17 (peoplecurrency) hash\n\
-						whirlcoin   whirlcoin hash\n\
+						x17       X17 (people currency coin) hash\n\
+						whirlcoin  whirlcoin (whirlcoin) hash\n\
+						keccak     keccak256 (maxcoin) hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
@@ -732,7 +735,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo ==  ALGO_WHIRLCOIN)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WH || opt_algo == ALGO_KECCAK )
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	else
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -792,6 +795,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+    else if (opt_algo == ALGO_KECCAK)
+		diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));  // seems to work best, minimize rejected share
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }
@@ -958,13 +963,17 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
-         case ALGO_X17:
+        case ALGO_X17:
 			rc = scanhash_x17(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
-        case ALGO_WHIRLCOIN:
-			rc = scanhash_test(thr_id, work.data, work.target,
+        case ALGO_WH:
+			rc = scanhash_wh(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+		case ALGO_KECCAK:
+			rc = scanhash_keccak256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 		default:

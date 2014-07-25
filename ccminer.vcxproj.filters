@@ -61,6 +61,9 @@
     <Filter Include="Source Files\CUDA\qubit">
       <UniqueIdentifier>{f3ed23a2-8ce7-41a5-b051-6da56047dc35}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\Algo256">
+      <UniqueIdentifier>{a448ec8d-f346-4944-9786-aa0b55519306}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -162,10 +165,10 @@
     <ClCompile Include="sph\shabal.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
-    <ClCompile Include="sph\haval.c">
+    <ClCompile Include="sph\sha2big.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
-    <ClCompile Include="sph\sha2big.c">
+    <ClCompile Include="sph\haval.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
   </ItemGroup>
@@ -269,6 +272,7 @@
     <ClInclude Include="sph\sph_whirlpool.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
     <ClInclude Include="sph\sph_haval.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
@@ -277,12 +281,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="cuda_fugue256.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_groestlcoin.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
       <Filter>Source Files\CUDA\JHA</Filter>
     </CudaCompile>
@@ -291,9 +289,6 @@
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_checkhash.cu">
       <Filter>Source Files\CUDA\quark</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_myriadgroestl.cu">
-      <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_compactionTest.cu">
       <Filter>Source Files\CUDA\JHA</Filter>
@@ -400,20 +395,38 @@
     <CudaCompile Include="qubit\qubit_luffa512.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
     </CudaCompile>
-    <CudaCompile Include="x13\cuda_haval512.cu">
-      <Filter>Source Files\CUDA\x13</Filter>
-    </CudaCompile>
-    <CudaCompile Include="x13\cuda_sha512.cu">
-      <Filter>Source Files\CUDA\x13</Filter>
-    </CudaCompile>
-    <CudaCompile Include="x13\whirlcoin.cu">
-      <Filter>Source Files\CUDA\x13</Filter>
-    </CudaCompile>
     <CudaCompile Include="x13\x17.cu">
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
     <CudaCompile Include="x13\fresh.cu">
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
+    <CudaCompile Include="x13\cuda_haval512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\cuda_sha512.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\keccak256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_fugue256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_groestlcoin.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_myriadgroestl.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_keccak256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x13\whirlpool.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ccminer.rc" />
   </ItemGroup>
 </Project>
