@@ -73,7 +73,7 @@ extern "C" int scanhash_wh(int thr_id, uint32_t *pdata,
 
 	const uint32_t Htarg = ptarget[7];
 
-	const int throughput = 256*256*8;
+	const int throughput = 256*256*8*4;
 	
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
