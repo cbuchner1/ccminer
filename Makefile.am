@@ -25,9 +25,9 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  heavy/cuda_hefty1.cu heavy/cuda_hefty1.h \
 			  heavy/cuda_keccak512.cu heavy/cuda_keccak512.h \
 			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
-			  fuguecoin.cpp Algo256/cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
-			  groestlcoin.cpp Algo256/cuda_groestlcoin.cu cuda_groestlcoin.h \
-			  myriadgroestl.cpp Algo256/cuda_myriadgroestl.cu \
+			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
+			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
+			  myriadgroestl.cpp cuda_myriadgroestl.cu \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
 			  JHA/cuda_jha_compactionTest.cu quark/cuda_quark_checkhash.cu \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
