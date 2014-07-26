@@ -1,12 +1,10 @@
 /*
- * test routine for new algorithm
+ * whirlpool routine for new algorithm
  * 
  */
 
 extern "C"
 {
-#include "sph/sph_shavite.h"
-#include "sph/sph_simd.h"
 #include "sph/sph_whirlpool.h"
 
 #include "miner.h"
@@ -19,23 +17,18 @@ extern int device_map[8];
 static uint32_t *d_hash[8];
 
 extern void whirlpool512_cpu_init(int thr_id, int threads, int flag);
-extern void whirlpool512_setBlock_80(void *pdata);
+extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
 extern void whirlpool512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
 extern void whirlpool512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_check_cpu_init(int thr_id, int threads);
 extern void quark_check_cpu_setTarget(const void *ptarget);
 
 extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
-extern uint32_t test_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
-
-extern void quark_compactTest_cpu_init(int thr_id, int threads);
-extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, 
-											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse,
-											int order);
 
 // fresh Hashfunktion
-inline void test_hash(void *state, const void *input)
+inline void wh_hash(void *state, const void *input)
 {
     // shavite-simd-shavite-simd-echo
 
@@ -69,7 +62,7 @@ inline void test_hash(void *state, const void *input)
 
 extern bool opt_benchmark;
 
-extern "C" int scanhash_test(int thr_id, uint32_t *pdata,
+extern "C" int scanhash_wh(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
 {
@@ -91,7 +84,7 @@ extern "C" int scanhash_test(int thr_id, uint32_t *pdata,
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
 		whirlpool512_cpu_init(thr_id, throughput,1);
 		
-		quark_check_cpu_init(thr_id, throughput);
+//		quark_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
 
@@ -100,8 +93,8 @@ extern "C" int scanhash_test(int thr_id, uint32_t *pdata,
     uint32_t endiandata[20];
 	for (int k=0; k < 20; k++) {
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);	}
-	whirlpool512_setBlock_80((void*)endiandata);
-	quark_check_cpu_setTarget(ptarget);
+	whirlpool512_setBlock_80((void*)endiandata, ptarget);
+//	quark_check_cpu_setTarget(ptarget);
 	do {
 		int order = 0;
 		 
@@ -109,18 +102,19 @@ extern "C" int scanhash_test(int thr_id, uint32_t *pdata,
 		   
 		
 		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		
 		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+//		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		
 		
-		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		uint32_t foundNonce = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 
-			test_hash(vhash64, endiandata);
+			wh_hash(vhash64, endiandata);
 
 			if( (vhash64[7]<=Htarg) && fulltest(vhash64, ptarget) ) {
                 

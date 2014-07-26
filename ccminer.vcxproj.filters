@@ -422,7 +422,7 @@
     <CudaCompile Include="Algo256\cuda_keccak256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
-    <CudaCompile Include="x13\whirlpool.cu">
+    <CudaCompile Include="x13\whirlcoin.cu">
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
   </ItemGroup>
