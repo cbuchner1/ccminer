@@ -37,6 +37,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \
 			  sph/shabal.c sph/whirlpool.c sph/sph_shabal.h sph/sph_whirlpool.h \
+			  sph/haval.c sph/sph_haval.h sph/sph_sha2.h sph/sha2big.c \
 			  qubit/qubit.cu qubit/qubit_luffa512.cu x13/x14.cu x13/fresh.cu x13/x17.cu \
 			  x13/x13.cu x13/cuda_x13_hamsi512.cu x13/cuda_x13_fugue512.cu x13/x15.cu x13/cuda_shabal512.cu x13/cuda_whirlpool512.cu \
 			  x13/whirlcoin.cu Algo256/cuda_keccak256.cu Algo256/keccak256.cu \
