@@ -161,7 +161,7 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
-	"luffa";
+	"luffa",
 	"whirlcoin",
 	"keccak",
 	"dmd-gr",
