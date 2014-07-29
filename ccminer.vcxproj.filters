@@ -425,6 +425,9 @@
     <CudaCompile Include="x13\whirlcoin.cu">
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
+    <CudaCompile Include="qubit\doom.cu">
+      <Filter>Source Files\CUDA\qubit</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ccminer.rc" />

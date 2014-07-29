@@ -138,6 +138,7 @@ typedef enum {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
+	ALGO_DOOM,
 	ALGO_WH,
 	ALGO_KECCAK,
 	ALGO_DMD_GR,
@@ -160,6 +161,7 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
+	"luffa";
 	"whirlcoin",
 	"keccak",
 	"dmd-gr",
@@ -241,6 +243,7 @@ Options:\n\
 						x14       X14 (MoronCoin) hash\n\
 						x15       X15 (BitBlock) hash\n\
 						x17       X17 (people currency coin) hash\n\
+						luffa     luffa512 (doomcoin) hash\n\
 						whirlcoin  whirlcoin (whirlcoin) hash\n\
 						keccak     keccak256 (maxcoin) hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
@@ -965,6 +968,11 @@ static void *miner_thread(void *userdata)
 
         case ALGO_X17:
 			rc = scanhash_x17(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+        case ALGO_DOOM:
+			rc = scanhash_doom(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

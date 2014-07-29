@@ -451,6 +451,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="qubit\doom.cu" />
     <CudaCompile Include="qubit\qubit.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
