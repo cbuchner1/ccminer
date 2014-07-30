@@ -21,6 +21,8 @@ static uint32_t *d_hash[8];
 extern void qubit_luffa512_cpu_init(int thr_id, int threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
 extern void qubit_luffa512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget);
+extern uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 extern void quark_check_cpu_init(int thr_id, int threads);
 extern void quark_check_cpu_setTarget(const void *ptarget);
@@ -67,8 +69,6 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
 		qubit_luffa512_cpu_init(thr_id, throughput);
 		
-		quark_check_cpu_init(thr_id, throughput);
-
 		init[thr_id] = true;
 	}
 
@@ -78,17 +78,14 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
-	qubit_luffa512_cpu_setBlock_80((void*)endiandata);
-	quark_check_cpu_setTarget(ptarget);
+	qubit_luffa512_cpufinal_setBlock_80((void*)endiandata,ptarget);
+	
 
 	do {
 		int order = 0;
 
-        // erstes luffa512 Hash mit CUDA
-		qubit_luffa512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		if  (foundNonce != 0xffffffff)
+		uint32_t foundNonce = qubit_luffa512_cpu_finalhash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);		
+	    if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
