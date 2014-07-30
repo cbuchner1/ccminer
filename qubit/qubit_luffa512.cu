@@ -30,9 +30,7 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 typedef unsigned char BitSequence;
 
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
+
 #include "cuda_helper.h"
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t pTarget[8];
