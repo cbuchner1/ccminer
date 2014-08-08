@@ -19,6 +19,10 @@ If you find this tool useful and like to support its continued
    SFR donation address: SR4b87aEnPfTs77bo9NnnaV21fiF6jQpAp
    MNC donation address: MShgNUSYwybEbXLvJUtdNg1a7rUeiNgooK
    BTQ donation address: 13GFwLiZL2DaA9XeE733PNrQX5QYLFsonS
+
+X14/X15 (tpruvot@github)
+   BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
+
 ***************************************************************
 
 >>> Introduction <<<
@@ -88,6 +92,7 @@ its command line interface and options.
   -P, --protocol-dump   verbose dump of protocol-level activities
   -B, --background      run the miner in the background
       --benchmark       run in offline benchmark mode
+      --cputest         debug hashes from cpu algorithms
   -c, --config=FILE     load a JSON-format configuration file
   -V, --version         display version information and exit
   -h, --help            display this help text and exit

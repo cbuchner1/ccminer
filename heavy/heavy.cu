@@ -1,9 +1,14 @@
-#include <string.h>
-#include <openssl/sha.h>
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+
+#include <stdio.h>
+#include <memory.h>
+#include <string.h>
+
 #include <map>
+
+#include <openssl/sha.h>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -337,7 +342,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
     blake512_cpu_setBlock(pdata, blocklen);
 
     do {
-        int i;
+        uint32_t i;
 
         ////// Compaction init
         thrust::device_ptr<uint32_t> devNoncePtr(d_nonceVector[thr_id]);

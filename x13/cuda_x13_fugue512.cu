@@ -5,6 +5,25 @@
  * heavily based on phm's sgminer
  *
  */
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include "device_launch_parameters.h"
+
+#include <stdint.h>
+
+// aus heavy.cu
+extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+
+#define SPH_C32(x)    ((uint32_t)(x ## U))
+#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
+
+#if __CUDA_ARCH__ < 350
+// Kepler (Compute 3.0)
+#define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
+#else
+// Kepler (Compute 3.5, 5.0)
+#define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
+#endif
 
 /*
  * X13 kernel implementation.
@@ -37,24 +56,7 @@
  * @author   phm <phm@inbox.com>
  */
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-#include <stdint.h>
-
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
-#define SPH_C32(x)    ((uint32_t)(x ## U))
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
-
 #define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
-
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
 
 #define mixtab0(x) (*((uint32_t*)mixtabs + (    (x))))
 #define mixtab1(x) (*((uint32_t*)mixtabs + (256+(x))))

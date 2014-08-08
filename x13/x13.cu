@@ -1,8 +1,6 @@
 /*
- * X13 algorithm built on cbuchner1's original X11
- * 
+ * X13 algorithm
  */
-
 extern "C"
 {
 #include "sph/sph_blake.h"
@@ -23,6 +21,9 @@ extern "C"
 
 #include "miner.h"
 }
+
+#include <stdint.h>
+#include <cuda_runtime.h>
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -82,90 +83,80 @@ extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t star
 											int order);
 
 // X13 Hashfunktion
-inline void x13hash(void *state, const void *input)
+extern "C" void x13hash(void *output, const void *input)
 {
-    // blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11-hamsi12-fugue13
+	// blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11-hamsi12-fugue13
 
-    sph_blake512_context ctx_blake;
-    sph_bmw512_context ctx_bmw;
-    sph_groestl512_context ctx_groestl;
-    sph_jh512_context ctx_jh;
-    sph_keccak512_context ctx_keccak;
-    sph_skein512_context ctx_skein;
-    sph_luffa512_context ctx_luffa;
-    sph_cubehash512_context ctx_cubehash;
-    sph_shavite512_context ctx_shavite;
-    sph_simd512_context ctx_simd;
-    sph_echo512_context ctx_echo;
-    sph_hamsi512_context ctx_hamsi;
-    sph_fugue512_context ctx_fugue;
+	sph_blake512_context ctx_blake;
+	sph_bmw512_context ctx_bmw;
+	sph_groestl512_context ctx_groestl;
+	sph_jh512_context ctx_jh;
+	sph_keccak512_context ctx_keccak;
+	sph_skein512_context ctx_skein;
+	sph_luffa512_context ctx_luffa;
+	sph_cubehash512_context ctx_cubehash;
+	sph_shavite512_context ctx_shavite;
+	sph_simd512_context ctx_simd;
+	sph_echo512_context ctx_echo;
+	sph_hamsi512_context ctx_hamsi;
+	sph_fugue512_context ctx_fugue;
 
-    uint32_t hash[16];
+	uint32_t hash[32];
+	memset(hash, 0, sizeof hash);
 
-    sph_blake512_init(&ctx_blake);
-    // ZBLAKE;
-    sph_blake512 (&ctx_blake, input, 80);
-    sph_blake512_close(&ctx_blake, (void*) hash);
+	sph_blake512_init(&ctx_blake);
+	sph_blake512 (&ctx_blake, input, 80);
+	sph_blake512_close(&ctx_blake, (void*) hash);
 
-    sph_bmw512_init(&ctx_bmw);
-    // ZBMW;
-    sph_bmw512 (&ctx_bmw, (const void*) hash, 64);
-    sph_bmw512_close(&ctx_bmw, (void*) hash);
+	sph_bmw512_init(&ctx_bmw);
+	sph_bmw512 (&ctx_bmw, (const void*) hash, 64);
+	sph_bmw512_close(&ctx_bmw, (void*) hash);
 
-    sph_groestl512_init(&ctx_groestl);
-    // ZGROESTL;
-    sph_groestl512 (&ctx_groestl, (const void*) hash, 64);
-    sph_groestl512_close(&ctx_groestl, (void*) hash);
+	sph_groestl512_init(&ctx_groestl);
+	sph_groestl512 (&ctx_groestl, (const void*) hash, 64);
+	sph_groestl512_close(&ctx_groestl, (void*) hash);
 
-    sph_skein512_init(&ctx_skein);
-    // ZSKEIN;
-    sph_skein512 (&ctx_skein, (const void*) hash, 64);
-    sph_skein512_close(&ctx_skein, (void*) hash);
+	sph_skein512_init(&ctx_skein);
+	sph_skein512 (&ctx_skein, (const void*) hash, 64);
+	sph_skein512_close(&ctx_skein, (void*) hash);
 
-    sph_jh512_init(&ctx_jh);
-    // ZJH;
-    sph_jh512 (&ctx_jh, (const void*) hash, 64);
-    sph_jh512_close(&ctx_jh, (void*) hash);
+	sph_jh512_init(&ctx_jh);
+	sph_jh512 (&ctx_jh, (const void*) hash, 64);
+	sph_jh512_close(&ctx_jh, (void*) hash);
 
-    sph_keccak512_init(&ctx_keccak);
-    // ZKECCAK;
-    sph_keccak512 (&ctx_keccak, (const void*) hash, 64);
-    sph_keccak512_close(&ctx_keccak, (void*) hash);
+	sph_keccak512_init(&ctx_keccak);
+	sph_keccak512 (&ctx_keccak, (const void*) hash, 64);
+	sph_keccak512_close(&ctx_keccak, (void*) hash);
 
-    sph_luffa512_init(&ctx_luffa);
-    // ZLUFFA;
-    sph_luffa512 (&ctx_luffa, (const void*) hash, 64);
-    sph_luffa512_close (&ctx_luffa, (void*) hash);
+	sph_luffa512_init(&ctx_luffa);
+	sph_luffa512 (&ctx_luffa, (const void*) hash, 64);
+	sph_luffa512_close (&ctx_luffa, (void*) hash);
 
-    sph_cubehash512_init(&ctx_cubehash);
-    // ZCUBEHASH;
-    sph_cubehash512 (&ctx_cubehash, (const void*) hash, 64);
-    sph_cubehash512_close(&ctx_cubehash, (void*) hash);
+	sph_cubehash512_init(&ctx_cubehash);
+	sph_cubehash512 (&ctx_cubehash, (const void*) hash, 64);
+	sph_cubehash512_close(&ctx_cubehash, (void*) hash);
 
-    sph_shavite512_init(&ctx_shavite);
-    // ZSHAVITE;
-    sph_shavite512 (&ctx_shavite, (const void*) hash, 64);
-    sph_shavite512_close(&ctx_shavite, (void*) hash);
+	sph_shavite512_init(&ctx_shavite);
+	sph_shavite512 (&ctx_shavite, (const void*) hash, 64);
+	sph_shavite512_close(&ctx_shavite, (void*) hash);
 
-    sph_simd512_init(&ctx_simd);
-    // ZSIMD
-    sph_simd512 (&ctx_simd, (const void*) hash, 64);
-    sph_simd512_close(&ctx_simd, (void*) hash);
+	sph_simd512_init(&ctx_simd);
+	sph_simd512 (&ctx_simd, (const void*) hash, 64);
+	sph_simd512_close(&ctx_simd, (void*) hash);
 
-    sph_echo512_init(&ctx_echo);
-    // ZECHO
-    sph_echo512 (&ctx_echo, (const void*) hash, 64);
-    sph_echo512_close(&ctx_echo, (void*) hash); 
+	sph_echo512_init(&ctx_echo);
+	sph_echo512 (&ctx_echo, (const void*) hash, 64);
+	sph_echo512_close(&ctx_echo, (void*) hash);
 
-    sph_hamsi512_init(&ctx_hamsi);
-    sph_hamsi512 (&ctx_hamsi, (const void*) hash, 64);
-    sph_hamsi512_close(&ctx_hamsi, (void*) hash); 
+	sph_hamsi512_init(&ctx_hamsi);
+	sph_hamsi512 (&ctx_hamsi, (const void*) hash, 64);
+	sph_hamsi512_close(&ctx_hamsi, (void*) hash);
 
-    sph_fugue512_init(&ctx_fugue);
-    sph_fugue512 (&ctx_fugue, (const void*) hash, 64);
-    sph_fugue512_close(&ctx_fugue, (void*) hash); 
+	sph_fugue512_init(&ctx_fugue);
+	sph_fugue512 (&ctx_fugue, (const void*) hash, 64);
+	sph_fugue512_close(&ctx_fugue, (void*) hash);
 
-    memcpy(state, hash, 32);
+	memcpy(output, hash, 32);
 }
 
 
@@ -266,12 +257,15 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 			x13hash(vhash64, endiandata);
 
 			if( (vhash64[7]<=Htarg) && fulltest(vhash64, ptarget) ) {
-                
-                pdata[19] = foundNonce;
-                *hashes_done = foundNonce - first_nonce + 1;
-                return 1;
-			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+				pdata[19] = foundNonce;
+				*hashes_done = foundNonce - first_nonce + 1;
+				return 1;
+			}
+			else if (vhash64[7] > Htarg) {
+				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
+			}
+			else {
+				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 

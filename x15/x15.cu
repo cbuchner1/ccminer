@@ -1,6 +1,9 @@
+/*
+ * X15 algorithm (CHC, BBC, X15C)
+ * Added in ccminer by Tanguy Pruvot - 2014
+ */
 
-extern "C"
-{
+extern "C" {
 #include "sph/sph_blake.h"
 #include "sph/sph_bmw.h"
 #include "sph/sph_groestl.h"
@@ -14,16 +17,24 @@ extern "C"
 #include "sph/sph_simd.h"
 #include "sph/sph_echo.h"
 
+#include "sph/sph_hamsi.h"
+#include "sph/sph_fugue.h"
+#include "sph/sph_shabal.h"
+#include "sph/sph_whirlpool.h"
+
 #include "miner.h"
 }
 
 #include <stdint.h>
 #include <cuda_runtime.h>
 
-// aus cpu-miner.c
+// to test gpu hash on a null buffer
+#define NULLTEST 0
+
+// from cpu-miner.c
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
+// Memory for the hash functions
 static uint32_t *d_hash[8];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);
@@ -36,7 +47,6 @@ extern void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 
 extern void quark_groestl512_cpu_init(int thr_id, int threads);
 extern void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void quark_doublegroestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_skein512_cpu_init(int thr_id, int threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -62,105 +72,136 @@ extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounc
 extern void x11_echo512_cpu_init(int thr_id, int threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
+extern void x13_hamsi512_cpu_init(int thr_id, int threads);
+extern void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void x13_fugue512_cpu_init(int thr_id, int threads);
+extern void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void x14_shabal512_cpu_init(int thr_id, int threads);
+extern void x14_shabal512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void x15_whirlpool_cpu_init(int thr_id, int threads);
+extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
 extern void quark_check_cpu_init(int thr_id, int threads);
 extern void quark_check_cpu_setTarget(const void *ptarget);
 extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
-extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, 
-											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse,
-											int order);
+extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
+											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse, int order);
 
-// X11 Hashfunktion
-extern "C" void x11hash(void *output, const void *input)
+extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+
+// X15 CPU Hash function
+extern "C" void x15hash(void *output, const void *input)
 {
-	// blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11
+	sph_blake512_context     ctx_blake;
+	sph_bmw512_context       ctx_bmw;
+	sph_groestl512_context   ctx_groestl;
+	sph_jh512_context        ctx_jh;
+	sph_keccak512_context    ctx_keccak;
+	sph_skein512_context     ctx_skein;
+	sph_luffa512_context     ctx_luffa;
+	sph_cubehash512_context  ctx_cubehash;
+	sph_shavite512_context   ctx_shavite;
+	sph_simd512_context      ctx_simd;
+	sph_echo512_context      ctx_echo;
+	sph_hamsi512_context     ctx_hamsi;
+	sph_fugue512_context     ctx_fugue;
+	sph_shabal512_context    ctx_shabal;
+	sph_whirlpool_context    ctx_whirlpool;
 
-	sph_blake512_context ctx_blake;
-	sph_bmw512_context ctx_bmw;
-	sph_groestl512_context ctx_groestl;
-	sph_jh512_context ctx_jh;
-	sph_keccak512_context ctx_keccak;
-	sph_skein512_context ctx_skein;
-	sph_luffa512_context ctx_luffa;
-	sph_cubehash512_context ctx_cubehash;
-	sph_shavite512_context ctx_shavite;
-	sph_simd512_context ctx_simd;
-	sph_echo512_context ctx_echo;
+	unsigned char hash[128]; // uint32_t hashA[16], hashB[16];
+	#define hashB hash+64
 
-	unsigned char hash[128];
 	memset(hash, 0, sizeof hash);
 
 	sph_blake512_init(&ctx_blake);
-	sph_blake512 (&ctx_blake, input, 80);
-	sph_blake512_close(&ctx_blake, (void*) hash);
+	sph_blake512(&ctx_blake, input, 80);
+	sph_blake512_close(&ctx_blake, hash);
 
 	sph_bmw512_init(&ctx_bmw);
-	sph_bmw512 (&ctx_bmw, (const void*) hash, 64);
-	sph_bmw512_close(&ctx_bmw, (void*) hash);
+	sph_bmw512(&ctx_bmw, hash, 64);
+	sph_bmw512_close(&ctx_bmw, hashB);
 
 	sph_groestl512_init(&ctx_groestl);
-	sph_groestl512 (&ctx_groestl, (const void*) hash, 64);
-	sph_groestl512_close(&ctx_groestl, (void*) hash);
+	sph_groestl512(&ctx_groestl, hashB, 64);
+	sph_groestl512_close(&ctx_groestl, hash);
 
 	sph_skein512_init(&ctx_skein);
-	sph_skein512 (&ctx_skein, (const void*) hash, 64);
-	sph_skein512_close(&ctx_skein, (void*) hash);
+	sph_skein512(&ctx_skein, hash, 64);
+	sph_skein512_close(&ctx_skein, hashB);
 
 	sph_jh512_init(&ctx_jh);
-	sph_jh512 (&ctx_jh, (const void*) hash, 64);
-	sph_jh512_close(&ctx_jh, (void*) hash);
+	sph_jh512(&ctx_jh, hashB, 64);
+	sph_jh512_close(&ctx_jh, hash);
 
 	sph_keccak512_init(&ctx_keccak);
-	sph_keccak512 (&ctx_keccak, (const void*) hash, 64);
-	sph_keccak512_close(&ctx_keccak, (void*) hash);
+	sph_keccak512(&ctx_keccak, hash, 64);
+	sph_keccak512_close(&ctx_keccak, hashB);
 
 	sph_luffa512_init(&ctx_luffa);
-	sph_luffa512 (&ctx_luffa, (const void*) hash, 64);
-	sph_luffa512_close (&ctx_luffa, (void*) hash);
+	sph_luffa512(&ctx_luffa, hashB, 64);
+	sph_luffa512_close(&ctx_luffa, hash);
 
 	sph_cubehash512_init(&ctx_cubehash);
-	sph_cubehash512 (&ctx_cubehash, (const void*) hash, 64);
-	sph_cubehash512_close(&ctx_cubehash, (void*) hash);
+	sph_cubehash512(&ctx_cubehash, hash, 64);
+	sph_cubehash512_close(&ctx_cubehash, hashB);
 
 	sph_shavite512_init(&ctx_shavite);
-	sph_shavite512 (&ctx_shavite, (const void*) hash, 64);
-	sph_shavite512_close(&ctx_shavite, (void*) hash);
+	sph_shavite512(&ctx_shavite, hashB, 64);
+	sph_shavite512_close(&ctx_shavite, hash);
 
 	sph_simd512_init(&ctx_simd);
-	sph_simd512 (&ctx_simd, (const void*) hash, 64);
-	sph_simd512_close(&ctx_simd, (void*) hash);
+	sph_simd512(&ctx_simd, hash, 64);
+	sph_simd512_close(&ctx_simd, hashB);
 
 	sph_echo512_init(&ctx_echo);
-	sph_echo512 (&ctx_echo, (const void*) hash, 64);
-	sph_echo512_close(&ctx_echo, (void*) hash);
+	sph_echo512(&ctx_echo, hashB, 64);
+	sph_echo512_close(&ctx_echo, hash);
+
+	sph_hamsi512_init(&ctx_hamsi);
+	sph_hamsi512(&ctx_hamsi, hash, 64);
+	sph_hamsi512_close(&ctx_hamsi, hashB);
+
+	sph_fugue512_init(&ctx_fugue);
+	sph_fugue512(&ctx_fugue, hashB, 64);
+	sph_fugue512_close(&ctx_fugue, hash);
+
+	sph_shabal512_init(&ctx_shabal);
+	sph_shabal512(&ctx_shabal, hash, 64);
+	sph_shabal512_close(&ctx_shabal, hashB);
+
+	sph_whirlpool_init(&ctx_whirlpool);
+	sph_whirlpool(&ctx_whirlpool, hashB, 64);
+	sph_whirlpool_close(&ctx_whirlpool, hash);
 
 	memcpy(output, hash, 32);
 }
 
-
 extern bool opt_benchmark;
 
-extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
-    unsigned long *hashes_done)
+extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
+	const int throughput = 256*256*8;
+	static bool init[8] = {0,0,0,0,0,0,0,0};
+	uint32_t endiandata[20];
+	uint32_t Htarg = ptarget[7];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		((uint32_t*)ptarget)[7] = Htarg = 0x0000ff;
 
-	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*256*8;
-
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
@@ -172,68 +213,73 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_shavite512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
+		x13_hamsi512_cpu_init(thr_id, throughput);
+		x13_fugue512_cpu_init(thr_id, throughput);
+		x14_shabal512_cpu_init(thr_id, throughput);
+		x15_whirlpool_cpu_init(thr_id, throughput);
+
 		quark_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++)
+#if NULLTEST
+		endiandata[k] = 0;
+#else
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+#endif
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	quark_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
-
-		// erstes Blake512 Hash mit CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für BMW512
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Groestl512
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Skein512
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für JH512
 		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Luffa512
 		x11_luffa512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Cubehash512
 		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Shavite512
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für SIMD512
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für ECHO512
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		// Scan nach Gewinner Hashes auf der GPU
+		/* Scan with GPU */
 		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		if  (foundNonce != 0xffffffff)
+
+#if NULLTEST
+		uint32_t buf[16]; memset(buf, 0, sizeof(buf));
+		cudaMemcpy(buf, d_hash[thr_id], 16 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+		MyStreamSynchronize(NULL, order, thr_id);
+		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[0], buf[1], buf[2], buf[3]);
+		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[4], buf[5], buf[6], buf[7]);
+		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[8], buf[9], buf[10], buf[11]);
+		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[12], buf[13], buf[14], buf[15]);
+		return 0;
+#endif
+		if (foundNonce != 0xffffffff)
 		{
+			/* check now with the CPU to confirm */
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
-			x11hash(vhash64, endiandata);
-
-			if ((vhash64[7] <= Htarg) && fulltest(vhash64, ptarget)) {
+			x15hash(vhash64, endiandata);
+			if ((vhash64[7] <= Htarg) /* && fulltest(vhash64, ptarget) */) {
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
+				applog(LOG_INFO, "GPU #%d: result for nonce $%08X is in wanted range, %x <= %x", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
-				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
+				applog(LOG_NOTICE, "Hash0 %08x %08x %08x %08x", vhash64[0], vhash64[1], vhash64[2], vhash64[3]);
+				applog(LOG_NOTICE, "Hash1 %08x %08x %08x %08x", vhash64[4], vhash64[5], vhash64[6], vhash64[7]);
+				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x",
+					thr_id, foundNonce, vhash64[7], Htarg);
 			}
 			else {
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);

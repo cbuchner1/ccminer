@@ -58,6 +58,9 @@
     <Filter Include="Source Files\CUDA\x13">
       <UniqueIdentifier>{d67a2af7-4851-4d21-910e-87791bc8ee35}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\x15">
+      <UniqueIdentifier>{a2403c22-6777-46ab-a55a-3fcc7386c974}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -151,6 +154,15 @@
       <Filter>Source Files\sph</Filter>
     </ClCompile>
     <ClCompile Include="sph\hamsi_helper.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\shabal.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\whirlpool.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\x15_helper.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
   </ItemGroup>
@@ -254,6 +266,12 @@
     <ClInclude Include="sph\sph_hamsi.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
+    <ClInclude Include="sph\sph_shabal.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_whirlpool.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_fugue256.cu">
@@ -267,9 +285,6 @@
     </CudaCompile>
     <CudaCompile Include="JHA\jackpotcoin.cu">
       <Filter>Source Files\CUDA\JHA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="quark\cuda_quark_checkhash.cu">
-      <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_myriadgroestl.cu">
       <Filter>Source Files\CUDA</Filter>
@@ -360,6 +375,21 @@
     </CudaCompile>
     <CudaCompile Include="x13\x13.cu">
       <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
+    <CudaCompile Include="quark\cuda_checkhash.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\x14.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\cuda_x14_shabal512.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\x15.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x15\cuda_x15_whirlpool.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

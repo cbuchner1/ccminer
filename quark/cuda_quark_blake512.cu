@@ -64,11 +64,12 @@ static __device__ uint32_t LOWORD(const uint64_t &x) {
 	return (uint32_t)(x & 0xFFFFFFFFULL);
 #endif
 }
-
+#if 0
 // das Lo Word in einem 64 Bit Typen ersetzen
 static __device__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t &y) {
 	return (x & 0xFFFFFFFF00000000ULL) | ((uint64_t)y);
 }
+#endif
 
 __device__ __forceinline__ uint64_t SWAP64(uint64_t x)
 {

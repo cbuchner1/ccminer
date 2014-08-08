@@ -1,7 +1,7 @@
 // Auf QuarkCoin spezialisierte Version von Groestl inkl. Bitslice
 
 #include <cuda.h>
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
 #include "device_launch_parameters.h"
 
 #include <stdio.h>

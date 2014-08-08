@@ -1,3 +1,5 @@
+#include <cuda_runtime.h>
+
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
@@ -8,10 +10,12 @@ typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
 typedef unsigned long long uint64_t;
 
-static __device__ uint32_t cuda_swab32(uint32_t x)
+#if 0
+__device__ static uint32_t cuda_swab32(uint32_t x)
 {
 	return __byte_perm(x, 0, 0x0123);
 }
+#endif
 
 typedef unsigned char BitSequence;
 typedef unsigned long long DataLength;

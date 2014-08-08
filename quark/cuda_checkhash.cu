@@ -3,14 +3,10 @@
 #include "device_launch_parameters.h"
 
 #include <stdio.h>
+#include <stdint.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
-// das Hash Target gegen das wir testen sollen
+// Hash Target gegen das wir testen sollen
 __constant__ uint32_t pTarget[8];
 
 uint32_t *d_resNounce[8];
@@ -19,7 +15,7 @@ uint32_t *h_resNounce[8];
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-__global__ void quark_check_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
+__global__ void cuda_check_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -89,7 +85,7 @@ __host__ uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t star
 	// Größe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
-	quark_check_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, d_inputHash, d_resNounce[thr_id]);
+	cuda_check_gpu_hash_64 <<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, d_inputHash, d_resNounce[thr_id]);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
 	MyStreamSynchronize(NULL, order, thr_id);

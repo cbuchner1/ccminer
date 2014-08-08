@@ -21,6 +21,7 @@
 #include <time.h>
 #ifdef WIN32
 #include <windows.h>
+#include <stdint.h>
 #else
 #include <errno.h>
 #include <signal.h>
@@ -133,6 +134,8 @@ typedef enum {
 	ALGO_NIST5,
 	ALGO_X11,
 	ALGO_X13,
+	ALGO_X14,
+	ALGO_X15,
 	ALGO_DMD_GR,
 } sha256_algos;
 
@@ -148,6 +151,8 @@ static const char *algo_names[] = {
 	"nist5",
 	"x11",
 	"x13",
+	"x14",
+	"x15",
 	"dmd-gr",
 };
 
@@ -222,6 +227,8 @@ Options:\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
+                        x14       X14 hash\n\
+                        x15       X15 hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
@@ -258,6 +265,7 @@ Options:\n\
 #endif
 "\
       --benchmark       run in offline benchmark mode\n\
+      --cputest         debug hashes from cpu algorithms\n\
   -c, --config=FILE     load a JSON-format configuration file\n\
   -V, --version         display version information and exit\n\
   -h, --help            display this help text and exit\n\
@@ -278,6 +286,7 @@ static struct option const options[] = {
 	{ "background", 0, NULL, 'B' },
 #endif
 	{ "benchmark", 0, NULL, 1005 },
+	{ "cputest", 0, NULL, 1006 },
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
 	{ "debug", 0, NULL, 'D' },
@@ -924,6 +933,17 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_X14:
+			rc = scanhash_x14(thr_id, work.data, work.target,
+				max_nonce, &hashes_done);
+			break;
+
+		case ALGO_X15:
+			rc = scanhash_x15(thr_id, work.data, work.target,
+				max_nonce, &hashes_done);
+			exit(0);
+			break;
+
 		default:
 			/* should never happen */
 			goto out;
@@ -1345,6 +1365,10 @@ static void parse_arg (int key, char *arg)
 		want_stratum = false;
 		have_stratum = false;
 		break;
+	case 1006:
+		print_hash_tests();
+		exit(0);
+		break;
 	case 1003:
 		want_longpoll = false;
 		break;
@@ -1481,26 +1505,26 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "1.2"
+#define PROGRAM_VERSION "1.2-VC12"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
 	long flags;
 	int i;
 
+	printf("*** ccMiner for nVidia GPUs by Christian Buchner and Christian H. ***\n");
+	printf("\t This is version "PROGRAM_VERSION" (tpruvot@github)\n");
 #ifdef WIN32
-	SYSTEM_INFO sysinfo;
+	printf("\t  Built with VC++ 2013 and nVidia CUDA SDK 6.5 RC (DC 5.0)\n\n");
+#else
+	printf("\t  Built with the nVidia CUDA SDK 6.5 RC\n\n");
 #endif
-
-	printf("     *** ccMiner for nVidia GPUs by Christian Buchner and Christian H. ***\n");
-	printf("\t             This is version "PROGRAM_VERSION" (beta)\n");
 	printf("\t  based on pooler-cpuminer 2.3.2 (c) 2010 Jeff Garzik, 2012 pooler\n");
-	printf("\t  based on pooler-cpuminer extension for HVC from\n\t       https://github.com/heavycoin/cpuminer-heavycoin\n");
-	printf("\t\t\tand\n\t       http://hvc.1gh.com/\n");
+	printf("\t  based on pooler-cpuminer extension for HVC from http://hvc.1gh.com/" "\n\n");
 	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n");
-	printf("\t  LTC donation address: LKS1WDKGED647msBQfLBHV3Ls8sveGncnm\n");
 	printf("\t  BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM\n");
-	printf("\t  YAC donation address: Y87sptDEcpLkLeAuex6qZioDbvy1qXZEj4\n");
+	printf("\tCuda X14 and X15 added by Tanguy Pruvot (also in cpuminer-multi)\n");
+	printf("\t  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");

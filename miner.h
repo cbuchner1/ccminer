@@ -243,6 +243,14 @@ extern int scanhash_x13(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_x14(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
+extern int scanhash_x15(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 extern void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
 extern void groestlcoin_hash(unsigned char* output, const unsigned char* input, int len);
@@ -341,6 +349,12 @@ extern bool tq_push(struct thread_q *tq, void *data);
 extern void *tq_pop(struct thread_q *tq, const struct timespec *abstime);
 extern void tq_freeze(struct thread_q *tq);
 extern void tq_thaw(struct thread_q *tq);
+
+void print_hash_tests(void);
+void x11hash(void *output, const void *input);
+void x13hash(void *output, const void *input);
+void x14hash(void *output, const void *input);
+void x15hash(void *output, const void *input);
 
 #ifdef __cplusplus
 }

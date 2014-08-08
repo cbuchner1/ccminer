@@ -23,6 +23,13 @@ static __device__ uint32_t cuda_swab32(uint32_t x)
 {
 	return __byte_perm(x, 0, 0x0123);
 }
+
+// das Hi Word in einem 64 Bit Typen ersetzen
+static __device__ unsigned long long REPLACE_HIWORD(const unsigned long long &x, const uint32_t &y) {
+	return (x & 0xFFFFFFFFULL) | (((unsigned long long)y) << 32ULL);
+}
+
+#if 0
 // Endian Drehung für 64 Bit Typen
 static __device__ unsigned long long cuda_swab64(unsigned long long x) {
     uint32_t h = (x >> 32);
@@ -37,11 +44,6 @@ static __device__ uint32_t HIWORD(const unsigned long long &x) {
 #else
 	return (uint32_t)(x >> 32);
 #endif
-}
-
-// das Hi Word in einem 64 Bit Typen ersetzen
-static __device__ unsigned long long REPLACE_HIWORD(const unsigned long long &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFFULL) | (((unsigned long long)y) << 32ULL);
 }
 
 // das Lo Word aus einem 64 Bit Typen extrahieren
@@ -66,6 +68,7 @@ static __device__ unsigned long long MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 static __device__ unsigned long long REPLACE_LOWORD(const unsigned long long &x, const uint32_t &y) {
 	return (x & 0xFFFFFFFF00000000ULL) | ((unsigned long long)y);
 }
+#endif
 
 // der Versuch, einen Wrapper für einen aus 32 Bit Registern zusammengesetzten uin64_t Typen zu entferfen...
 #if 1

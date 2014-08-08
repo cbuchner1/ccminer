@@ -1,16 +1,13 @@
 #include <cuda.h>
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
 #include "device_launch_parameters.h"
 
 #include <stdio.h>
+#include <stdint.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
 // das Hi Word aus einem 64 Bit Typen extrahieren
+#if 0
 static __device__ uint32_t HIWORD(const uint64_t &x) {
 #if __CUDA_ARCH__ >= 130
 	return (uint32_t)__double2hiint(__longlong_as_double(x));
@@ -27,6 +24,7 @@ static __device__ uint32_t LOWORD(const uint64_t &x) {
 	return (uint32_t)(x & 0xFFFFFFFFULL);
 #endif
 }
+#endif
 
 #define SPH_C64(x)    ((uint64_t)(x ## ULL))
 #define SPH_C32(x)    ((uint32_t)(x ## U))
