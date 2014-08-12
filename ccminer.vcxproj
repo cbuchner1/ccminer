@@ -98,8 +98,8 @@
       <AdditionalLibraryDirectories>..\pthreads\Pre-built.2\lib\x86;..\curl-7.29.0\build\lib\Debug;..\OpenSSL-Win32\lib\VC\static;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
-copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart32*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart32*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
@@ -127,8 +127,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalLibraryDirectories>..\pthreads\Pre-built.2\lib\x64;..\curl-7.29.0_x64\build\lib\Debug;..\OpenSSL-Win64\lib\VC\static;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
-copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
@@ -162,8 +162,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalLibraryDirectories>..\pthreads\Pre-built.2\lib\x86;..\curl-7.29.0\build\lib\Release;..\OpenSSL-Win32\lib\VC\static;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
-copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart32*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart32*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
@@ -202,8 +202,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalLibraryDirectories>..\pthreads\Pre-built.2\lib\x64;..\curl-7.29.0_x64\build\lib\Release;..\OpenSSL-Win64\lib\VC\static;%(AdditionalLibraryDirectories);$(CudaToolkitLibDir)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
-copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
