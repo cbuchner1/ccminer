@@ -428,8 +428,8 @@
     <CudaCompile Include="qubit\doom.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
     </CudaCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="ccminer.rc" />
+    <CudaCompile Include="x13\goalcoin.cu">
+      <Filter>Source Files\CUDA\x13</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

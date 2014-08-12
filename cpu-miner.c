@@ -140,6 +140,7 @@ typedef enum {
 	ALGO_X17,
 	ALGO_DOOM,
 	ALGO_WH,
+	ALGO_GOAL,
 	ALGO_KECCAK,
 	ALGO_DMD_GR,
 } sha256_algos;
@@ -163,6 +164,7 @@ static const char *algo_names[] = {
 	"x17",
 	"luffa",
 	"whirlcoin",
+	"goalcoin",
 	"keccak",
 	"dmd-gr",
 };
@@ -245,6 +247,7 @@ Options:\n\
 						x17       X17 (people currency coin) hash\n\
 						luffa     luffa512 (doomcoin) hash\n\
 						whirlcoin  whirlcoin (whirlcoin) hash\n\
+						goalcoin   goalcoin (goalcoin) hash\n\
 						keccak     keccak256 (maxcoin) hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
@@ -978,6 +981,10 @@ static void *miner_thread(void *userdata)
 
         case ALGO_WH:
 			rc = scanhash_wh(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+         case ALGO_GOAL:
+			rc = scanhash_goal(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 		case ALGO_KECCAK:
