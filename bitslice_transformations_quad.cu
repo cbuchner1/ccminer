@@ -1,4 +1,13 @@
 
+#if __CUDA_ARCH__ < 300
+/**
+ * __shfl() returns the value of var held by the thread whose ID is given by srcLane.
+ * If srcLane is outside the range 0..width-1, the thread's own value of var is returned.
+ */
+#undef __shfl
+#define __shfl(var, srcLane, width) (uint32_t)(var)
+#endif
+
 __device__ __forceinline__ void to_bitslice_quad(uint32_t *input, uint32_t *output)
 {
     int n = threadIdx.x % 4;
