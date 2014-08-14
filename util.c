@@ -1321,8 +1321,8 @@ out:
 
 static void print_hash(unsigned char *hash)
 {
-	for (int i=0; i < 32; i++) {
-		printf("%02x", hash[i]);
+	for (int i=0; i < 32; i += 4) {
+		printf("%02x%02x%02x%02x ", hash[i], hash[i+1], hash[i+2], hash[i+3]);
 	}
 }
 
@@ -1333,18 +1333,44 @@ void print_hash_tests(void)
 	printf("CPU HASH ON EMPTY BUFFER RESULTS:\n");
 
 	memset(hash, 0, sizeof hash);
+	fugue256_hash(&hash[0], &buf[0], 32);
+	printf("\nfugue256:"); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
+	groestlhash(&hash[0], &buf[0]);
+	printf("\ngroestl: "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
+	heavycoin_hash(&hash[0], &buf[0], 32);
+	printf("\nheavy:   "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
+	jackpothash(&hash[0], &buf[0]);
+	printf("\njackpot: "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
+	myriadhash(&hash[0], &buf[0]);
+	printf("\nmyriad:  "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
+	quarkhash(&hash[0], &buf[0]);
+	printf("\nquark:   "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
 	x11hash(&hash[0], &buf[0]);
-	printf("\nX11: "); print_hash(hash);
+	printf("\nX11:     "); print_hash(hash);
 
 	memset(hash, 0, sizeof hash);
 	x13hash(&hash[0], &buf[0]);
-	printf("\nX13: "); print_hash(hash);
+	printf("\nX13:     "); print_hash(hash);
 
 	memset(hash, 0, sizeof hash);
 	x14hash(&hash[0], &buf[0]);
-	printf("\nX14: "); print_hash(hash);
+	printf("\nX14:     "); print_hash(hash);
 
 	memset(hash, 0, sizeof hash);
 	x15hash(&hash[0], &buf[0]);
-	printf("\nX15: "); print_hash(hash);
+	printf("\nX15:     "); print_hash(hash);
+
+	printf("\n");
 }

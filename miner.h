@@ -251,10 +251,6 @@ extern int scanhash_x15(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
-extern void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
-extern void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
-extern void groestlcoin_hash(unsigned char* output, const unsigned char* input, int len);
-
 struct thr_info {
 	int		id;
 	pthread_t	pth;
@@ -351,6 +347,12 @@ extern void tq_freeze(struct thread_q *tq);
 extern void tq_thaw(struct thread_q *tq);
 
 void print_hash_tests(void);
+unsigned int jackpothash(void *state, const void *input);
+void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
+void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
+void groestlhash(void *state, const void *input);
+void myriadhash(void *state, const void *input);
+void quarkhash(void *state, const void *input);
 void x11hash(void *output, const void *input);
 void x13hash(void *output, const void *input);
 void x14hash(void *output, const void *input);

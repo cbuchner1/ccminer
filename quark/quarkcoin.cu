@@ -59,7 +59,7 @@ extern void quark_compactTest_single_false_cpu_hash_64(int thr_id, int threads, 
 											int order);
 
 // Original Quarkhash Funktion aus einem miner Quelltext
-inline void quarkhash(void *state, const void *input)
+extern "C" void quarkhash(void *state, const void *input)
 {
     sph_blake512_context ctx_blake;
     sph_bmw512_context ctx_bmw;

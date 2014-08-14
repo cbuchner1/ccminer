@@ -40,7 +40,7 @@ void sha256func(unsigned char *hash, const unsigned char *data, int len)
         be32enc((uint32_t *)hash + i, T[i]);
 }
 
-static void groestlhash(void *state, const void *input)
+extern "C" void groestlhash(void *state, const void *input)
 {
     // Tryout GPU-groestl
 

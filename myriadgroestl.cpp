@@ -18,7 +18,7 @@ void myriadgroestl_cpu_hash(int thr_id, int threads, uint32_t startNounce, void 
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
-static void myriadhash(void *state, const void *input)
+extern "C" void myriadhash(void *state, const void *input)
 {
     sph_groestl512_context     ctx_groestl;
 

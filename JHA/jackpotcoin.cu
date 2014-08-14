@@ -50,7 +50,7 @@ static uint32_t *d_branch2Nonces[8];
 static uint32_t *d_branch3Nonces[8];
 
 // Original jackpothash Funktion aus einem miner Quelltext
-inline unsigned int jackpothash(void *state, const void *input)
+extern "C" unsigned int jackpothash(void *state, const void *input)
 {
     sph_blake512_context     ctx_blake;
     sph_groestl512_context   ctx_groestl;
