@@ -21,16 +21,6 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define SPH_ROTL64(x, n)   SPH_T64(((x) << (n)) | ((x) >> (64 - (n))))
 #define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
 
-#define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
-
-#if __CUDA_ARCH__ < 350
-// Kepler (Compute 3.0)
-#define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-// Kepler (Compute 3.5)
-#define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
-
 #if 0
 static __constant__ uint64_t d_plain_T0[256];
 #if !SPH_SMALL_FOOTPRINT_WHIRLPOOL
@@ -1239,26 +1229,24 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 		uint32_t hashPosition = nounce - startNounce;
-		uint64_t *hash = (g_hash + hashPosition);
-#if NULLTEST
-		for (int i = 0; i < 8; i++)
-			hash[i] = 0;
-#endif
+		uint64_t *pHash = &g_hash[hashPosition<<3];
 		// whirlpool
 		uint64_t n0, n1, n2, n3, n4, n5, n6, n7;
-		uint64_t h0, h1, h2, h3, h4, h5, h6, h7;
+		uint64_t h0=0, h1=0, h2=0, h3=0, h4=0, h5=0, h6=0, h7=0;
 		uint64_t state[8];
 
-		n0 = (hash[0]);
-		n1 = (hash[1]);
-		n2 = (hash[2]);
-		n3 = (hash[3]);
-		n4 = (hash[4]);
-		n5 = (hash[5]);
-		n6 = (hash[6]);
-		n7 = (hash[7]);
-
-		h0 = h1 = h2 = h3 = h4 = h5 = h6 = h7 = 0;
+#if NULLTEST
+		for (uint8_t i = 0; i < 8; i++)
+			pHash[i] = 0;
+#endif
+		n0 = pHash[0];
+		n1 = pHash[1];
+		n2 = pHash[2];
+		n3 = pHash[3];
+		n4 = pHash[4];
+		n5 = pHash[5];
+		n6 = pHash[6];
+		n7 = pHash[7];
 
 		n0 ^= h0;
 		n1 ^= h1;
@@ -1270,7 +1258,7 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 		n7 ^= h7;
 
 #pragma unroll 10
-		for (unsigned r = 0; r < 10; r++)
+		for (uint8_t r = 0; r < 10; r++)
 		{
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 
@@ -1280,14 +1268,14 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 			TRANSFER(n, tmp);
 		}
 
-		state[0] = n0 ^ (hash[0]);
-		state[1] = n1 ^ (hash[1]);
-		state[2] = n2 ^ (hash[2]);
-		state[3] = n3 ^ (hash[3]);
-		state[4] = n4 ^ (hash[4]);
-		state[5] = n5 ^ (hash[5]);
-		state[6] = n6 ^ (hash[6]);
-		state[7] = n7 ^ (hash[7]);
+		state[0] = n0 ^ pHash[0];
+		state[1] = n1 ^ pHash[1];
+		state[2] = n2 ^ pHash[2];
+		state[3] = n3 ^ pHash[3];
+		state[4] = n4 ^ pHash[4];
+		state[5] = n5 ^ pHash[5];
+		state[6] = n6 ^ pHash[6];
+		state[7] = n7 ^ pHash[7];
 
 		n0 = 0x80;
 		n1 = n2 = n3 = n4 = n5 = n6 = 0;
@@ -1312,7 +1300,7 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 		n7 ^= h7;
 
 #pragma unroll 10
-		for (unsigned r = 0; r < 10; r++)
+		for (uint8_t r = 0; r < 10; r++)
 		{
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 
@@ -1322,19 +1310,14 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 			TRANSFER(n, tmp);
 		}
 
-		state[0] ^= n0 ^ 0x80;
-		state[1] ^= n1;
-		state[2] ^= n2;
-		state[3] ^= n3;
-		state[4] ^= n4;
-		state[5] ^= n5;
-		state[6] ^= n6;
-		state[7] ^= n7 ^ 0x2000000000000;
-
-		for (unsigned i = 0; i < 8; i++)
-			hash[i] = state[i];
-
-		// bool result = (hash[3] <= target);
+		pHash[0] = state[0] ^ (n0 ^ 0x80);
+		pHash[1] = state[1] ^ n1;
+		pHash[2] = state[2] ^ n2;
+		pHash[3] = state[3] ^ n3;
+		pHash[4] = state[4] ^ n4;
+		pHash[5] = state[5] ^ n5;
+		pHash[6] = state[6] ^ n6;
+		pHash[7] = state[7] ^ (n7 ^ 0x2000000000000);
 	}
 }
 

@@ -181,6 +181,15 @@ extern "C" void x15hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+#if NULLTEST
+static void print_hash(unsigned char *hash)
+{
+	for (int i=0; i < 32; i += 4) {
+		printf("%02x%02x%02x%02x ", hash[i], hash[i+1], hash[i+2], hash[i+3]);
+	}
+}
+#endif
+
 extern bool opt_benchmark;
 
 extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
@@ -195,6 +204,11 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = Htarg = 0x0000ff;
+
+#if NULLTEST
+	for (int k=0; k < 20; k++)
+		pdata[k] = 0;
+#endif
 
 	if (!init[thr_id])
 	{
@@ -223,11 +237,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	}
 
 	for (int k=0; k < 20; k++)
-#if NULLTEST
-		endiandata[k] = 0;
-#else
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
-#endif
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	quark_check_cpu_setTarget(ptarget);
@@ -250,36 +260,28 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
+#if NULLTEST
+		uint32_t buf[8]; memset(buf, 0, sizeof buf);
+		cudaMemcpy(buf, d_hash[thr_id], sizeof buf, cudaMemcpyDeviceToHost);
+		cudaThreadSynchronize();
+		print_hash((unsigned char*)buf); printf("\n");
+#endif
 		/* Scan with GPU */
 		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-#if NULLTEST
-		uint32_t buf[16]; memset(buf, 0, sizeof(buf));
-		cudaMemcpy(buf, d_hash[thr_id], 16 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-		MyStreamSynchronize(NULL, order, thr_id);
-		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[0], buf[1], buf[2], buf[3]);
-		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[4], buf[5], buf[6], buf[7]);
-		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[8], buf[9], buf[10], buf[11]);
-		applog(LOG_NOTICE, "Hash  %08x %08x %08x %08x", buf[12], buf[13], buf[14], buf[15]);
-		return 0;
-#endif
 		if (foundNonce != 0xffffffff)
 		{
 			/* check now with the CPU to confirm */
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			x15hash(vhash64, endiandata);
-			if ((vhash64[7] <= Htarg) /* && fulltest(vhash64, ptarget) */) {
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X is in wanted range, %x <= %x", thr_id, foundNonce, vhash64[7], Htarg);
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
-				applog(LOG_NOTICE, "Hash0 %08x %08x %08x %08x", vhash64[0], vhash64[1], vhash64[2], vhash64[3]);
-				applog(LOG_NOTICE, "Hash1 %08x %08x %08x %08x", vhash64[4], vhash64[5], vhash64[6], vhash64[7]);
-				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x",
-					thr_id, foundNonce, vhash64[7], Htarg);
+				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
 			}
 			else {
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);

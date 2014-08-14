@@ -941,7 +941,6 @@ static void *miner_thread(void *userdata)
 		case ALGO_X15:
 			rc = scanhash_x15(thr_id, work.data, work.target,
 				max_nonce, &hashes_done);
-			exit(0);
 			break;
 
 		default:
