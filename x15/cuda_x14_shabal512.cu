@@ -354,14 +354,14 @@ static const uint32_t C_init_384[] = {
 };
 #endif
 
-__device__
+__device__ __constant__
 static const uint32_t d_A512[] = {
 	C32(0x20728DFD), C32(0x46C0BD53), C32(0xE782B699), C32(0x55304632),
 	C32(0x71B4EF90), C32(0x0EA9E82C), C32(0xDBB930F1), C32(0xFAD06B8B),
 	C32(0xBE0CAE40), C32(0x8BD14410), C32(0x76D2ADAC), C32(0x28ACAB7F)
 };
 
-__device__
+__device__ __constant__
 static const uint32_t d_B512[] = {
 	C32(0xC1099CB7), C32(0x07B385F3), C32(0xE7442C26), C32(0xCC8AD640),
 	C32(0xEB6F56C7), C32(0x1EA81AA9), C32(0x73B9D314), C32(0x1DE85D08),
@@ -369,7 +369,7 @@ static const uint32_t d_B512[] = {
 	C32(0x72D2F240), C32(0x75941D99), C32(0x6D8BDE82), C32(0xA1A7502B)
 };
 
-__device__
+__device__ __constant__
 static const uint32_t d_C512[] = {
 	C32(0xD9BF68D1), C32(0x58BAD750), C32(0x56028CB2), C32(0x8134F359),
 	C32(0xB5D469D8), C32(0x941A8CC2), C32(0x418B2A6E), C32(0x04052780),
@@ -474,10 +474,11 @@ __global__ void x14_shabal512_gpu_hash_64(int threads, uint32_t startNounce, uin
 __host__ void x14_shabal512_cpu_init(int thr_id, int threads)
 {
 }
-#include <stdio.h>
+
+// #include <stdio.h>
 __host__ void x14_shabal512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 192;
+	const int threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

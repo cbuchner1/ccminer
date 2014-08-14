@@ -19,21 +19,6 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define SPH_T64(x)    ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 
 #define SPH_ROTL64(x, n)   SPH_T64(((x) << (n)) | ((x) >> (64 - (n))))
-#define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
-
-#if 0
-static __constant__ uint64_t d_plain_T0[256];
-#if !SPH_SMALL_FOOTPRINT_WHIRLPOOL
-static __constant__ uint64_t d_plain_T1[256];
-static __constant__ uint64_t d_plain_T2[256];
-static __constant__ uint64_t d_plain_T3[256];
-static __constant__ uint64_t d_plain_T4[256];
-static __constant__ uint64_t d_plain_T5[256];
-static __constant__ uint64_t d_plain_T6[256];
-static __constant__ uint64_t d_plain_T7[256];
-#endif
-static __constant__ uint64_t d_plain_RC[10];
-#endif
 
 /* $Id: whirlpool.c 227 2010-06-16 17:28:38Z tp $ */
 /*
@@ -47,9 +32,9 @@ static __constant__ uint64_t d_plain_RC[10];
 *
 * The most common big-endian architecture is Sparc, and Ultrasparc CPU
 * include special opcodes to perform little-endian accesses, which we use
-* (see sph_types.h). Most modern CPU designs can work with both endianness
+* (see sph_types.h). Most modern CPU designs can work with both endian.ss
 * and architecture designer now favour little-endian (basically, x86 has
-* won the endianness war).
+* won the endian.ss war).
 *
 * TODO: implement a 32-bit version. Not only such a version would be handy
 * for non-64-bit-able architectures, but it may also use smaller tables,
@@ -89,7 +74,7 @@ static __constant__ uint64_t d_plain_RC[10];
 /*
 * Constants for plain WHIRLPOOL (current version).
 */
-__device__ static const uint64_t plain_T0[256] = {
+__device__ __constant__ static const uint64_t plain_T0[256] = {
 	SPH_C64(0xD83078C018601818), SPH_C64(0x2646AF05238C2323),
 	SPH_C64(0xB891F97EC63FC6C6), SPH_C64(0xFBCD6F13E887E8E8),
 	SPH_C64(0xCB13A14C87268787), SPH_C64(0x116D62A9B8DAB8B8),
@@ -1144,7 +1129,7 @@ __device__ static const uint64_t plain_T7[256] = {
 /*
 * Round constants.
 */
-__device__ static const uint64_t plain_RC[10] = {
+__device__ __constant__ static const uint64_t plain_RC[10] = {
 	SPH_C64(0x4F01B887E8C62318),
 	SPH_C64(0x52916F79F5D2A636),
 	SPH_C64(0x357B0CA38E9BBC60),
@@ -1197,13 +1182,6 @@ __device__ static uint64_t table_skew(uint64_t val, int num) {
 		out ## 7 = ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0) ^ c7; \
 	} while (0)
 
-#define ROUND_KSCHED(table, in, out, c) \
-	ROUND(table, in, out, c, 0, 0, 0, 0, 0, 0, 0)
-
-#define ROUND_WENC(table, in, key, out) \
-	ROUND(table, in, out, key ## 0, key ## 1, key ## 2, \
-		key ## 3, key ## 4, key ## 5, key ## 6, key ## 7)
-
 #define TRANSFER(dst, src)   do { \
 		dst ## 0 = src ## 0; \
 		dst ## 1 = src ## 1; \
@@ -1215,7 +1193,21 @@ __device__ static uint64_t table_skew(uint64_t val, int num) {
 		dst ## 7 = src ## 7; \
 	} while (0)
 
+#define ROUND_KSCHED(table, in, out, c) \
+	ROUND(table, in, out, c, 0, 0, 0, 0, 0, 0, 0); \
+	TRANSFER(in, out)
+
+#define ROUND_WENC(table, in, key, out) \
+	ROUND(table, in, out, key ## 0, key ## 1, key ## 2, \
+		key ## 3, key ## 4, key ## 5, key ## 6, key ## 7); \
+	TRANSFER(in, out)
+
 #endif
+
+struct h8x64
+{
+	uint64_t n0, n1, n2, n3, n4, n5, n6, n7;
+};
 
 /***************************************************/
 // GPU Hash Function
@@ -1229,95 +1221,58 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 		uint32_t hashPosition = nounce - startNounce;
-		uint64_t *pHash = &g_hash[hashPosition<<3];
-		// whirlpool
-		uint64_t n0, n1, n2, n3, n4, n5, n6, n7;
-		uint64_t h0=0, h1=0, h2=0, h3=0, h4=0, h5=0, h6=0, h7=0;
-		uint64_t state[8];
+		struct h8x64 *phash = (struct h8x64 *) &g_hash[hashPosition<<3];
+		struct h8x64 p = *phash; /* copy content in local p */
+		struct h8x64 st, n, h = { 0, 0, 0, 0, 0, 0, 0, 0 };
+		uint8_t u;
 
 #if NULLTEST
-		for (uint8_t i = 0; i < 8; i++)
-			pHash[i] = 0;
+		p = h;
 #endif
-		n0 = pHash[0];
-		n1 = pHash[1];
-		n2 = pHash[2];
-		n3 = pHash[3];
-		n4 = pHash[4];
-		n5 = pHash[5];
-		n6 = pHash[6];
-		n7 = pHash[7];
+		TRANSFER(n.n, p.n);
 
-		n0 ^= h0;
-		n1 ^= h1;
-		n2 ^= h2;
-		n3 ^= h3;
-		n4 ^= h4;
-		n5 ^= h5;
-		n6 ^= h6;
-		n7 ^= h7;
-
-#pragma unroll 10
-		for (uint8_t r = 0; r < 10; r++)
+		#pragma unroll 10
+		for (u = 0; u < 10; u++)
 		{
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-
-			ROUND_KSCHED(plain_T, h, tmp, plain_RC[r]);
-			TRANSFER(h, tmp);
-			ROUND_WENC(plain_T, n, h, tmp);
-			TRANSFER(n, tmp);
+			uint64_t t0, t1, t2, t3, t4, t5, t6, t7;
+			ROUND_KSCHED(plain_T, h.n, t, plain_RC[u]);
+			ROUND_WENC(plain_T, n.n, h.n, t);
 		}
 
-		state[0] = n0 ^ pHash[0];
-		state[1] = n1 ^ pHash[1];
-		state[2] = n2 ^ pHash[2];
-		state[3] = n3 ^ pHash[3];
-		state[4] = n4 ^ pHash[4];
-		state[5] = n5 ^ pHash[5];
-		state[6] = n6 ^ pHash[6];
-		state[7] = n7 ^ pHash[7];
+		h.n0 = st.n0 = n.n0 ^ p.n0;
+		h.n1 = st.n1 = n.n1 ^ p.n1;
+		h.n2 = st.n2 = n.n2 ^ p.n2;
+		h.n3 = st.n3 = n.n3 ^ p.n3;
+		h.n4 = st.n4 = n.n4 ^ p.n4;
+		h.n5 = st.n5 = n.n5 ^ p.n5;
+		h.n6 = st.n6 = n.n6 ^ p.n6;
+		h.n7 = st.n7 = n.n7 ^ p.n7;
 
-		n0 = 0x80;
-		n1 = n2 = n3 = n4 = n5 = n6 = 0;
-		n7 = 0x2000000000000;
+		n.n0 = st.n0 ^ 0x80;
+		n.n1 = st.n1;
+		n.n2 = st.n2;
+		n.n3 = st.n3;
+		n.n4 = st.n4;
+		n.n5 = st.n5;
+		n.n6 = st.n6;
+		n.n7 = st.n7 ^ 0x2000000000000;
 
-		h0 = state[0];
-		h1 = state[1];
-		h2 = state[2];
-		h3 = state[3];
-		h4 = state[4];
-		h5 = state[5];
-		h6 = state[6];
-		h7 = state[7];
-
-		n0 ^= h0;
-		n1 ^= h1;
-		n2 ^= h2;
-		n3 ^= h3;
-		n4 ^= h4;
-		n5 ^= h5;
-		n6 ^= h6;
-		n7 ^= h7;
-
-#pragma unroll 10
-		for (uint8_t r = 0; r < 10; r++)
+		#pragma unroll 10
+		for (u = 0; u < 10; u++)
 		{
-			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-
-			ROUND_KSCHED(plain_T, h, tmp, plain_RC[r]);
-			TRANSFER(h, tmp);
-			ROUND_WENC(plain_T, n, h, tmp);
-			TRANSFER(n, tmp);
+			uint64_t t0, t1, t2, t3, t4, t5, t6, t7;
+			ROUND_KSCHED(plain_T, h.n, t, plain_RC[u]);
+			ROUND_WENC(plain_T, n.n, h.n, t);
 		}
 
-		pHash[0] = state[0] ^ (n0 ^ 0x80);
-		pHash[1] = state[1] ^ n1;
-		pHash[2] = state[2] ^ n2;
-		pHash[3] = state[3] ^ n3;
-		pHash[4] = state[4] ^ n4;
-		pHash[5] = state[5] ^ n5;
-		pHash[6] = state[6] ^ n6;
-		pHash[7] = state[7] ^ (n7 ^ 0x2000000000000);
+		phash->n0 = st.n0 ^ (n.n0 ^ 0x80);
+		phash->n1 = st.n1 ^  n.n1;
+		phash->n2 = st.n2 ^  n.n2;
+		phash->n3 = st.n3 ^  n.n3;
+		phash->n4 = st.n4 ^  n.n4;
+		phash->n5 = st.n5 ^  n.n5;
+		phash->n6 = st.n6 ^  n.n6;
+		phash->n7 = st.n7 ^ (n.n7 ^ 0x2000000000000);
 	}
 }
 
