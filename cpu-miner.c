@@ -1504,7 +1504,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "1.2-VC12"
+#define PROGRAM_VERSION "1.3"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;

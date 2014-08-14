@@ -1470,18 +1470,18 @@ uninstall-am: uninstall-binPROGRAMS
 
 # we're now targeting all major compute architectures within one binary.
 .cu.o:
-	$(NVCC) @CFLAGS@ -I . -Xptxas "-v" -gencode=arch=compute_20,code=\"sm_21,compute_20\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) @CFLAGS@ -I . -Xptxas "-v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=128 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 # Shavite compiles faster with 128 regs
 x11/cuda_x11_shavite512.o: x11/cuda_x11_shavite512.cu
-	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-v" -gencode=arch=compute_20,code=\"sm_21,compute_20\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=128 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<        
+	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=128 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<        
 
 # ABI requiring code modules
 quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
-	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_20,code=\"sm_21,compute_20\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
-	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_20,code=\"sm_21,compute_20\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
