@@ -34,8 +34,8 @@ typedef struct {
     uint32_t chainv[40];   /* Chaining values */
 } hashState;
 
-
-static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
+ __device__ __forceinline__
+static uint32_t BYTES_SWAP32(uint32_t x)
 {
 	return __byte_perm(x, x, 0x0123);
 }
@@ -100,8 +100,8 @@ static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
     b0 ^= c1;
 
 /* initial values of chaining variables */
-__constant__ uint32_t c_IV[40];
-const uint32_t h_IV[40] = {
+__device__ __constant__
+const uint32_t c_IV[40] = {
     0x6d251e69,0x44b051e0,0x4eaa6fb4,0xdbf78465,
     0x6e292011,0x90152df4,0xee058139,0xdef610bb,
     0xc3b44b95,0xd9d2f256,0x70eee9a0,0xde099fa3,
@@ -113,8 +113,8 @@ const uint32_t h_IV[40] = {
     0x6c68e9be,0x5ec41e22,0xc825b7c7,0xaffb4363,
     0xf5df3999,0x0fc688f1,0xb07224cc,0x03e86cea};
 
-__constant__ uint32_t c_CNS[80];
-uint32_t h_CNS[80] = {
+__device__ __constant__
+uint32_t c_CNS[80] = {
     0x303994a6,0xe0337818,0xc0e65299,0x441ba90d,
     0x6cc33a12,0x7f34d442,0xdc56983e,0x9389217f,
     0x1e00108f,0xe5a8bce6,0x7800423d,0x5274baf4,
@@ -138,7 +138,8 @@ uint32_t h_CNS[80] = {
 
 
 /***************************************************/
-__device__ __forceinline__ void rnd512(hashState *state)
+__device__ __forceinline__
+void rnd512(hashState *state)
 {
     int i,j;
     uint32_t t[40];
@@ -284,7 +285,8 @@ __device__ __forceinline__ void rnd512(hashState *state)
 }
 
 
-__device__ __forceinline__ void Update512(hashState *state, const BitSequence *data) 
+__device__ __forceinline__
+void Update512(hashState *state, const BitSequence *data)
 {
 #pragma unroll 8
     for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)data)[i]);
@@ -297,7 +299,8 @@ __device__ __forceinline__ void Update512(hashState *state, const BitSequence *d
 
 
 /***************************************************/
-__device__ __forceinline__ void finalization512(hashState *state, uint32_t *b)
+__device__ __forceinline__
+void finalization512(hashState *state, uint32_t *b)
 {
     int i,j;
 
@@ -363,8 +366,6 @@ __global__ void x11_luffa512_gpu_hash_64(int threads, uint32_t startNounce, uint
 // Setup-Funktionen
 __host__ void x11_luffa512_cpu_init(int thr_id, int threads)
 {
-    cudaMemcpyToSymbol( c_IV, h_IV, sizeof(h_IV), 0, cudaMemcpyHostToDevice );
-    cudaMemcpyToSymbol( c_CNS, h_CNS, sizeof(h_CNS), 0, cudaMemcpyHostToDevice );
 }
 
 __host__ void x11_luffa512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

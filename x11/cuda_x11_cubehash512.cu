@@ -29,8 +29,8 @@ typedef unsigned int uint32_t; /* must be exactly 32 bits */
 #define ROTATEUPWARDS11(a) (((a) << 11) | ((a) >> 21))
 #define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
 
-__constant__ uint32_t c_IV_512[32];
-static const uint32_t h_IV_512[32] = {
+__device__ __constant__
+static const uint32_t c_IV_512[32] = {
 	0x2AEA2A61, 0x50F494D4, 0x2D538B8B,
 	0x4167D83E, 0x3FEE2313, 0xC701CF8C,
 	0xCC39968E, 0x50AC5695, 0x4D42C787,
@@ -221,7 +221,7 @@ void __device__ Init(uint32_t x[2][2][2][2][2])
     /* "the state is then transformed invertibly through 10r identical rounds */
     for (i = 0;i < 10;++i) rrounds(x);
 #else
-    uint32_t *iv = c_IV_512;
+    const uint32_t *iv = c_IV_512;
 
 #pragma unroll 2
     for (i = 0;i < 2;++i)
@@ -297,7 +297,6 @@ __global__ void x11_cubehash512_gpu_hash_64(int threads, uint32_t startNounce, u
 // Setup-Funktionen
 __host__ void x11_cubehash512_cpu_init(int thr_id, int threads)
 {
-    cudaMemcpyToSymbol( c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
 }
 
 __host__ void x11_cubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

@@ -37,13 +37,11 @@
  * @author   phm <phm@inbox.com>
  */
 
+#include <stdint.h>
+#include <cuda_runtime.h>
+
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
 
 #define SPH_C64(x)    ((uint64_t)(x ## ULL))
 #define SPH_C32(x)    ((uint32_t)(x ## U))
@@ -51,7 +49,7 @@ typedef unsigned long long uint64_t;
 
 #define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
 
-#if __CUDA_ARCH__ < 350 
+#if __CUDA_ARCH__ < 350
     // Kepler (Compute 3.0)
     #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
 #else
@@ -59,11 +57,8 @@ typedef unsigned long long uint64_t;
     #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
 #endif
 
-static __constant__ uint32_t d_alpha_n[32];
-static __constant__ uint32_t d_alpha_f[32];
-static __constant__ uint32_t d_T512[64][16];
-
-static const uint32_t alpha_n[] = {
+__device__ __constant__
+static const uint32_t d_alpha_n[] = {
 	SPH_C32(0xff00f0f0), SPH_C32(0xccccaaaa), SPH_C32(0xf0f0cccc),
 	SPH_C32(0xff00aaaa), SPH_C32(0xccccaaaa), SPH_C32(0xf0f0ff00),
 	SPH_C32(0xaaaacccc), SPH_C32(0xf0f0ff00), SPH_C32(0xf0f0cccc),
@@ -77,7 +72,8 @@ static const uint32_t alpha_n[] = {
 	SPH_C32(0xff00aaaa), SPH_C32(0xccccf0f0)
 };
 
-static const uint32_t alpha_f[] = {
+__device__ __constant__
+static const uint32_t d_alpha_f[] = {
 	SPH_C32(0xcaf9639c), SPH_C32(0x0ff0f9c0), SPH_C32(0x639c0ff0),
 	SPH_C32(0xcaf9f9c0), SPH_C32(0x0ff0f9c0), SPH_C32(0x639ccaf9),
 	SPH_C32(0xf9c00ff0), SPH_C32(0x639ccaf9), SPH_C32(0x639c0ff0),
@@ -260,8 +256,8 @@ static const uint32_t alpha_f[] = {
 		c0 = (h[0x0] ^= hamsi_s00); \
 	}
 
-
-static const uint32_t T512[64][16] = {
+__device__ __constant__
+static const uint32_t d_T512[64][16] = {
 	{ SPH_C32(0xef0b0270), SPH_C32(0x3afd0000), SPH_C32(0x5dae0000),
 	  SPH_C32(0x69490000), SPH_C32(0x9b0f3c06), SPH_C32(0x4405b5f9),
 	  SPH_C32(0x66140a51), SPH_C32(0x924f5d0a), SPH_C32(0xc96b0030),
@@ -740,9 +736,6 @@ __global__ void x13_hamsi512_gpu_hash_64(int threads, uint32_t startNounce, uint
 
 __host__ void x13_hamsi512_cpu_init(int thr_id, int threads)
 {
-	cudaMemcpyToSymbol( d_alpha_n, alpha_n, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol( d_alpha_f, alpha_f, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol( d_T512, T512, sizeof(uint32_t)*64*16, 0, cudaMemcpyHostToDevice);
 }
 
 __host__ void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
