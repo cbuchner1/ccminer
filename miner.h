@@ -20,6 +20,8 @@ extern "C" {
 #define strncasecmp(x,y,z) _strnicmp(x,y,z)
 #define strcasecmp(x,y) _stricmp(x,y)
 typedef int ssize_t;
+#undef HAVE_ALLOCA_H
+#undef HAVE_SYSLOG_H
 #endif
 
 #ifdef STDC_HEADERS
@@ -30,6 +32,7 @@ typedef int ssize_t;
 #  include <stdlib.h>
 # endif
 #endif
+
 #ifdef HAVE_ALLOCA_H
 # include <alloca.h>
 #elif !defined alloca

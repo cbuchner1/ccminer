@@ -178,7 +178,9 @@ X(j) = (u-v) << (2*n); \
 __device__ __forceinline__ void FFT_16(int *y) {
 
 #if __CUDA_ARCH__ < 300
-#warning FFT_16() function is not compatible with SM 2.1 devices!
+#ifndef WIN32
+# warning FFT_16() function is not compatible with SM 2.1 devices!
+#endif
 #endif
 
   /*
@@ -345,7 +347,9 @@ __device__ __forceinline__ void Expansion(const uint32_t *data, uint4 *g_temp4)
 {
   int i;
 #if __CUDA_ARCH__ < 300
-#warning Expansion() function is not compatible with SM 2.1 Devices
+#ifndef WIN32
+# warning Expansion() function is not compatible with SM 2.1 devices
+#endif
 #endif
 
   /* Message Expansion using Number Theoretical Transform similar to FFT */
