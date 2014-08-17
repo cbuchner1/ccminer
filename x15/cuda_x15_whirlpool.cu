@@ -5,7 +5,7 @@
  */
 #include <stdio.h>
 #include <stdint.h>
-#include <cuda_runtime.h>
+#include <cuda_helper.h>
 
 #define NULLTEST 0
 
@@ -13,12 +13,11 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 #define SPH_64 (1)
 #define SPH_SMALL_FOOTPRINT_WHIRLPOOL (1)
-#define __constant
 
 #define SPH_C64(x)    ((uint64_t)(x ## ULL))
-#define SPH_T64(x)    ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 
-#define SPH_ROTL64(x, n)   SPH_T64(((x) << (n)) | ((x) >> (64 - (n))))
+// defined in cuda_helper.h
+#define SPH_ROTL64(x,n) ROTL64(x,n)
 
 /* $Id: whirlpool.c 227 2010-06-16 17:28:38Z tp $ */
 /*
@@ -1225,7 +1224,6 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 		struct h8x64 p = *phash; /* copy content in local p */
 		struct h8x64 st, n, h = { 0, 0, 0, 0, 0, 0, 0, 0 };
 		uint8_t u;
-
 #if NULLTEST
 		p = h;
 #endif
@@ -1239,23 +1237,17 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 			ROUND_WENC(plain_T, n.n, h.n, t);
 		}
 
-		h.n0 = st.n0 = n.n0 ^ p.n0;
-		h.n1 = st.n1 = n.n1 ^ p.n1;
-		h.n2 = st.n2 = n.n2 ^ p.n2;
-		h.n3 = st.n3 = n.n3 ^ p.n3;
-		h.n4 = st.n4 = n.n4 ^ p.n4;
-		h.n5 = st.n5 = n.n5 ^ p.n5;
-		h.n6 = st.n6 = n.n6 ^ p.n6;
-		h.n7 = st.n7 = n.n7 ^ p.n7;
+		n.n0 = h.n0 = st.n0 = n.n0 ^ p.n0;
+		n.n1 = h.n1 = st.n1 = n.n1 ^ p.n1;
+		n.n2 = h.n2 = st.n2 = n.n2 ^ p.n2;
+		n.n3 = h.n3 = st.n3 = n.n3 ^ p.n3;
+		n.n4 = h.n4 = st.n4 = n.n4 ^ p.n4;
+		n.n5 = h.n5 = st.n5 = n.n5 ^ p.n5;
+		n.n6 = h.n6 = st.n6 = n.n6 ^ p.n6;
+		n.n7 = h.n7 = st.n7 = n.n7 ^ p.n7;
 
-		n.n0 = st.n0 ^ 0x80;
-		n.n1 = st.n1;
-		n.n2 = st.n2;
-		n.n3 = st.n3;
-		n.n4 = st.n4;
-		n.n5 = st.n5;
-		n.n6 = st.n6;
-		n.n7 = st.n7 ^ 0x2000000000000;
+		n.n0 ^= 0x80;
+		n.n7 ^= 0x2000000000000;
 
 		#pragma unroll 10
 		for (u = 0; u < 10; u++)
@@ -1265,14 +1257,17 @@ __global__ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uin
 			ROUND_WENC(plain_T, n.n, h.n, t);
 		}
 
-		phash->n0 = st.n0 ^ (n.n0 ^ 0x80);
-		phash->n1 = st.n1 ^  n.n1;
-		phash->n2 = st.n2 ^  n.n2;
-		phash->n3 = st.n3 ^  n.n3;
-		phash->n4 = st.n4 ^  n.n4;
-		phash->n5 = st.n5 ^  n.n5;
-		phash->n6 = st.n6 ^  n.n6;
-		phash->n7 = st.n7 ^ (n.n7 ^ 0x2000000000000);
+		n.n0 ^= 0x80;
+		n.n7 ^= 0x2000000000000;
+
+		phash->n0 = st.n0 ^ n.n0;
+		phash->n1 = st.n1 ^ n.n1;
+		phash->n2 = st.n2 ^ n.n2;
+		phash->n3 = st.n3 ^ n.n3;
+		phash->n4 = st.n4 ^ n.n4;
+		phash->n5 = st.n5 ^ n.n5;
+		phash->n6 = st.n6 ^ n.n6;
+		phash->n7 = st.n7 ^ n.n7;
 	}
 }
 
