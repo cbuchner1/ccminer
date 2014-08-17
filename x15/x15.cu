@@ -26,7 +26,7 @@ extern "C" {
 }
 
 #include <stdint.h>
-#include <cuda_runtime.h>
+#include <cuda_helper.h>
 
 // to test gpu hash on a null buffer
 #define NULLTEST 0
@@ -212,9 +212,8 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
-
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);

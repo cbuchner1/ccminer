@@ -1,6 +1,8 @@
 #ifndef CUDA_HELPER_H
 #define CUDA_HELPER_H
 
+#include <cuda_runtime.h>
+
 static __device__ unsigned long long MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 {
 #if __CUDA_ARCH__ >= 130
@@ -82,5 +84,16 @@ __forceinline__ __device__ uint64_t ROTL64(const uint64_t value, const int offse
 #else
 #define ROTL64(x, n)        (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
+
+// Macro to catch CUDA errors in CUDA runtime calls
+#define CUDA_SAFE_CALL(call)                                          \
+do {                                                                  \
+    cudaError_t err = call;                                           \
+    if (cudaSuccess != err) {                                         \
+        fprintf (stderr, "Cuda error in file '%s' in line %i : %s.\n",\
+                 __FILE__, __LINE__, cudaGetErrorString(err) );       \
+        exit(EXIT_FAILURE);                                           \
+    }                                                                 \
+} while (0)
 
 #endif // #ifndef CUDA_HELPER_H

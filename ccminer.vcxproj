@@ -175,7 +175,7 @@ copy "$(CudaToolkitBinDir)\cudart32*.dll" "$(OutDir)"</Command>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>false</Keep>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
-      <Defines>--optimize 2</Defines>
+      <Defines></Defines>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>false</GPUDebugInfo>

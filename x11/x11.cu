@@ -18,7 +18,7 @@ extern "C"
 }
 
 #include <stdint.h>
-#include <cuda_runtime.h>
+#include <cuda_helper.h>
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -157,10 +157,10 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
-
+		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		// Konstanten kopieren, Speicher belegen
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
+
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
@@ -173,6 +173,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
 		quark_check_cpu_init(thr_id, throughput);
+
 		init[thr_id] = true;
 	}
 
@@ -184,43 +185,24 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	quark_check_cpu_setTarget(ptarget);
 
 	do {
+		uint32_t foundNonce;
 		int order = 0;
 
-		// erstes Blake512 Hash mit CUDA
+		// Hash with CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für BMW512
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Groestl512
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Skein512
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für JH512
 		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Luffa512
 		x11_luffa512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Cubehash512
 		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Shavite512
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für SIMD512
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für ECHO512
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
