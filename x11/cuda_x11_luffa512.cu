@@ -18,27 +18,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <cuda_runtime.h>
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 typedef unsigned char BitSequence;
 
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
 typedef struct {
     uint32_t buffer[8]; /* Buffer to be hashed */
     uint32_t chainv[40];   /* Chaining values */
 } hashState;
-
- __device__ __forceinline__
-static uint32_t BYTES_SWAP32(uint32_t x)
-{
-	return __byte_perm(x, x, 0x0123);
-}
 
 #define MULT2(a,j)\
     tmp = a[7+(8*j)];\
@@ -289,11 +279,11 @@ __device__ __forceinline__
 void Update512(hashState *state, const BitSequence *data)
 {
 #pragma unroll 8
-    for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)data)[i]);
+    for(int i=0;i<8;i++) state->buffer[i] = cuda_swab32(((uint32_t*)data)[i]);
     rnd512(state);
 
 #pragma unroll 8
-    for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)(data+32))[i]);
+    for(int i=0;i<8;i++) state->buffer[i] = cuda_swab32(((uint32_t*)(data+32))[i]);
     rnd512(state);
 }
 
@@ -321,7 +311,7 @@ void finalization512(hashState *state, uint32_t *b)
         for(j=0;j<5;j++) {
             b[i] ^= state->chainv[i+8*j];
         }
-        b[i] = BYTES_SWAP32((b[i]));
+        b[i] = cuda_swab32((b[i]));
     }
 
 #pragma unroll 8
@@ -335,7 +325,7 @@ void finalization512(hashState *state, uint32_t *b)
         for(j=0;j<5;j++) {
             b[8+i] ^= state->chainv[i+8*j];
         }
-        b[8+i] = BYTES_SWAP32((b[8+i]));
+        b[8 + i] = cuda_swab32((b[8 + i]));
     }
 }
 

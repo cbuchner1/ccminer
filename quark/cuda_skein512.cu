@@ -1,16 +1,8 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
+#include <stdint.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
+#include "cuda_helper.h"
 
 // aus cpu-miner.c
 extern "C" extern int device_map[8];
@@ -19,21 +11,6 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 // Take a look at: https://www.schneier.com/skein1.3.pdf
 
-#if __CUDA_ARCH__ >= 350
-__forceinline__ __device__ uint64_t ROTL64(const uint64_t value, const int offset) {
-    uint2 result;
-    if(offset >= 32) {
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(__double2loint(__longlong_as_double(value))), "r"(__double2hiint(__longlong_as_double(value))), "r"(offset));
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(__double2hiint(__longlong_as_double(value))), "r"(__double2loint(__longlong_as_double(value))), "r"(offset));
-    } else {
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(__double2hiint(__longlong_as_double(value))), "r"(__double2loint(__longlong_as_double(value))), "r"(offset));
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(__double2loint(__longlong_as_double(value))), "r"(__double2hiint(__longlong_as_double(value))), "r"(offset));
-    }
-    return  __double_as_longlong(__hiloint2double(result.y, result.x));
-}
-#else
-#define ROTL64(x, n)        (((x) << (n)) | ((x) >> (64 - (n))))
-#endif
 #define SHL(x, n)			((x) << (n))
 #define SHR(x, n)			((x) >> (n))
 

@@ -1,9 +1,4 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned int uint32_t;
+#include "cuda_helper.h"
 
 // globaler Speicher für unsere Ergebnisse
 uint32_t *d_hashoutput[8];

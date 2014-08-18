@@ -1,7 +1,3 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 #include <string.h>
@@ -33,6 +29,8 @@
 #include "heavy/cuda_groestl512.h"
 #include "heavy/cuda_blake512.h"
 #include "heavy/cuda_combine.h"
+
+#include "cuda_helper.h"
 
 extern uint32_t *d_hash2output[8];
 extern uint32_t *d_hash3output[8];

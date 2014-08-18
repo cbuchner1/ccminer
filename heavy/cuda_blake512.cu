@@ -1,14 +1,7 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
+#include "cuda_helper.h"
 
 // globaler Speicher für alle HeftyHashes aller Threads
 extern uint32_t *d_heftyHashes[8];
@@ -20,7 +13,6 @@ uint32_t *d_hash5output[8];
 // die Message (112 bzw. 116 Bytes) mit Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage[16]; // padded message (80/84+32 bytes + padding)
 
-#include "cuda_helper.h"
 
 // ---------------------------- BEGIN CUDA blake512 functions ------------------------------------
 
@@ -46,21 +38,9 @@ const uint8_t host_sigma[16][16] =
   { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 }
 };
 
-// Diese Makros besser nur für Compile Time Konstanten verwenden. Sie sind langsam.
-#define SWAP32(x) \
-    ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
-      (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
-
-// Diese Makros besser nur für Compile Time Konstanten verwenden. Sie sind langsam.
-#define SWAP64(x) \
-    ((uint64_t)((((uint64_t)(x) & 0xff00000000000000ULL) >> 56) | \
-                (((uint64_t)(x) & 0x00ff000000000000ULL) >> 40) | \
-                (((uint64_t)(x) & 0x0000ff0000000000ULL) >> 24) | \
-                (((uint64_t)(x) & 0x000000ff00000000ULL) >>  8) | \
-                (((uint64_t)(x) & 0x00000000ff000000ULL) <<  8) | \
-                (((uint64_t)(x) & 0x0000000000ff0000ULL) << 24) | \
-                (((uint64_t)(x) & 0x000000000000ff00ULL) << 40) | \
-                (((uint64_t)(x) & 0x00000000000000ffULL) << 56)))
+/* in cuda_helper */
+#define SWAP32(x) cuda_swab32(x)
+#define SWAP64(x) cuda_swab64(x)
 
 __constant__ uint64_t c_SecondRound[15];
 

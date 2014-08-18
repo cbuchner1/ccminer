@@ -355,6 +355,7 @@ void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
 void groestlhash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
+void nist5hash(void *state, const void *input);
 void quarkhash(void *state, const void *input);
 void x11hash(void *output, const void *input);
 void x13hash(void *output, const void *input);

@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);

@@ -1,4 +1,3 @@
-
 extern "C"
 {
 #include "sph/sph_blake.h"
@@ -7,9 +6,8 @@ extern "C"
 #include "sph/sph_jh.h"
 #include "sph/sph_keccak.h"
 #include "miner.h"
+#include "cuda_helper.h"
 }
-
-#include <stdint.h>
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -33,12 +31,12 @@ extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 extern void quark_skein512_cpu_init(int thr_id, int threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_check_cpu_init(int thr_id, int threads);
-extern void quark_check_cpu_setTarget(const void *ptarget);
-extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+extern void cuda_check_cpu_init(int thr_id, int threads);
+extern void cuda_check_cpu_setTarget(const void *ptarget);
+extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 // Original nist5hash Funktion aus einem miner Quelltext
-inline void nist5hash(void *state, const void *input)
+extern "C" void nist5hash(void *state, const void *input)
 {
     sph_blake512_context ctx_blake;
     sph_groestl512_context ctx_groestl;
@@ -104,7 +102,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
-		quark_check_cpu_init(thr_id, throughput);
+		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
 
@@ -113,28 +111,20 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	quark_check_cpu_setTarget(ptarget);
+	cuda_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
 
-		// erstes Blake512 Hash mit CUDA
+		// Hash with CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Groestl512
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für JH512
 		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-
-		// das ist der unbedingte Branch für Skein512
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];

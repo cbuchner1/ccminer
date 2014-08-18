@@ -1,9 +1,8 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
+
+#include "cuda_helper.h"
+#include <device_functions.h>
 
 #define USE_SHARED 1
 
@@ -12,11 +11,6 @@ extern int device_map[8];
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned int uint32_t;
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
 
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];

@@ -1,18 +1,13 @@
-#include <stdint.h>
-#include <cuda_runtime.h>
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-typedef unsigned char BitSequence;
-typedef unsigned long long DataLength;
+//typedef unsigned char BitSequence;
+//typedef unsigned long long DataLength;
 
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
-#define SPH_C32(x)    ((uint32_t)(x ## U))
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
-
-static __constant__ uint32_t d_ShaviteInitVector[16];
-static const uint32_t h_ShaviteInitVector[] = {
+__device__ __constant__
+static const uint32_t d_ShaviteInitVector[16] = {
 	SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
 	SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
 	SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
@@ -1304,18 +1299,18 @@ __global__ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, ui
 
 	aes_gpu_init(sharedMemory);
 
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-        int hashPosition = nounce - startNounce;
-        uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
+		int hashPosition = nounce - startNounce;
+		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
 
 		// kopiere init-state
 		uint32_t state[16];
 
-#pragma unroll 16
+		#pragma unroll 16
 		for(int i=0;i<16;i++)
 			state[i] = d_ShaviteInitVector[i];
 
@@ -1323,13 +1318,13 @@ __global__ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, ui
 		uint32_t msg[32];
 
 		// fülle die Nachricht mit 64-byte (vorheriger Hash)
-#pragma unroll 16
+		#pragma unroll 16
 		for(int i=0;i<16;i++)
 			msg[i] = Hash[i];			
 
 		// Nachrichtenende
 		msg[16] = 0x80;
-#pragma unroll 10
+		#pragma unroll 10
 		for(int i=17;i<27;i++)
 			msg[i] = 0;
 
@@ -1341,10 +1336,10 @@ __global__ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, ui
 
 		c512(sharedMemory, state, msg);
 
-#pragma unroll 16
+		#pragma unroll 16
 		for(int i=0;i<16;i++)
 			Hash[i] = state[i];
-    }
+	}
 }
 
 
@@ -1352,25 +1347,19 @@ __global__ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, ui
 __host__ void x11_shavite512_cpu_init(int thr_id, int threads)
 {
 	aes_cpu_init();
-
-	cudaMemcpyToSymbol( d_ShaviteInitVector,
-                        h_ShaviteInitVector,
-                        sizeof(h_ShaviteInitVector),
-                        0, cudaMemcpyHostToDevice);
 }
 
 __host__ void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 256;
+	const int threadsperblock = 256;
 
-    // berechne wie viele Thread Blocks wir brauchen
-    dim3 grid((threads + threadsperblock-1)/threadsperblock);
-    dim3 block(threadsperblock);
+	// berechne wie viele Thread Blocks wir brauchen
+	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
+	// Größe des dynamischen Shared Memory Bereichs
+	size_t shared_size = 0;
 
-    x11_shavite512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
+	x11_shavite512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	MyStreamSynchronize(NULL, order, thr_id);
 }
-

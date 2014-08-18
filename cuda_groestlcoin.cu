@@ -1,22 +1,16 @@
 // Auf Groestlcoin spezialisierte Version von Groestl inkl. Bitslice
 
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
+
+#include "cuda_helper.h"
+#include <host_defines.h>
 
 // aus cpu-miner.c
 extern int device_map[8];
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
 
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];
@@ -31,10 +25,10 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #include "groestl_functions_quad.cu"
 #include "bitslice_transformations_quad.cu"
 
-#define SWAB32(x)        ( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
+#define SWAB32(x) cuda_swab32(x)
 
-__global__ void __launch_bounds__(256, 4)
- groestlcoin_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *resNounce)
+__global__ __launch_bounds__(256, 4)
+void groestlcoin_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *resNounce)
 {
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
     int thread = (blockDim.x * blockIdx.x + threadIdx.x) / 4;

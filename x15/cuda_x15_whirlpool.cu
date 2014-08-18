@@ -4,8 +4,8 @@
  * tpruvot@github
  */
 #include <stdio.h>
-#include <stdint.h>
-#include <cuda_helper.h>
+
+#include "cuda_helper.h"
 
 #define NULLTEST 0
 
@@ -13,8 +13,6 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 
 #define SPH_64 (1)
 #define SPH_SMALL_FOOTPRINT_WHIRLPOOL (1)
-
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
 
 // defined in cuda_helper.h
 #define SPH_ROTL64(x,n) ROTL64(x,n)

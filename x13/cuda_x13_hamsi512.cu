@@ -37,25 +37,10 @@
  * @author   phm <phm@inbox.com>
  */
 
-#include <stdint.h>
-#include <cuda_runtime.h>
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
-#define SPH_C32(x)    ((uint32_t)(x ## U))
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
-
-#define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
-
-#if __CUDA_ARCH__ < 350
-    // Kepler (Compute 3.0)
-    #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
 
 __device__ __constant__
 static const uint32_t d_alpha_n[] = {
@@ -663,7 +648,7 @@ static const uint32_t d_T512[64][16] = {
 		mD = 0; \
 		mE = 0; \
 		mF = 0; \
-        for (u = 0; u < 8; u ++) { \
+		for (u = 0; u < 8; u ++) { \
 			unsigned db = buf(u); \
 			for (v = 0; v < 8; v ++, db >>= 1) { \
 				uint32_t dm = SPH_T32(-(uint32_t)(db & 1)); \
@@ -692,45 +677,47 @@ static const uint32_t d_T512[64][16] = {
 // Die Hash-Funktion
 __global__ void x13_hamsi512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-        int hashPosition = nounce - startNounce;
-        uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
-        unsigned char *h1 = (unsigned char *)Hash;
+		int hashPosition = nounce - startNounce;
+		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
+		unsigned char *h1 = (unsigned char *)Hash;
 
-        uint32_t c0 = SPH_C32(0x73746565), c1 = SPH_C32(0x6c706172), c2 = SPH_C32(0x6b204172), c3 = SPH_C32(0x656e6265);
-        uint32_t c4 = SPH_C32(0x72672031), c5 = SPH_C32(0x302c2062), c6 = SPH_C32(0x75732032), c7 = SPH_C32(0x3434362c);
-        uint32_t c8 = SPH_C32(0x20422d33), c9 = SPH_C32(0x30303120), cA = SPH_C32(0x4c657576), cB = SPH_C32(0x656e2d48);
-        uint32_t cC = SPH_C32(0x65766572), cD = SPH_C32(0x6c65652c), cE = SPH_C32(0x2042656c), cF = SPH_C32(0x6769756d);
-        uint32_t m0, m1, m2, m3, m4, m5, m6, m7;
-        uint32_t m8, m9, mA, mB, mC, mD, mE, mF;
-        uint32_t h[16] = { c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF };
+		uint32_t c0 = SPH_C32(0x73746565), c1 = SPH_C32(0x6c706172), c2 = SPH_C32(0x6b204172), c3 = SPH_C32(0x656e6265);
+		uint32_t c4 = SPH_C32(0x72672031), c5 = SPH_C32(0x302c2062), c6 = SPH_C32(0x75732032), c7 = SPH_C32(0x3434362c);
+		uint32_t c8 = SPH_C32(0x20422d33), c9 = SPH_C32(0x30303120), cA = SPH_C32(0x4c657576), cB = SPH_C32(0x656e2d48);
+		uint32_t cC = SPH_C32(0x65766572), cD = SPH_C32(0x6c65652c), cE = SPH_C32(0x2042656c), cF = SPH_C32(0x6769756d);
+		uint32_t m0, m1, m2, m3, m4, m5, m6, m7;
+		uint32_t m8, m9, mA, mB, mC, mD, mE, mF;
+		uint32_t h[16] = { c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF };
 
 #define buf(u) (h1[i+u])
 		#pragma unroll 8
-        for(int i = 0; i < 64; i += 8) {
-            INPUT_BIG;
-            P_BIG;
-            T_BIG;
-        }
+		for(int i = 0; i < 64; i += 8) {
+			INPUT_BIG;
+			P_BIG;
+			T_BIG;
+		}
+
 #undef buf
 #define buf(u) (u == 0 ? 0x80 : 0)
-        INPUT_BIG;
-        P_BIG;
-        T_BIG;
+		INPUT_BIG;
+		P_BIG;
+		T_BIG;
+
 #undef buf
 #define buf(u) (u == 6 ? 2 : 0)
-        INPUT_BIG;
-        PF_BIG;
-        T_BIG;
+		INPUT_BIG;
+		PF_BIG;
+		T_BIG;
 
 		#pragma unroll 16
-        for (int i = 0; i < 16; i++)
-            Hash[i] = SWAB32(h[i]);
-    }
+		for (int i = 0; i < 16; i++)
+			Hash[i] = cuda_swab32(h[i]);
+	}
 }
 
 
@@ -740,18 +727,17 @@ __host__ void x13_hamsi512_cpu_init(int thr_id, int threads)
 
 __host__ void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 256;
+	const int threadsperblock = 256;
 
-    // berechne wie viele Thread Blocks wir brauchen
-    dim3 grid((threads + threadsperblock-1)/threadsperblock);
-    dim3 block(threadsperblock);
+	// berechne wie viele Thread Blocks wir brauchen
+	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
+	// Größe des dynamischen Shared Memory Bereichs
+	size_t shared_size = 0;
 
-//    fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
+	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
 
-    x13_hamsi512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
+	x13_hamsi512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	MyStreamSynchronize(NULL, order, thr_id);
 }
-

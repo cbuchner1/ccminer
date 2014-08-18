@@ -23,10 +23,9 @@ extern "C" {
 #include "sph/sph_whirlpool.h"
 
 #include "miner.h"
-}
 
-#include <stdint.h>
-#include <cuda_helper.h>
+#include "cuda_helper.h"
+}
 
 // to test gpu hash on a null buffer
 #define NULLTEST 0
@@ -84,9 +83,9 @@ extern void x14_shabal512_cpu_hash_64(int thr_id, int threads, uint32_t startNou
 extern void x15_whirlpool_cpu_init(int thr_id, int threads);
 extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_check_cpu_init(int thr_id, int threads);
-extern void quark_check_cpu_setTarget(const void *ptarget);
-extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+extern void cuda_check_cpu_init(int thr_id, int threads);
+extern void cuda_check_cpu_setTarget(const void *ptarget);
+extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
@@ -231,7 +230,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		x14_shabal512_cpu_init(thr_id, throughput);
 		x15_whirlpool_cpu_init(thr_id, throughput);
 
-		quark_check_cpu_init(thr_id, throughput);
+		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
 
@@ -239,7 +238,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	quark_check_cpu_setTarget(ptarget);
+	cuda_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
@@ -266,7 +265,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		print_hash((unsigned char*)buf); printf("\n");
 #endif
 		/* Scan with GPU */
-		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		if (foundNonce != 0xffffffff)
 		{

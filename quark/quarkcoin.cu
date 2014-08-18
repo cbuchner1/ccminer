@@ -1,4 +1,3 @@
-
 extern "C"
 {
 #include "sph/sph_blake.h"
@@ -8,9 +7,9 @@ extern "C"
 #include "sph/sph_jh.h"
 #include "sph/sph_keccak.h"
 #include "miner.h"
-}
 
-#include <stdint.h>
+#include "cuda_helper.h"
+}
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -45,9 +44,9 @@ extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 extern void quark_jh512_cpu_init(int thr_id, int threads);
 extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_check_cpu_init(int thr_id, int threads);
-extern void quark_check_cpu_setTarget(const void *ptarget);
-extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+extern void cuda_check_cpu_init(int thr_id, int threads);
+extern void cuda_check_cpu_setTarget(const void *ptarget);
+extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
@@ -171,18 +170,21 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
 		quark_jh512_cpu_init(thr_id, throughput);
-		quark_check_cpu_init(thr_id, throughput);
+		cuda_check_cpu_init(thr_id, throughput);
 		quark_compactTest_cpu_init(thr_id, throughput);
+
 		cudaMalloc(&d_quarkNonces[thr_id], sizeof(uint32_t)*throughput);
 		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput);
 		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput);
 		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput);
+
 		init[thr_id] = true;
 	}
 
@@ -191,7 +193,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	quark_check_cpu_setTarget(ptarget);
+	cuda_check_cpu_setTarget(ptarget);
 
 	do {
 		int order = 0;
@@ -247,7 +249,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
 		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = quark_check_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];

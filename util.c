@@ -1353,6 +1353,10 @@ void print_hash_tests(void)
 	printf("\nmyriad:  "); print_hash(hash);
 
 	memset(hash, 0, sizeof hash);
+	nist5hash(&hash[0], &buf[0]);
+	printf("\nnist5:   "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
 	printf("\nquark:   "); print_hash(hash);
 

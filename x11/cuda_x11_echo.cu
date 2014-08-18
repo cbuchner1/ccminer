@@ -1,33 +1,7 @@
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
-#include <stdint.h>
 #include <memory.h>
 
-// das Hi Word aus einem 64 Bit Typen extrahieren
-#if 0
-static __device__ uint32_t HIWORD(const uint64_t &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2hiint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x >> 32);
-#endif
-}
-
-// das Lo Word aus einem 64 Bit Typen extrahieren
-static __device__ uint32_t LOWORD(const uint64_t &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2loint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x & 0xFFFFFFFFULL);
-#endif
-}
-#endif
-
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
-#define SPH_C32(x)    ((uint32_t)(x ## U))
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);

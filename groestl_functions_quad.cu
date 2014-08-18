@@ -1,3 +1,4 @@
+#include "cuda_helper.h"
 
 __device__ __forceinline__ void G256_Mul2(uint32_t *regs)
 {

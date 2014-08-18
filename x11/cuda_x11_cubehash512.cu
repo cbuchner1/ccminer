@@ -1,29 +1,12 @@
-#include <cuda_runtime.h>
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 typedef unsigned char BitSequence;
-typedef unsigned long long DataLength;
-
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
-#if 0
-__device__ static uint32_t cuda_swab32(uint32_t x)
-{
-	return __byte_perm(x, 0, 0x0123);
-}
-#endif
-
-typedef unsigned char BitSequence;
-typedef unsigned long long DataLength;
 
 #define CUBEHASH_ROUNDS 16 /* this is r for CubeHashr/b */
 #define CUBEHASH_BLOCKBYTES 32 /* this is b for CubeHashr/b */
-
-typedef unsigned int uint32_t; /* must be exactly 32 bits */
 
 #define ROTATEUPWARDS7(a) (((a) << 7) | ((a) >> 25))
 #define ROTATEUPWARDS11(a) (((a) << 11) | ((a) >> 21))

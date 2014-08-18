@@ -20,10 +20,9 @@ extern "C"
 #include "sph/sph_fugue.h"
 
 #include "miner.h"
-}
 
-#include <stdint.h>
-#include <cuda_helper.h>
+#include "cuda_helper.h"
+}
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -73,9 +72,9 @@ extern void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNoun
 extern void x13_fugue512_cpu_init(int thr_id, int threads);
 extern void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_check_cpu_init(int thr_id, int threads);
-extern void quark_check_cpu_setTarget(const void *ptarget);
-extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+extern void cuda_check_cpu_init(int thr_id, int threads);
+extern void cuda_check_cpu_setTarget(const void *ptarget);
+extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, 
@@ -194,7 +193,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x11_echo512_cpu_init(thr_id, throughput);
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
-		quark_check_cpu_init(thr_id, throughput);
+		cuda_check_cpu_init(thr_id, throughput);
 
 		init[thr_id] = true;
 	}
@@ -204,7 +203,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
-	quark_check_cpu_setTarget(ptarget);
+	cuda_check_cpu_setTarget(ptarget);
 
 	do {
 		uint32_t foundNonce;
@@ -225,7 +224,7 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		// Scan nach Gewinner Hashes auf der GPU
-		foundNonce = quark_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];

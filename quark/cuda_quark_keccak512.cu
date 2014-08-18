@@ -1,19 +1,10 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-#include "cuda_helper.h"
 
 #define U32TO64_LE(p) \
     (((uint64_t)(*p)) | (((uint64_t)(*(p + 1))) << 32))
@@ -21,7 +12,8 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define U64TO32_LE(p, v) \
     *p = (uint32_t)((v)); *(p+1) = (uint32_t)((v) >> 32);
 
-static const uint64_t host_keccak_round_constants[24] = {
+__device__ __constant__
+static const uint64_t c_keccak_round_constants[24] = {
     0x0000000000000001ull, 0x0000000000008082ull,
     0x800000000000808aull, 0x8000000080008000ull,
     0x000000000000808bull, 0x0000000080000001ull,
@@ -35,8 +27,6 @@ static const uint64_t host_keccak_round_constants[24] = {
     0x8000000080008081ull, 0x8000000000008080ull,
     0x0000000080000001ull, 0x8000000080008008ull
 };
-
-__constant__ uint64_t c_keccak_round_constants[24];
 
 static __device__ __forceinline__ void
 keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_constants) {
@@ -157,11 +147,6 @@ __global__ void quark_keccak512_gpu_hash_64(int threads, uint32_t startNounce, u
 // Setup-Funktionen
 __host__ void quark_keccak512_cpu_init(int thr_id, int threads)
 {
-    // Kopiere die Hash-Tabellen in den GPU-Speicher
-    cudaMemcpyToSymbol( c_keccak_round_constants,
-                        host_keccak_round_constants,
-                        sizeof(host_keccak_round_constants),
-                        0, cudaMemcpyHostToDevice);
 }
 
 __host__ void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

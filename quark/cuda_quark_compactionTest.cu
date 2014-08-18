@@ -1,11 +1,8 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-#include "sm_30_intrinsics.h"
-
 #include <stdio.h>
 #include <memory.h>
-#include <stdint.h>
+
+#include "cuda_helper.h"
+#include <sm_30_intrinsics.h>
 
 // aus cpu-miner.c
 extern int device_map[8];

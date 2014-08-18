@@ -1,14 +1,7 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
+#include "cuda_helper.h"
 
 // globaler Speicher für alle HeftyHashes aller Threads
 extern uint32_t *d_heftyHashes[8];
@@ -802,7 +795,6 @@ __host__ void groestl512_cpu_setBlock(void *data, int len)
 	cudaMemcpyToSymbol(	groestl_gpu_msg,
 						msgBlock,
 						128);
-	
 	BLOCKSIZE = len;
 }
 

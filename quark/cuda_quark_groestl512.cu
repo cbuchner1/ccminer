@@ -1,22 +1,15 @@
 // Auf QuarkCoin spezialisierte Version von Groestl inkl. Bitslice
 
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
+
+#include "cuda_helper.h"
 
 // aus cpu-miner.c
 extern int device_map[8];
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
 
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];
@@ -25,8 +18,8 @@ static cudaDeviceProp props[8];
 #include "groestl_functions_quad.cu"
 #include "bitslice_transformations_quad.cu"
 
-__global__ void __launch_bounds__(256, 4)
- quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
+__global__ __launch_bounds__(256, 4)
+void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
     int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;

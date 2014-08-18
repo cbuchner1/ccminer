@@ -1,140 +1,9 @@
 #if 1
 
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-
-// Endian Drehung für 32 Bit Typen
-/*
-static __device__ uint32_t cuda_swab32(uint32_t x)
-{
-    return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
-          | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
-}
-*/
-static __device__ uint32_t cuda_swab32(uint32_t x)
-{
-	return __byte_perm(x, 0, 0x0123);
-}
-
-// das Hi Word in einem 64 Bit Typen ersetzen
-static __device__ unsigned long long REPLACE_HIWORD(const unsigned long long &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFFULL) | (((unsigned long long)y) << 32ULL);
-}
-
-#if 0
-// Endian Drehung für 64 Bit Typen
-static __device__ unsigned long long cuda_swab64(unsigned long long x) {
-    uint32_t h = (x >> 32);
-    uint32_t l = (x & 0xFFFFFFFFULL);
-    return (((unsigned long long)cuda_swab32(l)) << 32) | ((unsigned long long)cuda_swab32(h));
-}
-
-// das Hi Word aus einem 64 Bit Typen extrahieren
-static __device__ uint32_t HIWORD(const unsigned long long &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2hiint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x >> 32);
-#endif
-}
-
-// das Lo Word aus einem 64 Bit Typen extrahieren
-static __device__ uint32_t LOWORD(const unsigned long long &x) {
-#if __CUDA_ARCH__ >= 130
-	return (uint32_t)__double2loint(__longlong_as_double(x));
-#else
-	return (uint32_t)(x & 0xFFFFFFFFULL);
-#endif
-}
-
-static __device__ unsigned long long MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
-{
-#if __CUDA_ARCH__ >= 130
-    return __double_as_longlong(__hiloint2double(HI, LO));
-#else
-	return (unsigned long long)LO | (((unsigned long long)HI) << 32ULL);
-#endif
-}
-
-// das Lo Word in einem 64 Bit Typen ersetzen
-static __device__ unsigned long long REPLACE_LOWORD(const unsigned long long &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFF00000000ULL) | ((unsigned long long)y);
-}
-#endif
-
-// der Versuch, einen Wrapper für einen aus 32 Bit Registern zusammengesetzten uin64_t Typen zu entferfen...
-#if 1
-typedef unsigned long long uint64_t;
-#else
-typedef class uint64
-{
-public:
-	__device__ uint64()
-	{
-	}
-	__device__ uint64(unsigned long long init)
-	{
-		val = make_uint2( LOWORD(init), HIWORD(init) );
-	}
-	__device__ uint64(uint32_t lo, uint32_t hi)
-	{
-		val = make_uint2( lo, hi );
-	}
-	__device__ const uint64 operator^(uint64 const& rhs) const
-	{
-		return uint64(val.x ^ rhs.val.x, val.y ^ rhs.val.y);
-	}
-	__device__ const uint64 operator|(uint64 const& rhs) const
-	{
-		return uint64(val.x | rhs.val.x, val.y | rhs.val.y);
-	}
-	__device__ const uint64 operator+(unsigned long long const& rhs) const
-	{
-		return *this+uint64(rhs);
-	}
-	__device__ const uint64 operator+(uint64 const& rhs) const
-	{
-		uint64 res;
-		asm ("add.cc.u32      %0, %2, %4;\n\t"
-			 "addc.cc.u32     %1, %3, %5;\n\t"
-			 : "=r"(res.val.x), "=r"(res.val.y)
-			 : "r"(    val.x), "r"(    val.y),
-			   "r"(rhs.val.x), "r"(rhs.val.y));
-		return res;
-	}
-	__device__ const uint64 operator-(uint64 const& rhs) const
-	{
-		uint64 res;
-		asm ("sub.cc.u32      %0, %2, %4;\n\t"
-			 "subc.cc.u32     %1, %3, %5;\n\t"
-			 : "=r"(res.val.x), "=r"(res.val.y)
-			 : "r"(    val.x), "r"(    val.y),
-			   "r"(rhs.val.x), "r"(rhs.val.y));
-		return res;
-	}
-	__device__ const uint64 operator<<(int n) const
-	{
-		return uint64(unsigned long long(*this)<<n);
-	}
-	__device__ const uint64 operator>>(int n) const
-	{
-		return uint64(unsigned long long(*this)>>n);
-	}
-	__device__ operator unsigned long long() const
-	{
-		return MAKE_ULONGLONG(val.x, val.y);
-	}
-	uint2 val;
-} uint64_t;
-#endif
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
@@ -142,27 +11,9 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 // die Message it Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
-
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-// diese 64 Bit Rotates werden unter Compute 3.5 (und besser) mit dem Funnel Shifter beschleunigt
-#if __CUDA_ARCH__ >= 350
-__forceinline__ __device__ uint64_t ROTL64(const uint64_t value, const int offset) {
-    uint2 result;
-    if(offset >= 32) {
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(__double2loint(__longlong_as_double(value))), "r"(__double2hiint(__longlong_as_double(value))), "r"(offset));
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(__double2hiint(__longlong_as_double(value))), "r"(__double2loint(__longlong_as_double(value))), "r"(offset));
-    } else {
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(__double2hiint(__longlong_as_double(value))), "r"(__double2loint(__longlong_as_double(value))), "r"(offset));
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(__double2loint(__longlong_as_double(value))), "r"(__double2hiint(__longlong_as_double(value))), "r"(offset));
-    }
-    return  __double_as_longlong(__hiloint2double(result.y, result.x));
-}
-#else
-#define ROTL64(x, n)        (((x) << (n)) | ((x) >> (64 - (n))))
-#endif
 #define SHL(x, n)            ((x) << (n))
 #define SHR(x, n)            ((x) >> (n))
 

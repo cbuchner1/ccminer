@@ -1,44 +1,13 @@
-
-
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
+#include "cuda_helper.h"
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 __constant__ uint64_t c_State[25];
 __constant__ uint32_t c_PaddedMessage[18];
-
-static __device__ uint32_t cuda_swab32(uint32_t x)
-{
-	return __byte_perm(x, 0, 0x0123);
-}
-
-// diese 64 Bit Rotates werden unter Compute 3.5 (und besser) mit dem Funnel Shifter beschleunigt
-#if __CUDA_ARCH__ >= 350
-__forceinline__ __device__ uint64_t ROTL64(const uint64_t value, const int offset) {
-    uint2 result;
-    if(offset >= 32) {
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(__double2loint(__longlong_as_double(value))), "r"(__double2hiint(__longlong_as_double(value))), "r"(offset));
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(__double2hiint(__longlong_as_double(value))), "r"(__double2loint(__longlong_as_double(value))), "r"(offset));
-    } else {
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(__double2hiint(__longlong_as_double(value))), "r"(__double2loint(__longlong_as_double(value))), "r"(offset));
-        asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(__double2loint(__longlong_as_double(value))), "r"(__double2hiint(__longlong_as_double(value))), "r"(offset));
-    }
-    return  __double_as_longlong(__hiloint2double(result.y, result.x));
-}
-#else
-#define ROTL64(x, n)        (((x) << (n)) | ((x) >> (64 - (n))))
-#endif
 
 #define U32TO64_LE(p) \
     (((uint64_t)(*p)) | (((uint64_t)(*(p + 1))) << 32))

@@ -1,25 +1,9 @@
 /*
  * Shabal-512 for X14/X15 (STUB)
  */
-#include <stdint.h>
-#include <cuda_runtime.h>
+#include "cuda_helper.h"
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
-#define SPH_C32(x)    ((uint32_t)(x ## U))
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
-
-#define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
-
-#if __CUDA_ARCH__ < 350
-	// Kepler (Compute 3.0)
-	#define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-	// Kepler (Compute 3.5)
-	#define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
 
 /* $Id: shabal.c 175 2010-05-07 16:03:20Z tp $ */
 /*

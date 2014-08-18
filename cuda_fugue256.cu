@@ -1,11 +1,10 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
 #include "sph/sph_fugue.h"
+
+#include "cuda_helper.h"
+#include <host_defines.h>
 
 #define USE_SHARED 1
 
@@ -14,14 +13,6 @@ extern int device_map[8];
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
-// schon in sph_fugue.h definiert
-//#define SPH_C32(x)	((uint32_t)(x ## U))
 
 uint32_t *d_fugue256_hashoutput[8];
 uint32_t *d_resultNonce[8];

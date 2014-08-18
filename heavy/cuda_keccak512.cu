@@ -1,14 +1,7 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
+#include "cuda_helper.h"
 
 // globaler Speicher für alle HeftyHashes aller Threads
 extern uint32_t *d_heftyHashes[8];
@@ -81,8 +74,8 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
     uint64_t t[5], u[5], v, w;
 
     /* absorb input */
-#pragma unroll 9
-    for (i = 0; i < 72 / 8; i++, in += 2)
+    #pragma unroll 9
+    for (i = 0; i < 9 /* 72/8 */; i++, in += 2)
         s[i] ^= U32TO64_LE(in);
     
     for (i = 0; i < 24; i++) {

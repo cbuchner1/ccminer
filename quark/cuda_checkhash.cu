@@ -1,10 +1,7 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
-#include <stdint.h>
 #include <memory.h>
+
+#include "cuda_helper.h"
 
 // Hash Target gegen das wir testen sollen
 __constant__ uint32_t pTarget[8];
@@ -58,20 +55,20 @@ __global__ void cuda_check_gpu_hash_64(int threads, uint32_t startNounce, uint32
 }
 
 // Setup-Funktionen
-__host__ void quark_check_cpu_init(int thr_id, int threads)
+__host__ void cuda_check_cpu_init(int thr_id, int threads)
 {
     cudaMallocHost(&h_resNounce[thr_id], 1*sizeof(uint32_t));
     cudaMalloc(&d_resNounce[thr_id], 1*sizeof(uint32_t));
 }
 
 // Target Difficulty setzen
-__host__ void quark_check_cpu_setTarget(const void *ptarget)
+__host__ void cuda_check_cpu_setTarget(const void *ptarget)
 {
 	// die Message zur Berechnung auf der GPU
 	cudaMemcpyToSymbol( pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 }
 
-__host__ uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
+__host__ uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
 {
 	uint32_t result = 0xffffffff;
 	cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t));

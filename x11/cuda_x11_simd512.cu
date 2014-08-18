@@ -7,28 +7,16 @@
 
 #define TPB 256
 
+#include "cuda_helper.h"
+
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
 
 int *d_state[8];
 uint4 *d_temp4[8];
 
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
-
-#define C32(x)    ((uint32_t)(x ## U))
-#define T32(x) ((x) & C32(0xFFFFFFFF))
-
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define ROTL32(x, n) T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
 
 __device__ __constant__
 const uint32_t c_IV_512[32] = {
@@ -166,7 +154,7 @@ X(j) = (u-v) << (2*n); \
 #undef BUTTERFLY
 }
 
-#if __CUDA_ARCH__ < 300
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300
 /**
  * __shfl() returns the value of var held by the thread whose ID is given by srcLane.
  * If srcLane is outside the range 0..width-1, the thread's own value of var is returned.
@@ -177,7 +165,7 @@ X(j) = (u-v) << (2*n); \
 
 __device__ __forceinline__ void FFT_16(int *y) {
 
-#if __CUDA_ARCH__ < 300
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300
 #ifndef WIN32
 # warning FFT_16() function is not compatible with SM 2.1 devices!
 #endif
@@ -346,7 +334,7 @@ __device__ __forceinline__ void FFT_256_halfzero(int y[256]) {
 __device__ __forceinline__ void Expansion(const uint32_t *data, uint4 *g_temp4)
 {
   int i;
-#if __CUDA_ARCH__ < 300
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300
 #ifndef WIN32
 # warning Expansion() function is not compatible with SM 2.1 devices
 #endif

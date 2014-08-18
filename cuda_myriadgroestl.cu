@@ -1,22 +1,15 @@
 // Auf Myriadcoin spezialisierte Version von Groestl inkl. Bitslice
 
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
+
+#include "cuda_helper.h"
 
 // aus cpu-miner.c
 extern int device_map[8];
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
 
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];
