@@ -1,5 +1,5 @@
 
-minerd
+ccminer
 *.o
 
 autom4te.cache
@@ -26,6 +26,9 @@ config.sub
 mingw32-config.cache
 
 */.dirstamp
+.DS_Store
+Desktop.ini
+Thumbs.db
 
 *.iml
 
@@ -33,5 +36,14 @@ Debug/
 Release/
 x64/Debug/
 x64/Release/
-ccminer.*.suo
+*.suo
+*.user
+
+.settings/
+.project
+.metadata
+.classpath
+.loadpath
+.cproject
+.buildpath
 

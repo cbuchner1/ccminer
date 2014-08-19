@@ -1361,6 +1361,10 @@ void print_hash_tests(void)
 	printf("\nquark:   "); print_hash(hash);
 
 	memset(hash, 0, sizeof hash);
+	fresh_hash(&hash[0], &buf[0]);
+	printf("\nfresh:   "); print_hash(hash);
+
+	memset(hash, 0, sizeof hash);
 	x11hash(&hash[0], &buf[0]);
 	printf("\nX11:     "); print_hash(hash);
 
