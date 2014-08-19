@@ -193,6 +193,12 @@ extern "C" void cuda_devicenames()
     }
 }
 
+// Can't be called directly in cpu-miner
+extern "C" void cuda_devicereset()
+{
+	cudaDeviceReset();
+}
+
 static bool substringsearch(const char *haystack, const char *needle, int &match)
 {
     int hlen = strlen(haystack);

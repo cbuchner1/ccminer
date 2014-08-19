@@ -57,6 +57,7 @@ extern "C"
 #endif
 int cuda_num_devices();
 void cuda_devicenames();
+void cuda_devicereset();
 int cuda_finddevice(char *name);
 #ifdef __cplusplus
 }
@@ -797,7 +798,6 @@ static void *miner_thread(void *userdata)
 	unsigned char *scratchbuf = NULL;
 	char s[16];
 	int i;
-    static int rounds = 0;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
@@ -948,9 +948,6 @@ static void *miner_thread(void *userdata)
 			goto out;
 		}
 
-//        if (opt_benchmark)
-//            if (++rounds == 1) exit(0);
-
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 		timeval_subtract(&diff, &tv_end, &tv_start);
@@ -965,8 +962,6 @@ static void *miner_thread(void *userdata)
 				1e-3 * thr_hashrates[thr_id]);
 			applog(LOG_INFO, "GPU #%d: %s, %s khash/s",
 				device_map[thr_id], device_name[thr_id], s);
-//			applog(LOG_INFO, "thread %d: %lu hashes, %s khash/s",
-//				thr_id, hashes_done, s);
 		}
 		if (opt_benchmark && thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
@@ -1493,11 +1488,14 @@ static void signal_handler(int sig)
 		applog(LOG_INFO, "SIGHUP received");
 		break;
 	case SIGINT:
+		signal(sig, SIG_IGN);
 		applog(LOG_INFO, "SIGINT received, exiting");
+		cuda_devicereset();
 		exit(0);
 		break;
 	case SIGTERM:
 		applog(LOG_INFO, "SIGTERM received, exiting");
+		cuda_devicereset();
 		exit(0);
 		break;
 	}
@@ -1573,9 +1571,10 @@ int main(int argc, char *argv[])
 		if (i < 0)
 			applog(LOG_ERR, "chdir() failed (errno = %d)", errno);
 		signal(SIGHUP, signal_handler);
-		signal(SIGINT, signal_handler);
 		signal(SIGTERM, signal_handler);
 	}
+	/* Always catch Ctrl+C */
+	signal(SIGINT, signal_handler);
 #endif
 
 	if (num_processors == 0)
@@ -1683,6 +1682,9 @@ int main(int argc, char *argv[])
 #endif
 
 	applog(LOG_INFO, "workio thread dead, exiting.");
+
+	// nvprof requires this
+	cuda_devicereset();
 
 	return 0;
 }
