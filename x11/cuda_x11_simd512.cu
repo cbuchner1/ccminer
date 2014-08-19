@@ -18,16 +18,16 @@ uint4 *d_temp4[8];
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
 
-__device__ __constant__
-const uint32_t c_IV_512[32] = {
+__constant__  uint32_t c_IV_512[32];
+const uint32_t h_IV_512[32] = {
   0x0ba16b95, 0x72f999ad, 0x9fecc2ae, 0xba3264fc, 0x5e894929, 0x8e9f30e5, 0x2f1daa37, 0xf0f2c558,
   0xac506643, 0xa90635a5, 0xe25b878b, 0xaab7878f, 0x88817f7a, 0x0a02892b, 0x559a7550, 0x598f657e,
   0x7eef60a1, 0x6b70e3e8, 0x9c1714d1, 0xb958e2a8, 0xab02675e, 0xed1c014f, 0xcd8d65bb, 0xfdb7a257,
   0x09254899, 0xd699c7bc, 0x9019b6dc, 0x2b9022e4, 0x8fa14956, 0x21bf9bd3, 0xb94d0943, 0x6ffddc22
 };
 
-__device__ __constant__
-static const int c_FFT128_8_16_Twiddle[128] = {
+ __constant__ int c_FFT128_8_16_Twiddle[128];
+ static const int h_FFT128_8_16_Twiddle[128] = {
 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 1, 60, 2, 120, 4, -17, 8, -34, 16, -68, 32, 121, 64, -15, 128, -30,
 1, 46, 60, -67, 2, 92, 120, 123, 4, -73, -17, -11, 8, 111, -34, -22,
@@ -37,8 +37,9 @@ static const int c_FFT128_8_16_Twiddle[128] = {
 1, -31, -67, 21, 120, -122, -73, -50, 8, 9, -22, -89, -68, 52, -70, 114,
 1, -61, 123, -50, -34, 18, -70, -99, 128, -98, 67, 25, 17, -9, 35, -79};
 
-__device__ __constant__
-static const int c_FFT256_2_128_Twiddle[128] = {
+
+__constant__ int c_FFT256_2_128_Twiddle[128];
+static const int h_FFT256_2_128_Twiddle[128] = {
    1, 41, -118, 45, 46, 87, -31, 14,
   60, -110, 116, -127, -67, 80, -61, 69,
    2, 82, 21, 90, 92, -83, -62, 28,
@@ -154,22 +155,7 @@ X(j) = (u-v) << (2*n); \
 #undef BUTTERFLY
 }
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300
-/**
- * __shfl() returns the value of var held by the thread whose ID is given by srcLane.
- * If srcLane is outside the range 0..width-1, the thread's own value of var is returned.
- */
-#undef __shfl
-#define __shfl(var, srcLane, width) (uint32_t)(var)
-#endif
-
 __device__ __forceinline__ void FFT_16(int *y) {
-
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300
-#ifndef WIN32
-# warning FFT_16() function is not compatible with SM 2.1 devices!
-#endif
-#endif
 
   /*
    * FFT_16 using w=2 as 16th root of unity
@@ -334,11 +320,6 @@ __device__ __forceinline__ void FFT_256_halfzero(int y[256]) {
 __device__ __forceinline__ void Expansion(const uint32_t *data, uint4 *g_temp4)
 {
   int i;
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300
-#ifndef WIN32
-# warning Expansion() function is not compatible with SM 2.1 devices
-#endif
-#endif
 
   /* Message Expansion using Number Theoretical Transform similar to FFT */
   int expanded[32];
@@ -655,6 +636,15 @@ __host__ void x11_simd512_cpu_init(int thr_id, int threads)
     texRef1D_128.filterMode = cudaFilterModePoint;
     texRef1D_128.addressMode[0] = cudaAddressModeClamp;
     cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads);
+
+    cudaMemcpyToSymbol(c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
+
+    cudaMemcpyToSymbol(d_cw0, h_cw0, sizeof(h_cw0), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(d_cw1, h_cw1, sizeof(h_cw1), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(d_cw2, h_cw2, sizeof(h_cw2), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(d_cw3, h_cw3, sizeof(h_cw3), 0, cudaMemcpyHostToDevice);
 }
 
 __host__ void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

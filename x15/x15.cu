@@ -260,8 +260,8 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 
 #if NULLTEST
 		uint32_t buf[8]; memset(buf, 0, sizeof buf);
-		cudaMemcpy(buf, d_hash[thr_id], sizeof buf, cudaMemcpyDeviceToHost);
-		cudaThreadSynchronize();
+		CUDA_SAFE_CALL(cudaMemcpy(buf, d_hash[thr_id], sizeof buf, cudaMemcpyDeviceToHost));
+		CUDA_SAFE_CALL(cudaThreadSynchronize());
 		print_hash((unsigned char*)buf); printf("\n");
 #endif
 		/* Scan with GPU */
