@@ -410,9 +410,10 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_bmw512.cu">
+      <MaxRegCount>128</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">--ptxas-options=-O3 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">--ptxas-options=-O3 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_jh512.cu">
@@ -480,10 +481,11 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     <CudaCompile Include="x11\cuda_x11_echo.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">--ptxas-options=-O3 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">--ptxas-options=-O3 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_luffa512.cu">
+      <MaxRegCount>80</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">--ptxas-options=-O3 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalOptions)</AdditionalOptions>
@@ -547,6 +549,12 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="x15\cuda_x15_whirlpool.cu">
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalOptions)</AdditionalOptions>
+    </CudaCompile>
+    <CudaCompile Include="x15\whirlcoin.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalOptions)</AdditionalOptions>

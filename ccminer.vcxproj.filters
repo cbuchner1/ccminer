@@ -400,5 +400,8 @@
     <CudaCompile Include="bitslice_transformations_quad.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="x15\whirlcoin.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
