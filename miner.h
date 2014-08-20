@@ -242,6 +242,10 @@ extern int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_whc(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern int scanhash_x11(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -362,6 +366,7 @@ void myriadhash(void *state, const void *input);
 void fresh_hash(void *state, const void *input);
 void nist5hash(void *state, const void *input);
 void quarkhash(void *state, const void *input);
+void wcoinhash(void *state, const void *input);
 void x11hash(void *output, const void *input);
 void x13hash(void *output, const void *input);
 void x14hash(void *output, const void *input);

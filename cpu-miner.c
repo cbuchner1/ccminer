@@ -134,6 +134,7 @@ typedef enum {
 	ALGO_ANIME,
 	ALGO_FRESH,
 	ALGO_NIST5,
+	ALGO_WHC,
 	ALGO_X11,
 	ALGO_X13,
 	ALGO_X14,
@@ -152,6 +153,7 @@ static const char *algo_names[] = {
 	"anime",
 	"fresh",
 	"nist5",
+	"whirlcoin",
 	"x11",
 	"x13",
 	"x14",
@@ -229,6 +231,7 @@ Options:\n\
                         anime     Animecoin hash\n\
                         fresh     Freshcoin hash (shavite 80)\n\
                         nist5     NIST5 (TalkCoin) hash\n\
+                        whirlcoin Whirlcoin hash\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
                         x14       X14 hash\n\
@@ -928,6 +931,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_NIST5:
 			rc = scanhash_nist5(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_WHC:
+			rc = scanhash_whc(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

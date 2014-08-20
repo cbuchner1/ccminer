@@ -238,7 +238,7 @@ uint64_t shl_t64(uint64_t x, uint32_t n)
 
 
 // 64-bit ROTATE RIGHT
-#ifdef DJM_SM35_ROT64
+#if __CUDA_ARCH__ >= 350
 /* complicated sm >= 3.5 one (with Funnel Shifter beschleunigt), to bench */
 __device__ __forceinline__
 uint64_t ROTR64(const uint64_t value, const int offset) {
@@ -274,8 +274,7 @@ uint64_t ROTR64(const uint64_t x, const int offset)
 #endif
 
 // 64-bit ROTATE LEFT
-#ifdef DJM_SM35_ROT64
-/* complicated sm >= 3.5 one, to bench */
+#if __CUDA_ARCH__ >= 350
 __device__ __forceinline__
 uint64_t ROTL64(const uint64_t value, const int offset) {
 	uint2 result;

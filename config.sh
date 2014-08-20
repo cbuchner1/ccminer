@@ -7,6 +7,7 @@
 
 make clean || echo clean
 
+rm -f Makefile.in
 rm -f config.status
 ./autogen.sh || echo done
 

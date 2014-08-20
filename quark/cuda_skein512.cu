@@ -289,7 +289,7 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 	}
 
 static __constant__ uint64_t d_constMem[8];
-static uint64_t h_constMem[8] = {
+static const uint64_t h_constMem[8] = {
 	SPH_C64(0x4903ADFF749C51CE),
 	SPH_C64(0x0D95DE399746DF03),
 	SPH_C64(0x8FD1934127C79BCE),

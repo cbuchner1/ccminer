@@ -40,23 +40,30 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  x11/x11.cu x11/fresh.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
 			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu \
 			  x13/x13.cu x13/cuda_x13_hamsi512.cu x13/cuda_x13_fugue512.cu \
-			  x15/x14.cu x15/x15.cu x15/cuda_x14_shabal512.cu x15/cuda_x15_whirlpool.cu
+			  x15/x14.cu x15/x15.cu x15/cuda_x14_shabal512.cu x15/cuda_x15_whirlpool.cu x15/whirlcoin.cu
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
 ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
+nvcc_FLAGS = -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -I . -Xptxas "-v" --ptxas-options=-v
+nvcc_FLAGS += $(JANSSON_INCLUDES)
+
 # we're now targeting all major compute architectures within one binary.
 .cu.o:
-	$(NVCC) @CFLAGS@ -I . -Xptxas "-v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=128 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=128 -o $@ -c $<
+
+# Luffa is faster with 80 registers than 128
+x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
+	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=80 -o $@ -c $<
 
 # Shavite compiles faster with 128 regs
 x11/cuda_x11_shavite512.o: x11/cuda_x11_shavite512.cu
-	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=128 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<        
+	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ --maxrregcount=128 -o $@ -c $<
 
 # ABI requiring code modules
 quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
-	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" --maxrregcount=80 -o $@ -c $<
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
-	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" --maxrregcount=80 -o $@ -c $<
