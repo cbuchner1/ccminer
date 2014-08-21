@@ -46,15 +46,16 @@ ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
 ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
-nvcc_FLAGS = -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -I . -Xptxas "-v" --ptxas-options=-v
+nvcc_FLAGS = -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -I . --ptxas-options=-v --use_fast_math
 nvcc_FLAGS += $(JANSSON_INCLUDES)
 
 # we're now targeting all major compute architectures within one binary.
 .cu.o:
 	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=128 -o $@ -c $<
 
-# Luffa is faster with 80 registers than 128
+# Luffa and Echo are faster with 80 registers than 128
 x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
+x11/cuda_x11_echo.o: x11/cuda_x11_echo.cu
 	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=80 -o $@ -c $<
 
 # Shavite compiles faster with 128 regs

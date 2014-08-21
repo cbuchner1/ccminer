@@ -38,12 +38,12 @@ extern const uint3 threadIdx;
 #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
 #endif
 
-__device__ __forceinline__ unsigned long long MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
+__device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 {
 #if __CUDA_ARCH__ >= 130
 	return __double_as_longlong(__hiloint2double(HI, LO));
 #else
-	return (unsigned long long)LO | (((unsigned long long)HI) << 32);
+	return (uint64_t)LO | (((uint64_t)HI) << 32);
 #endif
 }
 
@@ -94,11 +94,8 @@ __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 {
 	// Input:       77665544 33221100
 	// Output:      00112233 44556677
-	uint64_t temp[2];
-	temp[0] = __byte_perm(_HIWORD(x), 0, 0x0123);
-	temp[1] = __byte_perm(_LOWORD(x), 0, 0x0123);
-
-	return temp[0] | (temp[1]<<32);
+	uint64_t result = __byte_perm((uint32_t) x, 0, 0x0123);
+	return (result << 32) | __byte_perm(_HIWORD(x), 0, 0x0123);
 }
 #else
 	/* host */
@@ -132,7 +129,7 @@ __device__ __forceinline__
 uint64_t xor1(uint64_t a, uint64_t b)
 {
 	uint64_t result;
-	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a) ,"l"(b));
+	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a),"l"(b));
 	return result;
 }
 
@@ -141,10 +138,10 @@ __device__ __forceinline__
 uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
 {
 	uint64_t result;
-	asm("{\n\t"
-		" .reg .u64 t1;\n\t"
-		"xor.b64 t1, %2, %3;\n\t"
-		"xor.b64 %0, %1, t1;\n\t"
+	asm("{"
+		".reg .u64 lt;\n\t"
+		"xor.b64 lt, %2, %3;\n\t"
+		"xor.b64 %0, %1, lt;\n\t"
 		"}"
 	: "=l"(result) : "l"(a) ,"l"(b),"l"(c));
 	return result;

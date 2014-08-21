@@ -1366,7 +1366,7 @@ void print_hash_tests(void)
 
 	memset(hash, 0, sizeof hash);
 	wcoinhash(&hash[0], &buf[0]);
-	printf("\nwhirlc:  "); print_hash(hash);
+	printf("\nwhirl:   "); print_hash(hash);
 
 	memset(hash, 0, sizeof hash);
 	x11hash(&hash[0], &buf[0]);

@@ -298,10 +298,11 @@ static void aes_cpu_init()
                         0, cudaMemcpyHostToDevice);
 }
 
-static __device__ __forceinline__ void aes_gpu_init(uint32_t *sharedMemory)
+__device__ __forceinline__
+void aes_gpu_init(uint32_t *sharedMemory)
 {
-	if(threadIdx.x < 256)
-	{
+	/* each thread startup will fill a uint32 */
+	if (threadIdx.x < 256) {
 		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
 		sharedMemory[threadIdx.x+256] = d_AES1[threadIdx.x];
 		sharedMemory[threadIdx.x+512] = d_AES2[threadIdx.x];
@@ -309,10 +310,13 @@ static __device__ __forceinline__ void aes_gpu_init(uint32_t *sharedMemory)
 	}
 }
 
-static __device__ __forceinline__ void aes_round(
+/* tried with 3 xor.b32 asm, not faster */
+#define xor4_32(a,b,c,d) (a ^ b ^ c ^ d);
+
+__device__
+static void aes_round(
 	const uint32_t *sharedMemory,
-	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, 
-	uint32_t k0, 
+	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, uint32_t k0,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
 	uint32_t idx0, idx1, idx2, idx3;
@@ -321,42 +325,47 @@ static __device__ __forceinline__ void aes_round(
 	idx1 = __byte_perm(x1, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x2, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x3, 0, 0x4443) + 768;
-	y0 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3] ^ 
-		k0;
+	y0 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]);
+	y0 ^= k0;
 
 	idx0 = __byte_perm(x1, 0, 0x4440);
 	idx1 = __byte_perm(x2, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x3, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x0, 0, 0x4443) + 768;
 
-	y1 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3]; // ^k3
+	y1 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]);
 
 	idx0 = __byte_perm(x2, 0, 0x4440);
 	idx1 = __byte_perm(x3, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x0, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x1, 0, 0x4443) + 768;
-	y2 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3]; // ^k2
+	y2 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]); // ^k2
 
 	idx0 = __byte_perm(x3, 0, 0x4440);
 	idx1 = __byte_perm(x0, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x1, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x2, 0, 0x4443) + 768;
-	y3 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3]; // ^k3
+	y3 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]); // ^k3
 }
 
-static __device__ __forceinline__ void aes_round(
+__device__
+static void aes_round(
 	const uint32_t *sharedMemory,
 	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, 
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
@@ -367,36 +376,40 @@ static __device__ __forceinline__ void aes_round(
 	idx1 = __byte_perm(x1, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x2, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x3, 0, 0x4443) + 768;
-	y0 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3];
+	y0 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]);
 
 	idx0 = __byte_perm(x1, 0, 0x4440);
 	idx1 = __byte_perm(x2, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x3, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x0, 0, 0x4443) + 768;
 
-	y1 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3]; // ^k3
+	y1 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]);
 
 	idx0 = __byte_perm(x2, 0, 0x4440);
 	idx1 = __byte_perm(x3, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x0, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x1, 0, 0x4443) + 768;
-	y2 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3]; // ^k2
+	y2 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]); // ^k2
 
 	idx0 = __byte_perm(x3, 0, 0x4440);
 	idx1 = __byte_perm(x0, 0, 0x4441) + 256;
 	idx2 = __byte_perm(x1, 0, 0x4442) + 512;
 	idx3 = __byte_perm(x2, 0, 0x4443) + 768;
-	y3 =sharedMemory[idx0] ^ 
-		sharedMemory[idx1] ^ 
-		sharedMemory[idx2] ^ 
-		sharedMemory[idx3]; // ^k3
+	y3 = xor4_32(
+		sharedMemory[idx0],
+		sharedMemory[idx1],
+		sharedMemory[idx2],
+		sharedMemory[idx3]); // ^k3
 }

@@ -479,6 +479,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_echo.cu">
+      <MaxRegCount>80</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">--ptxas-options=-O3 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">--ptxas-options=-O3 %(AdditionalOptions)</AdditionalOptions>

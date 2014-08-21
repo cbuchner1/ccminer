@@ -153,7 +153,7 @@ static const char *algo_names[] = {
 	"anime",
 	"fresh",
 	"nist5",
-	"whirlcoin",
+	"whirl",
 	"x11",
 	"x13",
 	"x14",
@@ -231,7 +231,7 @@ Options:\n\
                         anime     Animecoin hash\n\
                         fresh     Freshcoin hash (shavite 80)\n\
                         nist5     NIST5 (TalkCoin) hash\n\
-                        whirlcoin Whirlcoin hash\n\
+                        whirl     Whirlcoin (old whirlpool)\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
                         x14       X14 hash\n\
@@ -1526,17 +1526,17 @@ int main(int argc, char *argv[])
 	int i;
 
 	printf("*** ccMiner for nVidia GPUs by Christian Buchner and Christian H. ***\n");
-	printf("\t This is version "PROGRAM_VERSION" (tpruvot@github)\n");
+	printf("\t This is the forked version "PROGRAM_VERSION" (tpruvot@github)\n");
 #ifdef WIN32
-	printf("\t  Built with VC++ 2013 and nVidia CUDA SDK 6.5 RC (DC 5.0)\n\n");
+	printf("\t  Built with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
 #else
-	printf("\t  Built with the nVidia CUDA SDK 6.5 RC\n\n");
+	printf("\t  Built with the nVidia CUDA SDK 6.5\n\n");
 #endif
 	printf("\t  based on pooler-cpuminer 2.3.2 (c) 2010 Jeff Garzik, 2012 pooler\n");
-	printf("\t  based on pooler-cpuminer extension for HVC from http://hvc.1gh.com/" "\n\n");
+	printf("\t    and HVC extension from http://hvc.1gh.com/" "\n\n");
 	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n");
 	printf("\t  BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM\n");
-	printf("\tCuda X14 and X15 added by Tanguy Pruvot (also in cpuminer-multi)\n");
+	printf("\tCleaned and optimized by Tanguy Pruvot\n");
 	printf("\t  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
 
 	rpc_user = strdup("");
