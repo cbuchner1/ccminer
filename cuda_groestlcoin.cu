@@ -15,13 +15,13 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 // diese Struktur wird in der Init Funktion angefordert
 static cudaDeviceProp props[8];
 
-// globaler Speicher für alle HeftyHashes aller Threads
+// globaler Speicher fÃ¼r alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
 extern uint32_t *d_resultNonce[8];
 
 __constant__ uint32_t groestlcoin_gpu_msg[32];
 
-// 64 Register Variante für Compute 3.0
+// 64 Register Variante fÃ¼r Compute 3.0
 #include "groestl_functions_quad.cu"
 #include "bitslice_transformations_quad.cu"
 
@@ -104,7 +104,7 @@ __host__ void groestlcoin_cpu_init(int thr_id, int threads)
 
     cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
 
-    // Speicher für Gewinner-Nonce belegen
+    // Speicher fÃ¼r Gewinner-Nonce belegen
     cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 
 }
 
@@ -121,8 +121,8 @@ __host__ void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
     msgBlock[20] = 0x80;
     msgBlock[31] = 0x01000000;
 
-    // groestl512 braucht hierfür keinen CPU-Code (die einzige Runde wird
-    // auf der GPU ausgeführt)
+    // groestl512 braucht hierfÃ¼r keinen CPU-Code (die einzige Runde wird
+    // auf der GPU ausgefÃ¼hrt)
 
     // Blockheader setzen (korrekte Nonce und Hefty Hash fehlen da drin noch)
     cudaMemcpyToSymbol( groestlcoin_gpu_msg,
@@ -147,7 +147,7 @@ __host__ void groestlcoin_cpu_hash(int thr_id, int threads, uint32_t startNounce
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
+    // GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
 
     cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));

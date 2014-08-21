@@ -24,7 +24,7 @@ extern "C"
 // aus cpu-miner.c
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
+// Speicher fÃ¼r Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);

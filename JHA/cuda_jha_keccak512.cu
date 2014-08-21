@@ -127,7 +127,7 @@ __global__ void jackpot_keccak512_gpu_hash(int threads, uint32_t startNounce, ui
         for (int i=0; i<25; i++)
             keccak_gpu_state[i] = c_State[i];
 
-        // den Block einmal gut durchschütteln
+        // den Block einmal gut durchschÃ¼tteln
         keccak_block(keccak_gpu_state, message, c_keccak_round_constants);
 
         // das Hash erzeugen
@@ -533,7 +533,7 @@ __host__ void jackpot_keccak512_cpu_hash(int thr_id, int threads, uint32_t start
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
+    // GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
 
     jackpot_keccak512_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash);

@@ -11,7 +11,7 @@ extern "C"
 extern int device_map[8];
 extern bool opt_benchmark;
 
-// Speicher für Input/Output der verketteten Hashfunktionen
+// Speicher fÃ¼r Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void x15_whirlpool_cpu_init(int thr_id, int threads, int mode);

@@ -1,6 +1,6 @@
 // Parallelisierung:
 //
-// FFT_8  wird 2 mal 8-fach parallel ausgeführt (in FFT_64)
+// FFT_8  wird 2 mal 8-fach parallel ausgefÃ¼hrt (in FFT_64)
 //        und 1 mal 16-fach parallel (in FFT_128_full)
 //
 // STEP8_IF und STEP8_MAJ beinhalten je zwei 8-fach parallele Operationen
@@ -573,7 +573,7 @@ x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, u
         for (int i=0; i<2; i++)
             Hash[i] = inpHash[8*i+(threadIdx.x&7)];
 
-        // Puffer für expandierte Nachricht
+        // Puffer fÃ¼r expandierte Nachricht
         uint4 *temp4 = &g_temp4[64 * hashPosition];
 
         Expansion(Hash, temp4);
@@ -630,7 +630,7 @@ __host__ void x11_simd512_cpu_init(int thr_id, int threads)
     cudaMalloc( &d_state[thr_id], 32*sizeof(int)*threads );
     cudaMalloc( &d_temp4[thr_id], 64*sizeof(uint4)*threads );
 
-    // Textur für 128 Bit Zugriffe
+    // Textur fÃ¼r 128 Bit Zugriffe
     cudaChannelFormatDesc channelDesc128 = cudaCreateChannelDesc<uint4>();
     texRef1D_128.normalized = 0;
     texRef1D_128.filterMode = cudaFilterModePoint;
@@ -651,7 +651,7 @@ __host__ void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNou
 {
     const int threadsperblock = TPB;
 
-    // Größe des dynamischen Shared Memory Bereichs
+    // GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
 
     // berechne wie viele Thread Blocks wir brauchen
@@ -662,7 +662,7 @@ __host__ void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNou
 
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
 
-    // künstlich die Occupancy limitieren, um das totale Erschöpfen des Texture Cache zu vermeiden
+    // kÃ¼nstlich die Occupancy limitieren, um das totale ErschÃ¶pfen des Texture Cache zu vermeiden
     x11_simd512_gpu_compress1_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
     x11_simd512_gpu_compress2_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 

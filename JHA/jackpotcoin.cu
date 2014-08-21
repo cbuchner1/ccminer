@@ -12,7 +12,7 @@ extern "C"
 // aus cpu-miner.c
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
+// Speicher fÃ¼r Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void jackpot_keccak512_cpu_init(int thr_id, int threads);
@@ -41,7 +41,7 @@ extern void jackpot_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t st
 											uint32_t *d_nonces2, size_t *nrm2,
 											int order);
 
-// Speicher zur Generierung der Noncevektoren für die bedingten Hashes
+// Speicher zur Generierung der Noncevektoren fÃ¼r die bedingten Hashes
 static uint32_t *d_jackpotNonces[8];
 static uint32_t *d_branch1Nonces[8];
 static uint32_t *d_branch2Nonces[8];
@@ -142,7 +142,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 		size_t nrm1, nrm2, nrm3;
 
-		// Runde 1 (ohne Gröstl)
+		// Runde 1 (ohne GrÃ¶stl)
 
 		jackpot_compactTest_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], NULL,
 				d_branch1Nonces[thr_id], &nrm1,
@@ -165,7 +165,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 		// Runde 3 (komplett)
 
-		// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
+		// jackpotNonces in branch1/2 aufsplitten gemÃ¤ss if (hash[0] & 0x01)
 		jackpot_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2,
@@ -176,7 +176,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			quark_skein512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 		}
 
-		// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
+		// jackpotNonces in branch1/2 aufsplitten gemÃ¤ss if (hash[0] & 0x01)
 		jackpot_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2,
@@ -189,7 +189,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 		// Runde 3 (komplett)
 
-		// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
+		// jackpotNonces in branch1/2 aufsplitten gemÃ¤ss if (hash[0] & 0x01)
 		jackpot_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2,
@@ -200,7 +200,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			quark_skein512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 		}
 
-		// jackpotNonces in branch1/2 aufsplitten gemäss if (hash[0] & 0x01)
+		// jackpotNonces in branch1/2 aufsplitten gemÃ¤ss if (hash[0] & 0x01)
 		jackpot_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2,
@@ -219,7 +219,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 
-			// diese jackpothash Funktion gibt die Zahl der Runden zurück
+			// diese jackpothash Funktion gibt die Zahl der Runden zurÃ¼ck
 			rounds = jackpothash(vhash64, endiandata);
 
 			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {

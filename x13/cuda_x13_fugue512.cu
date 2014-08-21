@@ -686,7 +686,7 @@ __host__ void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
+	// GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 4 * 256 * sizeof(uint32_t);
 
 	// fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);

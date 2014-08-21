@@ -33,7 +33,7 @@ __device__ __forceinline__ void cuda_echo_round(
 	uint32_t &k0, uint32_t &k1, uint32_t &k2, uint32_t &k3,
 	uint32_t *W, int round)
 {
-	// W hat 16*4 als Abmaﬂe
+	// W hat 16*4 als Abma√üe
 
 	// Big Sub Words
 #pragma unroll 16
@@ -76,10 +76,10 @@ __device__ __forceinline__ void cuda_echo_round(
 
 	// Mix Columns
 #pragma unroll 4
-	for(int i=0;i<4;i++) // Schleife ¸ber je 2*uint32_t
+	for(int i=0;i<4;i++) // Schleife √ºber je 2*uint32_t
 	{
 #pragma unroll 4
-		for(int j=0;j<4;j++) // Schleife ¸ber die elemnte
+		for(int j=0;j<4;j++) // Schleife √ºber die elemnte
 		{
 			int idx = j<<2; // j*4
 
@@ -138,7 +138,7 @@ __global__ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint6
 			W[i + 3] = 0;
 		}
 
-		// kopiere 32-byte groﬂen hash
+		// kopiere 32-byte gro√üen hash
 #pragma unroll 16
 		for(int i=0;i<16;i++)
 			W[i+32] = Hash[i];
@@ -198,7 +198,7 @@ __host__ void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNou
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Grˆﬂe des dynamischen Shared Memory Bereichs
+    // Gr√∂√üe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
 
 //    fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);

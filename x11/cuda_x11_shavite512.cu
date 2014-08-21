@@ -1319,7 +1319,7 @@ __global__ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, ui
 		// nachricht laden
 		uint32_t msg[32];
 
-		// fülle die Nachricht mit 64-byte (vorheriger Hash)
+		// fÃ¼lle die Nachricht mit 64-byte (vorheriger Hash)
 		#pragma unroll 16
 		for(int i=0;i<16;i++)
 			msg[i] = Hash[i];
