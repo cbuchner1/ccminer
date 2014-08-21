@@ -123,16 +123,26 @@ do {                                                                  \
 } while (0)
 
 /*********************************************************************/
+#ifdef _WIN64
+#define USE_XOR_ASM_OPTS 0
+#else
+#define USE_XOR_ASM_OPTS 1
+#endif
 
+#if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
 uint64_t xor1(uint64_t a, uint64_t b)
 {
 	uint64_t result;
-	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a),"l"(b));
+	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(a), "l"(b));
 	return result;
 }
+#else
+#define xor1(a,b) (a ^ b)
+#endif
 
+#if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
 uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
@@ -146,7 +156,11 @@ uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
 	: "=l"(result) : "l"(a) ,"l"(b),"l"(c));
 	return result;
 }
+#else
+#define xor3(a,b,c) (a ^ b ^ c)
+#endif
 
+#if USE_XOR_ASM_OPTS
 // device asm for whirpool
 __device__ __forceinline__
 uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t f,uint64_t g, uint64_t h)
@@ -161,6 +175,9 @@ uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t
 	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(a));
 	return result;
 }
+#else
+#define xor8(a,b,c,d,e,f,g,h) (a^b^c^d^e^f^g^h)
+#endif
 
 // device asm for whirpool
 __device__ __forceinline__
@@ -189,7 +206,7 @@ uint64_t sph_t64(uint64_t x)
 	return result;
 }
 
-// device asm for whirpool
+// device asm for ?
 __device__ __forceinline__
 uint64_t andor(uint64_t a, uint64_t b, uint64_t c)
 {
@@ -205,7 +222,7 @@ uint64_t andor(uint64_t a, uint64_t b, uint64_t c)
 	return result;
 }
 
-// device asm for whirpool
+// device asm for ?
 __device__ __forceinline__
 uint64_t shr_t64(uint64_t x, uint32_t n)
 {
@@ -219,7 +236,7 @@ uint64_t shr_t64(uint64_t x, uint32_t n)
 	return result;
 }
 
-// device asm for whirpool
+// device asm for ?
 __device__ __forceinline__
 uint64_t shl_t64(uint64_t x, uint32_t n)
 {
