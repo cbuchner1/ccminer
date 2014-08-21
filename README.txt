@@ -1,5 +1,5 @@
 
-ccMiner release 1.2 (June 15th 2014) - "Killer Groestl + X13"
+ccMiner release 1.3-tpruvot (Aug 21th 2014) - "X14 X15 Fresh"
 -------------------------------------------------------------
 
 ***************************************************************
@@ -20,7 +20,7 @@ If you find this tool useful and like to support its continued
    MNC donation address: MShgNUSYwybEbXLvJUtdNg1a7rUeiNgooK
    BTQ donation address: 13GFwLiZL2DaA9XeE733PNrQX5QYLFsonS
 
-X14/X15 (tpruvot@github)
+tpruvot@github:
    BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
 
 ***************************************************************
@@ -58,12 +58,16 @@ its command line interface and options.
                           mjollnir    use to mine Mjollnircoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
-                          myr-gr      use to mine Myriad-Groestl
+                          dmd-gr      use to mine Diamond-Groestl
+                          myr-gr      use to mine Myriad-Groest
                           jackpot     use to mine Jackpotcoin
                           quark       use to mine Quarkcoin
                           anime       use to mine Animecoin
                           nist5       use to mine TalkCoin
+                          fresh       use to mine Freshcoin
                           x11         use to mine DarkCoin
+                          x14         use to mine X14Coin
+                          x15         use to mine Halcyon
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!
