@@ -19,12 +19,13 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
+#include <signal.h>
 #ifdef WIN32
 #include <windows.h>
 #include <stdint.h>
+BOOL WINAPI ConsoleHandler(DWORD);
 #else
 #include <errno.h>
-#include <signal.h>
 #include <sys/resource.h>
 #if HAVE_SYS_SYSCTL_H
 #include <sys/types.h>
@@ -1516,6 +1517,25 @@ static void signal_handler(int sig)
 		break;
 	}
 }
+#else
+BOOL WINAPI ConsoleHandler(DWORD dwType)
+{
+	switch (dwType) {
+	case CTRL_C_EVENT:
+		applog(LOG_INFO, "CTRL_C_EVENT received, exiting");
+		cuda_devicereset();
+		exit(0);
+		break;
+	case CTRL_BREAK_EVENT:
+		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
+		cuda_devicereset();
+		exit(0);
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
 #endif
 
 #define PROGRAM_VERSION "1.3"
@@ -1591,6 +1611,8 @@ int main(int argc, char *argv[])
 	}
 	/* Always catch Ctrl+C */
 	signal(SIGINT, signal_handler);
+#else
+	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
 #endif
 
 	if (num_processors == 0)
