@@ -266,8 +266,9 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 	PaddedMessage[126] = 0x02;
 	PaddedMessage[127] = 0x80;
 
-	// die Message zur Berechnung auf der GPU
-	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(
+		cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice)
+	);
 }
 
 __host__ void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)

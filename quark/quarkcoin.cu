@@ -14,10 +14,10 @@ extern "C"
 // aus cpu-miner.c
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
+// Speicher fÃ¼r Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
-// Speicher zur Generierung der Noncevektoren für die bedingten Hashes
+// Speicher zur Generierung der Noncevektoren fÃ¼r die bedingten Hashes
 static uint32_t *d_quarkNonces[8];
 static uint32_t *d_branch1Nonces[8];
 static uint32_t *d_branch2Nonces[8];
@@ -202,7 +202,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// erstes Blake512 Hash mit CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
-		// das ist der unbedingte Branch für BMW512
+		// das ist der unbedingte Branch fÃ¼r BMW512
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		quark_compactTest_single_false_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], NULL,
@@ -212,40 +212,40 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		// nur den Skein Branch weiterverfolgen
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der unbedingte Branch für Groestl512
+		// das ist der unbedingte Branch fÃ¼r Groestl512
 		quark_groestl512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der unbedingte Branch für JH512
+		// das ist der unbedingte Branch fÃ¼r JH512
 		quark_jh512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
-		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
+		// quarkNonces in branch1 und branch2 aufsplitten gemÃ¤ss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2,
 			order++);
 
-		// das ist der bedingte Branch für Blake512
+		// das ist der bedingte Branch fÃ¼r Blake512
 		quark_blake512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der bedingte Branch für Bmw512
+		// das ist der bedingte Branch fÃ¼r Bmw512
 		quark_bmw512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der unbedingte Branch für Keccak512
+		// das ist der unbedingte Branch fÃ¼r Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der unbedingte Branch für Skein512
+		// das ist der unbedingte Branch fÃ¼r Skein512
 		quark_skein512_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
-		// quarkNonces in branch1 und branch2 aufsplitten gemäss if (hash[0] & 0x8)
+		// quarkNonces in branch1 und branch2 aufsplitten gemÃ¤ss if (hash[0] & 0x8)
 		quark_compactTest_cpu_hash_64(thr_id, nrm3, pdata[19], d_hash[thr_id], d_branch3Nonces[thr_id],
 			d_branch1Nonces[thr_id], &nrm1,
 			d_branch2Nonces[thr_id], &nrm2,
 			order++);
 
-		// das ist der bedingte Branch für Keccak512
+		// das ist der bedingte Branch fÃ¼r Keccak512
 		quark_keccak512_cpu_hash_64(thr_id, nrm1, pdata[19], d_branch1Nonces[thr_id], d_hash[thr_id], order++);
 
-		// das ist der bedingte Branch für JH512
+		// das ist der bedingte Branch fÃ¼r JH512
 		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
 		// Scan nach Gewinner Hashes auf der GPU
