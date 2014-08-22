@@ -464,6 +464,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+      <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x11\fresh.cu">
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
@@ -482,7 +483,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
-      <MaxRegCount>64</MaxRegCount>
+      <MaxRegCount>80</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_fugue512.cu">
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
