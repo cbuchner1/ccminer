@@ -22,7 +22,7 @@ static cudaDeviceProp props[8];
 #include "bitslice_transformations_quad.cu"
 
 __global__ __launch_bounds__(TPB, THF)
-void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
+void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t * __restrict g_hash, uint32_t * __restrict g_nonceVector)
 {
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
     int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
@@ -32,18 +32,20 @@ void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32
         uint32_t message[8];
         uint32_t state[8];
 
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
+        uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
         int hashPosition = nounce - startNounce;
-        uint32_t *inpHash = &g_hash[hashPosition<<4];
+        uint32_t *inpHash = &g_hash[hashPosition << 4];
 
-#pragma unroll 4
-        for(int k=0;k<4;k++) message[k] = inpHash[(k<<2) + (threadIdx.x&0x03)];
-#pragma unroll 4
+        const uint16_t thr = threadIdx.x % THF;
+
+        #pragma unroll
+        for(int k=0;k<4;k++) message[k] = inpHash[(k * THF) + thr];
+
+        #pragma unroll
         for(int k=4;k<8;k++) message[k] = 0;
 
-        if ((threadIdx.x&0x03) == 0) message[4] = 0x80;
-        if ((threadIdx.x&0x03) == 3) message[7] = 0x01000000;
+        if (thr == 0) message[4] = 0x80;
+        if (thr == 3) message[7] = 0x01000000;
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(message, msgBitsliced);
@@ -51,13 +53,13 @@ void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32
         groestl512_progressMessage_quad(state, msgBitsliced);
 
         // Nur der erste von jeweils 4 Threads bekommt das Ergebns-Hash
-        uint32_t *outpHash = &g_hash[hashPosition<<4];
+        uint32_t *outpHash = inpHash;
         uint32_t hash[16];
         from_bitslice_quad(state, hash);
 
-        if ((threadIdx.x & 0x03) == 0)
+        if (thr == 0)
         {
-#pragma unroll 16
+            #pragma unroll
             for(int k=0;k<16;k++) outpHash[k] = hash[k];
         }
     }
@@ -73,18 +75,20 @@ __global__ void __launch_bounds__(TPB, THF)
         uint32_t message[8];
         uint32_t state[8];
 
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+        uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
 
         int hashPosition = nounce - startNounce;
-        uint32_t *inpHash = &g_hash[hashPosition<<4];
+        uint32_t * inpHash = &g_hash[hashPosition<<4];
+        const uint16_t thr = threadIdx.x % THF;
 
-#pragma unroll 4
-        for(int k=0;k<4;k++) message[k] = inpHash[(k<<2)+(threadIdx.x&0x03)];
-#pragma unroll 4
+        #pragma unroll
+        for(int k=0;k<4;k++) message[k] = inpHash[(k * THF) + thr];
+
+        #pragma unroll
         for(int k=4;k<8;k++) message[k] = 0;
 
-        if ((threadIdx.x&0x03) == 0) message[4] = 0x80;
-        if ((threadIdx.x&0x03) == 3) message[7] = 0x01000000;
+        if (thr == 0) message[4] = 0x80;
+        if (thr == 3) message[7] = 0x01000000;
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(message, msgBitsliced);
@@ -108,13 +112,13 @@ __global__ void __launch_bounds__(TPB, THF)
         }
 
         // Nur der erste von jeweils 4 Threads bekommt das Ergebns-Hash
-        uint32_t *outpHash = &g_hash[hashPosition<<4];
+        uint32_t *outpHash = inpHash;
         uint32_t hash[16];
         from_bitslice_quad(state, hash);
 
-        if ((threadIdx.x & 0x03) == 0)
+        if (thr == 0)
         {
-#pragma unroll 16
+            #pragma unroll
             for(int k=0;k<16;k++) outpHash[k] = hash[k];
         }
     }
