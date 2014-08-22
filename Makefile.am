@@ -16,8 +16,7 @@ bin_PROGRAMS	= ccminer
 ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
-			  cpu-miner.c util.c sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c hefty1.c scrypt.c sha2.c \
-			  sph/bmw.h sph/sph_blake.h sph/sph_groestl.h sph/sph_jh.h sph/sph_keccak.h sph/sph_skein.h sph/sph_types.h \
+			  cpu-miner.c util.c hefty1.c scrypt.c \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
 			  heavy/cuda_combine.cu heavy/cuda_combine.h \
@@ -34,7 +33,8 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu quark/quarkcoin.cu quark/animecoin.cu \
 			  quark/cuda_quark_compactionTest.cu \
 			  cuda_nist5.cu \
-			  sph/cubehash.c sph/echo.c sph/luffa.c sph/shavite.c sph/simd.c \
+			  sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c \
+			  sph/cubehash.c sph/echo.c sph/luffa.c sph/sha2.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \
 			  sph/shabal.c sph/whirlpool.c \
 			  x11/x11.cu x11/fresh.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
@@ -46,7 +46,11 @@ ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
 ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
-nvcc_FLAGS = -gencode=arch=compute_50,code=\"sm_50,compute_50\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -I . --ptxas-options=-v --use_fast_math
+nvcc_ARCH  = -gencode=arch=compute_50,code=\"sm_50,compute_50\"
+#nvcc_ARCH += -gencode=arch=compute_35,code=\"sm_35,compute_35\"
+#nvcc_ARCH += -gencode=arch=compute_30,code=\"sm_30,compute_30\"
+
+nvcc_FLAGS = $(nvcc_ARCH) -I . --ptxas-options=-v --use_fast_math
 nvcc_FLAGS += $(JANSSON_INCLUDES)
 
 # we're now targeting all major compute architectures within one binary.
@@ -55,6 +59,8 @@ nvcc_FLAGS += $(JANSSON_INCLUDES)
 
 # Luffa and Echo are faster with 80 registers than 128
 x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
+	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=80 -o $@ -c $<
+
 x11/cuda_x11_echo.o: x11/cuda_x11_echo.cu
 	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=80 -o $@ -c $<
 
