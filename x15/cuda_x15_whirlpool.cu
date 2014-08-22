@@ -2317,7 +2317,7 @@ void whirlpool512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHas
 		for (int i=0; i<8; i++) {
 			n[i] = c_PaddedMessage80[i];  // read data
 			h[i] = 0;                     // read state
-			n[i] = xor1(n[i], h[i]);
+			//n[i] = xor1(n[i], h[i]);
 		}
 
 		#pragma unroll 10
@@ -2398,7 +2398,7 @@ void whirlpool512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_has
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 		uint32_t hashPosition = (nounce - startNounce) << 3;
-		uint64_t hash[8], state[8], n[8], h[8] = {0,0,0,0, 0,0,0,0};
+		uint64_t hash[8], state[8], n[8], h[8] = { 0 };
 		uint8_t i;
 
 		#pragma unroll 8
