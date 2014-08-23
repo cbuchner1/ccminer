@@ -62,7 +62,7 @@ x11/cuda_x11_shavite512.o: x11/cuda_x11_shavite512.cu
 	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=no -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\" --maxrregcount=128 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<        
 
 # whirlpool compiles faster with 64 regs
-x13/cuda_whirlpool512.o: x11/cuda_whirlpool512.cu
+x13/cuda_whirlpool512.o: x13/cuda_whirlpool512.cu
 	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=no -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\" --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<        
 
 # whirlpool compiles faster with 64 regs
