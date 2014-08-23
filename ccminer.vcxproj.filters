@@ -135,6 +135,9 @@
     <ClCompile Include="sph\luffa.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="sph\md_helper.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
     <ClCompile Include="sph\sha2.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
@@ -160,9 +163,6 @@
       <Filter>Source Files\sph</Filter>
     </ClCompile>
     <ClCompile Include="sph\whirlpool.c">
-      <Filter>Source Files\sph</Filter>
-    </ClCompile>
-    <ClCompile Include="sph\x15_helper.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
   </ItemGroup>

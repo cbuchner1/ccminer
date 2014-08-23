@@ -148,12 +148,10 @@ __device__ __forceinline__
 uint64_t xor3(uint64_t a, uint64_t b, uint64_t c)
 {
 	uint64_t result;
-	asm("{"
-		".reg .u64 lt;\n\t"
-		"xor.b64 lt, %2, %3;\n\t"
-		"xor.b64 %0, %1, lt;\n\t"
-		"}"
-	: "=l"(result) : "l"(a) ,"l"(b),"l"(c));
+	asm("xor.b64 %0, %2, %3;\n\t"
+	    "xor.b64 %0, %0, %1;\n\t"
+		/* output : input registers */
+		: "=l"(result) : "l"(a), "l"(b), "l"(c));
 	return result;
 }
 #else
@@ -179,59 +177,56 @@ uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t
 #define xor8(a,b,c,d,e,f,g,h) (a^b^c^d^e^f^g^h)
 #endif
 
-// device asm for whirpool
+// device asm for x17
 __device__ __forceinline__
 uint64_t xandx(uint64_t a, uint64_t b, uint64_t c)
 {
 	uint64_t result;
 	asm("{\n\t"
-		".reg .u64 m,n;\n\t"
-		"xor.b64 m, %2,%3;\n\t"
-		"and.b64 n, m,%1;\n\t"
-		"xor.b64 %0, n,%3;\n\t"
-		"}\n\t"
+		".reg .u64 n;\n\t"
+		"xor.b64 %0, %2, %3;\n\t"
+		"and.b64 n, %0, %1;\n\t"
+		"xor.b64 %0, n, %3;"
+	"}\n"
 	: "=l"(result) : "l"(a), "l"(b), "l"(c));
 	return result;
 }
 
-// device asm for whirpool
+// device asm for x17
 __device__ __forceinline__
 uint64_t sph_t64(uint64_t x)
 {
 	uint64_t result;
 	asm("{\n\t"
 		"and.b64 %0,%1,0xFFFFFFFFFFFFFFFF;\n\t"
-		"}\n\t"
+	"}\n"
 	: "=l"(result) : "l"(x));
 	return result;
 }
 
-// device asm for ?
+// device asm for x17
 __device__ __forceinline__
 uint64_t andor(uint64_t a, uint64_t b, uint64_t c)
 {
 	uint64_t result;
 	asm("{\n\t"
-		".reg .u64 m,n,o;\n\t"
+		".reg .u64 m,n;\n\t"
 		"and.b64 m,  %1, %2;\n\t"
 		" or.b64 n,  %1, %2;\n\t"
-		"and.b64 o,   n, %3;\n\t"
-		" or.b64 %0,  m, o ;\n\t"
-		"}\n\t"
+		"and.b64 %0, n,  %3;\n\t"
+		" or.b64 %0, %0, m ;\n\t"
+	"}\n"
 	: "=l"(result) : "l"(a), "l"(b), "l"(c));
 	return result;
 }
 
-// device asm for ?
+// device asm for x17
 __device__ __forceinline__
 uint64_t shr_t64(uint64_t x, uint32_t n)
 {
 	uint64_t result;
-	asm("{\n\t"
-		".reg .u64 m;\n\t"
-		"shr.b64 m,%1,%2;\n\t"
-		"and.b64 %0,m,0xFFFFFFFFFFFFFFFF;\n\t"
-		"}\n\t"
+	asm("shr.b64 %0,%1,%2;\n\t"
+		"and.b64 %0,%0,0xFFFFFFFFFFFFFFFF;\n\t" /* useful ? */
 	: "=l"(result) : "l"(x), "r"(n));
 	return result;
 }
@@ -241,11 +236,8 @@ __device__ __forceinline__
 uint64_t shl_t64(uint64_t x, uint32_t n)
 {
 	uint64_t result;
-	asm("{\n\t"
-		".reg .u64 m;\n\t"
-		"shl.b64 m,%1,%2;\n\t"
-		"and.b64 %0,m,0xFFFFFFFFFFFFFFFF;\n\t"
-		"}\n\t"
+	asm("shl.b64 %0,%1,%2;\n\t"
+		"and.b64 %0,%0,0xFFFFFFFFFFFFFFFF;\n\t" /* useful ? */
 	: "=l"(result) : "l"(x), "r"(n));
 	return result;
 }
@@ -272,13 +264,13 @@ uint64_t ROTR64(const uint64_t x, const int offset)
 {
 	uint64_t result;
 	asm("{\n\t"
-		".reg .b64 lhs, rhs;\n\t"
-		".reg .u32 amt2;\n\t"
+		".reg .b64 lhs;\n\t"
+		".reg .u32 roff;\n\t"
 		"shr.b64 lhs, %1, %2;\n\t"
-		"sub.u32 amt2, 64, %2;\n\t"
-		"shl.b64 rhs, %1, amt2;\n\t"
-		"add.u64 %0, lhs, rhs;\n\t"
-		"}\n\t"
+		"sub.u32 roff, 64, %2;\n\t"
+		"shl.b64 %0, %1, roff;\n\t"
+		"add.u64 %0, %0, lhs;\n\t"
+	"}\n"
 	: "=l"(result) : "l"(x), "r"(offset));
 	return result;
 }
@@ -307,13 +299,13 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 {
 	uint64_t result;
 	asm("{\n\t"
-		".reg .b64 lhs, rhs;\n\t"
-		".reg .u32 amt2;\n\t"
+		".reg .b64 lhs;\n\t"
+		".reg .u32 roff;\n\t"
 		"shl.b64 lhs, %1, %2;\n\t"
-		"sub.u32 amt2, 64, %2;\n\t"
-		"shr.b64 rhs, %1, amt2;\n\t"
-		"add.u64 %0, lhs, rhs;\n\t"
-		"}\n\t"
+		"sub.u32 roff, 64, %2;\n\t"
+		"shr.b64 %0, %1, roff;\n\t"
+		"add.u64 %0, lhs, %0;\n\t"
+	"}\n"
 	: "=l"(result) : "l"(x), "r"(offset));
 	return result;
 }

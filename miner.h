@@ -265,6 +265,10 @@ extern int scanhash_x15(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_x17(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 struct thr_info {
 	int		id;
 	pthread_t	pth;
@@ -402,6 +406,7 @@ void x11hash(void *output, const void *input);
 void x13hash(void *output, const void *input);
 void x14hash(void *output, const void *input);
 void x15hash(void *output, const void *input);
+void x17hash(void *output, const void *input);
 
 #ifdef __cplusplus
 }

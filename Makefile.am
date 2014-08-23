@@ -36,11 +36,12 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/sha2.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \
-			  sph/shabal.c sph/whirlpool.c \
+			  sph/shabal.c sph/whirlpool.c sph/sha2big.c sph/haval.c \
 			  x11/x11.cu x11/fresh.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
 			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu \
 			  x13/x13.cu x13/cuda_x13_hamsi512.cu x13/cuda_x13_fugue512.cu \
-			  x15/x14.cu x15/x15.cu x15/cuda_x14_shabal512.cu x15/cuda_x15_whirlpool.cu x15/whirlcoin.cu
+			  x15/x14.cu x15/x15.cu x15/cuda_x14_shabal512.cu x15/cuda_x15_whirlpool.cu x15/whirlcoin.cu \
+			  x17/x17.cu x17/cuda_x17_haval512.cu x17/cuda_x17_sha512.cu
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
@@ -67,6 +68,9 @@ x11/cuda_x11_echo.o: x11/cuda_x11_echo.cu
 # Shavite compiles faster with 128 regs
 x11/cuda_x11_shavite512.o: x11/cuda_x11_shavite512.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ --maxrregcount=128 -o $@ -c $<
+
+x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
+	$(NVCC) $(nvcc_FLAGS) -O2 --maxrregcount=80 -o $@ -c $<
 
 # ABI requiring code modules
 quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu

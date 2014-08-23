@@ -1410,5 +1410,9 @@ void print_hash_tests(void)
 	x15hash(&hash[0], &buf[0]);
 	printf("\nX15:     "); print_hash(hash);
 
+	memset(hash, 0, sizeof hash);
+	x17hash(&hash[0], &buf[0]);
+	printf("\nX17:     "); print_hash(hash);
+
 	printf("\n");
 }

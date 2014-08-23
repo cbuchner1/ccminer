@@ -252,6 +252,9 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     <ClCompile Include="sph\jh.c" />
     <ClCompile Include="sph\keccak.c" />
     <ClCompile Include="sph\luffa.c" />
+    <ClCompile Include="sph\md_helper.c">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="sph\sha2.c" />
     <ClCompile Include="sph\shabal.c" />
     <ClCompile Include="sph\shavite.c" />
@@ -260,9 +263,6 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     <ClCompile Include="sph\hamsi.c" />
     <ClCompile Include="sph\hamsi_helper.c" />
     <ClCompile Include="sph\whirlpool.c" />
-    <ClCompile Include="sph\x15_helper.c">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="util.c">
       <AdditionalOptions>/Tp %(AdditionalOptions)</AdditionalOptions>
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
