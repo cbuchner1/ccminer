@@ -168,6 +168,59 @@ static inline void le16enc(void *pp, uint16_t x)
 }
 #endif
 
+#if !HAVE_DECL_BE64DEC
+static inline uint64_t be64dec(const void *pp)
+{
+	const uint8_t *p = (uint8_t const *)pp;
+	return ((uint64_t)(p[7]) + ((uint64_t)(p[6]) << 8) +
+	    ((uint64_t)(p[5]) << 16) + ((uint64_t)(p[4]) << 24) +
+	    ((uint64_t)(p[3]) << 32) + ((uint64_t)(p[2]) << 40) +
+	    ((uint64_t)(p[1]) << 48) + ((uint64_t)(p[0]) << 56));
+}
+#endif
+
+#if !HAVE_DECL_LE64DEC
+static inline uint64_t le64dec(const void *pp)
+{
+	const uint8_t *p = (uint8_t const *)pp;
+	return ((uint64_t)(p[0]) + ((uint64_t)(p[1]) << 8) +
+	    ((uint64_t)(p[2]) << 16) + ((uint64_t)(p[3]) << 24) +
+	    ((uint64_t)(p[4]) << 32) + ((uint64_t)(p[5]) << 40) +
+	    ((uint64_t)(p[6]) << 48) + ((uint64_t)(p[7]) << 56));
+}
+#endif
+
+#if !HAVE_DECL_BE64ENC
+static inline void be64enc(void *pp, uint64_t x)
+{
+	uint8_t *p = (uint8_t *)pp;
+	p[7] = x & 0xff;
+	p[6] = (x >> 8) & 0xff;
+	p[5] = (x >> 16) & 0xff;
+	p[4] = (x >> 24) & 0xff;
+	p[3] = (x >> 32) & 0xff;
+	p[2] = (x >> 40) & 0xff;
+	p[1] = (x >> 48) & 0xff;
+	p[0] = (x >> 56) & 0xff;
+}
+#endif
+
+#if !HAVE_DECL_LE64ENC
+static inline void le64enc(void *pp, uint64_t x)
+{
+	uint8_t *p = (uint8_t *)pp;
+	p[0] = x & 0xff;
+	p[1] = (x >> 8) & 0xff;
+	p[2] = (x >> 16) & 0xff;
+	p[3] = (x >> 24) & 0xff;
+	p[4] = (x >> 32) & 0xff;
+	p[5] = (x >> 40) & 0xff;
+	p[6] = (x >> 48) & 0xff;
+	p[7] = (x >> 56) & 0xff;
+}
+#endif
+
+
 #if JANSSON_MAJOR_VERSION >= 2
 #define JSON_LOADS(str, err_ptr) json_loads((str), 0, (err_ptr))
 #else
@@ -267,6 +320,14 @@ extern int scanhash_goal(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_m7(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long  *hashes_done);
+
+extern int scanhash_deep(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -294,6 +355,7 @@ struct work_restart {
 	char			padding[128 - sizeof(unsigned long)];
 };
 
+
 extern bool opt_debug;
 extern bool opt_protocol;
 extern int opt_timeout;
@@ -313,10 +375,18 @@ extern struct work_restart *work_restart;
 extern bool opt_trust_pool;
 extern uint16_t opt_vote;
 
+#define JSON_RPC_LONGPOLL	(1 << 0)
+#define JSON_RPC_QUIET_404	(1 << 1)
+extern bool opt_redirect;
+extern bool have_gbt;
+extern bool allow_getwork;
+
+
 extern void applog(int prio, const char *fmt, ...);
 extern json_t *json_rpc_call(CURL *curl, const char *url, const char *userpass,
 	const char *rpc_req, bool, bool, int *);
 extern char *bin2hex(const unsigned char *p, size_t len);
+extern void abin2hex(char *s, const unsigned char *p, size_t len);
 extern bool hex2bin(unsigned char *p, const char *hexstr, size_t len);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
@@ -337,6 +407,13 @@ struct stratum_job {
 	bool clean;
 	unsigned char nreward[2];
 	double diff;
+
+	unsigned char m7prevblock[32];
+	unsigned char m7accroot[32];
+	unsigned char m7merkleroot[32];
+	unsigned char m7height[8];
+	unsigned char m7ntime[8];
+	unsigned char m7version[2];
 };
 
 struct stratum_ctx {
@@ -368,6 +445,7 @@ void stratum_disconnect(struct stratum_ctx *sctx);
 bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
+bool stratum_handle_method_m7(struct stratum_ctx *sctx, const char *s);
 
 struct thread_q;
 

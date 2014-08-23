@@ -296,6 +296,7 @@ static int sockopt_keepalive_cb(void *userdata, curl_socket_t fd,
 }
 #endif
 
+
 json_t *json_rpc_call(CURL *curl, const char *url,
 		      const char *userpass, const char *rpc_req,
 		      bool longpoll_scan, bool longpoll, int *curl_err)
@@ -448,6 +449,14 @@ err_out:
 	curl_easy_reset(curl);
 	return NULL;
 }
+
+void abin2hex(char *s, const unsigned char *p, size_t len)
+{
+	int i;
+	for (i = 0; i < len; i++)
+		sprintf(s + (i * 2), "%02x", (unsigned int) p[i]);
+}
+
 
 char *bin2hex(const unsigned char *p, size_t len)
 {
@@ -981,6 +990,54 @@ out:
 
 	return ret;
 }
+static bool stratum_notify_m7(struct stratum_ctx *sctx, json_t *params)
+{
+	const char *job_id, *prevblock, *accroot, *merkleroot, *version, *ntime;
+	int height;
+	bool clean;
+
+	job_id = json_string_value(json_array_get(params, 0));
+	prevblock = json_string_value(json_array_get(params, 1));
+	accroot = json_string_value(json_array_get(params, 2));
+	merkleroot = json_string_value(json_array_get(params, 3));
+	height = json_integer_value(json_array_get(params, 4));
+	version = json_string_value(json_array_get(params, 5));
+	ntime = json_string_value(json_array_get(params, 6));
+	clean = json_is_true(json_array_get(params, 7));
+
+	if (!job_id || !prevblock || !accroot || !merkleroot || 
+		!version || !height || !ntime ||
+		strlen(prevblock) != 32*2 || 
+		strlen(accroot) != 32*2 || 
+		strlen(merkleroot) != 32*2 || 
+		strlen(ntime) != 8*2 || strlen(version) != 2*2) {
+		applog(LOG_ERR, "Stratum (M7) notify: invalid parameters");
+		return false;
+	}
+
+	pthread_mutex_lock(&sctx->work_lock);
+
+	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id)) {
+		sctx->job.xnonce2 = (unsigned char *)realloc(sctx->job.xnonce2, sctx->xnonce2_size);
+		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
+	}
+	free(sctx->job.job_id);
+	sctx->job.job_id = strdup(job_id);
+
+	hex2bin(sctx->job.m7prevblock, prevblock, 32);
+	hex2bin(sctx->job.m7accroot, accroot, 32);
+	hex2bin(sctx->job.m7merkleroot, merkleroot, 32);
+	be64enc(sctx->job.m7height, height);
+	hex2bin(sctx->job.m7version, version, 2);
+	hex2bin(sctx->job.m7ntime, ntime, 8);
+	sctx->job.clean = clean;
+
+	sctx->job.diff = sctx->next_diff;
+
+	pthread_mutex_unlock(&sctx->work_lock);
+
+	return true;
+}
 
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
@@ -1177,11 +1234,12 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		goto out;
 	id = json_object_get(val, "id");
 	params = json_object_get(val, "params");
-
+	
 	if (!strcasecmp(method, "mining.notify")) {
 		ret = stratum_notify(sctx, params);
 		goto out;
 	}
+	
 	if (!strcasecmp(method, "mining.set_difficulty")) {
 		ret = stratum_set_difficulty(sctx, params);
 		goto out;
@@ -1205,6 +1263,65 @@ out:
 
 	return ret;
 }
+
+bool stratum_handle_method_m7(struct stratum_ctx *sctx, const char *s)
+{
+	json_t *val, *id, *params;
+	json_error_t err;
+	const char *method;
+	bool ret = false;
+
+	val = JSON_LOADS(s, &err);
+	if (!val) {
+		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+		goto out;
+	}
+
+	method = json_string_value(json_object_get(val, "method"));
+	if (!method)
+		goto out;
+	id = json_object_get(val, "id");
+	params = json_object_get(val, "params");
+	/*
+	if (!strcasecmp(method, "mining.notify")) {
+		ret = stratum_notify(sctx, params);
+		goto out;
+	}
+	*/
+	if (!strcasecmp(method, "mining.notify")) {
+//		if (opt_algo == ALGO_M7) {
+			ret = stratum_notify_m7(sctx, params);
+//		} else {
+//			ret = stratum_notify(sctx, params);
+//		}
+		goto out;
+	}
+
+
+	if (!strcasecmp(method, "mining.set_difficulty")) {
+		ret = stratum_set_difficulty(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.reconnect")) {
+		ret = stratum_reconnect(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.get_version")) {
+		ret = stratum_get_version(sctx, id);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.show_message")) {
+		ret = stratum_show_message(sctx, id, params);
+		goto out;
+	}
+
+out:
+	if (val)
+		json_decref(val);
+
+	return ret;
+}
+
 
 struct thread_q *tq_new(void)
 {

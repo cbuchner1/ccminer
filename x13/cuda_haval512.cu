@@ -1,5 +1,5 @@
 /*
- * Haval-512 for X17
+ * Haval-512
  * 
  * Built on cbuchner1's implementation, actual hashing code
  * heavily based on phm's sgminer
@@ -54,20 +54,12 @@
 #include "cuda_helper.h"
 
 
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define SPH_ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-    #define SPH_ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define SPH_ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-    #define SPH_ROTR32(x, n) __funnelshift_r( (x), (x), (n) )
-#endif
 
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
+__constant__ uint32_t c_PaddedMessage80[32];
 static __constant__ uint32_t initVector[8];
 
 static const uint32_t c_initVector[8] = {
@@ -312,6 +304,113 @@ static const uint32_t c_initVector[8] = {
 			+ (w) + (c)); \
 	} 
 
+__global__ void m7_haval256_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+{
+	
+
+    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    if (thread < threads)
+    {
+        
+		uint32_t nounce = startNounce + thread;
+			
+union {
+uint32_t h4[16];
+uint64_t h8[8];
+} hash;  
+
+		
+	uint32_t u0, u1, u2, u3, u4, u5, u6, u7; 
+	uint32_t s0,s1,s2,s3,s4,s5,s6,s7;
+	uint32_t buf[32];
+	s0 = initVector[0];
+	s1 = initVector[1];
+	s2 = initVector[2];
+	s3 = initVector[3];
+    s4 = initVector[4];
+	s5 = initVector[5];
+	s6 = initVector[6];
+	s7 = initVector[7];
+
+		u0 = s0; 
+		u1 = s1; 
+		u2 = s2; 
+		u3 = s3; 
+		u4 = s4; 
+		u5 = s5; 
+		u6 = s6; 
+		u7 = s7; 		
+///////// input big /////////////////////        
+#pragma unroll 28
+		for (int i=0;i<29;i++) {
+			buf[i]=c_PaddedMessage80[i];} 
+			buf[29]=nounce;
+			buf[30]=c_PaddedMessage80[30]+0x00010000;  //need to fix that
+			buf[31]=0;
+			
+			PASS1(5, buf); 
+		    PASS2(5, buf); 
+		    PASS3(5, buf); 
+		    PASS4(5, buf); 
+		    PASS5(5, buf); 
+		   
+
+		    s0 = sph_t32(s0 + u0); 
+		    s1 = sph_t32(s1 + u1); 
+		    s2 = sph_t32(s2 + u2); 
+		    s3 = sph_t32(s3 + u3); 
+		    s4 = sph_t32(s4 + u4); 
+		    s5 = sph_t32(s5 + u5); 
+		    s6 = sph_t32(s6 + u6); 
+		    s7 = sph_t32(s7 + u7); 
+		    u0 = s0; 
+		    u1 = s1; 
+		    u2 = s2; 
+		    u3 = s3; 
+		    u4 = s4; 
+	     	u5 = s5; 
+	 	    u6 = s6; 
+	    	u7 = s7; 
+
+            
+/////////////////////
+#pragma unroll 32
+		for (int i=0;i<32;i++) {buf[i]=0;}
+		    
+			buf[29]=0x40290000;
+			buf[30]=0x000003d0;
+
+			
+
+			PASS1(5, buf); 
+		    PASS2(5, buf); 
+		    PASS3(5, buf); 
+		    PASS4(5, buf); 
+		    PASS5(5, buf); 
+		   
+			
+		    s0 = sph_t32(s0 + u0); 
+		    s1 = sph_t32(s1 + u1); 
+		    s2 = sph_t32(s2 + u2); 
+		    s3 = sph_t32(s3 + u3); 
+		    s4 = sph_t32(s4 + u4); 
+		    s5 = sph_t32(s5 + u5); 
+		    s6 = sph_t32(s6 + u6); 
+		    s7 = sph_t32(s7 + u7); 
+////////////////////
+	        hash.h4[0]=s0;
+            hash.h4[1]=s1;
+	        hash.h4[2]=s2;
+            hash.h4[3]=s3;
+	        hash.h4[4]=s4;
+            hash.h4[5]=s5;  
+	        hash.h4[6]=s6;
+            hash.h4[7]=s7;
+
+#pragma unroll 4
+for (int i=0;i<4;i++) {outputHash[i*threads+thread]=hash.h8[i];} //else {outputHash[i*threads+thread]=0;}}
+ } // threads
+}
 
 __global__ void haval256_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
@@ -377,14 +476,14 @@ uint64_t h8[8];
 		    PASS5(5, buf); 
 		   
 
-		    s0 = SPH_T32(s0 + u0); 
-		    s1 = SPH_T32(s1 + u1); 
-		    s2 = SPH_T32(s2 + u2); 
-		    s3 = SPH_T32(s3 + u3); 
-		    s4 = SPH_T32(s4 + u4); 
-		    s5 = SPH_T32(s5 + u5); 
-		    s6 = SPH_T32(s6 + u6); 
-		    s7 = SPH_T32(s7 + u7); 
+		    s0 = sph_t32(s0 + u0); 
+		    s1 = sph_t32(s1 + u1); 
+		    s2 = sph_t32(s2 + u2); 
+		    s3 = sph_t32(s3 + u3); 
+		    s4 = sph_t32(s4 + u4); 
+		    s5 = sph_t32(s5 + u5); 
+		    s6 = sph_t32(s6 + u6); 
+		    s7 = sph_t32(s7 + u7); 
 
 	        hash.h4[0]=s0;
             hash.h4[1]=s1;
@@ -410,7 +509,6 @@ void haval256_cpu_init(int thr_id, int threads)
 	
 }
 
-
 __host__ void haval256_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 
@@ -426,3 +524,30 @@ __host__ void haval256_cpu_hash_64(int thr_id, int threads, uint32_t startNounce
 
 	MyStreamSynchronize(NULL, order, thr_id);
 }
+
+__host__ void haval256_setBlock_120(void *pdata)
+{
+	unsigned char PaddedMessage[128];
+	memcpy(PaddedMessage, pdata, 122);
+	memset(PaddedMessage+122, 0, 6);
+	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 32*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+
+}
+
+__host__ void m7_haval256_cpu_hash_120(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+{
+
+	const int threadsperblock = 256; // Alignment mit mixtob Grösse. NICHT ÄNDERN
+
+	// berechne wie viele Thread Blocks wir brauchen
+	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 block(threadsperblock);
+//	dim3 grid(1);
+//	dim3 block(1);
+	size_t shared_size = 0;
+	
+	m7_haval256_gpu_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+
+	MyStreamSynchronize(NULL, order, thr_id);
+}
+
