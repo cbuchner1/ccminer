@@ -73,7 +73,7 @@ extern "C" int scanhash_wh(int thr_id, uint32_t *pdata,
 
 	const uint32_t Htarg = ptarget[7];
 
-	const int throughput = 256*256*8;
+	const int throughput = 256*256*8*4;
 	
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
@@ -98,15 +98,9 @@ extern "C" int scanhash_wh(int thr_id, uint32_t *pdata,
 	do {
 		int order = 0;
 		 
-		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		   
-		
-		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		
-		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-//		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		
-		
+		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);		  		
+		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);		
+		whirlpool512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);		
 		uint32_t foundNonce = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
