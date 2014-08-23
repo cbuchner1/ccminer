@@ -238,7 +238,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     <ClCompile Include="groestlcoin.cpp" />
     <ClCompile Include="hefty1.c" />
     <ClCompile Include="myriadgroestl.cpp" />
-    <ClCompile Include="scrypt.c" >
+    <ClCompile Include="scrypt.c">
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
       <AdditionalOptions>/Tp %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -249,6 +249,10 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     <ClCompile Include="sph\echo.c" />
     <ClCompile Include="sph\fugue.c" />
     <ClCompile Include="sph\groestl.c" />
+    <ClCompile Include="sph\haval.c" />
+    <ClCompile Include="sph\haval_helper.c">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="sph\jh.c" />
     <ClCompile Include="sph\keccak.c" />
     <ClCompile Include="sph\luffa.c" />
@@ -256,6 +260,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="sph\sha2.c" />
+    <ClCompile Include="sph\sha2big.c" />
     <ClCompile Include="sph\shabal.c" />
     <ClCompile Include="sph\shavite.c" />
     <ClCompile Include="sph\simd.c" />
@@ -293,9 +298,11 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
     <ClInclude Include="sph\sph_echo.h" />
     <ClInclude Include="sph\sph_fugue.h" />
     <ClInclude Include="sph\sph_groestl.h" />
+    <ClInclude Include="sph\sph_haval.h" />
     <ClInclude Include="sph\sph_jh.h" />
     <ClInclude Include="sph\sph_keccak.h" />
     <ClInclude Include="sph\sph_luffa.h" />
+    <ClInclude Include="sph\sph_sha2.h" />
     <ClInclude Include="sph\sph_shabal.h" />
     <ClInclude Include="sph\sph_shavite.h" />
     <ClInclude Include="sph\sph_simd.h" />
@@ -505,6 +512,17 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
     </CudaCompile>
+    <CudaCompile Include="x17\cuda_x17_haval512.cu">
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
+      <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+    </CudaCompile>
+    <CudaCompile Include="x17\cuda_x17_sha512.cu">
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
+      <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+      <MaxRegCount>80</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="x15\whirlcoin.cu">
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
@@ -516,6 +534,11 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="x15\x15.cu">
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
+      <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+    </CudaCompile>
+    <CudaCompile Include="x17\x17.cu">
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>

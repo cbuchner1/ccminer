@@ -61,6 +61,9 @@
     <Filter Include="Source Files\CUDA\x15">
       <UniqueIdentifier>{a2403c22-6777-46ab-a55a-3fcc7386c974}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\x17">
+      <UniqueIdentifier>{85dfae6a-66ca-4332-8cec-98ee70cbdf2f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -163,6 +166,15 @@
       <Filter>Source Files\sph</Filter>
     </ClCompile>
     <ClCompile Include="sph\whirlpool.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\haval.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\haval_helper.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\sha2big.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
   </ItemGroup>
@@ -270,6 +282,12 @@
       <Filter>Header Files\sph</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_whirlpool.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_haval.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_sha2.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
@@ -402,6 +420,15 @@
     </CudaCompile>
     <CudaCompile Include="x15\whirlcoin.cu">
       <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x17\cuda_x17_haval512.cu">
+      <Filter>Source Files\CUDA\x17</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x17\cuda_x17_sha512.cu">
+      <Filter>Source Files\CUDA\x17</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x17\x17.cu">
+      <Filter>Source Files\CUDA\x17</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>
