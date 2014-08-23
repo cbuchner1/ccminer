@@ -20,16 +20,7 @@ extern "C"
 // aus cpu-miner.c
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
-/*
-struct ctx {
-	uint64_t *d_hash[8];
-	uint64_t *d_prod[2];
-	uint64_t *hash[8];
-	uint64_t *prod[2];
-	int thr_id;
-} pctx;
-*/
+
 static uint64_t *d_hash[8];
 static uint64_t *FinalHash[8];
 static uint64_t *KeccakH[8];
@@ -41,11 +32,7 @@ static uint64_t *TigerH[8];
 static uint64_t *RipemdH[8];
 static uint64_t *d_prod0[8];
 static uint64_t *d_prod1[8];
-/*
-static uint64_t *Stage3H[8];
-static uint64_t *Stage4H[8];
-static uint64_t *Stage5H[8];
-*/
+
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 static void mpz_set_uint256(mpz_t r, uint8_t *u)
 {
@@ -141,16 +128,12 @@ inline void m7_hash(void *state, const void *input,uint32_t TheNonce, int debug)
     mpz_init(product);
 	 
 
-	/// initialize all hash at 0
-	//data[30]=0;
-	//data[31]=0;
-	// shavite 1
 	
 
-	__declspec(align(128)) 	uint32_t data[32] ; 
+	uint32_t data[32] ; 
 	uint32_t *data_p64 = data + (116 / sizeof(data[0]));
-	__declspec(align(32))	uint8_t bhash[7][64];
-	__declspec(align(32)) 	uint32_t hash[8];
+	uint8_t bhash[7][64];
+	uint32_t hash[8];
 	memcpy(data,input,122);
 
 
@@ -252,13 +235,11 @@ if (debug == 1) {
         int bytes = mpz_sizeinbase(bns[0], 256);
         bdata = (uint8_t *)realloc(bdata, bytes);
         mpz_export((void *)bdata, NULL, -1, 1, 0, 0, bns[0]);
-//printf("size %d\n",bytes);
-//for (int i=0;i<38;i++) {printf("%d   %02x  %02x %02x  %02x  %02x  %02x %02x  %02x\n",8*i,bdata[8*i],bdata[8*i+1],bdata[8*i+2],bdata[8*i+3],bdata[8*i+4],bdata[8*i+5],bdata[8*i+6],bdata[8*i+7]);}
         sph_sha256_init(&ctx_final_sha256);
         sph_sha256 (&ctx_final_sha256, bdata, bytes);
         sph_sha256_close(&ctx_final_sha256, (void*)(hash));
 
-//for (int i=0;i<8;i++) {printf("%d finalhash %08x %08x\n",2*i,hash[2*i],hash[2*i+1]);} 
+
 
     memcpy(state, hash, 32);
 }
@@ -267,13 +248,6 @@ if (debug == 1) {
 extern bool opt_benchmark;
 
 
-
-//extern "C" void* struct_init(int thr_id)
-//{
-//ctx *pctx = new ctx;	/// create the structure, don't do anything
-//thr_id=thr_id;
-//return pctx;
-//}
 
 extern "C" int scanhash_m7(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -330,7 +304,7 @@ extern "C" int scanhash_m7(int thr_id, uint32_t *pdata,
 	uint32_t TheNonce =pdata[29];
 	
 	do {
-//		pdata[29]=0;
+
 		int order = 0;
 
           m7_sha256_cpu_hash_120(thr_id, throughput, pdata[29], Sha256H[thr_id], order++);
@@ -375,8 +349,7 @@ if  (foundNonce != 0xffffffff)
             if( (vhash64[7]<=Htarg )  ) {              
                 pdata[29] = foundNonce;
 				*hashes_done = foundNonce - FirstNonce + 1;
-//                applog(LOG_INFO, "GPU #%d: result for nonce $%08X does work! vhash64 %08x and htarg %08x", thr_id, foundNonce,vhash64[7],Htarg);
-// m7_bigmul_cpu(thr_id,throughput,Sha256H[thr_id],Sha512H[thr_id],KeccakH[thr_id],WhirlpoolH[thr_id],HavalH[thr_id],TigerH[thr_id],RipemdH[thr_id],foundNonce,FirstNonce,order++);
+
            
 				return 1;
 			} else {
