@@ -46,14 +46,14 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  x11/x11.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
 			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu \
 			  x13/cuda_m7_sha256.cu x13/cuda_mul.cu x13/cuda_mul2.cu x13/cuda_ripemd160.cu x13/cuda_tiger192.cu \
-			  x13/m7_keccak512.cu x13/m7.cu x13/deep.cu
+			  x13/m7_keccak512.cu x13/m7.cu qubit/deep.cu
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@ @MPIRLIB@
 ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
 # we're now targeting all major compute architectures within one binary.
-# require cuda 6.0 or higher
+# require cuda 6.5 or higher
 .cu.o:
 	$(NVCC) @CFLAGS@ -I . -Xptxas "-abi=no -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
@@ -66,7 +66,7 @@ x13/cuda_whirlpool512.o: x13/cuda_whirlpool512.cu
 	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=no -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\" --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<        
 
 # whirlpool compiles faster with 64 regs
-x13/cuda_tiger192.o: x11/cuda_tiger192.cu
+x13/cuda_tiger192.o: x13/cuda_tiger192.cu
 	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=no -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\" --maxrregcount=64 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<        
 
 
