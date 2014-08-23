@@ -194,13 +194,13 @@ extern "C" void cuda_devicenames()
 // Can't be called directly in cpu-miner
 extern "C" void cuda_devicereset()
 {
-	cudaDeviceReset();
+    cudaDeviceReset();
 }
 
 static bool substringsearch(const char *haystack, const char *needle, int &match)
 {
-    int hlen = strlen(haystack);
-    int nlen = strlen(needle);
+    int hlen = (int) strlen(haystack);
+    int nlen = (int) strlen(needle);
     for (int i=0; i < hlen; ++i)
     {
         if (haystack[i] == ' ') continue;
@@ -401,7 +401,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         if(actualNumberOfValuesInNonceVectorGPU > 0)
         {
             cudaMemcpy(cpu_nonceVector, d_nonceVector[thr_id], sizeof(uint32_t) * actualNumberOfValuesInNonceVectorGPU, cudaMemcpyDeviceToHost);
-        
+
             for (i=0; i<actualNumberOfValuesInNonceVectorGPU;++i)
             {
                 uint32_t nonce = cpu_nonceVector[i];
