@@ -29,24 +29,27 @@ extern "C" void wcoinhash(void *state, const void *input)
 {
 	sph_whirlpool_context ctx_whirlpool;
 
-	uint32_t hash[16];
+	unsigned char hash[128]; // uint32_t hashA[16], hashB[16];
+	#define hashB hash+64
+
+	memset(hash, 0, sizeof hash);
 
 	// shavite 1
 	sph_whirlpool1_init(&ctx_whirlpool);
 	sph_whirlpool1(&ctx_whirlpool, input, 80);
-	sph_whirlpool1_close(&ctx_whirlpool, (void*) hash);
+	sph_whirlpool1_close(&ctx_whirlpool, hash);
 
 	sph_whirlpool1_init(&ctx_whirlpool);
-	sph_whirlpool1(&ctx_whirlpool, (const void*) hash, 64);
-	sph_whirlpool1_close(&ctx_whirlpool, (void*) hash); 
+	sph_whirlpool1(&ctx_whirlpool, hash, 64);
+	sph_whirlpool1_close(&ctx_whirlpool, hashB);
 
 	sph_whirlpool1_init(&ctx_whirlpool);
-	sph_whirlpool1(&ctx_whirlpool, (const void*) hash, 64);
-	sph_whirlpool1_close(&ctx_whirlpool, (void*) hash); 
+	sph_whirlpool1(&ctx_whirlpool, hashB, 64);
+	sph_whirlpool1_close(&ctx_whirlpool, hash);
 
 	sph_whirlpool1_init(&ctx_whirlpool);
-	sph_whirlpool1(&ctx_whirlpool, (const void*) hash, 64);
-	sph_whirlpool1_close(&ctx_whirlpool, (void*) hash); 
+	sph_whirlpool1(&ctx_whirlpool, hash, 64);
+	sph_whirlpool1_close(&ctx_whirlpool, hash);
 
 	memcpy(state, hash, 32);
 }
@@ -68,7 +71,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
-		x15_whirlpool_cpu_init(thr_id, throughput,1);
+		x15_whirlpool_cpu_init(thr_id, throughput, 1 /* old whirlpool */);
 
 		init[thr_id] = true;
 	}

@@ -298,6 +298,12 @@
     <CudaCompile Include="cuda_groestlcoin.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="groestl_functions_quad.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="bitslice_transformations_quad.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
       <Filter>Source Files\CUDA\JHA</Filter>
     </CudaCompile>
@@ -406,19 +412,13 @@
     <CudaCompile Include="x15\cuda_x14_shabal512.cu">
       <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
+    <CudaCompile Include="x15\whirlpool.cu">
+      <Filter>Source Files\CUDA\x15</Filter>
+    </CudaCompile>
     <CudaCompile Include="x15\x15.cu">
       <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
     <CudaCompile Include="x15\cuda_x15_whirlpool.cu">
-      <Filter>Source Files\CUDA\x15</Filter>
-    </CudaCompile>
-    <CudaCompile Include="groestl_functions_quad.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="bitslice_transformations_quad.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="x15\whirlcoin.cu">
       <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
     <CudaCompile Include="x17\cuda_x17_haval512.cu">
