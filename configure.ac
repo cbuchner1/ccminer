@@ -56,7 +56,7 @@ esac
 
 PTHREAD_FLAGS="-pthread"
 WS2_LIBS=""
-MPIRLIB="-lmpir"
+
 
 case $target in
   *-*-mingw*)
