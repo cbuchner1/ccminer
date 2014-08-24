@@ -57,11 +57,15 @@ typedef unsigned char BitSequence;
 #define SPH_C32(x)    ((uint32_t)(x ## U))
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
-#define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
+#define SWAB32(x)      cuda_swab32(x)
+#define ROTL32(x,n)    SPH_ROTL32(x,n) 
+
 
 static __constant__ uint32_t d_alpha_n[32];
 static __constant__ uint32_t d_alpha_f[32];
 static __constant__ uint32_t d_T512[64][16];
+
+
 
 static const uint32_t alpha_n[] = {
 	SPH_C32(0xff00f0f0), SPH_C32(0xccccaaaa), SPH_C32(0xf0f0cccc),
