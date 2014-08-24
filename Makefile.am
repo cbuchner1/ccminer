@@ -75,4 +75,7 @@ quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
 	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
-	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\"  --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<
+
+x13/cuda_mul.o: x13/cuda_mul.cu
+	$(NVCC) -I . -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" -gencode=arch=compute_30,code=\"sm_30,compute_30\" -gencode=arch=compute_35,code=\"sm_35,compute_35\" -gencode=arch=compute_50,code=\"sm_50,compute_50\"  --maxrregcount=80 --ptxas-options=-v $(JANSSON_INCLUDES) -o $@ -c $<

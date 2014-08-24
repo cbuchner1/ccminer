@@ -37,27 +37,27 @@
  * @author   phm <phm@inbox.com>
  */
 
+#include <cuda.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+
+#include <stdio.h>
+#include <stdint.h>
+#include <memory.h>
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
+typedef unsigned char BitSequence;
+
+
+#include "cuda_helper.h"
 
 #define SPH_C64(x)    ((uint64_t)(x ## ULL))
 #define SPH_C32(x)    ((uint32_t)(x ## U))
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
 #define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
-
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
 
 static __constant__ uint32_t d_alpha_n[32];
 static __constant__ uint32_t d_alpha_f[32];
