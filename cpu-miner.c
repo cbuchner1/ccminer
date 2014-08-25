@@ -1210,9 +1210,19 @@ out:
 	return NULL;
 }
 
+#define PROGRAM_VERSION "1.3"
 static void show_version_and_exit(void)
 {
-	printf("%s\n%s\n", PACKAGE_STRING, curl_version());
+	printf("%s v%s\n"
+#ifdef WIN32
+		"pthreads static %s\n"
+#endif
+		"%s\n",
+		PACKAGE_STRING, PROGRAM_VERSION,
+#ifdef WIN32
+		PTW32_VERSION_STRING,
+#endif
+		curl_version());
 	exit(0);
 }
 
@@ -1560,7 +1570,6 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 }
 #endif
 
-#define PROGRAM_VERSION "1.3"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
