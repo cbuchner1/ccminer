@@ -47,7 +47,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #pragma comment(lib, "winmm.lib")
 #endif
 
-#define PROGRAM_NAME		"minerd"
+#define PROGRAM_NAME		"ccminer"
 #define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
@@ -1238,7 +1238,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.3"
+#define PROGRAM_VERSION "1.4"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
@@ -1618,7 +1618,7 @@ int main(int argc, char *argv[])
 	printf("\t    and HVC extension from http://hvc.1gh.com/" "\n\n");
 	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n");
 	printf("\t  BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM\n");
-	printf("\tCleaned and optimized by Tanguy Pruvot\n");
+	printf("\tInclude some of djm34 additions, cleaned by Tanguy Pruvot\n");
 	printf("\t  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
 
 	rpc_user = strdup("");
