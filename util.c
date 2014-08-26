@@ -22,7 +22,8 @@
 #include <jansson.h>
 #include <curl/curl.h>
 #include <time.h>
-#if defined(WIN32)
+#ifdef WIN32
+#include "compat/winansi.h"
 #include <winsock2.h>
 #include <mstcpip.h>
 #else

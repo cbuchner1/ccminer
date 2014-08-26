@@ -23,6 +23,7 @@
 #ifdef WIN32
 #include <windows.h>
 #include <stdint.h>
+#include "compat/winansi.h"
 BOOL WINAPI ConsoleHandler(DWORD);
 #else
 #include <errno.h>

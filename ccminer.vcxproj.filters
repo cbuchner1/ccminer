@@ -177,6 +177,9 @@
     <ClCompile Include="sph\sha2big.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="compat\winansi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -289,6 +292,9 @@
     </ClInclude>
     <ClInclude Include="sph\sph_sha2.h">
       <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\winansi.h">
+      <Filter>Header Files\compat</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
