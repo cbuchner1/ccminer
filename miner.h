@@ -392,6 +392,9 @@ extern void *tq_pop(struct thread_q *tq, const struct timespec *abstime);
 extern void tq_freeze(struct thread_q *tq);
 extern void tq_thaw(struct thread_q *tq);
 
+
+void applog_hash(unsigned char *hash);
+
 void print_hash_tests(void);
 unsigned int jackpothash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);

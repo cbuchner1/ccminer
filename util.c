@@ -1346,74 +1346,88 @@ out:
 	return rval;
 }
 
-static void print_hash(unsigned char *hash)
+/* sprintf can be used in applog */
+static char* format_hash(char* buf, unsigned char *hash)
 {
+	int len = 0;
 	for (int i=0; i < 32; i += 4) {
-		printf("%02x%02x%02x%02x ", hash[i], hash[i+1], hash[i+2], hash[i+3]);
+		len += sprintf(buf+len, "%02x%02x%02x%02x ",
+			hash[i], hash[i+1], hash[i+2], hash[i+3]);
 	}
+	return buf;
 }
+
+extern void applog_hash(unsigned char *hash)
+{
+	char s[128] = {'\0'};
+	applog(LOG_DEBUG, "%s", format_hash(s, hash));
+}
+
+#define printpfx(n,h) \
+	printf("%s%12s%s: %s\n", CL_BLU, n, CL_N, format_hash(s, h))
 
 void print_hash_tests(void)
 {
-	unsigned char buf[128], hash[128];
+	unsigned char buf[128], hash[128], s[128];
 	memset(buf, 0, sizeof buf);
-	printf("CPU HASH ON EMPTY BUFFER RESULTS:\n");
+
+	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
 	memset(hash, 0, sizeof hash);
 	fugue256_hash(&hash[0], &buf[0], 32);
-	printf("\nfugue256:"); print_hash(hash);
+	printpfx("fugue256", hash);
 
 	memset(hash, 0, sizeof hash);
 	groestlhash(&hash[0], &buf[0]);
-	printf("\ngroestl: "); print_hash(hash);
+	printpfx("groestl", hash);
 
 	memset(hash, 0, sizeof hash);
 	heavycoin_hash(&hash[0], &buf[0], 32);
-	printf("\nheavy:   "); print_hash(hash);
+	printpfx("heavy", hash);
 
 	memset(hash, 0, sizeof hash);
 	jackpothash(&hash[0], &buf[0]);
-	printf("\njackpot: "); print_hash(hash);
+	printpfx("jackpot", hash);
 
 	memset(hash, 0, sizeof hash);
 	myriadhash(&hash[0], &buf[0]);
-	printf("\nmyriad:  "); print_hash(hash);
+	printpfx("myriad", hash);
 
 	memset(hash, 0, sizeof hash);
 	nist5hash(&hash[0], &buf[0]);
-	printf("\nnist5:   "); print_hash(hash);
+	printpfx("nist5", hash);
 
 	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
-	printf("\nquark:   "); print_hash(hash);
+	printpfx("quark", hash);
 
 	memset(hash, 0, sizeof hash);
 	fresh_hash(&hash[0], &buf[0]);
-	printf("\nfresh:   "); print_hash(hash);
+	printpfx("fresh", hash);
 
 	memset(hash, 0, sizeof hash);
 	wcoinhash(&hash[0], &buf[0]);
-	printf("\nwhirl:   "); print_hash(hash);
+	printpfx("whirl", hash);
 
 	memset(hash, 0, sizeof hash);
 	x11hash(&hash[0], &buf[0]);
-	printf("\nX11:     "); print_hash(hash);
+	printpfx("X11", hash);
 
 	memset(hash, 0, sizeof hash);
 	x13hash(&hash[0], &buf[0]);
-	printf("\nX13:     "); print_hash(hash);
+	printpfx("X13", hash);
 
 	memset(hash, 0, sizeof hash);
 	x14hash(&hash[0], &buf[0]);
-	printf("\nX14:     "); print_hash(hash);
+	printpfx("X14", hash);
 
 	memset(hash, 0, sizeof hash);
 	x15hash(&hash[0], &buf[0]);
-	printf("\nX15:     "); print_hash(hash);
+	printpfx("X15", hash);
 
 	memset(hash, 0, sizeof hash);
 	x17hash(&hash[0], &buf[0]);
-	printf("\nX17:     "); print_hash(hash);
+	printpfx("X17", hash);
 
 	printf("\n");
 }
