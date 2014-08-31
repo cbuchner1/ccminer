@@ -1394,6 +1394,10 @@ void print_hash_tests(void)
 	printpfx("myriad", hash);
 
 	memset(hash, 0, sizeof hash);
+	blake32hash(&hash[0], &buf[0]);
+	printpfx("blake", hash);
+
+	memset(hash, 0, sizeof hash);
 	nist5hash(&hash[0], &buf[0]);
 	printpfx("nist5", hash);
 

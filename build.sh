@@ -4,7 +4,7 @@
 
 # export PATH="$PATH:/usr/local/cuda/bin/"
 
-make distclean || echo clean
+#make distclean || echo clean
 
 rm -f Makefile.in
 rm -f config.status

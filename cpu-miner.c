@@ -135,6 +135,7 @@ typedef enum {
 	ALGO_QUARK,
 	ALGO_ANIME,
 	ALGO_FRESH,
+	ALGO_BLAKE,
 	ALGO_NIST5,
 	ALGO_WHC,
 	ALGO_X11,
@@ -155,6 +156,7 @@ static const char *algo_names[] = {
 	"quark",
 	"anime",
 	"fresh",
+	"blake",
 	"nist5",
 	"whirl",
 	"x11",
@@ -235,6 +237,7 @@ Options:\n\
                         jackpot   Jackpot hash\n\
                         quark     Quark hash\n\
                         anime     Animecoin hash\n\
+                        blake     Blake 256 (like NEOS blake)\n\
                         fresh     Freshcoin hash (shavite 80)\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         whirl     Whirlcoin (old whirlpool)\n\
@@ -842,18 +845,23 @@ static void *miner_thread(void *userdata)
 		int64_t max64;
 		int rc;
 
+		// &work.data[19]
+		int wcmplen = 76;
+		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
+
 		if (have_stratum) {
 			while (time(NULL) >= g_work_time + 120)
 				sleep(1);
 			pthread_mutex_lock(&g_work_lock);
-			if (work.data[19] >= end_nonce)
+			if ((*nonceptr) >= end_nonce)
 				stratum_gen_work(&stratum, &g_work);
 		} else {
+			int min_scantime = have_longpoll ? LP_SCANTIME : opt_scantime;
 			/* obtain new work from internal workio thread */
 			pthread_mutex_lock(&g_work_lock);
-			if (!have_stratum && (!have_longpoll ||
-					time(NULL) >= g_work_time + LP_SCANTIME*3/4 ||
-					work.data[19] >= end_nonce)) {
+			if (!have_stratum &&
+			    (time(NULL) - g_work_time >= min_scantime ||
+			     (*nonceptr) >= end_nonce)) {
 				if (unlikely(!get_work(mythr, &g_work))) {
 					applog(LOG_ERR, "work retrieval failed, exiting "
 						"mining thread %d", mythr->id);
@@ -867,11 +875,11 @@ static void *miner_thread(void *userdata)
 				continue;
 			}
 		}
-		if (memcmp(work.data, g_work.data, 76)) {
+		if (memcmp(work.data, g_work.data, wcmplen)) {
 			memcpy(&work, &g_work, sizeof(struct work));
-			work.data[19] = 0xffffffffU / opt_n_threads * thr_id;
+			(*nonceptr) = 0xffffffffU / opt_n_threads * thr_id;
 		} else
-			work.data[19]++;
+			(*nonceptr)++;
 		pthread_mutex_unlock(&g_work_lock);
 		work_restart[thr_id].restart = 0;
 
@@ -881,13 +889,26 @@ static void *miner_thread(void *userdata)
 		else
 			max64 = g_work_time + (have_longpoll ? LP_SCANTIME : opt_scantime)
 			      - time(NULL);
+
 		max64 *= (int64_t)thr_hashrates[thr_id];
-		if (max64 <= 0)
-			max64 = (opt_algo == ALGO_JACKPOT) ? 0x1fffLL : 0xfffffLL;
-		if ((int64_t)work.data[19] + max64 > end_nonce)
+
+		if (max64 <= 0) {
+			switch (opt_algo) {
+			case ALGO_JACKPOT:
+				max64 = 0x1fffLL;
+				break;
+			case ALGO_BLAKE:
+				max64 = 0xffffffLL;
+				break;
+			default:
+				max64 = 0xfffffLL;
+				break;
+			}
+		}
+		if ((int64_t)(*nonceptr) + max64 > end_nonce)
 			max_nonce = end_nonce;
 		else
-			max_nonce = (uint32_t)(work.data[19] + max64);
+			max_nonce = (uint32_t)((*nonceptr) + max64);
 
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
@@ -928,6 +949,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_QUARK:
 			rc = scanhash_quark(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_BLAKE:
+			rc = scanhash_blake32(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

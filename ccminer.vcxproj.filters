@@ -436,5 +436,8 @@
     <CudaCompile Include="x17\x17.cu">
       <Filter>Source Files\CUDA\x17</Filter>
     </CudaCompile>
+    <CudaCompile Include="blake32.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
