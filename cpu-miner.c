@@ -194,6 +194,7 @@ char *device_name[8]; // CB
 static char *rpc_url;
 static char *rpc_userpass;
 static char *rpc_user, *rpc_pass;
+static char *short_url = NULL;
 char *opt_cert;
 char *opt_proxy;
 long opt_proxy_type;
@@ -1153,7 +1154,7 @@ static void *stratum_thread(void *userdata)
 	stratum.url = (char*)tq_pop(mythr->q, NULL);
 	if (!stratum.url)
 		goto out;
-	applog(LOG_INFO, "Starting Stratum on %s", stratum.url);
+	applog(LOG_BLUE, "Starting Stratum on %s", stratum.url);
 
 	while (1) {
 		int failures = 0;
@@ -1186,7 +1187,8 @@ static void *stratum_thread(void *userdata)
 			time(&g_work_time);
 			pthread_mutex_unlock(&g_work_lock);
 			if (stratum.job.clean) {
-				if (!opt_quiet) applog(LOG_BLUE, "Stratum detected new block");
+				if (!opt_quiet)
+					applog(LOG_BLUE, "%s send a new %s block", short_url, algo_names[opt_algo]);
 				restart_threads();
 			}
 		}
@@ -1338,12 +1340,14 @@ static void parse_arg (int key, char *arg)
 				show_usage_and_exit(1);
 			free(rpc_url);
 			rpc_url = strdup(arg);
+			short_url = &rpc_url[(p - arg) + 3];
 		} else {
 			if (!strlen(arg) || *arg == '/')
 				show_usage_and_exit(1);
 			free(rpc_url);
 			rpc_url = (char*)malloc(strlen(arg) + 8);
 			sprintf(rpc_url, "http://%s", arg);
+			short_url = &rpc_url[7];
 		}
 		p = strrchr(rpc_url, '@');
 		if (p) {
@@ -1364,6 +1368,7 @@ static void parse_arg (int key, char *arg)
 				rpc_user = strdup(ap);
 			}
 			memmove(ap, p + 1, strlen(p + 1) + 1);
+			short_url = p + 1;
 		}
 		have_stratum = !opt_benchmark && !strncasecmp(rpc_url, "stratum", 7);
 		break;
