@@ -12,6 +12,9 @@ extern "C" {
 #include <memory.h>
 }
 
+/* threads per block */
+#define TPB 128
+
 /* hash by cpu with blake 256 */
 extern "C" void blake32hash(void *output, const void *input)
 {
@@ -43,7 +46,6 @@ static uint32_t __align__(32) c_PaddedMessage80[32]; // padded message (80 bytes
 
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
-static bool init_made = false;
 
 __constant__
 static uint8_t c_sigma[16][16];
@@ -214,7 +216,7 @@ void blake256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
 		msg[1] = c_PaddedMessage80[17];
 		msg[2] = c_PaddedMessage80[18];
 		msg[3] = nounce; /* our tested value */
-		msg[4] = 0x80000000; //cuda_swab32(0x80U);
+		msg[4] = 0x80000000UL; //cuda_swab32(0x80U);
 
 		msg[13] = 1;
 		msg[15] = 0x280; // 60-63
@@ -232,7 +234,7 @@ void blake256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
 __host__
 void blake256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = 128;
+	const int threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -280,7 +282,7 @@ void gpu_check_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVecto
 __host__
 uint32_t cpu_check_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
 {
-	const int threadsperblock = 128;
+	const int threadsperblock = TPB;
 	uint32_t result = 0xffffffff;
 
 	cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t));
@@ -307,7 +309,6 @@ void blake256_cpu_init(int thr_id)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_sigma, host_sigma, sizeof(host_sigma), 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], sizeof(uint32_t)));
 	CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], sizeof(uint32_t)));
-	init_made = true;
 }
 
 __host__
@@ -327,7 +328,7 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = 128 * 2048;
+	const int throughput = TPB * 2048;
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
 	uint32_t Htarg = ptarget[7];
@@ -338,10 +339,8 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 	if (!init[thr_id]) {
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 32 * throughput));
-
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 48 * throughput)); // not sure for this size...
 		blake256_cpu_init(thr_id);
-
 		init[thr_id] = true;
 	}
 
@@ -349,8 +348,6 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 	// dev test with a null buffer 0x00000...
 	for (int k = 0; k < 20; k++)
 		pdata[k] = 0;
-	uint32_t vhash[8];
-	blake32hash(vhash, pdata);
 #endif
 
 	blake256_cpu_setBlock_80(pdata, (void*)ptarget);
@@ -362,7 +359,7 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 		int order = 0;
 		uint32_t foundNonce;
 
-		// GPU
+		// GPU HASH
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
 #if NULLTEST
@@ -379,16 +376,17 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 			blake32hash(vhashcpu, endiandata);
 
-			//if (opt_debug)
-			//	applog(LOG_DEBUG, "foundNonce = %08x",foundNonce);
-
 			if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget))
 			{
 				pdata[19] = foundNonce;
 				rc = 1;
 				goto exit_scan;
-			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce %08x does not validate on CPU!", thr_id, foundNonce);
+			}
+			else if (vhashcpu[7] > Htarg) {
+				applog(LOG_WARNING, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[7], Htarg);
+			}
+			else {
+				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
@@ -398,10 +396,5 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1;
-	if (init_made && opt_debug && h_resNounce[thr_id]) {
-		// made auto ???
-		//applog(LOG_DEBUG, "%08x", h_resNounce[thr_id]);
-		//cudaFreeHost(h_resNounce[thr_id]);
-	}
 	return rc;
 }
