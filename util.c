@@ -559,7 +559,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 		}
 	}
 
-	if (opt_debug) {
+	if (!rc || opt_debug) {
 		uint32_t hash_be[8], target_be[8];
 		char *hash_str, *target_str;
 		
@@ -572,7 +572,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 
 		applog(LOG_DEBUG, "DEBUG: %s\nHash:   %s\nTarget: %s",
 			rc ? "hash <= target"
-			   : "hash > target (false positive)",
+			   : CL_YLW "hash > target (false positive)" CL_N,
 			hash_str,
 			target_str);
 
@@ -1205,6 +1205,10 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 	id = json_object_get(val, "id");
 	params = json_object_get(val, "params");
 
+	if (opt_debug) {
+		applog(LOG_DEBUG, "method: %s", s);
+	}
+
 	if (!strcasecmp(method, "mining.notify")) {
 		ret = stratum_notify(sctx, params);
 		goto out;
@@ -1368,7 +1372,8 @@ extern void applog_hash(unsigned char *hash)
 
 void print_hash_tests(void)
 {
-	unsigned char buf[128], hash[128], s[128];
+	char s[128] = {'\0'};
+	unsigned char buf[128], hash[128];
 	memset(buf, 0, sizeof buf);
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
