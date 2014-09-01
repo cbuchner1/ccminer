@@ -396,6 +396,7 @@ extern void *tq_pop(struct thread_q *tq, const struct timespec *abstime);
 extern void tq_freeze(struct thread_q *tq);
 extern void tq_thaw(struct thread_q *tq);
 
+void proper_exit(int reason);
 
 void applog_hash(unsigned char *hash);
 

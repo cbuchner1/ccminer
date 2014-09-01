@@ -209,7 +209,7 @@ static struct stratum_ctx stratum;
 
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
-
+static uint8_t duplicate_shares = 0;
 static unsigned long accepted_count = 0L;
 static unsigned long rejected_count = 0L;
 static double *thr_hashrates;
@@ -349,6 +349,13 @@ static struct work g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
 
+
+void proper_exit(int reason)
+{
+	cuda_devicereset();
+	exit(reason);
+}
+
 static bool jobj_binary(const json_t *obj, const char *key,
 			void *buf, size_t buflen)
 {
@@ -423,8 +430,17 @@ static void share_result(int result, const char *reason)
 				(result ? CL_GRN "yay!!!" : CL_RED "booooo")
 			:	(result ? "(yay!!!)" : "(booooo)"));
 
-	if (reason)
+	if (reason) {
+		if (!strcmp(reason, "Duplicate share")) {
+			duplicate_shares++;
+			if (duplicate_shares > 3) {
+				// exit from app (until auto restart)
+				applog(LOG_WARNING, "Auto exit to prevent stratum bans: %s", reason);
+				proper_exit(1);
+			}
+		}
 		applog(LOG_WARNING, "reject reason: %s", reason);
+	}
 }
 
 static bool submit_upstream_work(CURL *curl, struct work *work)
@@ -1253,7 +1269,7 @@ static void show_version_and_exit(void)
 		PTW32_VERSION_STRING,
 #endif
 		curl_version());
-	exit(0);
+	proper_exit(0);
 }
 
 static void show_usage_and_exit(int status)
@@ -1262,7 +1278,7 @@ static void show_usage_and_exit(int status)
 		fprintf(stderr, "Try `" PROGRAM_NAME " --help' for more information.\n");
 	else
 		printf(usage);
-	exit(status);
+	proper_exit(status);
 }
 
 static void parse_arg (int key, char *arg)
@@ -1297,7 +1313,7 @@ static void parse_arg (int key, char *arg)
 #endif
 		if (!json_is_object(opt_config)) {
 			applog(LOG_ERR, "JSON decode of %s failed", arg);
-			exit(1);
+			proper_exit(1);
 		}
 		break;
 	}
@@ -1440,7 +1456,7 @@ static void parse_arg (int key, char *arg)
 		break;
 	case 1006:
 		print_hash_tests();
-		exit(0);
+		proper_exit(0);
 		break;
 	case 1003:
 		want_longpoll = false;
@@ -1462,7 +1478,7 @@ static void parse_arg (int key, char *arg)
 						device_map[opt_n_threads++] = atoi(pch);
 					else {
 						applog(LOG_ERR, "Non-existant CUDA device #%d specified in -d option", atoi(pch));
-						exit(1);
+						proper_exit(1);
 					}
 				} else {
 					int device = cuda_finddevice(pch);
@@ -1470,7 +1486,7 @@ static void parse_arg (int key, char *arg)
 						device_map[opt_n_threads++] = device;
 					else {
 						applog(LOG_ERR, "Non-existant CUDA device '%s' specified in -d option", pch);
-						exit(1);
+						proper_exit(1);
 					}
 				}
 				pch = strtok (NULL, ",");
@@ -1572,13 +1588,11 @@ static void signal_handler(int sig)
 	case SIGINT:
 		signal(sig, SIG_IGN);
 		applog(LOG_INFO, "SIGINT received, exiting");
-		cuda_devicereset();
-		exit(0);
+		proper_exit(0);
 		break;
 	case SIGTERM:
 		applog(LOG_INFO, "SIGTERM received, exiting");
-		cuda_devicereset();
-		exit(0);
+		proper_exit(0);
 		break;
 	}
 }
@@ -1588,13 +1602,11 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 	switch (dwType) {
 	case CTRL_C_EVENT:
 		applog(LOG_INFO, "CTRL_C_EVENT received, exiting");
-		cuda_devicereset();
-		exit(0);
+		proper_exit(0);
 		break;
 	case CTRL_BREAK_EVENT:
 		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
-		cuda_devicereset();
-		exit(0);
+		proper_exit(0);
 		break;
 	default:
 		return false;
@@ -1784,9 +1796,6 @@ int main(int argc, char *argv[])
 #endif
 
 	applog(LOG_INFO, "workio thread dead, exiting.");
-
-	// nvprof requires this
-	cuda_devicereset();
 
 	return 0;
 }
