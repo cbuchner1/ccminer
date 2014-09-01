@@ -36,7 +36,7 @@
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-
+ 
 
 #include <stdio.h>
 #include <stdint.h>
@@ -46,23 +46,17 @@
 #define USE_SHARED 1
 #include "cuda_helper.h"
 #define SPH_C64(x)    ((uint64_t)(x ## ULL))
-//#define SPH_T64(x)    ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
-#define SPH_T64(x)  sph_t64(x)
 
-__device__ __forceinline__ uint64_t SWAP64(uint64_t x)
-{
-	
-	uint64_t temp[2];
-	temp[0] = __byte_perm(HIWORD(x), 0, 0x0123);
-	temp[1] = __byte_perm(LOWORD(x), 0, 0x0123);
 
-	return temp[0] | (temp[1]<<32);
-}
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+extern int device_major[8];
+
 
 __constant__ uint64_t c_PaddedMessage80[16];
 static __constant__ uint64_t H_512[8];
+static __constant__ uint64_t gpu_WK[80];
+static __constant__ uint64_t gpu_W[80];
 
 static const uint64_t H512[8] = {
 	SPH_C64(0x6A09E667F3BCC908), SPH_C64(0xBB67AE8584CAA73B),
@@ -116,24 +110,6 @@ static const uint64_t K512[80] = {
 };
 
 
-#define SHA3_STEP(ord,r,i) { \
-	    uint64_t T1, T2; \
-		int a = 8-ord; \
-		T1 = SPH_T64(r[(7+a)& 7] + BSG5_1(r[(4+a)& 7]) + CH(r[(4+a)& 7], r[(5+a)& 7], r[(6+a)& 7]) + K_512[i] + W[i]); \
-		T2 = SPH_T64(BSG5_0(r[(0+a)& 7]) + MAJ(r[(0+a)& 7], r[(1+a)& 7], r[(2+a)& 7])); \
-		r[(3+a)& 7] = SPH_T64(r[(3+a)& 7] + T1); \
-		r[(7+a)& 7] = SPH_T64(T1 + T2); \
-	}
-
-#define SHA3_STEP2(truc,ord,r,i) { \
-	    uint64_t T1, T2; \
-		int a = 8-ord; \
-		T1 = Tone(truc,r,W,a,i); \
-		T2 = SPH_T64(BSG5_0(r[(0+a)& 7]) + MAJ(r[(0+a)& 7], r[(1+a)& 7], r[(2+a)& 7])); \
-		r[(3+a)& 7] = SPH_T64(r[(3+a)& 7] + T1); \
-		r[(7+a)& 7] = SPH_T64(T1 + T2); \
-	}
-
 static __device__ __forceinline__ uint64_t bsg5_0(uint64_t x)
 {
 	uint64_t r1 = ROTR64(x,28);
@@ -162,35 +138,52 @@ static __device__ __forceinline__ uint64_t ssg5_1(uint64_t x)
 	uint64_t r3 = shr_t64(x,6);
 	return xor3(r1,r2,r3);
 }
-#define BSG5_0(x)        bsg5_0(x)
-#define BSG5_1(x)        bsg5_1(x)
-#define SSG5_0(x)      ssg5_0(x)
-#define SSG5_1(x)     ssg5_1(x)
-#define CH(x, y, z)    xandx64(x,y,z)
-#define MAJ(x, y, z)   andor(x,y,z)
 
-static __device__ __forceinline__ uint64_t Tone(const uint64_t* sharedMemory, uint64_t r[8], uint64_t W[80], short a, short i) 
+
+static __device__ __forceinline__ void sha3_step2(uint64_t* r,uint64_t* W,uint64_t* K,int ord,int i) 
 {
+int u = 8-ord;
+uint64_t a=r[(0+u)& 7];
+uint64_t b=r[(1+u)& 7];
+uint64_t c=r[(2+u)& 7];
+uint64_t d=r[(3+u)& 7];
+uint64_t e=r[(4+u)& 7];
+uint64_t f=r[(5+u)& 7];
+uint64_t g=r[(6+u)& 7];
+uint64_t h=r[(7+u)& 7];
 
-int idxh = (7+a) & 7;
-int idxe = (4+a) & 7;
-int idxf = (5+a) & 7;
-int idxg = (6+a) & 7;
+uint64_t T1, T2;
+T1 = h+bsg5_1(e)+xandx64(e,f,g)+W[i]+K[i];
+T2 = bsg5_0(a) + andor(a,b,c); 
+r[(3+u)& 7] = d + T1; 
+r[(7+u)& 7] = T1 + T2; 
 
-uint64_t BSG51 = bsg5_1(r[idxe]);
-uint64_t CHl = xandx64(r[idxe],r[idxf],r[idxg]);
-uint64_t result = SPH_T64(r[idxh]+BSG51+CHl+sharedMemory[i]+W[i]);
-return result;
+}
+
+static __device__ __forceinline__ void sha3_step3(uint64_t* r,uint64_t* W,int ord,int i) 
+{
+int u = 8-ord;
+uint64_t a=r[(0+u)& 7];
+uint64_t b=r[(1+u)& 7];
+uint64_t c=r[(2+u)& 7];
+uint64_t d=r[(3+u)& 7];
+uint64_t e=r[(4+u)& 7];
+uint64_t f=r[(5+u)& 7];
+uint64_t g=r[(6+u)& 7];
+uint64_t h=r[(7+u)& 7];
+
+uint64_t T1, T2;
+T1 = h+bsg5_1(e)+xandx64(e,f,g)+W[i];
+T2 = bsg5_0(a) + andor(a,b,c); 
+r[(3+u)& 7] = d + T1; 
+r[(7+u)& 7] = T1 + T2; 
+
 }
 
 
 __global__ void sha512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
-/*
-     __shared__ uint64_t sharedMem[80];
-	
-		sharedMem[threadIdx.x]      = K_512[threadIdx.x];
-*/	
+
 
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -200,23 +193,10 @@ __global__ void sha512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *
         int hashPosition = nounce - startNounce;
 
 
-        uint32_t *inpHash = (uint32_t*)&g_hash[8 * hashPosition];
+        uint64_t *inpHash = (uint64_t*)&g_hash + 8*thread;
 		
 			
-union {
-uint8_t h1[64];
-uint32_t h4[16];
-uint64_t h8[8];
-} hash;  
 
-		
-        
-	    #pragma unroll 16
-		for (int i=0;i<16;i++) {
-			hash.h4[i]= inpHash[i];}
-		 
-	
-		
 		uint64_t W[80]; 
         uint64_t r[8];
 #pragma unroll 71
@@ -224,42 +204,44 @@ uint64_t h8[8];
 
 #pragma unroll 8
  		for (int i = 0; i < 8; i ++) {
-			W[i] = cuda_swab64(hash.h8[i]);
+			W[i] = cuda_swab64(inpHash[i]);
 			r[i] = H_512[i];}
 		
 		W[8] = 0x8000000000000000;
 		W[15]= 0x0000000000000200;
 #pragma unroll 64
 		for (int i = 16; i < 80; i ++) 
- 			W[i] = SPH_T64(SSG5_1(W[i - 2]) + W[i - 7] 
-				+ SSG5_0(W[i - 15]) + W[i - 16]); 
+ 			W[i] = sph_t64(ssg5_1(W[i - 2]) + W[i - 7] + ssg5_0(W[i - 15]) + W[i - 16]); 
 
 #if __CUDA_ARCH__ < 500    // go figure...
 #pragma unroll 10
 #endif
 		for (int i = 0; i < 10; i ++) {
 #pragma unroll 8
-			for (int ord=0;ord<8;ord++) {SHA3_STEP2(K_512,ord,r,8*i+ord);}
+			for (int ord=0;ord<8;ord++) {sha3_step2(r,W,K_512,ord,8*i+ord);}
 		}
 
 #pragma unroll 8
-		for (int i = 0; i < 8; i++) {r[i] = SPH_T64(r[i] + H_512[i]);}
+		for (int i = 0; i < 8; i++) {r[i] = sph_t64(r[i] + H_512[i]);}
 
-#pragma unroll 8
-for(int i=0;i<8;i++) {	
-	hash.h8[i] = cuda_swab64(r[i]);}
-
-      
-      #pragma unroll 16
-      for (int u = 0; u < 16; u ++) 
-            inpHash[u] = hash.h4[u];    
+      #pragma unroll 8
+      for (int u = 0; u < 8; u ++) 
+            inpHash[u] = cuda_swab64(r[u]);    
  }
 }
 
 
-__global__ void m7_sha512_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__ void __launch_bounds__(256,3) m7_sha512_gpu50_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
-
+	
+	__shared__ uint64_t K[80];
+	__shared__ uint64_t WK[80];
+	if (threadIdx.x<80) 
+	{
+		WK[threadIdx.x] = gpu_WK[threadIdx.x];
+		K[threadIdx.x] =K_512[threadIdx.x];
+	}
+	__syncthreads();
 	
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
@@ -279,55 +261,115 @@ __global__ void m7_sha512_gpu_hash_120(int threads, uint32_t startNounce, uint64
 
 #pragma unroll 64
 		for (int i = 16; i < 80; i ++) 
- 			W[i] = SPH_T64(SSG5_1(W[i - 2]) + W[i - 7] + SSG5_0(W[i - 15]) + W[i - 16]); 
+ 			W[i] = sph_t64(ssg5_1(W[i - 2]) + W[i - 7] + ssg5_0(W[i - 15]) + W[i - 16]); 
 
 #if __CUDA_ARCH__ < 500    // go figure...
 #pragma unroll 10
 #endif
 		for (int i = 0; i < 10; i ++) {
 #pragma unroll 8
-			for (int ord=0;ord<8;ord++) {SHA3_STEP2(K_512,ord,r,8*i+ord);}
+			for (int ord=0;ord<8;ord++) {sha3_step2(r,W,K,ord,8*i+ord); }
+		}
+ uint64_t tempr[8];
+#pragma unroll 8
+		for (int i = 0; i < 8; i++) {tempr[i] = r[i] = sph_t64(r[i] + H_512[i]);}
+
+
+#if __CUDA_ARCH__ < 500    // go figure...
+#pragma unroll 
+#endif 10
+		for (int i = 0; i < 10; i ++) {
+#pragma unroll 8
+			for (int ord=0;ord<8;ord++) {sha3_step3(r,WK,ord,8*i+ord); }
 		}
 
+               
 #pragma unroll 8
-		for (int i = 0; i < 8; i++) {r[i] = SPH_T64(r[i] + H_512[i]);}
+for(int i=0;i<8;i++) {outputHash[i*threads+thread] = cuda_swab64(sph_t64(r[i] + tempr[i]));}
 
-  uint64_t tempr[8];
-#pragma unroll 8 
-  for (int i=0;i<8;i++) {tempr[i]=r[i];}
-#pragma unroll 15
-		for (int i = 0; i < 15; i ++) {W[i] = 0;}
+	
+ } /// thread
+}
 
-		      W[15]=0x3d0;
+__global__ void __launch_bounds__(256,4) m7_sha512_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+{
+	
+	__shared__ uint64_t K[80];
+	__shared__ uint64_t WK[80];
+	if (threadIdx.x<80) 
+	{
+		WK[threadIdx.x] = gpu_WK[threadIdx.x];
+		K[threadIdx.x] =K_512[threadIdx.x];
+	}
+	__syncthreads();
+	
+    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    if (thread < threads)
+    {
+        
+		
+			uint32_t nounce = startNounce + thread;		
+		
+		uint64_t W[80]; 
+        uint64_t r[8];
+#pragma unroll 8
+		for (int i = 0; i < 8; i ++) {r[i] = H_512[i];}
+#pragma unroll 14
+		for (int i = 0; i < 14; i ++) {W[i] = cuda_swab64(c_PaddedMessage80[i]);}			        	
+		    W[14] =  cuda_swab64(REPLACE_HIWORD(c_PaddedMessage80[14],nounce));
+            W[15] =  cuda_swab64(c_PaddedMessage80[15]); 
+
 #pragma unroll 64
 		for (int i = 16; i < 80; i ++) 
- 			W[i] = SPH_T64(SSG5_1(W[i - 2]) + W[i - 7] + SSG5_0(W[i - 15]) + W[i - 16]); 
+ 			W[i] = sph_t64(ssg5_1(W[i - 2]) + W[i - 7] + ssg5_0(W[i - 15]) + W[i - 16]); 
 
 #if __CUDA_ARCH__ < 500    // go figure...
 #pragma unroll 10
-#endif 
+#endif
 		for (int i = 0; i < 10; i ++) {
 #pragma unroll 8
-			for (int ord=0;ord<8;ord++) {SHA3_STEP2(K_512,ord,r,8*i+ord);}
+			for (int ord=0;ord<8;ord++) {sha3_step2(r,W,K,ord,8*i+ord); }
+		}
+ uint64_t tempr[8];
+#pragma unroll 8
+		for (int i = 0; i < 8; i++) {tempr[i] = r[i] = sph_t64(r[i] + H_512[i]);}
+
+
+#if __CUDA_ARCH__ < 500    // go figure...
+#pragma unroll 
+#endif 10
+		for (int i = 0; i < 10; i ++) {
+#pragma unroll 8
+			for (int ord=0;ord<8;ord++) {sha3_step3(r,WK,ord,8*i+ord); }
 		}
 
-
+               
 #pragma unroll 8
-for(int i=0;i<8;i++) {outputHash[i*threads+thread] = cuda_swab64(SPH_T64(r[i] + tempr[i]));}
+for(int i=0;i<8;i++) {outputHash[i*threads+thread] = cuda_swab64(sph_t64(r[i] + tempr[i]));}
 
-
-/////////////////////////////////////////////////////////////////////////////////////
+	
  } /// thread
 }
 
 
 void sha512_cpu_init(int thr_id, int threads)
 {
-
+#define ROTR64(x, n)        (((x) >> (n)) | ((x) << (64 - (n))))
+#define SPH_T64(x)           ((x) & 0xFFFFFFFFFFFFFFFF)
+#define BSG5_0(x)      (ROTR64(x, 28) ^ ROTR64(x, 34) ^ ROTR64(x, 39))
+#define BSG5_1(x)      (ROTR64(x, 14) ^ ROTR64(x, 18) ^ ROTR64(x, 41))
+#define SSG5_0(x)      (ROTR64(x, 1) ^ ROTR64(x, 8) ^ SPH_T64((x) >> 7))
+#define SSG5_1(x)      (ROTR64(x, 19) ^ ROTR64(x, 61) ^ SPH_T64((x) >> 6))
     cudaMemcpyToSymbol(K_512,K512,80*sizeof(uint64_t),0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(H_512,H512,sizeof(H512),0, cudaMemcpyHostToDevice);
-	
-	
+	uint64_t W[80],WK[80];
+
+		for (int i = 0; i < 15; i ++) {W[i] = 0;}
+		      W[15]=0x3d0;
+		for (int i = 16; i < 80; i ++) {
+			W[i] = SPH_T64(SSG5_1(W[i - 2]) + W[i - 7] + SSG5_0(W[i - 15]) + W[i - 16]);} 	   
+		for (int i=0; i<80;i++) {WK[i]=W[i]+K512[i];}
+	 cudaMemcpyToSymbol(gpu_WK,WK,80*sizeof(uint64_t),0, cudaMemcpyHostToDevice);
 }
 
 
@@ -364,12 +406,14 @@ __host__ void m7_sha512_cpu_hash_120(int thr_id, int threads, uint32_t startNoun
 	const int threadsperblock = 256; // Alignment mit mixtob Grösse. NICHT ÄNDERN
 
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid(threads/threadsperblock);
 	dim3 block(threadsperblock);
 	size_t shared_size = 0;
-	
-	m7_sha512_gpu_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
-
+	if (device_major[thr_id]==5) {
+	m7_sha512_gpu50_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+	} else {
+    m7_sha512_gpu_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+	}
 	MyStreamSynchronize(NULL, order, thr_id);
 }
  

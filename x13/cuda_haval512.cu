@@ -341,7 +341,7 @@ uint64_t h8[8];
 		u6 = s6; 
 		u7 = s7; 		
 ///////// input big /////////////////////        
-#pragma unroll 28
+#pragma unroll 29
 		for (int i=0;i<29;i++) {
 			buf[i]=c_PaddedMessage80[i];} 
 			buf[29]=nounce;
@@ -408,7 +408,7 @@ uint64_t h8[8];
             hash.h4[7]=s7;
 
 #pragma unroll 4
-for (int i=0;i<4;i++) {outputHash[i*threads+thread]=hash.h8[i];} //else {outputHash[i*threads+thread]=0;}}
+for (int i=0;i<4;i++) {outputHash[i*threads+thread]=hash.h8[i];} 
  } // threads
 }
 
@@ -540,7 +540,7 @@ __host__ void m7_haval256_cpu_hash_120(int thr_id, int threads, uint32_t startNo
 	const int threadsperblock = 256; // Alignment mit mixtob Grösse. NICHT ÄNDERN
 
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid(threads/threadsperblock);
 	dim3 block(threadsperblock);
 //	dim3 grid(1);
 //	dim3 block(1);

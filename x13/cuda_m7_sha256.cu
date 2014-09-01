@@ -16,7 +16,7 @@ extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int t
 #define host_swab32(x)        ( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 
  __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
-__constant__ uint32_t pTarget[8];
+__constant__ uint64_t pTarget[4];
 __constant__ uint32_t pbuf[8];
 uint32_t *d_mnounce[8];
 uint32_t *d_MNonce[8];
@@ -75,7 +75,7 @@ static __device__ __forceinline__ uint32_t bsg2_0(uint32_t x)
 	uint32_t r1 = SPH_ROTR32(x,2);
 	uint32_t r2 = SPH_ROTR32(x,13);
 	uint32_t r3 = SPH_ROTR32(x,22);
-	return xor3b(r1,r2,r3);
+	return xor3b(r1,r2,r3); 
 }
 static __device__ __forceinline__ uint32_t bsg2_1(uint32_t x)
 {
@@ -287,7 +287,7 @@ static __forceinline__ void sha2_round_body_host(uint32_t* in, uint32_t* r,const
 		sha2_step1_host(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
 		sha2_step1_host(b,c,d,e,f,g,h,a,in[15],Kshared[15]);
 
-#pragma unroll 3
+
 		for (int i=0;i<3;i++) {
 
 		sha2_step2_host(a,b,c,d,e,f,g,h,in,0,Kshared[16+16*i]);
@@ -320,22 +320,10 @@ static __forceinline__ void sha2_round_body_host(uint32_t* in, uint32_t* r,const
 }
 
 
-__global__ void m7_sha256_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__ void __launch_bounds__(512,1) m7_sha256_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
-/*	
-	__shared__ uint32_t Kshared[64];
-	if (threadIdx.x < 64) {
-		Kshared[threadIdx.x]=K[threadIdx.x];
-	}
-	__syncthreads();
-*/	
-union {
-uint8_t h1[64];
-uint32_t h4[16];
-uint64_t h8[8];
-} hash;  
-//uint32_t buf[8];
-    
+
+   
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
@@ -358,8 +346,6 @@ uint64_t h8[8];
 
                     sha2_round_body(in2,buf,K);
 					sha2_round_body(in3,buf,K);
-//#pragma unroll 8
-//for (int i=0;i<8;i++) {hash.h4[i]=cuda_swab32(buf[i]);}
 
 #pragma unroll 4
 for (int i=0;i<4;i++) {outputHash[i*threads+thread]=cuda_swab32ll(((uint64_t*)buf)[i]);}
@@ -371,7 +357,7 @@ for (int i=0;i<4;i++) {outputHash[i*threads+thread]=cuda_swab32ll(((uint64_t*)bu
 }
 
 
-__global__ void m7_sha256_gpu_hash_300(int threads, uint32_t startNounce, uint64_t *g_hash1, uint64_t *g_nonceVector, uint32_t *resNounce)
+__global__ void  m7_sha256_gpu_hash_300(int threads, uint32_t startNounce, uint64_t *g_hash1, uint64_t *g_nonceVector, uint32_t *resNounce)
 {
 /*	
 	__shared__ uint32_t Kshared[64];
@@ -439,18 +425,23 @@ uint64_t h8[38];
 				   sha2_round_body(in,buf,K);
 
 uint32_t nounce = startNounce +thread;
-		bool rc = false;
+		bool rc = true;
 
 
-		#pragma unroll 4	
-		for (int i = 0; i < 4; i++) 
-		{
-			if (cuda_swab32ll(((uint64_t*)buf)[i]) != ((uint64_t*)pTarget)[i]) {
-				if (cuda_swab32ll(((uint64_t*)buf)[i]) < ((uint64_t*)pTarget)[i]) {rc = true;} else {rc =  false;}
-//			if cuda_swab32(((uint64_t*)buf)[3]) < ((uint64_t*)pTarget)[3]) {rc = true;} 
-			}
-		}
-
+    if (cuda_swab32ll(((uint64_t*)buf)[3]) > pTarget[3]) {rc = false;} 
+//// only needed for solo mining, commenting it out will probably increased rejected block (no big deal actually)
+	/*
+	else if (cuda_swab32ll(((uint64_t*)buf)[3]) == pTarget[3]) {  // in case ptarget=buf=0
+		          if (cuda_swab32ll(((uint64_t*)buf)[2]) > pTarget[2]) {rc = false;} 
+	         else if (cuda_swab32ll(((uint64_t*)buf)[2]) == pTarget[2]) {
+				         if (cuda_swab32ll(((uint64_t*)buf)[1]) > pTarget[1]) {rc = false;} 
+	                     else if (cuda_swab32ll(((uint64_t*)buf)[1]) == pTarget[1]) {
+				                  if (cuda_swab32ll(((uint64_t*)buf)[0]) > pTarget[0]) {rc = false;} 
+								  else if (cuda_swab32ll(((uint64_t*)buf)[0]) == pTarget[0]) {rc = true;}
+						 }}}
+      */      
+	
+	
 
 		if(rc == true)
 		{
@@ -481,10 +472,10 @@ __host__  uint32_t m7_sha256_cpu_hash_300(int thr_id, int threads, uint32_t star
 	
 	uint32_t result = 0xffffffff;
 	cudaMemset(d_MNonce[thr_id], 0xff, sizeof(uint32_t));
-	const int threadsperblock = 384; // Alignment mit mixtob Grösse. NICHT ÄNDERN
-
+	//const int threadsperblock = 384; // Alignment mit mixtob Grösse. NICHT ÄNDERN
+	const int threadsperblock = 512;
 	
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid(threads/threadsperblock);
 	dim3 block(threadsperblock);
 
 	size_t shared_size = 0;
@@ -504,7 +495,7 @@ __host__ void m7_sha256_cpu_hash_120(int thr_id, int threads, uint32_t startNoun
 	const int threadsperblock = 512; // Alignment mit mixtob Grösse. NICHT ÄNDERN
 
 	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid(threads/threadsperblock);
 	dim3 block(threadsperblock); 
 //	dim3 grid(1);
 //	dim3 block(1);
@@ -523,7 +514,7 @@ __host__ void m7_sha256_setBlock_120(void *pdata,const void *ptarget)  //not use
 	memset(PaddedMessage+122,ending,1); 
 	memset(PaddedMessage+123, 0, 5); //useless
 	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol( pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol( pTarget, ptarget, 4*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 	/// do first loop here... ///
     
 	uint32_t * alt_data = (uint32_t*) PaddedMessage; 

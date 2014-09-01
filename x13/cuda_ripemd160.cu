@@ -317,8 +317,6 @@ uint64_t h8[8];
 #define F5(x, y, z)   xornt64(x,y,z)
         uint32_t in2[16],in3[16];
         uint32_t in[16],buf[5]; 
-//	    #pragma unroll 16
-//		for (int i=0;i<16;i++) {in[i]= c_PaddedMessage80[i];}
         #pragma unroll 16
         for (int i=0;i<16;i++) {if ((i+16)<29)  {in2[i]= c_PaddedMessage80[i+16];} 
 						   else if ((i+16)==29) {in2[i]= nounce;}
@@ -327,11 +325,8 @@ uint64_t h8[8];
 		#pragma unroll 16
 		for (int i=0;i<16;i++) {in3[i]=0;}
 		                        in3[14]=0x3d0;
-//		#pragma unroll 5
-//		for (int i=0;i<5;i++) {buf[i]=gpu_IV[i];}
          #pragma unroll 5
 		 for (int i=0;i<5;i++) {buf[i]=bufo[i];}
-//		 RIPEMD160_ROUND_BODY(in, buf); //no need to calculate it several time (need to moved)
 		 RIPEMD160_ROUND_BODY(in2, buf);		 
          RIPEMD160_ROUND_BODY(in3, buf);
 
@@ -341,13 +336,10 @@ hash.h4[5]=0;
 for (int i=0;i<5;i++) 
 {hash.h4[i]=buf[i];
 }
-//uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
-//#pragma unroll 3
-//for (int i=0;i<3;i++) {outHash[i]=hash.h8[i];}
+
 #pragma unroll 3
 for (int i=0;i<3;i++) {outputHash[i*threads+thread]=hash.h8[i];}
-//#pragma unroll 8
-//for (int i=0;i<8;i++) { if (i<3) {outputHash[i*threads+thread]=hash.h8[i];} else {outputHash[i*threads+thread]=0;}}
+
  }
 }
 
@@ -397,7 +389,7 @@ __host__ void m7_ripemd160_cpu_hash_120(int thr_id, int threads, uint32_t startN
 	const int threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
 
 
-dim3 grid((threads + threadsperblock-1)/threadsperblock);
+dim3 grid(threads/threadsperblock);
 dim3 block(threadsperblock);
 //dim3 grid(1);
 //dim3 block(1);

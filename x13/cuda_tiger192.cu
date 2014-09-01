@@ -713,22 +713,24 @@ uint64_t h8[8];
 
         uint64_t in[8],buf[3];
 		uint64_t in2[8],in3[8];
+
         #pragma unroll 8
 		for (int i=0;i<8;i++) {in2[i]= c_PaddedMessage80[i+8];}
 		uint32_t* Mess = (uint32_t*)in2;
 		Mess[13]=nounce;
-        #pragma unroll 8
-		for (int i=0;i<8;i++) {in3[i]=0;}
-		in3[7]=0x3d0;
-		#pragma unroll 3
 
+        #pragma unroll 7
+		for (int i=0;i<7;i++) {in3[i]=0;}
+		in3[7]=0x3d0;
+
+		#pragma unroll 3
 		for (int i=0;i<3;i++) {buf[i]=bufo[i];}
 
          TIGER_ROUND_BODY(in2, buf);
 		 TIGER_ROUND_BODY(in3, buf);
 
-#pragma unroll 8
-for (int i=0;i<8;i++) { if (i<3) {outputHash[i*threads+thread]=buf[i];} else {outputHash[i*threads+thread]=0;}}
+#pragma unroll 3
+for (int i=0;i<3;i++) {outputHash[i*threads+thread]=buf[i];} 
  } //// threads
 }
 
@@ -753,7 +755,7 @@ __host__ void m7_tiger192_cpu_hash_120(int thr_id, int threads, uint32_t startNo
 	const int threadsperblock = 640; // Alignment mit mixtab Grösse. NICHT ÄNDERN
 //	const int threadsperblock = 256;
 
-dim3 grid((threads + threadsperblock-1)/threadsperblock);
+dim3 grid(threads/threadsperblock);
 dim3 block(threadsperblock);
 //dim3 grid(1);
 //dim3 block(1);

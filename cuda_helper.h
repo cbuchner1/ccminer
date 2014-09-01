@@ -13,7 +13,7 @@ static __device__ unsigned long long oMAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 static __device__ unsigned long long MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 {
 uint64_t result;
-asm("{\n\t"
+asm volatile ("{\n\t"
 	"mov.b64 %0,{%1,%2}; \n\t"
 		"}"
 		: "=l"(result) : "r"(LO) , "r"(HI));
@@ -22,7 +22,7 @@ return result;
 static __device__ uint32_t HIWORD(uint64_t x)
 {
 uint32_t result;
-asm("{\n\t"
+asm volatile ("{\n\t"
 	".reg .u32 xl; \n\t"
 	"mov.b64 {xl,%0},%1; \n\t"
 		"}"
@@ -32,7 +32,7 @@ return result;
 static __device__ uint32_t LOWORD(uint64_t x)
 {
 uint32_t result;
-asm("{\n\t"
+asm volatile ("{\n\t"
 	".reg .u32 xh; \n\t"
 	"mov.b64 {%0,xh},%1; \n\t"
 		"}"
@@ -64,7 +64,7 @@ static __device__ uint64_t oREPLACE_HIWORD(const uint64_t &x, const uint32_t &y)
 }
 
 static __device__ uint64_t REPLACE_HIWORD(uint64_t x, uint32_t y) {
-	asm("{\n\t"
+	asm volatile("{\n\t"
 		" .reg .u32 tl,th; \n\t"
 		"mov.b64 {tl,th},%0; \n\t"
 		"mov.b64 %0,{tl,%1}; \n\t"
@@ -73,8 +73,9 @@ static __device__ uint64_t REPLACE_HIWORD(uint64_t x, uint32_t y) {
 return x;
 }
 
+
 static __device__ uint64_t REPLACE_LOWORD(uint64_t x, uint32_t y) {
-        asm("{\n\t"
+        asm volatile ("{\n\t"
 		" .reg .u32 tl,th; \n\t"
 		"mov.b64 {tl,th},%0; \n\t"
 		"mov.b64 %0,{%1,th}; \n\t"
@@ -108,19 +109,7 @@ static __device__ uint64_t swap2ll(uint32_t lo, uint32_t hi)
 return(MAKE_ULONGLONG(cuda_swab32(lo),cuda_swab32(hi)));
 }
 
-static __device__ uint64_t swap32toll(uint8_t* lo,uint8_t* hi)
-{
-uint64_t result;
-asm("{\n\t"
-		".reg .b32 l,h; \n\t"
-		"mov.b32 l,{%4,%3,%2,%1}; \n\t"		
-		"mov.b32 h,{%8,%7,%6,%5}; \n\t"
-		"mov.b64 %0,{l,h}; \n\t"
-		"}"
-		: "=l"(result) : "r"(lo)  ,
-		                 "r"(hi));
-return result;
-}
+
 // Endian Drehung für 64 Bit Typen
 static __device__ uint64_t cuda_swab64(uint64_t x) {
     return MAKE_ULONGLONG(cuda_swab32(HIWORD(x)), cuda_swab32(LOWORD(x)));
@@ -167,98 +156,50 @@ __forceinline__ __device__ uint64_t oROTL64(const uint64_t value, const int offs
 #define oROTL64(x, n)        (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
 
+// Wolf0 Rotate
 #if __CUDA_ARCH__ >= 350
-__forceinline__ __device__ uint64_t ROTR64(const uint64_t value, const int offset) {
-    uint64_t result;
-    if(offset < 32) {
-		asm("{\n\t"
-		" .reg .u32 tl,th,vl,vh; \n\t"
-		"mov.b64 {tl,th},%1; \n\t"
-		"shf.r.wrap.b32 vl,tl,th,%2; \n\t"
-		"shf.r.wrap.b32 vh,th,tl,%2; \n\t"
-		"mov.b64 %0,{vl,vh}; \n\t"
-		"}"
-		: "=l"(result) : "l"(value) , "r"(offset));
-    } else {
-		asm("{\n\t"
-		" .reg .u32 tl,th,vl,vh; \n\t"
-		"mov.b64 {tl,th},%1; \n\t"
-		"shf.r.wrap.b32 vh,tl,th,%2; \n\t"
-		"shf.r.wrap.b32 vl,th,tl,%2; \n\t"
-		"mov.b64 %0,{vl,vh}; \n\t"
-		"}"
-		: "=l"(result) : "l"(value) , "r"(offset));
-    }
-    return  result;
+__forceinline__ __device__ uint64_t ROTR64(const uint64_t x, const int y)
+{
+	uint64_t res;
+		
+	asm("{\n\t"
+			".reg .u32 tl,th,vl,vh;\n\t"
+			".reg .pred p;\n\t"
+			"mov.b64 {tl,th}, %1;\n\t"
+			"shf.r.wrap.b32 vl, tl, th, %2;\n\t"
+			"shf.r.wrap.b32 vh, th, tl, %2;\n\t"
+			"setp.lt.u32 p, %2, 32;\n\t"
+			"@p mov.b64 %0, {vl,vh};\n\t"
+			"@!p mov.b64 %0, {vh,vl};\n\t"
+			"}" : "=l"(res) : "l"(x) , "r"(y));
+	
+	return res;
 }
 #else
 #define ROTR64(x, n)        (((x) >> (n)) | ((x) << (64 - (n))))
 #endif
 
 #if __CUDA_ARCH__ >= 350
-__forceinline__ __device__ uint64_t ROTL64(const uint64_t value, const int offset) {
-    uint64_t result;
-    if(offset >= 32) {
-		asm("{\n\t"
-		" .reg .u32 tl,th,vl,vh; \n\t"
-		"mov.b64 {tl,th},%1; \n\t"
-		"shf.l.wrap.b32 vl,tl,th,%2; \n\t"
-		"shf.l.wrap.b32 vh,th,tl,%2; \n\t"
-		"mov.b64 %0,{vl,vh}; \n\t"
-		"}"
-		: "=l"(result) : "l"(value) , "r"(offset));
-    } else {
-		asm("{\n\t"
-		" .reg .u32 tl,th,vl,vh; \n\t"
-		"mov.b64 {tl,th},%1; \n\t"
-		"shf.l.wrap.b32 vh,tl,th,%2; \n\t"
-		"shf.l.wrap.b32 vl,th,tl,%2; \n\t"
-		"mov.b64 %0,{vl,vh}; \n\t"
-		"}"
-		: "=l"(result) : "l"(value) , "r"(offset));
-    }
-    return  result;
+__forceinline__ __device__ uint64_t ROTL64(const uint64_t x, const int y)
+{
+	uint64_t res;
+		
+	asm("{\n\t"
+			".reg .u32 tl,th,vl,vh;\n\t"
+			".reg .pred p;\n\t"
+			"mov.b64 {tl,th}, %1;\n\t"
+			"shf.l.wrap.b32 vl, tl, th, %2;\n\t"
+			"shf.l.wrap.b32 vh, th, tl, %2;\n\t"
+			"setp.lt.u32 p, %2, 32;\n\t"
+			"@!p mov.b64 %0, {vl,vh};\n\t"
+			"@p mov.b64 %0, {vh,vl};\n\t"
+			"}" : "=l"(res) : "l"(x) , "r"(y));
+	
+	return res;
 }
 #else
 #define ROTL64(x, n)        (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
-
-/*
-__device__ __forceinline__
-uint64_t rotr_t64(uint64_t x, uint32_t n)
-{
-    uint64_t result;
-    asm("{\n\t"
-        ".reg .b64 lhs;\n\t"
-        ".reg .b64 rhs;\n\t"
-        ".reg .u32 amt2;\n\t"
-        "shr.b64 lhs, %1, %2;\n\t"
-        "sub.u32 amt2, 64, %2;\n\t"
-        "shl.b64 rhs, %1, amt2;\n\t"
-        "add.u64 %0, lhs, rhs;\n\t"
-        "}\n\t"
-    : "=l"(result) : "l"(x), "r"(n));
-    return result;
-}
-
-// 64-bit ROTATE LEFT
-__device__ __forceinline__
-uint64_t rotl_t64(uint64_t x, uint32_t n)
-{
-    uint64_t result;
-    asm("{\n\t"
-        ".reg .b64 lhs;\n\t"
-        ".reg .b64 rhs;\n\t"
-        ".reg .u32 amt2;\n\t"
-        "shl.b64 lhs, %1, %2;\n\t"
-        "sub.u32 amt2, 64, %2;\n\t"
-        "shr.b64 rhs, %1, amt2;\n\t"
-        "add.u64 %0, lhs, rhs;\n\t"
-        "}\n\t"
-    : "=l"(result) : "l"(x), "r"(n));
-    return result;
-}
-*/
 
 __forceinline__ __device__ uint64_t xor1(uint64_t a, uint64_t b) {
 	uint64_t result;
@@ -306,28 +247,16 @@ __forceinline__ __device__ uint64_t xor5(uint64_t a, uint64_t b, uint64_t c, uin
 }
 
 
-/*
-__forceinline__ __device__ uint64_t xor4(uint64_t a, uint64_t b, uint64_t c, uint64_t d) {
-	uint64_t result;
-	asm("{\n\t"
-		" .reg .u64 m,n;\n\t"
-		"xor.b64 m, %3, %4;\n\t"
-		"xor.b64 n, %2, m;\n\t"
-		"xor.b64 %0, %1, n;\n\t"
-		"}\n\t"
-		: "=l"(result) :"l"(a), "l"(b), "l"(c), "l"(d));
-	return result;
-}
-*/
+
 __forceinline__ __device__ uint64_t xor8(uint64_t a, uint64_t b, uint64_t c, uint64_t d,uint64_t e,uint64_t f,uint64_t g, uint64_t h) {
 	uint64_t result;
-	asm("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(g) ,"l"(h));
-	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(f));
-	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(e));
-	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(d));
-	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(c));
-	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(b));
-	asm("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(a));
+	asm volatile ("xor.b64 %0, %1, %2;" : "=l"(result) : "l"(g) ,"l"(h));
+	asm volatile ("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(f));
+	asm volatile ("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(e));
+	asm volatile ("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(d));
+	asm volatile ("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(c));
+	asm volatile ("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(b));
+	asm volatile ("xor.b64 %0, %0, %1;" : "+l"(result) : "l"(a));
 	return result;
 }
 
@@ -411,7 +340,7 @@ __forceinline__ __device__ uint64_t xornt64(uint64_t a, uint64_t b, uint64_t c)
 __forceinline__ __device__ uint64_t sph_t64(uint64_t x)
 {
 uint64_t result;
-asm("{\n\t"
+ asm("{\n\t"
     "and.b64 %0,%1,0xFFFFFFFFFFFFFFFF;\n\t"
     "}\n\t"
 	: "=l"(result) : "l"(x));
@@ -420,7 +349,7 @@ asm("{\n\t"
 __forceinline__ __device__ uint32_t sph_t32(uint32_t x)
 {
 uint32_t result;
-asm("{\n\t"
+ asm("{\n\t"
     "and.b32 %0,%1,0xFFFFFFFF;\n\t"
     "}\n\t"
 	: "=r"(result) : "r"(x));
@@ -518,79 +447,10 @@ a=c;
 c=b;
 b=d;
 asm("not.b32 %0,%1;" : "=r"(d) : "r"(t));
-//asm("xor.b32 %0,%0,0xFFFFFFFF;" : "+r"(d));
-}
-/*
-__forceinline__ __device__ uint64_t byte64(uint64_t x,uint32_t n) 
-{
-uint64_t result;
-unsigned res;
-asm("shr.b64 %0,%1,%2;" : "=l"(result) : "l"(x),"r"(8*n)); 
-res= (unsigned) result;
-asm("and.b64 %0,%0,0x00000000000000FF;" : "+l"(res));
-return res;
-}
-*/
-__forceinline__ __device__ uint32_t byte(uint64_t x,uint32_t n)
-{
-uint64_t result;
-asm("{\n\t"
-	".reg .u64 m;\n\t"
-	"shr.b64 m,%1,%2;\n\t"
-	"and.b64 %0,m,0x00000000000000FF;\n\t"
-	    "}\n\t" 
-    : "=l"(result) : "l"(x) , "r"(8*n));
-	return (uint32_t) result;
-//asm("shr.b64 %0,%1,%2;" : "=l"(result) : "l"(x) , "r"(8*n));
-//asm("and.b64 %0,%0,0x00000000000000FF;" : "+l"(result));
-//	return (uint32_t) result;
-}
-/*
-__forceinline__ __device__ uint64_t* mult128(uint64_t a, uint64_t b)
-{
-uint64_t c[2];
-asm("mul.hi.u64 %0,%1,%2" : "=l"(c[1]) : "l"(a) , "l"(b));
-asm("mul.lo.u64 %0,%1,%2" : "=l"(c[0]) : "l"(a) , "l"(b));
-return c;
-}
-*/
-__forceinline__ __device__ uint64_t mult128hi(uint64_t a, uint64_t b)
-{
-uint64_t c;
-asm("mul.hi.u64 %0,%1,%2" : "=l"(c) : "l"(a) , "l"(b));
-return c;
-}
-__forceinline__ __device__ uint64_t muladd128hi(uint64_t a, uint64_t b,uint64_t c,uint64_t e)
-{
-uint64_t d;
-asm("{\n\t"
-	".reg .u64 m;\n\t"
-    "add.u64 m,%3,%4;\n\t" 
-    "mad.hi.u64 %0,%1,%2,m;\n\t"     
-	"}\n\t"
-	: "=l"(d) : "l"(a), "l"(b), "l"(c), "l"(e));
-return d;
-}
-
-__forceinline__ __device__ uint64_t muladd128lo(uint64_t a, uint64_t b,uint64_t c,uint64_t e)
-{
-uint64_t d;
-asm("{\n\t"
-	".reg .u64 m;\n\t"
-    "add.u64 m,3%,%4;\n\t" 
-    "mad.lo.u64 %0,%1,%2,m;\n\t"     
-	"}\n\t"
-	: "=l"(d) : "l"(a), "l"(b), "l"(c), "l"(e));
-return d;
 }
 
 
-__forceinline__ __device__ uint64_t mult128lo(uint64_t a, uint64_t b)
-{
-uint64_t c;
-asm("mul.lo.u64 %0,%1,%2" : "=l"(c) : "l"(a) , "l"(b));
-return c;
-}
+
 
 __forceinline__ __device__ void muladd128(uint64_t &u,uint64_t &v,uint64_t a, uint64_t b,uint64_t &c,uint64_t &e)
 {
@@ -626,27 +486,14 @@ asm("{\n\t"
 return result;
 }
 
-/*
-__device__  void bigmul(void *wa, uint64_t* am, uint64_t* bm, int sizea, int sizeb)
+__device__ __forceinline__ uint64_t shfl(uint64_t x, int lane)
 {
-
-uint64_t* w = (uint64_t*)wa;
-//printf("coming here bigmul core routine %08x %08x  %d  %d \n",am[0],bm[0],sizea,sizeb);
-#pragma unroll
-for (int i=0;i<sizea+sizeb;i++) {w[i]=0;}
-#pragma unroll
-for (int i=0;i<sizeb;i++) {
-	uint64_t c=0;
-	uint64_t u=0,v=0;
-    #pragma unroll
-	for (int j=0;j<sizea;j++) {
-    muladd128(u,v,am[j],bm[i],w[i+j],c);	
-    w[i+j]=v;
-    c=u;
-	}
-   w[i+sizea]=u;
- }
-
+uint32_t lo,hi;
+asm volatile("mov.b64 {%0,%1},%2;" : "=r"(lo), "=r"(hi) : "l"(x));
+lo = __shfl(lo, lane);
+hi = __shfl(hi, lane);
+asm volatile("mov.b64 %0,{%1,%2};" : "=l"(x) : "r"(lo) , "r"(hi));
+return x;
 }
-*/
+
 #endif // #ifndef CUDA_HELPER_H

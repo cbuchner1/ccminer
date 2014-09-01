@@ -36,7 +36,7 @@ static __device__ __forceinline__ void keccak_block(uint64_t *s, const uint64_t 
 
     /* absorb input */    
     
-    //#pragma unroll 
+//#pragma unroll 24
     for (i = 0; i < 24; i++) {
         /* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
 		
@@ -60,13 +60,6 @@ static __device__ __forceinline__ void keccak_block(uint64_t *s, const uint64_t 
         u[3] = xor1(t[2],temp4);
         u[4] = xor1(t[3],temp0);
 		
-		/*
-        u[0] = t[4] ^ ROTL64(t[1], 1);
-        u[1] = t[0] ^ ROTL64(t[2], 1);
-        u[2] = t[1] ^ ROTL64(t[3], 1);
-        u[3] = t[2] ^ ROTL64(t[4], 1);
-        u[4] = t[3] ^ ROTL64(t[0], 1);
-		*/
         /* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
         s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
         s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
@@ -102,11 +95,6 @@ static __device__ __forceinline__ void keccak_block(uint64_t *s, const uint64_t 
         s[10] = ROTL64(    v,  1);
 
         /* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */		
-	//	chi(s[0],s[1],s[2],s[3],s[4]);
-	//	chi(s[5],s[6],s[7],s[8],s[9]);
-	//	chi(s[10],s[11],s[12],s[13],s[14]);
-	//	chi(s[15],s[16],s[17],s[18],s[19]);
-	//	chi(s[20],s[21],s[22],s[23],s[24]);
 
 		v = s[ 0]; w = s[ 1]; 
 		s[ 0] ^= (~w) & s[ 2]; 
@@ -218,7 +206,7 @@ static __forceinline__ void keccak_block_host(uint64_t *s, const uint64_t *kecca
 
 
 
-__global__ void m7_keccak512_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__ void  m7_keccak512_gpu_hash_120(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
 
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -284,7 +272,7 @@ __host__ void m7_keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounc
 {
     const int threadsperblock = 256;
 
-    dim3 grid((threads + threadsperblock-1)/threadsperblock);
+    dim3 grid(threads/threadsperblock);
     dim3 block(threadsperblock);
 
     size_t shared_size = 0;

@@ -113,11 +113,7 @@ __global__ void keccak256_gpu_hash_80(int threads, uint32_t startNounce, void *o
     {
         
 		uint32_t nounce = startNounce + thread;
-union {
-uint8_t h1[64];
-uint32_t h4[16];
-uint64_t h8[8];
-} hash;  
+
 uint64_t keccak_gpu_state[25];
 
 #pragma unroll 25
@@ -129,22 +125,9 @@ uint64_t keccak_gpu_state[25];
 		   keccak_gpu_state[16]=0x8000000000000000;
 
        keccak_block(keccak_gpu_state,keccak_round_constants);
-#pragma unroll 4
-	   for (int i=0;i<4;i++) {
-		   hash.h8[i]=keccak_gpu_state[i];}
 
-		bool rc = true;
-	
-		for (int i = 7; i >= 0; i--) {
-			if (hash.h4[i] > pTarget[i]) {
-				rc = false;
-				break;
-			}
-			if (hash.h4[i] < pTarget[i]) {
-				rc = true;
-				break;
-			}
-		}
+		bool rc = false;
+			if (keccak_gpu_state[3] <= ((uint64_t*)pTarget)[3]) {rc = true;}
 
 		if(rc == true)
 		{

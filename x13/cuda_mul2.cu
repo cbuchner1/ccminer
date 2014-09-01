@@ -45,14 +45,13 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <memory.h>
-//#include "uint256.h"
+
 
 #include "cuda_helper.h"
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 
-//#include "cuPrintf.cu"
 
 typedef struct t4_t{
 	uint64_t high,low;
@@ -199,9 +198,7 @@ __device__ __forceinline__ t4_t T4(uint32_t thread, uint32_t threads, uint32_t i
 	ret.high = g[(idx*2 + 1)*threads + thread];
 	ret.low = g[(idx*2)*threads + thread];
 
-	if(thread==0){
-	//	cuPrintf("Load Idx: %d %8.8X %8.8X %8.8X %8.8X\n", idx, ret.high>>32, ret.high, ret.low>>32, ret.low);
-	}
+	
 
 	return ret;
 }
@@ -210,9 +207,7 @@ __device__ __forceinline__ void T4_store(uint32_t thread, uint32_t threads, uint
 	g[(idx*2 + 1)*threads + thread]=val.high;
 	g[(idx*2)*threads + thread]=val.low;
 
-	if(thread==0){
-	//	cuPrintf("Store Idx: %d %8.8X %8.8X %8.8X %8.8X\n", idx, val.high>>32, val.high, val.low>>32, val.low);
-	}
+	
 
 }
 
@@ -363,8 +358,7 @@ __global__ void gpu_mul(int threads, uint32_t ulegs, uint32_t vlegs, uint64_t *g
 #if 1
 
   	while (vofst < vlegs) {
-		//clear high word //TODO: right 
-	//	printf("Size: %d\n", rp->size[tid]);
+
 	    	g_p[(psize+0)*threads+thread] = 0;
 
             	g_p[(ulegs+rofst)*threads + thread] = addmul_1g (thread, threads, g_p ,rofst , g_u, ulegs,  g_v[vofst*threads+thread]);
@@ -373,21 +367,20 @@ __global__ void gpu_mul(int threads, uint32_t ulegs, uint32_t vlegs, uint64_t *g
 	    	psize++;
         }
 
-//	if(D_REF(rp->d,up->size[tid] + vp->size[tid] - 1,tid) != (uint64_t)0)
-//		rp->size[tid]++;
+
 
 
 #endif
     }
 }
 
-__global__ void gpu_mulT4(int threads, uint32_t ulegs, uint32_t vlegs, uint64_t *g_u, uint64_t *g_v, uint64_t *g_p)
+__global__ void  gpu_mulT4(int threads, uint32_t ulegs, uint32_t vlegs, uint64_t *g_u, uint64_t *g_v, uint64_t *g_p)
 {
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
 
-	if(ulegs < vlegs){  ///everything written the other way around... are you kidding me ?! 
+	if(ulegs < vlegs){  
 		uint64_t t1=ulegs;
 		ulegs = vlegs;   
 		vlegs = t1;
@@ -399,11 +392,7 @@ __global__ void gpu_mulT4(int threads, uint32_t ulegs, uint32_t vlegs, uint64_t 
 
 	ulegs >>= 1; vlegs >>= 1;
 
-	if(thread == 0){
-	//    cuPrintf("U: %d V: %d\n", ulegs, vlegs);
-	}
-
-
+	
 
 	uint32_t vofst=1,rofst=1,psize=0;
 	mulScalarT4(thread,threads,ulegs,g_p,g_u,T4(thread,threads,0,g_v),&psize);
@@ -413,15 +402,11 @@ __global__ void gpu_mulT4(int threads, uint32_t ulegs, uint32_t vlegs, uint64_t 
 	T4_set(&zero,0);
 	
 
-
-//  	while (vofst < vlegs) {
-
 #pragma unroll
 	    for (vofst=1;vofst<vlegs;vofst++) {  
 	    	T4_store(thread,threads,psize,g_p,zero);
 
             	T4_store(thread,threads,ulegs+rofst,g_p,addmul_1gT4 (thread, threads, g_p ,rofst , g_u, ulegs,T4(thread,threads,vofst,g_v)));
-//	    	vofst++; 
 			rofst++;
 	    	psize++;
         }
@@ -459,14 +444,13 @@ __host__ void cpu_mul(int thr_id, int threads, uint32_t alegs, uint32_t blegs, u
 __host__ void cpu_mulT4(int thr_id, int threads, uint32_t alegs, uint32_t blegs, uint64_t *g_a, uint64_t *g_b, uint64_t *g_p, int order)
 {
 
-	const int threadsperblock = 256; // better occupancy (for both 780 and 750 ti's)
+	const int threadsperblock = 256; 
 
-	// berechne wie viele Thread Blocks wir brauchen
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid(2*(threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
 	size_t shared_size =0;
-  	//gpu_mulT4<<<grid, block, shared_size>>>(threads, alegs, blegs, g_a, g_b, g_p) ;
+  	
 	gpu_mulT4<<<grid, block, shared_size>>>(threads, blegs, alegs, g_b, g_a, g_p) ;
 }
 

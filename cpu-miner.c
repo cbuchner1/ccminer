@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
+#include <cmath>
 #ifdef WIN32
 #include <windows.h>
 #else
@@ -44,7 +45,7 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 
-#define PROGRAM_NAME		"minerd"
+#define PROGRAM_NAME		"ccminer"
 #define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
@@ -199,6 +200,7 @@ uint16_t opt_vote = 9999;
 static int num_processors;
 int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
 char *device_name[8]; // CB
+int tp_coef[8];
 static char *rpc_url;
 static char *rpc_userpass;
 static char *rpc_user, *rpc_pass;
@@ -235,7 +237,7 @@ struct option {
 	int *flag;
 	int val;
 };
-#endif
+#endif 
 
 static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
@@ -249,25 +251,26 @@ Options:\n\
                         jackpot   Jackpot hash\n\
                         quark     Quark hash\n\
                         anime     Animecoin hash\n\
-						qubit     qubitcoin hash\n\
-						fresh     freshcoin hash\n\
+		        qubit     qubitcoin hash\n\
+		        fresh     freshcoin hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
-						x14       X14 (MoronCoin) hash\n\
-						x15       X15 (BitBlock) hash\n\
-						x17       X17 (people currency coin) hash\n\
-						whirlcoin  whirlcoin (whirlcoin) hash\n\
-						keccak     keccak256 (maxcoin) hash\n\
-						m7         m7  (crytonite) hash\n\
-						deep       deep  (deepcoin) hash\n\
-						doom       doomcoin  hash\n\
+                        x14       X14 (MoronCoin) hash\n\
+			x15       X15 (BitBlock) hash\n\
+			x17       X17 (people currency coin) hash\n\
+			whirlcoin  whirlcoin (whirlcoin) hash\n\
+			keccak     keccak256 (maxcoin) hash\n\
+			m7         m7  (crytonite) hash\n\
+			deep       deep  (deepcoin) hash\n\
+			doom       doomcoin  hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
-						goalcoin   goalcoin hash\n\
+			goalcoin   goalcoin hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
                         (matching 2nd gt640 in the PC)\n\
+  -F, --throughput     coefficient to apply to the number of threads\n\
   -f, --diff            Divide difficulty by this factor (std is 1) \n\
   -v, --vote=VOTE       block reward vote (for HeavyCoin)\n\
   -m, --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
@@ -311,8 +314,8 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
-
+	"a:c:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:F:f:mv:";
+ 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
 #ifndef WIN32
@@ -344,30 +347,10 @@ static struct option const options[] = {
 	{ "userpass", 1, NULL, 'O' },
 	{ "version", 0, NULL, 'V' },
 	{ "devices", 1, NULL, 'd' },
+	{ "throughput", 1, NULL, 'F'},
 	{ "diff", 1, NULL, 'f' },
 	{ 0, 0, 0, 0 }
 };
-/*
-#pragma pack(push,1)
-class CBlockHeader
-{
-public:
-    //!!!!!!!!!!! struct must be in packed order even though serialize order is version first
-    //or else we can't use hash macros, could also use #pragma pack but that has 
-    //terrible implicatation on non-x86
-    uint32_t hashPrevBlock[8];  //uint256
-    uint32_t hashMerkleRoot[8];
-    uint32_t hashAccountRoot[8];
-    uint64_t nTime;
-    uint64_t nHeight;
-    uint64_t nNonce;
-    uint16_t nVersion;
-};
-#pragma pack(pop)
-*/
-uint16_t mdat7[61];
-uint32_t datam7[30];
-uint32_t targetm7[8];
 
 struct work {
 
@@ -429,12 +412,7 @@ static bool work_decode(const json_t *val, struct work *work)
 		applog(LOG_ERR, "JSON invalid target");
 		goto err_out;
 	}
-	/*
-	for (i = 0; i < ARRAY_SIZE(work->data); i++)
-		work->data[i] = le32dec(work->data + i);
-	for (i = 0; i < ARRAY_SIZE(work->target); i++)
-		work->target[i] = le32dec(work->target + i);
-	*/
+	
 
 	} else {
 
@@ -462,7 +440,7 @@ static bool work_decode(const json_t *val, struct work *work)
 err_out:
 	return false;
 }
-
+/*
 static void share_result(int result, const char *reason)
 {
 	char s[345];
@@ -483,6 +461,49 @@ static void share_result(int result, const char *reason)
 		   100. * accepted_count / (accepted_count + rejected_count),
 		   s,
 		   result ? "(yay!!!)" : "(booooo)");
+
+	if (opt_debug && reason)
+		applog(LOG_DEBUG, "DEBUG: reject reason: %s", reason);
+}
+*/
+int hashratessize=250;
+double hashrates [250]= { }; 
+double totalhashrate = 0.;
+double totalhashsquare =0.;
+int hashcomplete=0;
+int hashrow=0;
+static void share_result(int result, const char *reason)
+{
+	char s[345];
+	char s1[345];
+	char s2[345];
+	double hashrate;
+	int i;
+	double averagehashrate=0.;
+	double avsquare=0.;
+	double stddev=0.;
+	hashrate = 0.;
+	pthread_mutex_lock(&stats_lock);
+	for (i = 0; i < opt_n_threads; i++)
+		hashrate += thr_hashrates[i];
+	result ? accepted_count++ : rejected_count++;
+	pthread_mutex_unlock(&stats_lock);
+	
+	sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", 1e-3 * hashrate);	
+	totalhashrate+=(double) hashrate;
+	totalhashsquare+=pow((double)hashrate,2);
+	hashrow++;
+	averagehashrate=totalhashrate/(double)hashrow;
+	avsquare=totalhashsquare/(double)hashrow;
+	stddev = sqrt(avsquare-pow(averagehashrate,2));
+	sprintf(s1, hashrate >= 1e6 ? "%.0f" : "%.2f", 1e-3 * averagehashrate);
+	sprintf(s2, hashrate >= 1e6 ? "%.0f" : "%.2f", 1e-3 * stddev);
+	
+		applog(LOG_INFO, "accepted: %lu/%lu (%.2f%%), %s kh/s (%s +/- %s) %s",
+				accepted_count,
+				accepted_count + rejected_count,
+				100. * accepted_count / (accepted_count + rejected_count),
+				s,s1,s2, result ? "(yay!!!)" : "(booooo)");
 
 	if (opt_debug && reason)
 		applog(LOG_DEBUG, "DEBUG: reject reason: %s", reason);
@@ -513,7 +534,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	}
 	if (have_stratum) {
 		if (opt_algo == ALGO_M7) {
-			// printf("coming here: have stratum");
+			
 			uint64_t ntime, nonce;
 			char *ntimestr, *noncestr, *xnonce2str;
 
@@ -572,7 +593,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			}
 		} else {
 			
-			// str = bin2hex((unsigned char *)mdat7, sizeof(mdat7));
+			
 			abin2hex(data_str,(unsigned char *)work->data, 122);
 			if (unlikely(!data_str)) {
 				applog(LOG_ERR, "submit_upstream_work OOM");
@@ -621,8 +642,7 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 	bool rc;
 	int err;
 	struct timeval tv_start, tv_end, diff;
-	// printf("get upstream work");
-start:
+
 	gettimeofday(&tv_start, NULL);
 	
 	val = json_rpc_call(curl, rpc_url, rpc_userpass, rpc_req,
@@ -638,7 +658,6 @@ start:
 	if (!val)
 		return false;
 
-	// printf("get upstream work");
 	rc = work_decode(json_object_get(val, "result"), work);
 
 	if (opt_debug && rc) {
@@ -674,7 +693,6 @@ static bool workio_get_work(struct workio_cmd *wc, CURL *curl)
 	struct work *ret_work;
 	int failures = 0;
 
-	// printf("workio_get_work");
 
 	ret_work = (struct work*)calloc(1, sizeof(*ret_work));
 	if (!ret_work)
@@ -780,7 +798,7 @@ static bool get_work(struct thr_info *thr, struct work *work)
 		memset(work->target, 0x00, sizeof(work->target));
 		return true;
 	}
-	// printf("getwork 1\n");
+	
 	/* fill out work request message */
 	wc = (struct workio_cmd *)calloc(1, sizeof(*wc));
 	if (!wc)
@@ -788,13 +806,13 @@ static bool get_work(struct thr_info *thr, struct work *work)
 
 	wc->cmd = WC_GET_WORK;
 	wc->thr = thr;
-	// printf("getwork 2\n");
+	
 	/* send work request to workio thread */
 	if (!tq_push(thr_info[work_thr_id].q, wc)) {
 		workio_cmd_free(wc);
 		return false;
 	}
-	// printf("getwork 3\n");
+	
 	/* wait for response, a unit of work */
 	work_heap = (struct work *)tq_pop(thr->q, NULL);
 	if (!work_heap)
@@ -917,8 +935,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 static void stratum_gen_work_m7(struct stratum_ctx *sctx, struct work *work)
 {
-	unsigned char merkle_root[64];
-	// printf("\n stratum_gen_work7\n");
+
 	pthread_mutex_lock(&sctx->work_lock);
 	strcpy(work->job_id, sctx->job.job_id);
 	work->xnonce2_len = sctx->xnonce2_size;
@@ -938,13 +955,13 @@ static void stratum_gen_work_m7(struct stratum_ctx *sctx, struct work *work)
 	for (int i = 0; i < (int) sctx->xnonce1_size; i++) {
 		*(xnonce_ptr + i) = sctx->xnonce1[i];
 	}
-	for (int i = 0; i < (int) work->xnonce2_len; i++) {
+	for (int i = 0; i < (int) work->xnonce2_len; i++) { 
 		*(xnonce_ptr + sctx->xnonce1_size + i) = work->xnonce2[i];
 	}
 	work->data16[60] = be16dec(sctx->job.m7version);
 
 	pthread_mutex_unlock(&sctx->work_lock);
-//	printf("\n stratum_gen_work7\n");
+
 	diff_to_target(work->target, sctx->job.diff / (65536.0* opt_difficulty));
 
 	if (opt_debug) {
@@ -955,11 +972,7 @@ static void stratum_gen_work_m7(struct stratum_ctx *sctx, struct work *work)
 		applog(LOG_DEBUG, "DEBUG: stratum_gen_work target %s", target_str);
 	}
 }
-/*
-extern "C" {
-void* struct_init(int i);
-}
-*/
+
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -969,11 +982,9 @@ static void *miner_thread(void *userdata)
 	uint32_t end_nonce = (0xffffffffU) / opt_n_threads * (thr_id + 1) - 0x20;
 	unsigned char *scratchbuf = NULL;
 	char s[16];
-	int i;
+
     static int rounds = 0;
-//	void * cuda_ctx = struct_init(thr_id);
 	
-	// printf("miner threads 1\n");
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
 	/* Set worker threads to nice 19 and then preferentially to SCHED_IDLE
@@ -995,25 +1006,24 @@ static void *miner_thread(void *userdata)
 	// printf("\n miner threads 2\n");
 	while (1) {
 		unsigned long hashes_done;
-		unsigned long long m7_hashes_done;
+		
 		struct timeval tv_start, tv_end, diff;
 		int64_t max64;
 		int rc;
 
 		if (have_stratum) {
-			// printf("\n have_stratum miner threads 1\n");
-			while (time(NULL) >= g_work_time + 120)
+			
+			while (time(NULL) >= g_work_time + 60)
 				sleep(1);
 			pthread_mutex_lock(&g_work_lock);
+
        if (opt_algo == ALGO_M7) {		       
 			if (work.data[29] >= end_nonce && !memcmp(work.data, g_work.data, 116))
-//		   if (work.data[29] >= end_nonce)
 					stratum_gen_work_m7(&stratum, &g_work);
-				// printf("opt_algo ALGO_M7 miner threads 1\n");
+				
 			} else {
 				
-				if (work.data[19] >= end_nonce && !memcmp(work.data, g_work.data, 76))
-		//		if (work.data[19] >= end_nonce)
+				if (work.data[19] >= end_nonce && !memcmp(work.data, g_work.data, 76))		
 					stratum_gen_work(&stratum, &g_work);
 			}
 		} else {
@@ -1036,14 +1046,12 @@ static void *miner_thread(void *userdata)
 				g_work_time = have_stratum ? 0 : time(NULL);
 			}
 			if (have_stratum) {
-				// printf("mutex_unlock\n");
 				pthread_mutex_unlock(&g_work_lock);
 				continue;
 			}
 		}
 		if (opt_algo == ALGO_M7) {
 
-// printf("coming here opt_algo\n");
 
 			if (memcmp(work.data, g_work.data, 116)) {
 				memcpy(&work, &g_work, sizeof(struct work));
@@ -1209,19 +1217,20 @@ static void *miner_thread(void *userdata)
 
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
+		
+
 		timeval_subtract(&diff, &tv_end, &tv_start);
 		if (diff.tv_usec || diff.tv_sec) {
 			pthread_mutex_lock(&stats_lock);
 			thr_hashrates[thr_id] =	hashes_done / (diff.tv_sec + 1e-6 * diff.tv_usec);
 			pthread_mutex_unlock(&stats_lock);
 		}
+
 		if (!opt_quiet) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
 			applog(LOG_INFO, "GPU #%d: %s, %s khash/s",
 				device_map[thr_id], device_name[thr_id], s);
-//			applog(LOG_INFO, "thread %d: %lu hashes, %s khash/s",
-//				thr_id, hashes_done, s);
 		}
 		if (opt_benchmark && thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
@@ -1449,7 +1458,7 @@ out:
 
 static void show_version_and_exit(void)
 {
-	// printf("%s\n%s\n", PACKAGE_STRING, curl_version());
+	 printf("%s\n%s\n", PACKAGE_STRING, curl_version());
 	exit(0);
 }
 
@@ -1458,7 +1467,7 @@ static void show_usage_and_exit(int status)
 	if (status)
 		fprintf(stderr, "Try `" PROGRAM_NAME " --help' for more information.\n");
 	else
-		// printf(usage);
+		printf(usage);
 	exit(status);
 }
 
@@ -1662,8 +1671,18 @@ static void parse_arg (int key, char *arg)
 				}
 				pch = strtok (NULL, ",");
 			}
-		}
+		} 
 		break;
+    case 'F': 
+		{
+			char * pch = strtok (arg,",");
+			int tmp_n_threads = 0, last = 0;
+			while (pch != NULL) {
+				tp_coef[tmp_n_threads++] = last = atoi(pch);
+				pch = strtok (NULL, ",");
+			}
+			while (tmp_n_threads < 8) tp_coef[tmp_n_threads++] = last;
+		}
 	case 'f': // CH - Divisor for Difficulty
 		d = atof(arg);
 		if (d == 0)	/* sanity check */
@@ -1765,7 +1784,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "1.2"
+#define PROGRAM_VERSION "djm34 m7v7"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
@@ -1776,15 +1795,22 @@ int main(int argc, char *argv[])
 	SYSTEM_INFO sysinfo;
 #endif
 
-	 printf("     *** ccMiner for nVidia GPUs by Christian Buchner and Christian H. ***\n");
-	 printf("\t             This is version "PROGRAM_VERSION" (beta)\n");
+	 printf("        ***** ccMiner for nVidia GPUs by djm34  *****\n");
+	 printf("\t             This is version "PROGRAM_VERSION" \n");
+	 printf("	based on original ccMiner by Christian Buchner and Christian H. 2014 ***\n");	 
 	 printf("\t  based on pooler-cpuminer 2.3.2 (c) 2010 Jeff Garzik, 2012 pooler\n");
 	 printf("\t  based on pooler-cpuminer extension for HVC from\n\t       https://github.com/heavycoin/cpuminer-heavycoin\n");
 	 printf("\t\t\tand\n\t       http://hvc.1gh.com/\n");
 	 printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n");
-	 printf("\t  LTC donation address: LKS1WDKGED647msBQfLBHV3Ls8sveGncnm\n");
-	 printf("\t  BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM\n");
-	 printf("\t  YAC donation address: Y87sptDEcpLkLeAuex6qZioDbvy1qXZEj4\n");
+	 printf("\tCuda additions Copyright 2014 DJM34\n");
+	 printf("\t  XCN donation address: CNh6F4h1byX7vvbmfQn4LMtsC4TYb8mgmn\n");
+	 printf("\t  BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze\n");
+	 printf("\t  TAC donation address: TuqNvPoQxghHfzwnPpAxSTiYoN6FM8LM5p\n");
+    
+	for(int thr_id = 0; thr_id < 8; thr_id++)
+    {
+		tp_coef[thr_id] = 1;
+	}
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
