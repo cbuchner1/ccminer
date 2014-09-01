@@ -1374,6 +1374,18 @@ void print_hash_tests(void)
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
 	memset(hash, 0, sizeof hash);
+	animehash(&hash[0], &buf[0]);
+	printpfx("anime", hash);
+
+	memset(hash, 0, sizeof hash);
+	blake32hash(&hash[0], &buf[0]);
+	printpfx("blake", hash);
+
+	memset(hash, 0, sizeof hash);
+	fresh_hash(&hash[0], &buf[0]);
+	printpfx("fresh", hash);
+
+	memset(hash, 0, sizeof hash);
 	fugue256_hash(&hash[0], &buf[0], 32);
 	printpfx("fugue256", hash);
 
@@ -1394,20 +1406,12 @@ void print_hash_tests(void)
 	printpfx("myriad", hash);
 
 	memset(hash, 0, sizeof hash);
-	blake32hash(&hash[0], &buf[0]);
-	printpfx("blake", hash);
-
-	memset(hash, 0, sizeof hash);
 	nist5hash(&hash[0], &buf[0]);
 	printpfx("nist5", hash);
 
 	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
-
-	memset(hash, 0, sizeof hash);
-	fresh_hash(&hash[0], &buf[0]);
-	printpfx("fresh", hash);
 
 	memset(hash, 0, sizeof hash);
 	wcoinhash(&hash[0], &buf[0]);

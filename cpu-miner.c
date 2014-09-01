@@ -126,16 +126,16 @@ struct workio_cmd {
 };
 
 typedef enum {
-	ALGO_HEAVY,		/* Heavycoin hash */
-	ALGO_MJOLLNIR,		/* Mjollnir hash */
+	ALGO_ANIME,
+	ALGO_BLAKE,
+	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
-	ALGO_MYR_GR,
+	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_JACKPOT,
+	ALGO_MJOLLNIR,		/* Mjollnir hash */
+	ALGO_MYR_GR,
 	ALGO_QUARK,
-	ALGO_ANIME,
-	ALGO_FRESH,
-	ALGO_BLAKE,
 	ALGO_NIST5,
 	ALGO_WHC,
 	ALGO_X11,
@@ -147,17 +147,17 @@ typedef enum {
 } sha256_algos;
 
 static const char *algo_names[] = {
-	"heavy",
-	"mjollnir",
+	"anime",
+	"blake",
+	"fresh",
 	"fugue256",
 	"groestl",
-	"myr-gr",
+	"heavy",
 	"jackpot",
-	"quark",
-	"anime",
-	"fresh",
-	"blake",
+	"mjollnir",
+	"myr-gr",
 	"nist5",
+	"quark",
 	"whirl",
 	"x11",
 	"x13",
@@ -229,17 +229,17 @@ static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
-                        fugue256  Fuguecoin hash\n\
-                        heavy     Heavycoin hash\n\
-                        mjollnir  Mjollnircoin hash\n\
-                        groestl   Groestlcoin hash\n\
-                        myr-gr    Myriad-Groestl hash\n\
-                        jackpot   Jackpot hash\n\
-                        quark     Quark hash\n\
                         anime     Animecoin hash\n\
                         blake     Blake 256 (like NEOS blake)\n\
                         fresh     Freshcoin hash (shavite 80)\n\
+                        fugue256  Fuguecoin hash\n\
+                        groestl   Groestlcoin hash\n\
+                        heavy     Heavycoin hash\n\
+                        jackpot   Jackpot hash\n\
+                        mjollnir  Mjollnircoin hash\n\
+                        myr-gr    Myriad-Groestl hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
+                        quark     Quark hash\n\
                         whirl     Whirlcoin (old whirlpool)\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
@@ -420,11 +420,11 @@ static void share_result(int result, const char *reason)
 			100. * accepted_count / (accepted_count + rejected_count),
 			s,
 			use_colors ?
-				(result ? CL_GRN "(yay!!!)" : CL_RED "(booooo)")
+				(result ? CL_GRN "yay!!!" : CL_RED "booooo")
 			:	(result ? "(yay!!!)" : "(booooo)"));
 
-	if (opt_debug && reason)
-		applog(LOG_DEBUG, "DEBUG: reject reason: %s", reason);
+	if (reason)
+		applog(LOG_WARNING, "reject reason: %s", reason);
 }
 
 static bool submit_upstream_work(CURL *curl, struct work *work)
@@ -856,7 +856,7 @@ static void *miner_thread(void *userdata)
 			if ((*nonceptr) >= end_nonce)
 				stratum_gen_work(&stratum, &g_work);
 		} else {
-			int min_scantime = have_longpoll ? LP_SCANTIME : opt_scantime;
+			int min_scantime = have_longpoll ? (LP_SCANTIME*3)/4 : opt_scantime;
 			/* obtain new work from internal workio thread */
 			pthread_mutex_lock(&g_work_lock);
 			if (!have_stratum &&
@@ -952,13 +952,13 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
-		case ALGO_BLAKE:
-			rc = scanhash_blake32(thr_id, work.data, work.target,
+		case ALGO_ANIME:
+			rc = scanhash_anime(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
-		case ALGO_ANIME:
-			rc = scanhash_anime(thr_id, work.data, work.target,
+		case ALGO_BLAKE:
+			rc = scanhash_blake32(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

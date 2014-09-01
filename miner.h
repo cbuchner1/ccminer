@@ -400,13 +400,14 @@ extern void tq_thaw(struct thread_q *tq);
 void applog_hash(unsigned char *hash);
 
 void print_hash_tests(void);
-unsigned int jackpothash(void *state, const void *input);
+void animehash(void *state, const void *input);
+void blake32hash(void *output, const void *input);
+void fresh_hash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
+unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
-void fresh_hash(void *state, const void *input);
-void blake32hash(void *output, const void *input);
 void nist5hash(void *state, const void *input);
 void quarkhash(void *state, const void *input);
 void wcoinhash(void *state, const void *input);
