@@ -117,10 +117,10 @@ inline void m7_hash(void *state, const void *input,uint32_t TheNonce, int debug)
     mpz_init(product);
 	 
 
-	__declspec(align(128)) 	uint32_t data[32] ; 
+	uint32_t data[32] ; 
 	uint32_t *data_p64 = data + (116 / sizeof(data[0]));
-	__declspec(align(32))	uint8_t bhash[7][64];
-	__declspec(align(32)) 	uint32_t hash[8];
+	uint8_t bhash[7][64];
+	uint32_t hash[8];
 	memcpy(data,input,122);
 
 

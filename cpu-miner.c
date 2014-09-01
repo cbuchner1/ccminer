@@ -19,8 +19,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
-#include <cmath>
+#include <math.h>
 #ifdef WIN32
+
 #include <windows.h>
 #else
 #include <errno.h>
