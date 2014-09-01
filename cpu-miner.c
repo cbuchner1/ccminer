@@ -805,6 +805,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+	else if (opt_algo == ALGO_BLAKE)
+		diff_to_target(work->target, sctx->job.diff / (4.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }
@@ -898,8 +900,8 @@ static void *miner_thread(void *userdata)
 				max64 = 0x1fffLL;
 				break;
 			case ALGO_BLAKE:
-				max64 = 0xffffffLL;
-				break;
+				//max64 = 0x1000000LL;
+				//break;
 			default:
 				max64 = 0xfffffLL;
 				break;
