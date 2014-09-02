@@ -1205,7 +1205,7 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 	id = json_object_get(val, "id");
 	params = json_object_get(val, "params");
 
-	if (opt_debug) {
+	if (opt_debug_rpc) {
 		applog(LOG_DEBUG, "method: %s", s);
 	}
 

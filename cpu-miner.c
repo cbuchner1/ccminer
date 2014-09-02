@@ -168,6 +168,7 @@ static const char *algo_names[] = {
 };
 
 bool opt_debug = false;
+bool opt_debug_rpc = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
 bool want_longpoll = true;
@@ -520,6 +521,10 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		share_result(json_is_true(res), reason ? json_string_value(reason) : NULL);
 
 		json_decref(val);
+	}
+
+	if (opt_debug_rpc) {
+		applog(LOG_DEBUG, "submit: %s", s);
 	}
 
 	rc = true;
@@ -1325,6 +1330,7 @@ static void parse_arg (int key, char *arg)
 		break;
 	case 'D':
 		opt_debug = true;
+		opt_debug_rpc = true;
 		break;
 	case 'p':
 		free(rpc_pass);
