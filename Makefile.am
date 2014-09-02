@@ -60,6 +60,9 @@ nvcc_FLAGS += $(JANSSON_INCLUDES)
 .cu.o:
 	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=128 -o $@ -c $<
 
+blake32.o: blake32.cu
+	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=64 -o $@ -c $<
+
 # Luffa and Echo are faster with 80 registers than 128
 x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
 	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=80 -o $@ -c $<

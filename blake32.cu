@@ -35,11 +35,8 @@ extern int device_map[8];
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
-// shared for 8 threads of addresses (cudaMalloc)
-uint32_t* d_hash[8];
-
 __constant__
-static uint32_t pTarget[8];
+static uint32_t c_Target[8];
 
 __constant__
 static uint32_t __align__(32) c_PaddedMessage80[32]; // padded message (80 bytes + padding)
@@ -181,7 +178,7 @@ extern __device__ __device_builtin__ void __nvvm_memset(uint8_t *, unsigned char
 #endif
 
 __global__
-void blake256_gpu_hash_80(int threads, uint32_t startNounce, uint32_t* outputHash)
+void blake256_gpu_hash_80(int threads, uint32_t startNounce, uint32_t *resNounce)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < (uint32_t) threads)
@@ -198,9 +195,12 @@ void blake256_gpu_hash_80(int threads, uint32_t startNounce, uint32_t* outputHas
 
 		// ------ Close: Bytes 64 to 80 ------ 
 
-#if 0 /* __CUDA_ARCH__ >= 200 */
-		__nvvm_memset((uint8_t*)(&msg[4]), 0, sizeof(msg)-16, 8);
-#else
+		msg[0] = c_PaddedMessage80[16];
+		msg[1] = c_PaddedMessage80[17];
+		msg[2] = c_PaddedMessage80[18];
+		msg[3] = nounce; /* our tested value */
+		msg[4] = 0x80000000UL; //cuda_swab32(0x80U);
+
 		msg[5] = 0;  // uchar[17 to 55]
 		msg[6] = 0;
 		msg[7] = 0;
@@ -210,95 +210,48 @@ void blake256_gpu_hash_80(int threads, uint32_t startNounce, uint32_t* outputHas
 		msg[11] = 0;
 		msg[12] = 0;
 
-		msg[14] = 0;
-#endif
-		msg[0] = c_PaddedMessage80[16];
-		msg[1] = c_PaddedMessage80[17];
-		msg[2] = c_PaddedMessage80[18];
-		msg[3] = nounce; /* our tested value */
-		msg[4] = 0x80000000UL; //cuda_swab32(0x80U);
-
 		msg[13] = 1;
-		msg[15] = 0x280; // 60-63
+		msg[14] = 0;
+		msg[15] = 0x280;
 
-		blake256_compress(h, msg, c_sigma, c_u256, 0x280); // or 0x80
+		blake256_compress(h, msg, c_sigma, c_u256, 0x280);
 
-		uint32_t *outHash = &outputHash[thread<<3];
-		//#pragma unroll 8
-		for (int i=0; i < 8; i++) {
-			outHash[i] = cuda_swab32(h[i]);
-		}
-	}
-}
-
-__host__
-void blake256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
-{
-	const int threadsperblock = TPB;
-
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
-
-	size_t shared_size = 0;
-
-	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
-
-	MyStreamSynchronize(NULL, order, thr_id);
-}
-
-__global__
-void gpu_check_hash_64(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *resNounce)
-{
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint32_t* pHash = &g_hash[thread<<3];
 		for (int i = 7; i >= 0; i--) {
-			uint32_t hash = pHash[i];
-			if (hash > pTarget[i]) {
+			uint32_t hash = cuda_swab32(h[i]);
+			if (hash > c_Target[i]) {
 				return;
 			}
-			if (hash < pTarget[i]) {
+			if (hash < c_Target[i]) {
 				break;
 			}
 		}
 
-		uint32_t nounce = startNounce + thread;
+		/* keep the smallest nounce, hmm... */
 		if(resNounce[0] > nounce)
 			resNounce[0] = nounce;
 	}
 }
 
 __host__
-uint32_t cpu_check_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
+uint32_t blake256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = 0xffffffff;
-
-	cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t));
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-
 	size_t shared_size = 0;
 
-	gpu_check_hash_64 <<<grid, block, shared_size>>>(threads, startNounce, d_inputHash, d_resNounce[thr_id]);
-	MyStreamSynchronize(NULL, order, thr_id);
+	uint32_t result = 0xffffffffU;
+	cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t));
+
+	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id]);
+	MyStreamSynchronize(NULL, 1, thr_id);
 
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		cudaThreadSynchronize();
 		result = *h_resNounce[thr_id];
 	}
-
 	return result;
-}
-
-__host__
-void blake256_cpu_init(int thr_id)
-{
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_sigma, host_sigma, sizeof(host_sigma), 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], sizeof(uint32_t)));
-	CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], sizeof(uint32_t)));
 }
 
 __host__
@@ -307,47 +260,43 @@ void blake256_cpu_setBlock_80(uint32_t *pdata, const void *ptarget)
 	uint32_t PaddedMessage[32];
 	memcpy(PaddedMessage, pdata, 80);
 	memset(&PaddedMessage[20], 0, 48);
-
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 32, 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, sizeof(PaddedMessage), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_sigma, host_sigma, sizeof(host_sigma), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
 
 extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = TPB * 2048;
-	static bool init[8] = {0,0,0,0,0,0,0,0};
-	uint32_t endiandata[20];
-	uint32_t Htarg = ptarget[7];
+	const int throughput = TPB * 2048; /* 2048 threads is the max on a 750Ti */
+	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	int rc = 0;
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = Htarg = 0x00000f;
+		((uint32_t*)ptarget)[7] = 0x00000f;
 
 	if (!init[thr_id]) {
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 32 * throughput)); /* 32 bytes x 256K Threads (to be removed soon) */
-		blake256_cpu_init(thr_id);
+		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], sizeof(uint32_t)));
+		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], sizeof(uint32_t)));
 		init[thr_id] = true;
 	}
 
 	blake256_cpu_setBlock_80(pdata, (void*)ptarget);
 
-	for (int k=0; k < 20; k++)
-		be32enc(&endiandata[k], pdata[k]);
-
 	do {
-		int order = 0;
-		uint32_t foundNonce;
-
 		// GPU HASH
-		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		foundNonce = cpu_check_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		uint32_t foundNonce = blake256_cpu_hash_80(thr_id, throughput, pdata[19]);
 		if (foundNonce != 0xffffffff)
 		{
+			uint32_t endiandata[20];
 			uint32_t vhashcpu[8];
+			uint32_t Htarg = ptarget[7];
+
+			for (int k=0; k < 20; k++)
+				be32enc(&endiandata[k], pdata[k]);
+
 			be32enc(&endiandata[19], foundNonce);
 
 			blake32hash(vhashcpu, endiandata);
