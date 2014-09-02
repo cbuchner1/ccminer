@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <jansson.h>
 #include <curl/curl.h>
+#include <sys/time.h>
 #include <time.h>
 #ifdef WIN32
 #include "compat/winansi.h"
@@ -1348,6 +1349,31 @@ pop:
 out:
 	pthread_mutex_unlock(&tq->mutex);
 	return rval;
+}
+
+/**
+ * @param buf char[9] mini
+ * @param time_t timer to convert
+ */
+size_t time2str(char* buf, time_t timer)
+{
+	struct tm* tm_info;
+	tm_info = localtime(&timer);
+	return strftime(buf, 19, "%H:%M:%S", tm_info);
+}
+
+/**
+ * Alloc and returns time string (to be freed)
+ * @param time_t timer to convert
+ */
+char* atime2str(time_t timer)
+{
+	struct tm* tm_info;
+	char* buf = malloc(16);
+	memset(buf, 0, 16);
+	tm_info = localtime(&timer);
+	strftime(buf, 19, "%H:%M:%S", tm_info);
+	return buf;
 }
 
 /* sprintf can be used in applog */

@@ -822,9 +822,11 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	pthread_mutex_unlock(&sctx->work_lock);
 
 	if (opt_debug) {
+		char *tm = atime2str(swab32(work->data[17]));
 		char *xnonce2str = bin2hex(work->xnonce2, sctx->xnonce2_size);
-		applog(LOG_DEBUG, "DEBUG: job_id='%s' extranonce2=%s ntime=%08x",
-		       work->job_id, xnonce2str, swab32(work->data[17]));
+		applog(LOG_DEBUG, "DEBUG: job_id=%s xnonce2=%s time=%s",
+		       work->job_id, xnonce2str, tm);
+		free(tm);
 		free(xnonce2str);
 	}
 
@@ -842,10 +844,9 @@ static void *miner_thread(void *userdata)
 	int thr_id = mythr->id;
 	struct work work;
 	uint32_t max_nonce;
-	uint32_t end_nonce = 0xffffffffU / opt_n_threads * (thr_id + 1) - 2;
+	uint32_t end_nonce = 0xffffffffU / opt_n_threads * (thr_id + 1) - (thr_id + 1);
 	unsigned char *scratchbuf = NULL;
 	char s[16];
-	int i;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
@@ -870,6 +871,7 @@ static void *miner_thread(void *userdata)
 		unsigned long hashes_done;
 		struct timeval tv_start, tv_end, diff;
 		int64_t max64;
+		uint64_t umax64;
 		int rc;
 
 		// &work.data[19]
@@ -877,13 +879,17 @@ static void *miner_thread(void *userdata)
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
 		if (have_stratum) {
-			while (time(NULL) >= g_work_time + 120)
-				sleep(1);
+			while (time(NULL) >= g_work_time + opt_scantime)
+				usleep(500*1000);
 			pthread_mutex_lock(&g_work_lock);
+			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 			if ((*nonceptr) >= end_nonce)
 				stratum_gen_work(&stratum, &g_work);
 		} else {
-			int min_scantime = have_longpoll ? (LP_SCANTIME*3)/4 : opt_scantime;
+			int min_scantime = have_longpoll ? LP_SCANTIME : opt_scantime;
+			if (!opt_quiet)
+			applog(LOG_DEBUG, "have_longpoll=%d, have_stratum=%d, min_scantime=%d, g_work_time=%d",
+				have_longpoll, have_stratum, min_scantime, g_work_time);
 			/* obtain new work from internal workio thread */
 			pthread_mutex_lock(&g_work_lock);
 			if (!have_stratum &&
@@ -904,7 +910,7 @@ static void *miner_thread(void *userdata)
 		}
 		if (memcmp(work.data, g_work.data, wcmplen)) {
 			memcpy(&work, &g_work, sizeof(struct work));
-			(*nonceptr) = 0xffffffffU / opt_n_threads * thr_id;
+			(*nonceptr) = 0xffffffffU / opt_n_threads * thr_id; // 0 if single thr
 		} else
 			(*nonceptr)++;
 		pthread_mutex_unlock(&g_work_lock);
@@ -932,10 +938,24 @@ static void *miner_thread(void *userdata)
 				break;
 			}
 		}
-		if ((int64_t)(*nonceptr) + max64 > end_nonce)
+
+		umax64 = (uint64_t) max64;
+		if (end_nonce < (umax64 + (*nonceptr)))
 			max_nonce = end_nonce;
 		else
-			max_nonce = (uint32_t)((*nonceptr) + max64);
+			max_nonce = umax64 + (*nonceptr);
+
+		/* do not recompute something already scanned (and sent) ! */
+		if (hashlog_already_submittted(work.job_id, 0)) {
+			uint32_t lastnonce = hashlog_get_last_sent(work.job_id);
+			if ((*nonceptr) < lastnonce && lastnonce <= max_nonce) {
+				applog(LOG_WARNING, "rescan of sent job? nonce=%x, last was %x", (*nonceptr), lastnonce);
+				max_nonce = lastnonce - 1;
+			} else if ((*nonceptr) == lastnonce) {
+				applog(LOG_WARNING, "rescan of sent job? start nonce = lastnonce");
+				(*nonceptr) = lastnonce + 1;
+			}
+		}
 
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
@@ -1051,6 +1071,7 @@ static void *miner_thread(void *userdata)
 		}
 		if (opt_benchmark && thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
+			int i;
 			for (i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += thr_hashrates[i];
 			if (i == opt_n_threads) {

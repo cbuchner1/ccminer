@@ -390,6 +390,7 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
 void hashlog_remember_submit(char* jobid, uint32_t nounce);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
+uint32_t hashlog_get_last_sent(char* jobid);
 void hashlog_purge_old(void);
 void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);
@@ -404,6 +405,9 @@ extern void tq_freeze(struct thread_q *tq);
 extern void tq_thaw(struct thread_q *tq);
 
 void proper_exit(int reason);
+
+size_t time2str(char* buf, time_t timer);
+char* atime2str(time_t timer);
 
 void applog_hash(unsigned char *hash);
 
