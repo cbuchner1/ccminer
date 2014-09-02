@@ -181,10 +181,10 @@ extern __device__ __device_builtin__ void __nvvm_memset(uint8_t *, unsigned char
 #endif
 
 __global__
-void blake256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
+void blake256_gpu_hash_80(int threads, uint32_t startNounce, uint32_t* outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < (uint32_t) threads)
 	{
 		const uint32_t nounce = startNounce + thread;
 		uint32_t /* __align__(8) */ msg[16];
@@ -223,7 +223,7 @@ void blake256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
 
 		blake256_compress(h, msg, c_sigma, c_u256, 0x280); // or 0x80
 
-		uint32_t *outHash = (uint32_t*) outputHash + thread;
+		uint32_t *outHash = &outputHash[thread<<3];
 		//#pragma unroll 8
 		for (int i=0; i < 8; i++) {
 			outHash[i] = cuda_swab32(h[i]);
@@ -247,40 +247,30 @@ void blake256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_
 }
 
 __global__
-void gpu_check_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
+void gpu_check_hash_64(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *resNounce)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		const uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-		uint32_t *inpHash = &g_hash[hashPosition];
-		uint32_t hash[8];
-
-		#pragma unroll 8
-		for (int i=0; i < 8; i++)
-			hash[i] = inpHash[i];
-
-		/* to enhance ? */
-		int i, rc = 1, position = -1;
-		for (i = 7; i >= 0; i--) {
-			// rc &= (hash[i] <= pTarget[i]);
-			if (hash[i] > pTarget[i] && position < i) {
-				rc = false; position = i;
+		uint32_t* pHash = &g_hash[thread<<3];
+		for (int i = 7; i >= 0; i--) {
+			uint32_t hash = pHash[i];
+			if (hash > pTarget[i]) {
+				return;
 			}
-			if (hash[i] < pTarget[i] && position < i) {
-				rc = true; position = i;
+			if (hash < pTarget[i]) {
+				break;
 			}
 		}
 
-		if(rc && resNounce[0] > nounce)
+		uint32_t nounce = startNounce + thread;
+		if(resNounce[0] > nounce)
 			resNounce[0] = nounce;
 	}
 }
 
 __host__
-uint32_t cpu_check_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
+uint32_t cpu_check_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
 {
 	const int threadsperblock = TPB;
 	uint32_t result = 0xffffffff;
@@ -292,7 +282,7 @@ uint32_t cpu_check_hash_64(int thr_id, int threads, uint32_t startNounce, uint32
 
 	size_t shared_size = 0;
 
-	gpu_check_hash_64 <<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, d_inputHash, d_resNounce[thr_id]);
+	gpu_check_hash_64 <<<grid, block, shared_size>>>(threads, startNounce, d_inputHash, d_resNounce[thr_id]);
 	MyStreamSynchronize(NULL, order, thr_id);
 
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
@@ -322,8 +312,6 @@ void blake256_cpu_setBlock_80(uint32_t *pdata, const void *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, sizeof(PaddedMessage), 0, cudaMemcpyHostToDevice));
 }
 
-#define NULLTEST 0
-
 extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -339,16 +327,10 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 	if (!init[thr_id]) {
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 48 * throughput)); // not sure for this size...
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 32 * throughput)); /* 32 bytes x 256K Threads (to be removed soon) */
 		blake256_cpu_init(thr_id);
 		init[thr_id] = true;
 	}
-
-#if NULLTEST
-	// dev test with a null buffer 0x00000...
-	for (int k = 0; k < 20; k++)
-		pdata[k] = 0;
-#endif
 
 	blake256_cpu_setBlock_80(pdata, (void*)ptarget);
 
@@ -362,13 +344,7 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 		// GPU HASH
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
-#if NULLTEST
-		uint32_t buf[8]; memset(buf, 0, sizeof buf);
-		CUDA_SAFE_CALL(cudaMemcpy(buf, d_hash[thr_id], sizeof buf, cudaMemcpyDeviceToHost));
-		CUDA_SAFE_CALL(cudaThreadSynchronize());
-		//applog_hash((unsigned char*)buf);
-#endif
-		foundNonce = cpu_check_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		foundNonce = cpu_check_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhashcpu[8];
