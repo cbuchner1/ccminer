@@ -388,6 +388,12 @@ bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
+void hashlog_remember_submit(char* jobid, uint32_t nounce);
+uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
+void hashlog_purge_old(void);
+void hashlog_purge_job(char* jobid);
+void hashlog_purge_all(void);
+
 struct thread_q;
 
 extern struct thread_q *tq_new(void);

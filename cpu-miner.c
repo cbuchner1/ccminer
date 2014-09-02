@@ -210,7 +210,6 @@ static struct stratum_ctx stratum;
 
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
-static uint8_t duplicate_shares = 0;
 static unsigned long accepted_count = 0L;
 static unsigned long rejected_count = 0L;
 static double *thr_hashrates;
@@ -354,6 +353,7 @@ static pthread_mutex_t g_work_lock;
 void proper_exit(int reason)
 {
 	cuda_devicereset();
+	hashlog_purge_all();
 	exit(reason);
 }
 
@@ -432,14 +432,6 @@ static void share_result(int result, const char *reason)
 			:	(result ? "(yay!!!)" : "(booooo)"));
 
 	if (reason) {
-		if (!strcmp(reason, "Duplicate share")) {
-			duplicate_shares++;
-			if (duplicate_shares > 3) {
-				// exit from app (until auto restart)
-				applog(LOG_WARNING, "Auto exit to prevent stratum bans: %s", reason);
-				proper_exit(1);
-			}
-		}
 		applog(LOG_WARNING, "reject reason: %s", reason);
 	}
 }
@@ -460,6 +452,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	}
 
 	if (have_stratum) {
+		uint32_t sent;
 		uint32_t ntime, nonce;
 		uint16_t nvote;
 		char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
@@ -472,6 +465,16 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		noncestr = bin2hex((const unsigned char *)(&nonce), 4);
 		xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
 		nvotestr = bin2hex((const unsigned char *)(&nvote), 2);
+
+		sent = hashlog_already_submittted(work->job_id, nonce);
+		if (sent > 0) {
+			sent = (uint32_t) time(NULL) - sent;
+			if (!opt_quiet)
+				applog(LOG_WARNING, "skip submit, nonce %s was already sent %u seconds ago", noncestr, sent);
+			rc = true;
+			goto out;
+		}
+
 		if (opt_algo == ALGO_HEAVY) {
 			sprintf(s,
 				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
@@ -490,6 +493,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			goto out;
 		}
+
+		hashlog_remember_submit(work->job_id, nonce);
+
 	} else {
 
 		/* build hex string */
@@ -826,8 +832,6 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
-	else if (opt_algo == ALGO_BLAKE)
-		diff_to_target(work->target, sctx->job.diff / (4.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }
@@ -1237,8 +1241,9 @@ static void *stratum_thread(void *userdata)
 			pthread_mutex_unlock(&g_work_lock);
 			if (stratum.job.clean) {
 				if (!opt_quiet)
-					applog(LOG_BLUE, "%s send a new %s block", short_url, algo_names[opt_algo]);
+					applog(LOG_BLUE, "%s send a new %s job", short_url, algo_names[opt_algo]);
 				restart_threads();
+				hashlog_purge_old();
 			}
 		}
 		

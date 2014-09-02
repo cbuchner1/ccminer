@@ -180,6 +180,9 @@
     <ClCompile Include="compat\winansi.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="hashlog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
