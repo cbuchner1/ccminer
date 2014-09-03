@@ -285,6 +285,14 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 		init[thr_id] = true;
 	}
 
+	if (throughput < (TPB * 2048))
+		applog(LOG_WARNING, "throughput=%u, start=%x, max=%x", throughput, first_nonce, max_nonce);
+
+	if (max_nonce < first_nonce) {
+		applog(LOG_ERR, "start=%x > end=%x !", first_nonce, max_nonce);
+		return 0;
+	}
+
 	blake256_cpu_setBlock_80(pdata, (void*)ptarget);
 
 	do {
@@ -312,10 +320,13 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 				goto exit_scan;
 			}
 			else if (vhashcpu[7] > Htarg) {
-				applog(LOG_WARNING, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[7], Htarg);
+				applog(LOG_WARNING, "GPU #%d: result for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[7], Htarg);
+			}
+			else if (vhashcpu[6] > ptarget[6]) {
+				applog(LOG_WARNING, "GPU #%d: hash[6] for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[6], ptarget[6]);
 			}
 			else {
-				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
