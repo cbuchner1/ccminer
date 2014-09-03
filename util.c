@@ -559,7 +559,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 		}
 	}
 
-	if (!rc || opt_debug) {
+	if (!rc && opt_debug) {
 		uint32_t hash_be[8], target_be[8];
 		char *hash_str, *target_str;
 		
