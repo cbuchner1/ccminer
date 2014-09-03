@@ -377,6 +377,8 @@ struct stratum_ctx {
 	size_t xnonce2_size;
 	struct stratum_job job;
 	pthread_mutex_t work_lock;
+
+	int srvtime_diff;
 };
 
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);

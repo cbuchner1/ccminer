@@ -179,7 +179,7 @@ static bool submit_old = false;
 bool use_syslog = false;
 bool use_colors = false;
 static bool opt_background = false;
-static bool opt_quiet = false;
+bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_timeout = 270;
@@ -789,7 +789,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
 
 	/* Assemble block header */
-	memset(work->data, 0, 128);
+	memset(work->data, 0, sizeof(work->data));
 	work->data[0] = le32dec(sctx->job.version);
 	for (i = 0; i < 8; i++)
 		work->data[1 + i] = le32dec((uint32_t *)sctx->job.prevhash + i);
@@ -822,7 +822,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	pthread_mutex_unlock(&sctx->work_lock);
 
 	if (opt_debug) {
-		char *tm = atime2str(swab32(work->data[17]));
+		char *tm = atime2str(swab32(work->data[17]) - sctx->srvtime_diff);
 		char *xnonce2str = bin2hex(work->xnonce2, sctx->xnonce2_size);
 		applog(LOG_DEBUG, "DEBUG: job_id=%s xnonce2=%s time=%s",
 		       work->job_id, xnonce2str, tm);
@@ -1689,6 +1689,9 @@ int main(int argc, char *argv[])
 			return 1;
 		sprintf(rpc_userpass, "%s:%s", rpc_user, rpc_pass);
 	}
+
+	/* init stratum data.. */
+	memset(&stratum.url, 0, sizeof(stratum));
 
 	pthread_mutex_init(&stats_lock, NULL);
 	pthread_mutex_init(&g_work_lock, NULL);

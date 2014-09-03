@@ -21,7 +21,6 @@
 #include <unistd.h>
 #include <jansson.h>
 #include <curl/curl.h>
-#include <sys/time.h>
 #include <time.h>
 #ifdef WIN32
 #include "compat/winansi.h"
@@ -1012,12 +1011,13 @@ out:
 
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
-	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *ntime, *nreward;
+	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime, *nreward;
 	size_t coinb1_size, coinb2_size;
 	bool clean, ret = false;
 	int merkle_count, i;
 	json_t *merkle_arr;
 	unsigned char **merkle;
+	int ntime;
 
 	job_id = json_string_value(json_array_get(params, 0));
 	prevhash = json_string_value(json_array_get(params, 1));
@@ -1029,16 +1029,26 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	merkle_count = json_array_size(merkle_arr);
 	version = json_string_value(json_array_get(params, 5));
 	nbits = json_string_value(json_array_get(params, 6));
-	ntime = json_string_value(json_array_get(params, 7));
+	stime = json_string_value(json_array_get(params, 7));
 	clean = json_is_true(json_array_get(params, 8));
 	nreward = json_string_value(json_array_get(params, 9));
 
-	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !ntime ||
+	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !stime ||
 	    strlen(prevhash) != 64 || strlen(version) != 8 ||
-	    strlen(nbits) != 8 || strlen(ntime) != 8) {
+	    strlen(nbits) != 8 || strlen(stime) != 8) {
 		applog(LOG_ERR, "Stratum notify: invalid parameters");
 		goto out;
 	}
+
+	/* store stratum server time diff */
+	hex2bin((unsigned char *)&ntime, stime, 4);
+	ntime = swab32(ntime) - time(0);
+	if (ntime > sctx->srvtime_diff) {
+		sctx->srvtime_diff = ntime;
+		if (!opt_quiet)
+			applog(LOG_DEBUG, "stratum time is at least %ds in the future", ntime);
+	}
+
 	merkle = (unsigned char**)malloc(merkle_count * sizeof(char *));
 	for (i = 0; i < merkle_count; i++) {
 		const char *s = json_string_value(json_array_get(merkle_arr, i));
@@ -1079,7 +1089,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 
 	hex2bin(sctx->job.version, version, 4);
 	hex2bin(sctx->job.nbits, nbits, 4);
-	hex2bin(sctx->job.ntime, ntime, 4);
+	hex2bin(sctx->job.ntime, stime, 4);
 	if(nreward != NULL)
 	{
 		if(strlen(nreward) == 4)
@@ -1368,11 +1378,9 @@ size_t time2str(char* buf, time_t timer)
  */
 char* atime2str(time_t timer)
 {
-	struct tm* tm_info;
-	char* buf = malloc(16);
+	char* buf = (char*) malloc(16);
 	memset(buf, 0, 16);
-	tm_info = localtime(&timer);
-	strftime(buf, 19, "%H:%M:%S", tm_info);
+	time2str(buf, timer);
 	return buf;
 }
 
