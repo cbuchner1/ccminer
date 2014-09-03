@@ -835,7 +835,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 	else if (opt_algo == ALGO_BLAKE)
-		diff_to_target(work->target, sctx->job.diff / (16.0 * opt_difficulty));
+		diff_to_target(work->target, sctx->job.diff / (2.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }
@@ -945,7 +945,7 @@ static void *miner_thread(void *userdata)
 		if (end_nonce < (umax64 + (*nonceptr)))
 			max_nonce = end_nonce;
 		else
-			max_nonce = umax64 + (*nonceptr);
+			max_nonce = (uint32_t) umax64 + (*nonceptr);
 
 		/* do not recompute something already scanned (and sent) ! */
 		if (hashlog_already_submittted(work.job_id, 0)) {
