@@ -123,6 +123,8 @@ static const uint32_t c_u256[16] = {
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
 }
 
+#define BLAKE256_ROUNDS 14
+
 __device__ static
 void blake256_compress(uint32_t *h, uint32_t *block, uint8_t ((*sigma)[16]), const uint32_t *u256, const uint32_t T0, uint8_t nullt = 1)
 {
@@ -134,7 +136,7 @@ void blake256_compress(uint32_t *h, uint32_t *block, uint8_t ((*sigma)[16]), con
 		m[i] = block[i];
 	}
 
-	#pragma unroll 8
+	//#pragma unroll 8
 	for(int i = 0; i < 8; i++)
 		v[i] = h[i];
 
@@ -149,7 +151,7 @@ void blake256_compress(uint32_t *h, uint32_t *block, uint8_t ((*sigma)[16]), con
 	v[15] = u256[7];
 
 	//#pragma unroll
-	for (int i = 0; i < 14; i++) {
+	for (int i = 0; i < BLAKE256_ROUNDS; i++) {
 		/* column step */
 		GS(0, 4, 0x8, 0xC, 0);
 		GS(1, 5, 0x9, 0xD, 2);
@@ -178,10 +180,10 @@ extern __device__ __device_builtin__ void __nvvm_memset(uint8_t *, unsigned char
 #endif
 
 __global__
-void blake256_gpu_hash_80(int threads, uint32_t startNounce, uint32_t *resNounce)
+void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < (uint32_t) threads)
+	if (thread < threads)
 	{
 		const uint32_t nounce = startNounce + thread;
 		uint32_t /* __align__(8) */ msg[16];
@@ -233,7 +235,7 @@ void blake256_gpu_hash_80(int threads, uint32_t startNounce, uint32_t *resNounce
 }
 
 __host__
-uint32_t blake256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce)
+uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
 {
 	const int threadsperblock = TPB;
 
@@ -269,8 +271,8 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int throughput = TPB * 2048; /* 2048 threads is the max on a 750Ti */
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+	uint32_t throughput = min(TPB * 2048, max_nonce - first_nonce);
 	int rc = 0;
 
 	if (opt_benchmark)
@@ -293,6 +295,8 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 			uint32_t endiandata[20];
 			uint32_t vhashcpu[8];
 			uint32_t Htarg = ptarget[7];
+
+			applog(LOG_WARNING, "throughput=%u, start=%x, max=%x", throughput, first_nonce, max_nonce);
 
 			for (int k=0; k < 20; k++)
 				be32enc(&endiandata[k], pdata[k]);
