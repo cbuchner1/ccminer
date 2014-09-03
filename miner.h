@@ -241,6 +241,10 @@ extern int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_blake32(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -281,6 +285,8 @@ struct work_restart {
 };
 
 extern bool opt_debug;
+extern bool opt_debug_rpc;
+extern bool opt_quiet;
 extern bool opt_protocol;
 extern int opt_timeout;
 extern bool want_longpoll;
@@ -311,7 +317,7 @@ extern uint16_t opt_vote;
 #define CL_BLK  "\x1B[22;30m" /* black */
 #define CL_RD2  "\x1B[22;31m" /* red */
 #define CL_GR2  "\x1B[22;32m" /* green */
-#define CL_BRW  "\x1B[22;33m" /* brown */
+#define CL_YL2  "\x1B[22;33m" /* dark yellow */
 #define CL_BL2  "\x1B[22;34m" /* blue */
 #define CL_MA2  "\x1B[22;35m" /* magenta */
 #define CL_CY2  "\x1B[22;36m" /* cyan */
@@ -320,7 +326,7 @@ extern uint16_t opt_vote;
 #define CL_GRY  "\x1B[01;30m" /* dark gray */
 #define CL_LRD  "\x1B[01;31m" /* light red */
 #define CL_LGR  "\x1B[01;32m" /* light green */
-#define CL_YL2  "\x1B[01;33m" /* yellow */
+#define CL_LYL  "\x1B[01;33m" /* tooltips */
 #define CL_LBL  "\x1B[01;34m" /* light blue */
 #define CL_LMA  "\x1B[01;35m" /* light magenta */
 #define CL_LCY  "\x1B[01;36m" /* light cyan */
@@ -372,6 +378,9 @@ struct stratum_ctx {
 	size_t xnonce2_size;
 	struct stratum_job job;
 	pthread_mutex_t work_lock;
+
+	int srvtime_diff;
+	int bloc_height;
 };
 
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
@@ -383,6 +392,16 @@ bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
+void hashlog_remember_submit(char* jobid, uint32_t nounce);
+void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to);
+uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
+uint32_t hashlog_get_last_sent(char* jobid);
+uint64_t hashlog_get_scan_range(char* jobid);
+void hashlog_purge_old(void);
+void hashlog_purge_job(char* jobid);
+void hashlog_purge_all(void);
+void hashlog_dump_job(char* jobid);
+
 struct thread_q;
 
 extern struct thread_q *tq_new(void);
@@ -392,16 +411,22 @@ extern void *tq_pop(struct thread_q *tq, const struct timespec *abstime);
 extern void tq_freeze(struct thread_q *tq);
 extern void tq_thaw(struct thread_q *tq);
 
+void proper_exit(int reason);
+
+size_t time2str(char* buf, time_t timer);
+char* atime2str(time_t timer);
 
 void applog_hash(unsigned char *hash);
 
 void print_hash_tests(void);
-unsigned int jackpothash(void *state, const void *input);
+void animehash(void *state, const void *input);
+void blake32hash(void *output, const void *input);
+void fresh_hash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
+unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
-void fresh_hash(void *state, const void *input);
 void nist5hash(void *state, const void *input);
 void quarkhash(void *state, const void *input);
 void wcoinhash(void *state, const void *input);

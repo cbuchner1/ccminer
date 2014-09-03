@@ -6,8 +6,8 @@
 // Hash Target gegen das wir testen sollen
 __constant__ uint32_t pTarget[8];
 
-uint32_t *d_resNounce[8];
-uint32_t *h_resNounce[8];
+static uint32_t *d_resNounce[8];
+static uint32_t *h_resNounce[8];
 
 // aus heavy.cu
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);

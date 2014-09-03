@@ -115,7 +115,7 @@ void applog(int prio, const char *fmt, ...)
 			case LOG_WARNING: color = CL_YLW; break;
 			case LOG_NOTICE:  color = CL_WHT; break;
 			case LOG_INFO:    color = ""; break;
-			case LOG_DEBUG:   color = ""; break;
+			case LOG_DEBUG:   color = CL_GRY; break;
 
 			case LOG_BLUE:
 				prio = LOG_NOTICE;
@@ -559,7 +559,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 		}
 	}
 
-	if (opt_debug) {
+	if (!rc && opt_debug) {
 		uint32_t hash_be[8], target_be[8];
 		char *hash_str, *target_str;
 		
@@ -572,7 +572,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 
 		applog(LOG_DEBUG, "DEBUG: %s\nHash:   %s\nTarget: %s",
 			rc ? "hash <= target"
-			   : "hash > target (false positive)",
+			   : CL_YLW "hash > target (false positive)" CL_N,
 			hash_str,
 			target_str);
 
@@ -1011,12 +1011,13 @@ out:
 
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
-	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *ntime, *nreward;
+	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime, *nreward;
 	size_t coinb1_size, coinb2_size;
 	bool clean, ret = false;
 	int merkle_count, i;
 	json_t *merkle_arr;
 	unsigned char **merkle;
+	int ntime;
 
 	job_id = json_string_value(json_array_get(params, 0));
 	prevhash = json_string_value(json_array_get(params, 1));
@@ -1028,16 +1029,26 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	merkle_count = json_array_size(merkle_arr);
 	version = json_string_value(json_array_get(params, 5));
 	nbits = json_string_value(json_array_get(params, 6));
-	ntime = json_string_value(json_array_get(params, 7));
+	stime = json_string_value(json_array_get(params, 7));
 	clean = json_is_true(json_array_get(params, 8));
 	nreward = json_string_value(json_array_get(params, 9));
 
-	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !ntime ||
+	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !stime ||
 	    strlen(prevhash) != 64 || strlen(version) != 8 ||
-	    strlen(nbits) != 8 || strlen(ntime) != 8) {
+	    strlen(nbits) != 8 || strlen(stime) != 8) {
 		applog(LOG_ERR, "Stratum notify: invalid parameters");
 		goto out;
 	}
+
+	/* store stratum server time diff */
+	hex2bin((unsigned char *)&ntime, stime, 4);
+	ntime = swab32(ntime) - time(0);
+	if (ntime > sctx->srvtime_diff) {
+		sctx->srvtime_diff = ntime;
+		if (!opt_quiet)
+			applog(LOG_DEBUG, "stratum time is at least %ds in the future", ntime);
+	}
+
 	merkle = (unsigned char**)malloc(merkle_count * sizeof(char *));
 	for (i = 0; i < merkle_count; i++) {
 		const char *s = json_string_value(json_array_get(merkle_arr, i));
@@ -1058,10 +1069,13 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	coinb2_size = strlen(coinb2) / 2;
 	sctx->job.coinbase_size = coinb1_size + sctx->xnonce1_size +
 	                          sctx->xnonce2_size + coinb2_size;
+
 	sctx->job.coinbase = (unsigned char*)realloc(sctx->job.coinbase, sctx->job.coinbase_size);
 	sctx->job.xnonce2 = sctx->job.coinbase + coinb1_size + sctx->xnonce1_size;
 	hex2bin(sctx->job.coinbase, coinb1, coinb1_size);
 	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
+
+	sctx->bloc_height = le16dec((uint8_t*) sctx->job.coinbase + 43);
 	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id))
 		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
 	hex2bin(sctx->job.xnonce2 + sctx->xnonce2_size, coinb2, coinb2_size);
@@ -1078,7 +1092,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 
 	hex2bin(sctx->job.version, version, 4);
 	hex2bin(sctx->job.nbits, nbits, 4);
-	hex2bin(sctx->job.ntime, ntime, 4);
+	hex2bin(sctx->job.ntime, stime, 4);
 	if(nreward != NULL)
 	{
 		if(strlen(nreward) == 4)
@@ -1204,6 +1218,10 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		goto out;
 	id = json_object_get(val, "id");
 	params = json_object_get(val, "params");
+
+	if (opt_debug_rpc) {
+		applog(LOG_DEBUG, "method: %s", s);
+	}
 
 	if (!strcasecmp(method, "mining.notify")) {
 		ret = stratum_notify(sctx, params);
@@ -1346,6 +1364,29 @@ out:
 	return rval;
 }
 
+/**
+ * @param buf char[9] mini
+ * @param time_t timer to convert
+ */
+size_t time2str(char* buf, time_t timer)
+{
+	struct tm* tm_info;
+	tm_info = localtime(&timer);
+	return strftime(buf, 19, "%H:%M:%S", tm_info);
+}
+
+/**
+ * Alloc and returns time string (to be freed)
+ * @param time_t timer to convert
+ */
+char* atime2str(time_t timer)
+{
+	char* buf = (char*) malloc(16);
+	memset(buf, 0, 16);
+	time2str(buf, timer);
+	return buf;
+}
+
 /* sprintf can be used in applog */
 static char* format_hash(char* buf, unsigned char *hash)
 {
@@ -1368,10 +1409,23 @@ extern void applog_hash(unsigned char *hash)
 
 void print_hash_tests(void)
 {
-	unsigned char buf[128], hash[128], s[128];
+	char s[128] = {'\0'};
+	unsigned char buf[128], hash[128];
 	memset(buf, 0, sizeof buf);
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
+
+	memset(hash, 0, sizeof hash);
+	animehash(&hash[0], &buf[0]);
+	printpfx("anime", hash);
+
+	memset(hash, 0, sizeof hash);
+	blake32hash(&hash[0], &buf[0]);
+	printpfx("blake", hash);
+
+	memset(hash, 0, sizeof hash);
+	fresh_hash(&hash[0], &buf[0]);
+	printpfx("fresh", hash);
 
 	memset(hash, 0, sizeof hash);
 	fugue256_hash(&hash[0], &buf[0], 32);
@@ -1400,10 +1454,6 @@ void print_hash_tests(void)
 	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
-
-	memset(hash, 0, sizeof hash);
-	fresh_hash(&hash[0], &buf[0]);
-	printpfx("fresh", hash);
 
 	memset(hash, 0, sizeof hash);
 	wcoinhash(&hash[0], &buf[0]);

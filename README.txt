@@ -63,11 +63,14 @@ its command line interface and options.
                           jackpot     use to mine Jackpotcoin
                           quark       use to mine Quarkcoin
                           anime       use to mine Animecoin
+                          blake       use to mine NEOS (Blake 256)
                           nist5       use to mine TalkCoin
                           fresh       use to mine Freshcoin
+                          whirl       use to mine Whirlcoin
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
+                          x17         use to mine X17
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!
@@ -98,6 +101,7 @@ its command line interface and options.
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
   -c, --config=FILE     load a JSON-format configuration file
+  -C, --color           display colored output in a linux Terminal
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
 
@@ -147,6 +151,14 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Sep.  1st 2014  add X17, optimized x15 and whirl
+                  add blake (256 variant)
+                  color support on Windows,
+                  remove some dll dependencies (pthreads, msvcp)
+
+  Aug. 18th 2014  add X14, X15, Whirl, and Fresh algos,
+                  also add colors and nvprof cmd line support
 
   June 15th 2014  add X13 and Diamond Groestl support.
                   Thanks to tsiv and to Bombadil for the contributions!
@@ -213,6 +225,9 @@ features.
 Notable contributors to this application are:
 
 Christian Buchner, Christian H. (Germany): CUDA implementation 
+
+Tanguy Pruvot : CUDA, blake, general code cleanup, tuneup for linux (Makefiles)
+                and some vstudio 2013 stuff...
 
 and also many thanks to anyone else who contributed to the original
 cpuminer application (Jeff Garzik, pooler), it's original HVC-fork
