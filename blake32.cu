@@ -304,10 +304,14 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 			uint32_t vhashcpu[8];
 			uint32_t Htarg = ptarget[7];
 
-			applog(LOG_WARNING, "throughput=%u, start=%x, max=%x, pdata=%x", throughput, first_nonce, max_nonce, pdata[0]);
-
 			for (int k=0; k < 20; k++)
 				be32enc(&endiandata[k], pdata[k]);
+
+			if (opt_debug && !opt_quiet) {
+				applog(LOG_DEBUG, "throughput=%u, start=%x, max=%x, pdata=%08x...%08x",
+					throughput, first_nonce, max_nonce, endiandata[0], endiandata[7]);
+				applog_hash((unsigned char *)pdata);
+			}
 
 			be32enc(&endiandata[19], foundNonce);
 

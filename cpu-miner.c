@@ -494,7 +494,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			goto out;
 		}
 
-		hashlog_remember_submit(work->job_id, nonce);
+		hashlog_remember_submit(work->job_id, nonce, 0);
 
 	} else {
 
@@ -834,6 +834,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+	else if (opt_algo == ALGO_BLAKE)
+		diff_to_target(work->target, sctx->job.diff / (16.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }

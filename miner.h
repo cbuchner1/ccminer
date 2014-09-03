@@ -286,6 +286,7 @@ struct work_restart {
 
 extern bool opt_debug;
 extern bool opt_debug_rpc;
+extern bool opt_quiet;
 extern bool opt_protocol;
 extern int opt_timeout;
 extern bool want_longpoll;
@@ -390,7 +391,7 @@ bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
-void hashlog_remember_submit(char* jobid, uint32_t nounce);
+void hashlog_remember_submit(char* jobid, uint32_t nounce, uint64_t range);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
 void hashlog_purge_old(void);

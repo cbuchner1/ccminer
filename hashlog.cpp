@@ -7,7 +7,13 @@
 #define HI_DWORD(u64) ((uint32_t) (u64 >> 32))
 #define LO_DWORD(u64) ((uint32_t) u64)
 
-static std::map<uint64_t, uint32_t> tlastshares;
+struct hashlog_data {
+	uint32_t ntime;
+	uint32_t scanned_from;
+	uint32_t scanned_to;
+};
+
+static std::map<uint64_t, hashlog_data> tlastshares;
 
 #define LOG_PURGE_TIMEOUT 15*60
 
@@ -23,11 +29,15 @@ static uint64_t hextouint(char* jobid)
 /**
  * Store submitted nonces of a job
  */
-extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce)
+extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint64_t range)
 {
 	uint64_t njobid = hextouint(jobid);
 	uint64_t key = (njobid << 32) + nonce;
-	tlastshares[key] = (uint32_t) time(NULL);
+	struct hashlog_data data;
+	data.ntime = (uint32_t) time(NULL);
+	data.scanned_from = LO_DWORD(range);
+	data.scanned_to   = HI_DWORD(range);
+	tlastshares[key] = data;
 }
 
 /**
@@ -39,7 +49,7 @@ extern "C" uint32_t hashlog_get_last_sent(char* jobid)
 	uint32_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
-	std::map<uint64_t, uint32_t>::iterator i = tlastshares.begin();
+	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
 		if ((keypfx & i->first) == keypfx && LO_DWORD(i->first) > ret) {
 			ret = LO_DWORD(i->first);
@@ -61,7 +71,8 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 		// search last submitted nonce for job
 		ret = hashlog_get_last_sent(jobid);
 	} else if (tlastshares.find(key) != tlastshares.end()) {
-		ret = (uint32_t) tlastshares[key];
+		hashlog_data data = tlastshares[key];
+		ret = data.ntime;
 	}
 	return ret;
 }
@@ -73,7 +84,7 @@ extern "C" void hashlog_purge_job(char* jobid)
 {
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
-	std::map<uint64_t, uint32_t>::iterator i = tlastshares.begin();
+	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
 		if ((keypfx & i->first) == keypfx)
 			tlastshares.erase(i);
@@ -89,9 +100,9 @@ extern "C" void hashlog_purge_old(void)
 	int deleted = 0;
 	uint32_t now = (uint32_t) time(NULL);
 	uint32_t sz = tlastshares.size();
-	std::map<uint64_t, uint32_t>::iterator i = tlastshares.begin();
+	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
-		if ((now - i->second) > LOG_PURGE_TIMEOUT) {
+		if ((now - i->second.ntime) > LOG_PURGE_TIMEOUT) {
 			deleted++;
 			tlastshares.erase(i);
 		}

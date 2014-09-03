@@ -399,6 +399,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="blake32.cu">
+      <MaxRegCount>64</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
