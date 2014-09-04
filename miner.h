@@ -399,6 +399,7 @@ uint64_t hashlog_get_scan_range(char* jobid);
 void hashlog_purge_old(void);
 void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);
+void hashlog_dump_job(char* jobid);
 
 struct thread_q;
 

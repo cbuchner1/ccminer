@@ -29,8 +29,9 @@ extern "C" void blake32hash(void *output, const void *input)
 #include "cuda_helper.h"
 
 // in cpu-miner.c
+extern bool opt_n_threads;
 extern bool opt_benchmark;
-extern bool opt_debug;
+//extern bool opt_debug;
 extern int device_map[8];
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
@@ -279,7 +280,9 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 		((uint32_t*)ptarget)[7] = 0x00000f;
 
 	if (!init[thr_id]) {
-		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		if (opt_n_threads > 1) {
+			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		}
 		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], sizeof(uint32_t)));
 		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], sizeof(uint32_t)));
 		init[thr_id] = true;
@@ -287,11 +290,6 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 	if (throughput < (TPB * 2048))
 		applog(LOG_WARNING, "throughput=%u, start=%x, max=%x", throughput, first_nonce, max_nonce);
-
-	if (max_nonce < first_nonce) {
-		applog(LOG_ERR, "start=%x > end=%x !", first_nonce, max_nonce);
-		return 0;
-	}
 
 	blake256_cpu_setBlock_80(pdata, (void*)ptarget);
 
@@ -340,5 +338,12 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1;
+	// reset the device to allow multiple instances
+	if (opt_n_threads == 1) {
+		CUDA_SAFE_CALL(cudaDeviceReset());
+		init[thr_id] = false;
+	}
+	// wait proper end of all threads
+	cudaDeviceSynchronize();
 	return rc;
 }

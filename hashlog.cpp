@@ -9,10 +9,12 @@
 #define MK_HI64(u32) (0x100000000ULL * u32)
 
 struct hashlog_data {
-	uint32_t ntime;
+	uint32_t tm_sent;
 	uint32_t scanned_from;
 	uint32_t scanned_to;
 	uint32_t last_from;
+	uint32_t tm_add;
+	uint32_t tm_upd;
 };
 
 static std::map<uint64_t, hashlog_data> tlastshares;
@@ -41,7 +43,7 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 		ret = hashlog_get_last_sent(jobid);
 	} else if (tlastshares.find(key) != tlastshares.end()) {
 		hashlog_data data = tlastshares[key];
-		ret = data.ntime;
+		ret = data.tm_sent;
 	}
 	return ret;
 }
@@ -56,7 +58,9 @@ extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce)
 	struct hashlog_data data;
 
 	data = tlastshares[keyall];
-	data.ntime = (uint32_t) time(NULL);
+	data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
+	if (data.tm_add == 0)
+		data.tm_add = data.tm_upd;
 	tlastshares[key] = data;
 }
 
@@ -67,24 +71,38 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
 {
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keyall = (njobid << 32);
+	uint64_t range = hashlog_get_scan_range(jobid);
 	struct hashlog_data data;
 
 	// global scan range of a job
 	data = tlastshares[keyall];
-	if (hashlog_get_scan_range(jobid) == 0) {
+	if (range == 0) {
 		memset(&data, 0, sizeof(data));
+	} else {
+		// get min and max from all sent records
+		data.scanned_from = LO_DWORD(range);
+		data.scanned_to   = HI_DWORD(range);
 	}
 
-	if (data.scanned_from == 0 || scanned_to == (data.scanned_from - 1))
-		data.scanned_from = scanned_from ? scanned_from : 1; // min 1
-	if (data.scanned_to == 0 || scanned_from == data.scanned_to + 1)
-		data.scanned_to = scanned_to;
+	if (data.tm_add == 0)
+		data.tm_add = (uint32_t) time(NULL);
 
 	data.last_from = scanned_from;
 
+	if (scanned_from < scanned_to) {
+		if (data.scanned_from == 0)
+			data.scanned_from = scanned_from ? scanned_from : 1; // min 1
+		else if (scanned_from < data.scanned_from) // || scanned_to == (data.scanned_from - 1)
+			data.scanned_from = scanned_from;
+		if (data.scanned_to == 0 || scanned_from == data.scanned_to + 1)
+			data.scanned_to = scanned_to;
+	}
+
+	data.tm_upd = (uint32_t) time(NULL);
+
 	tlastshares[keyall] = data;
-	applog(LOG_BLUE, "job %s range : %x %x -> %x %x (%x)", jobid,
-		scanned_from, scanned_to, data.scanned_from, data.scanned_to, data.ntime);/* */
+	applog(LOG_BLUE, "job %s range : %x %x -> %x %x", jobid,
+		scanned_from, scanned_to, data.scanned_from, data.scanned_to);/* */
 }
 
 /**
@@ -96,15 +114,21 @@ extern "C" uint64_t hashlog_get_scan_range(char* jobid)
 	uint64_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
+	struct hashlog_data data;
+	data.scanned_from = 0;
+	data.scanned_to = 0;
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
-		if ((keypfx & i->first) == keypfx) {
-			hashlog_data data = i->second;
-			ret = data.scanned_from;
-			ret += MK_HI64(data.scanned_to);
+		if ((keypfx & i->first) == keypfx && i->second.scanned_to > ret) {
+			if (i->second.scanned_to > data.scanned_to)
+				data.scanned_to = i->second.scanned_to;
+			if (i->second.scanned_from < data.scanned_from || data.scanned_from == 0)
+				data.scanned_from = i->second.scanned_from;
 		}
 		i++;
 	}
+	ret = data.scanned_from;
+	ret += MK_HI64(data.scanned_to);
 	return ret;
 }
 
@@ -119,7 +143,7 @@ extern "C" uint32_t hashlog_get_last_sent(char* jobid)
 	uint64_t keypfx = (njobid << 32);
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
-		if ((keypfx & i->first) == keypfx && i->second.ntime > 0) {
+		if ((keypfx & i->first) == keypfx && i->second.tm_sent > 0) {
 			nonce = LO_DWORD(i->first);
 		}
 		i++;
@@ -128,17 +152,24 @@ extern "C" uint32_t hashlog_get_last_sent(char* jobid)
 }
 
 /**
- * Remove entries of a job... not used yet
+ * Remove entries of a job...
  */
 extern "C" void hashlog_purge_job(char* jobid)
 {
+	int deleted = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
+	uint32_t sz = tlastshares.size();
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
-		if ((keypfx & i->first) == keypfx)
+		if ((keypfx & i->first) == keypfx) {
+			deleted++;
 			tlastshares.erase(i);
+		}
 		i++;
+	}
+	if (opt_debug && deleted) {
+		applog(LOG_DEBUG, "hashlog: purge job %s, del %d/%d", jobid, deleted, sz);
 	}
 }
 
@@ -152,7 +183,7 @@ extern "C" void hashlog_purge_old(void)
 	uint32_t sz = tlastshares.size();
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
-		if ((now - i->second.ntime) > LOG_PURGE_TIMEOUT) {
+		if ((now - i->second.tm_sent) > LOG_PURGE_TIMEOUT) {
 			deleted++;
 			tlastshares.erase(i);
 		}
@@ -169,4 +200,26 @@ extern "C" void hashlog_purge_old(void)
 extern "C" void hashlog_purge_all(void)
 {
 	tlastshares.clear();
+}
+
+
+/**
+ * Can be used to debug...
+ */
+extern "C" void hashlog_dump_job(char* jobid)
+{
+	int deleted = 0;
+	uint64_t njobid = hextouint(jobid);
+	uint64_t keypfx = (njobid << 32);
+	uint32_t sz = tlastshares.size();
+	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
+	while (i != tlastshares.end()) {
+		if ((keypfx & i->first) == keypfx) {
+			applog(LOG_BLUE, "job %s range : %x %x %s added %x upd %x", jobid,
+				i->second.scanned_from, i->second.scanned_to,
+				i->second.tm_sent ? "sent" : "",
+				i->second.tm_add, i->second.tm_upd);/* */
+		}
+		i++;
+	}
 }
