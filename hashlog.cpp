@@ -164,9 +164,9 @@ extern "C" void hashlog_purge_job(char* jobid)
 	while (i != tlastshares.end()) {
 		if ((keypfx & i->first) == keypfx) {
 			deleted++;
-			tlastshares.erase(i);
+			tlastshares.erase(i++);
 		}
-		i++;
+		else ++i;
 	}
 	if (opt_debug && deleted) {
 		applog(LOG_DEBUG, "hashlog: purge job %s, del %d/%d", jobid, deleted, sz);
@@ -185,9 +185,9 @@ extern "C" void hashlog_purge_old(void)
 	while (i != tlastshares.end()) {
 		if ((now - i->second.tm_sent) > LOG_PURGE_TIMEOUT) {
 			deleted++;
-			tlastshares.erase(i);
+			tlastshares.erase(i++);
 		}
-		i++;
+		else ++i;
 	}
 	if (opt_debug && deleted) {
 		applog(LOG_DEBUG, "hashlog: %d/%d purged", deleted, sz);
