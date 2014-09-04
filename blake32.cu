@@ -31,44 +31,45 @@ extern "C" void blake32hash(void *output, const void *input)
 // in cpu-miner.c
 extern bool opt_n_threads;
 extern bool opt_benchmark;
-//extern bool opt_debug;
 extern int device_map[8];
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 __constant__
-static uint32_t c_Target[8];
+static uint32_t __align__(32) c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
 __constant__
-static uint32_t __align__(32) c_PaddedMessage80[32]; // padded message (80 bytes + padding)
+static uint32_t __align__(32) c_Target[8];
+
+#define MAXU 0xffffffffU
 
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
 
 __constant__
-static uint8_t c_sigma[16][16];
-const uint8_t host_sigma[16][16] =
-{
-  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-  {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
-  {11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
-  { 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
-  { 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
-  { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
-  {12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
-  {13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
-  { 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
-  {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13 , 0 },
-  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-  {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
-  {11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
-  { 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
-  { 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
-  { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 }
+static uint32_t __align__(32) c_sigma[16][16];
+/* prefer uint32_t to prevent size conversions = speed +5/10 % */
+const uint32_t host_sigma[16][16] = {
+	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	{ 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	{ 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
+	{ 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
+	{12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
+	{13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
+	{ 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
+	{10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13 , 0 },
+	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	{ 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	{ 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
+	{ 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 }
 };
 
 __device__ __constant__
-static const uint32_t c_IV256[8] = {
+static const uint32_t __align__(32) c_IV256[8] = {
 	SPH_C32(0x6A09E667), SPH_C32(0xBB67AE85),
 	SPH_C32(0x3C6EF372), SPH_C32(0xA54FF53A),
 	SPH_C32(0x510E527F), SPH_C32(0x9B05688C),
@@ -76,8 +77,7 @@ static const uint32_t c_IV256[8] = {
 };
 
 __device__ __constant__
-
-static const uint32_t c_u256[16] = {
+static const uint32_t __align__(32) c_u256[16] = {
 	SPH_C32(0x243F6A88), SPH_C32(0x85A308D3),
 	SPH_C32(0x13198A2E), SPH_C32(0x03707344),
 	SPH_C32(0xA4093822), SPH_C32(0x299F31D0),
@@ -112,13 +112,15 @@ static const uint32_t c_u256[16] = {
 } while (0)
 #endif
 
-#define GS(a,b,c,d,e) { \
-	v[a] += (m[sigma[i][e]] ^ u256[sigma[i][e+1]]) + v[b]; \
-	v[d] = SPH_ROTR32(v[d] ^ v[a], 16); \
+#define GS(a,b,c,d,x) { \
+	const uint32_t idx1 = c_sigma[i][x]; \
+	const uint32_t idx2 = c_sigma[i][x+1]; \
+	v[a] += (m[idx1] ^ u256[idx2]) + v[b]; \
+	v[d] = SPH_ROTL32(v[d] ^ v[a], 16); \
 	v[c] += v[d]; \
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 12); \
 \
-	v[a] += (m[sigma[i][e+1]] ^ u256[sigma[i][e]]) + v[b]; \
+	v[a] += (m[idx2] ^ u256[idx1]) + v[b]; \
 	v[d] = SPH_ROTR32(v[d] ^ v[a], 8); \
 	v[c] += v[d]; \
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
@@ -127,10 +129,12 @@ static const uint32_t c_u256[16] = {
 #define BLAKE256_ROUNDS 14
 
 __device__ static
-void blake256_compress(uint32_t *h, uint32_t *block, uint8_t ((*sigma)[16]), const uint32_t *u256, const uint32_t T0, uint8_t nullt = 1)
+void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0)
 {
 	uint32_t /* __align__(8) */ v[16];
 	uint32_t /* __align__(8) */ m[16];
+
+	const uint32_t* u256 = c_u256;
 
 	//#pragma unroll
 	for (int i = 0; i < 16; ++i) {
@@ -170,16 +174,6 @@ void blake256_compress(uint32_t *h, uint32_t *block, uint8_t ((*sigma)[16]), con
 		h[i % 8] ^= v[i];
 }
 
-#if __CUDA_ARCH__ >= 200
-/* memory should be aligned to use __nvvm_memset */
-#if (__NV_POINTER_SIZE == 64)
-# define SZCT uint64_t
-#else
-# define SZCT uint32_t
-#endif
-extern __device__ __device_builtin__ void __nvvm_memset(uint8_t *, unsigned char, SZCT, int);
-#endif
-
 __global__
 void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 {
@@ -194,7 +188,7 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 		for(int i=0; i<8; i++)
 			h[i] = c_IV256[i];
 
-		blake256_compress(h, c_PaddedMessage80, c_sigma, c_u256, 0x200); /* 512 = 0x200 */
+		blake256_compress(h, c_PaddedMessage80, 0x200); /* 512 = 0x200 */
 
 		// ------ Close: Bytes 64 to 80 ------ 
 
@@ -217,7 +211,7 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 		msg[14] = 0;
 		msg[15] = 0x280;
 
-		blake256_compress(h, msg, c_sigma, c_u256, 0x280);
+		blake256_compress(h, msg, 0x280);
 
 		for (int i = 7; i >= 0; i--) {
 			uint32_t hash = cuda_swab32(h[i]);
@@ -239,17 +233,18 @@ __host__
 uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
 {
 	const int threadsperblock = TPB;
+	uint32_t result = MAXU;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 	size_t shared_size = 0;
 
-	uint32_t result = 0xffffffffU;
-	cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t));
+	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
+	if (cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t)) != cudaSuccess)
+		return result;
 
 	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id]);
-	MyStreamSynchronize(NULL, 1, thr_id);
-
+	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		cudaThreadSynchronize();
 		result = *h_resNounce[thr_id];
@@ -258,7 +253,7 @@ uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 }
 
 __host__
-void blake256_cpu_setBlock_80(uint32_t *pdata, const void *ptarget)
+void blake256_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 {
 	uint32_t PaddedMessage[32];
 	memcpy(PaddedMessage, pdata, 80);
@@ -291,7 +286,7 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 	if (throughput < (TPB * 2048))
 		applog(LOG_WARNING, "throughput=%u, start=%x, max=%x", throughput, first_nonce, max_nonce);
 
-	blake256_cpu_setBlock_80(pdata, (void*)ptarget);
+	blake256_cpu_setBlock_80(pdata, ptarget);
 
 	do {
 		// GPU HASH

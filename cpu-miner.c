@@ -962,7 +962,7 @@ static void *miner_thread(void *userdata)
 				max64 = 0x1fffLL;
 				break;
 			case ALGO_BLAKE:
-				/* based on the 750Ti hashrate */
+				/* based on the 750Ti hashrate (100kH) */
 				max64 = 0x3ffffffLL;
 				break;
 			default:
