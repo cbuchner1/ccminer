@@ -202,24 +202,25 @@ extern "C" void hashlog_purge_all(void)
 	tlastshares.clear();
 }
 
-
 /**
- * Can be used to debug...
+ * Used to debug ranges...
  */
 extern "C" void hashlog_dump_job(char* jobid)
 {
-	int deleted = 0;
-	uint64_t njobid = hextouint(jobid);
-	uint64_t keypfx = (njobid << 32);
-	uint32_t sz = tlastshares.size();
-	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
-	while (i != tlastshares.end()) {
-		if ((keypfx & i->first) == keypfx) {
-			applog(LOG_BLUE, "job %s range : %x %x %s added %x upd %x", jobid,
-				i->second.scanned_from, i->second.scanned_to,
-				i->second.tm_sent ? "sent" : "",
-				i->second.tm_add, i->second.tm_upd);/* */
+	if (opt_debug) {
+		int deleted = 0;
+		uint64_t njobid = hextouint(jobid);
+		uint64_t keypfx = (njobid << 32);
+		uint32_t sz = tlastshares.size();
+		std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
+		while (i != tlastshares.end()) {
+			if ((keypfx & i->first) == keypfx) {
+				applog(LOG_BLUE, "job %s range : %x %x %s added %x upd %x", jobid,
+					i->second.scanned_from, i->second.scanned_to,
+					i->second.tm_sent ? "sent" : "",
+					i->second.tm_add, i->second.tm_upd);/* */
+			}
+			i++;
 		}
-		i++;
 	}
 }

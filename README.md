@@ -4,6 +4,7 @@ ccminer
 Christian Buchner's &amp; Christian H.'s CUDA miner project
 
 Fork by tpruvot@github with X14,X15,X17,WHIRL and Blake256 support
+
    BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
    [![tip for next commit](https://tip4commit.com/projects/927.svg)](https://tip4commit.com/github/tpruvot/ccminer)
 
@@ -25,8 +26,6 @@ This project requires some libraries to be built :
 - Curl
 
 - pthreads
-
-- [mpir math library](http://www.mpir.org)
 
 You can download prebuilt .lib and dll on the [bitcointalk forum thread](https://bitcointalk.org/?topic=167229.0)
 

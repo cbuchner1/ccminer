@@ -317,7 +317,7 @@ extern uint16_t opt_vote;
 #define CL_BLK  "\x1B[22;30m" /* black */
 #define CL_RD2  "\x1B[22;31m" /* red */
 #define CL_GR2  "\x1B[22;32m" /* green */
-#define CL_BRW  "\x1B[22;33m" /* brown */
+#define CL_YL2  "\x1B[22;33m" /* dark yellow */
 #define CL_BL2  "\x1B[22;34m" /* blue */
 #define CL_MA2  "\x1B[22;35m" /* magenta */
 #define CL_CY2  "\x1B[22;36m" /* cyan */
@@ -326,7 +326,7 @@ extern uint16_t opt_vote;
 #define CL_GRY  "\x1B[01;30m" /* dark gray */
 #define CL_LRD  "\x1B[01;31m" /* light red */
 #define CL_LGR  "\x1B[01;32m" /* light green */
-#define CL_YL2  "\x1B[01;33m" /* yellow */
+#define CL_LYL  "\x1B[01;33m" /* tooltips */
 #define CL_LBL  "\x1B[01;34m" /* light blue */
 #define CL_LMA  "\x1B[01;35m" /* light magenta */
 #define CL_LCY  "\x1B[01;36m" /* light cyan */
