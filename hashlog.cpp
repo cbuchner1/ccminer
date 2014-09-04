@@ -101,8 +101,8 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
 	data.tm_upd = (uint32_t) time(NULL);
 
 	tlastshares[keyall] = data;
-	applog(LOG_BLUE, "job %s range : %x %x -> %x %x", jobid,
-		scanned_from, scanned_to, data.scanned_from, data.scanned_to);/* */
+/* 	applog(LOG_BLUE, "job %s range : %x %x -> %x %x", jobid,
+		scanned_from, scanned_to, data.scanned_from, data.scanned_to); */
 }
 
 /**

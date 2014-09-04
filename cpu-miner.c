@@ -918,9 +918,9 @@ static void *miner_thread(void *userdata)
 				g_work_time = time(NULL);
 			}
 		}
-		if (memcmp(work.data, g_work.data, 72)) { // wcmplen)) {
+		if (memcmp(work.data, g_work.data, wcmplen)) {
 			if (opt_debug) {
-				applog(LOG_DEBUG, "job %s %08x work updated", g_work.job_id, (*nonceptr));
+				applog(LOG_DEBUG, "job %s work updated", g_work.job_id);
 				for (int n=0; n<wcmplen; n+=8) {
 					if (memcmp(work.data + n, g_work.data + n, 8)) {
 						applog(LOG_DEBUG, "diff detected at offset %d", n);
@@ -933,7 +933,7 @@ static void *miner_thread(void *userdata)
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
 		} else if (memcmp(work.target, g_work.target, sizeof(work.target))) {
 			if (opt_debug) {
-				applog(LOG_DEBUG, "job %s %08x target change", g_work.job_id, (*nonceptr));
+				applog(LOG_DEBUG, "job %s target change", g_work.job_id);
 				applog_hash((uint8_t*) work.target);
 				applog_hash((uint8_t*) g_work.target);
 			}
@@ -944,7 +944,8 @@ static void *miner_thread(void *userdata)
 		pthread_mutex_unlock(&g_work_lock);
 		work_restart[thr_id].restart = 0;
 
-		applog(LOG_WARNING, "job %s %08x", g_work.job_id, (*nonceptr));
+		if (opt_debug)
+			applog(LOG_WARNING, "job %s %08x", g_work.job_id, (*nonceptr));
 
 		/* adjust max_nonce to meet target scan time */
 		if (have_stratum)
@@ -1328,16 +1329,20 @@ static void *stratum_thread(void *userdata)
 		}
 
 		if (stratum.job.job_id &&
-		    (strcmp(stratum.job.job_id, g_work.job_id) || !g_work_time)) {
+		    (!g_work_time || strncmp(stratum.job.job_id, g_work.job_id + 8, 120))) {
 			pthread_mutex_lock(&g_work_lock);
 			stratum_gen_work(&stratum, &g_work);
 			time(&g_work_time);
 			pthread_mutex_unlock(&g_work_lock);
 			if (stratum.job.clean) {
 				if (!opt_quiet)
-					applog(LOG_BLUE, "%s send a new %s job", short_url, algo_names[opt_algo]);
+					applog(LOG_BLUE, "%s requested %s job %d restart, block %d", short_url, algo_names[opt_algo],
+						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
 				restart_threads();
 				hashlog_purge_old();
+			} else if (!opt_quiet) {
+					applog(LOG_BLUE, "%s send %s job %d, block %d", short_url, algo_names[opt_algo],
+						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
 			}
 		}
 		

@@ -380,6 +380,7 @@ struct stratum_ctx {
 	pthread_mutex_t work_lock;
 
 	int srvtime_diff;
+	int bloc_height;
 };
 
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
