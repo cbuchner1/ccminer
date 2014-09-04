@@ -53,33 +53,33 @@ nvcc_ARCH  = -gencode=arch=compute_50,code=\"sm_50,compute_50\"
 #nvcc_ARCH += -gencode=arch=compute_35,code=\"sm_35,compute_35\"
 #nvcc_ARCH += -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 
-nvcc_FLAGS = $(nvcc_ARCH) -I . --ptxas-options=-v --use_fast_math
+nvcc_FLAGS = $(nvcc_ARCH) -I . @CUDA_CFLAGS@
 nvcc_FLAGS += $(JANSSON_INCLUDES)
 
 # we're now targeting all major compute architectures within one binary.
 .cu.o:
-	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=128 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=128 -o $@ -c $<
 
 blake32.o: blake32.cu
-	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=64 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
 
 # Luffa and Echo are faster with 80 registers than 128
 x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
-	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
 x11/cuda_x11_echo.o: x11/cuda_x11_echo.cu
-	$(NVCC) $(nvcc_FLAGS) @CFLAGS@ --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
 # Shavite compiles faster with 128 regs
 x11/cuda_x11_shavite512.o: x11/cuda_x11_shavite512.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ --maxrregcount=128 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=128 -o $@ -c $<
 
 x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
-	$(NVCC) $(nvcc_FLAGS) -O2 --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
 # ABI requiring code modules
 quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include @CFLAGS@ -Xptxas "-abi=yes -v" --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
