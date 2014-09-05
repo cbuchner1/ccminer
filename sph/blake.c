@@ -548,7 +548,7 @@ static const sph_u64 CB[16] = {
 		M[0xD] = sph_dec32be_aligned(buf + 52); \
 		M[0xE] = sph_dec32be_aligned(buf + 56); \
 		M[0xF] = sph_dec32be_aligned(buf + 60); \
-		for (r = 0; r < 14; r ++) \
+		for (r = 0; r < blake256_rounds; r ++) \
 			ROUND_S(r); \
 		H0 ^= S0 ^ V0 ^ V8; \
 		H1 ^= S1 ^ V1 ^ V9; \
@@ -592,6 +592,7 @@ static const sph_u64 CB[16] = {
 		M6 = sph_dec32be_aligned(buf + 24); \
 		M7 = sph_dec32be_aligned(buf + 28); \
 		M8 = sph_dec32be_aligned(buf + 32); \
+		if (blake256_rounds == 14) { \
 		M9 = sph_dec32be_aligned(buf + 36); \
 		MA = sph_dec32be_aligned(buf + 40); \
 		MB = sph_dec32be_aligned(buf + 44); \
@@ -599,6 +600,7 @@ static const sph_u64 CB[16] = {
 		MD = sph_dec32be_aligned(buf + 52); \
 		ME = sph_dec32be_aligned(buf + 56); \
 		MF = sph_dec32be_aligned(buf + 60); \
+		} \
 		ROUND_S(0); \
 		ROUND_S(1); \
 		ROUND_S(2); \

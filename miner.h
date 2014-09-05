@@ -237,11 +237,11 @@ extern int scanhash_anime(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
-extern int scanhash_fresh(int thr_id, uint32_t *pdata,
+extern int scanhash_blake256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done);
+	unsigned long *hashes_done, uint32_t blakerounds);
 
-extern int scanhash_blake32(int thr_id, uint32_t *pdata,
+extern int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
@@ -420,7 +420,7 @@ void applog_hash(unsigned char *hash);
 
 void print_hash_tests(void);
 void animehash(void *state, const void *input);
-void blake32hash(void *output, const void *input);
+void blake256hash(void *output, const void *input, int rounds);
 void fresh_hash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);

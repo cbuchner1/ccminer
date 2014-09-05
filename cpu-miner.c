@@ -128,6 +128,7 @@ struct workio_cmd {
 typedef enum {
 	ALGO_ANIME,
 	ALGO_BLAKE,
+	ALGO_BLAKECOIN,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
@@ -149,6 +150,7 @@ typedef enum {
 static const char *algo_names[] = {
 	"anime",
 	"blake",
+	"blakecoin",
 	"fresh",
 	"fugue256",
 	"groestl",
@@ -231,6 +233,7 @@ Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
                         anime     Animecoin hash\n\
                         blake     Blake 256 (like NEOS blake)\n\
+                        blakecoin Old Blake 256 (8 rounds)\n\
                         fresh     Freshcoin hash (shavite 80)\n\
                         fugue256  Fuguecoin hash\n\
                         groestl   Groestlcoin hash\n\
@@ -961,6 +964,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_JACKPOT:
 				max64 = 0x1fffLL;
 				break;
+			case ALGO_BLAKECOIN:
 			case ALGO_BLAKE:
 				/* based on the 750Ti hashrate (100kH) */
 				max64 = 0x3ffffffLL;
@@ -1065,9 +1069,14 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_BLAKECOIN:
+			rc = scanhash_blake256(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done, 8);
+			break;
+
 		case ALGO_BLAKE:
-			rc = scanhash_blake32(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_blake256(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done, 14);
 			break;
 
 		case ALGO_FRESH:

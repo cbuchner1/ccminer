@@ -15,11 +15,17 @@ extern "C" {
 /* threads per block */
 #define TPB 128
 
+extern "C" int blake256_rounds = 14;
+
 /* hash by cpu with blake 256 */
-extern "C" void blake32hash(void *output, const void *input)
+extern "C" void blake256hash(void *output, const void *input, int rounds = 14)
 {
 	unsigned char hash[64];
 	sph_blake256_context ctx;
+
+	/* in sph_blake.c */
+	blake256_rounds = rounds;
+
 	sph_blake256_init(&ctx);
 	sph_blake256(&ctx, input, 80);
 	sph_blake256_close(&ctx, hash);
@@ -133,10 +139,8 @@ static const uint32_t __align__(32) c_u256[16] = {
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
 }
 
-#define BLAKE256_ROUNDS 14
-
 __device__ static
-void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0)
+void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, int blakerounds)
 {
 	uint32_t /* __align__(8) */ v[16];
 	uint32_t /* __align__(8) */ m[16];
@@ -162,8 +166,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0)
 	v[14] = u256[6];
 	v[15] = u256[7];
 
-	//#pragma unroll
-	for (int i = 0; i < BLAKE256_ROUNDS; i++) {
+	for (int i = 0; i < blakerounds; i++) {
 		/* column step */
 		GS(0, 4, 0x8, 0xC, 0);
 		GS(1, 5, 0x9, 0xD, 2);
@@ -182,7 +185,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0)
 }
 
 __global__
-void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
+void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, int blakerounds)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -195,7 +198,7 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 		for(int i=0; i<8; i++)
 			h[i] = c_IV256[i];
 
-		blake256_compress(h, c_PaddedMessage80, 0x200); /* 512 = 0x200 */
+		blake256_compress(h, c_PaddedMessage80, 0x200, blakerounds); /* 512 = 0x200 */
 
 		// ------ Close: Bytes 64 to 80 ------ 
 
@@ -218,7 +221,7 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 		msg[14] = 0;
 		msg[15] = 0x280;
 
-		blake256_compress(h, msg, 0x280);
+		blake256_compress(h, msg, 0x280, blakerounds);
 
 		for (int i = 7; i >= 0; i--) {
 			uint32_t hash = cuda_swab32(h[i]);
@@ -237,7 +240,7 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 }
 
 __host__
-uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
+uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, int blakerounds)
 {
 	const int threadsperblock = TPB;
 	uint32_t result = MAXU;
@@ -250,7 +253,7 @@ uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 	if (cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
-	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id]);
+	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id], blakerounds);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		cudaThreadSynchronize();
@@ -270,8 +273,8 @@ void blake256_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
 
-extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+	uint32_t max_nonce, unsigned long *hashes_done, uint32_t blakerounds=14)
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -297,7 +300,7 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 	do {
 		// GPU HASH
-		uint32_t foundNonce = blake256_cpu_hash_80(thr_id, throughput, pdata[19]);
+		uint32_t foundNonce = blake256_cpu_hash_80(thr_id, throughput, pdata[19], blakerounds);
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t endiandata[20];
@@ -315,7 +318,7 @@ extern "C" int scanhash_blake32(int thr_id, uint32_t *pdata, const uint32_t *pta
 
 			be32enc(&endiandata[19], foundNonce);
 
-			blake32hash(vhashcpu, endiandata);
+			blake256hash(vhashcpu, endiandata, blakerounds);
 
 			if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget))
 			{

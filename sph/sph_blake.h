@@ -182,6 +182,11 @@ void sph_blake224_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 /**
+ * Switch for the number of rounds (old blake was 8)
+ */
+extern int blake256_rounds;
+
+/**
  * Initialize a BLAKE-256 context. This process performs no memory allocation.
  *
  * @param cc   the BLAKE-256 context (pointer to a

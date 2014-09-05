@@ -1042,7 +1042,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 
 	/* store stratum server time diff */
 	hex2bin((unsigned char *)&ntime, stime, 4);
-	ntime = swab32(ntime) - time(0);
+	ntime = swab32(ntime) - (uint32_t) time(0);
 	if (ntime > sctx->srvtime_diff) {
 		sctx->srvtime_diff = ntime;
 		if (!opt_quiet)
@@ -1420,7 +1420,11 @@ void print_hash_tests(void)
 	printpfx("anime", hash);
 
 	memset(hash, 0, sizeof hash);
-	blake32hash(&hash[0], &buf[0]);
+	blake256hash(&hash[0], &buf[0], 8);
+	printpfx("blakecoin", hash);
+
+	memset(hash, 0, sizeof hash);
+	blake256hash(&hash[0], &buf[0], 14);
 	printpfx("blake", hash);
 
 	memset(hash, 0, sizeof hash);
