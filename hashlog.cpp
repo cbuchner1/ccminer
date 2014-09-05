@@ -1,3 +1,11 @@
+/**
+ * Hash log of submitted job nonces
+ * Prevent duplicate shares and could be used for RPC stats later
+ *
+ * Note: this source is C++ (requires std::map)
+ *
+ * tpruvot@github 2014
+ */
 #include <stdlib.h>
 #include <memory.h>
 #include <map>
@@ -52,17 +60,17 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 /**
  * Store submitted nonces of a job
  */
-extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce)
+extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint32_t scanned_from)
 {
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keyall = (njobid << 32);
 	uint64_t key = keyall + nonce;
 	hashlog_data data;
 
-	data = tlastshares[keyall];
-	data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
-	if (data.tm_add == 0)
-		data.tm_add = data.tm_upd;
+	memset(&data, 0, sizeof(data));
+	data.scanned_from = scanned_from;
+	data.scanned_to = nonce;
+	data.tm_add = data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
 	tlastshares[key] = data;
 }
 
@@ -92,12 +100,12 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
 	data.last_from = scanned_from;
 
 	if (scanned_from < scanned_to) {
-		if (data.scanned_from == 0)
-			data.scanned_from = scanned_from ? scanned_from : 1; // min 1
-		else if (scanned_from < data.scanned_from) // || scanned_to == (data.scanned_from - 1)
-			data.scanned_from = scanned_from;
 		if (data.scanned_to == 0 || scanned_from == data.scanned_to + 1)
 			data.scanned_to = scanned_to;
+		if (data.scanned_from == 0)
+			data.scanned_from = scanned_from ? scanned_from : 1; // min 1
+		else if (scanned_from < data.scanned_from || scanned_to == (data.scanned_from - 1))
+			data.scanned_from = scanned_from;
 	}
 
 	data.tm_upd = (uint32_t) time(NULL);
@@ -218,10 +226,11 @@ extern "C" void hashlog_dump_job(char* jobid)
 		std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 		while (i != tlastshares.end()) {
 			if ((keypfx & i->first) == keypfx) {
-				applog(LOG_BLUE, "job %s range : %x %x %s added %x upd %x", jobid,
-					i->second.scanned_from, i->second.scanned_to,
-					i->second.tm_sent ? "sent" : "",
-					i->second.tm_add, i->second.tm_upd);/* */
+				if (i->first != keypfx)
+					applog(LOG_DEBUG, CL_YLW "job %s, found %08x ", jobid, LO_DWORD(i->first));
+				else
+					applog(LOG_DEBUG, CL_YLW "job %s scanned range : %08x-%08x", jobid,
+						i->second.scanned_from, i->second.scanned_to);
 			}
 			i++;
 		}

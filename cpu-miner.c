@@ -508,8 +508,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			goto out;
 		}
 
-		hashlog_remember_submit(work->job_id, nonce);
-		hashlog_remember_scan_range(work->job_id, work->scanned_from, work->scanned_to);
+		hashlog_remember_submit(work->job_id, nonce, work->scanned_from);
 
 	} else {
 

@@ -392,7 +392,7 @@ bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
-void hashlog_remember_submit(char* jobid, uint32_t nounce);
+void hashlog_remember_submit(char* jobid, uint32_t nounce, uint32_t scanned_from);
 void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
