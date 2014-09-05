@@ -62,6 +62,7 @@ its command line interface and options.
                           quark       use to mine Quarkcoin
                           anime       use to mine Animecoin
                           blake       use to mine NEOS (Blake 256)
+                          blakecoin   use to mine Old Blake 256
                           nist5       use to mine TalkCoin
                           fresh       use to mine Freshcoin
                           whirl       use to mine Whirlcoin

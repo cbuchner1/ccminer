@@ -191,7 +191,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, in
 }
 
 __global__
-void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, int blakerounds)
+void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, const int blakerounds)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -232,7 +232,7 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 }
 
 __host__
-uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, int blakerounds)
+uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, const int blakerounds)
 {
 	const int threadsperblock = TPB;
 	uint32_t result = MAXU;

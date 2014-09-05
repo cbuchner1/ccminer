@@ -789,7 +789,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WHC)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WHC || opt_algo == ALGO_BLAKECOIN)
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	else
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -964,6 +964,7 @@ static void *miner_thread(void *userdata)
 				max64 = 0x1fffLL;
 				break;
 			case ALGO_BLAKECOIN:
+				max64 = 0x3ffffffLL;
 			case ALGO_BLAKE:
 				/* based on the 750Ti hashrate (100kH) */
 				max64 = 0x3ffffffLL;
@@ -1373,7 +1374,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4"
+#define PROGRAM_VERSION "1.4.1"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
