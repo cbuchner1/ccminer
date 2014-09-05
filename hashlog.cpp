@@ -27,7 +27,8 @@ static std::map<uint64_t, hashlog_data> tlastshares;
 static uint64_t hextouint(char* jobid)
 {
 	char *ptr;
-	return strtoull(jobid, &ptr, 16);
+	/* dont use strtoull(), only since VS2013 */
+	return (uint64_t) strtoul(jobid, &ptr, 16);
 }
 
 /**
@@ -38,6 +39,7 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 	uint32_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t key = (njobid << 32) + nonce;
+
 	if (nonce == 0) {
 		// search last submitted nonce for job
 		ret = hashlog_get_last_sent(jobid);
@@ -55,7 +57,7 @@ extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce)
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keyall = (njobid << 32);
 	uint64_t key = keyall + nonce;
-	struct hashlog_data data;
+	hashlog_data data;
 
 	data = tlastshares[keyall];
 	data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
@@ -72,7 +74,7 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keyall = (njobid << 32);
 	uint64_t range = hashlog_get_scan_range(jobid);
-	struct hashlog_data data;
+	hashlog_data data;
 
 	// global scan range of a job
 	data = tlastshares[keyall];
@@ -114,7 +116,8 @@ extern "C" uint64_t hashlog_get_scan_range(char* jobid)
 	uint64_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
-	struct hashlog_data data;
+	hashlog_data data;
+
 	data.scanned_from = 0;
 	data.scanned_to = 0;
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
