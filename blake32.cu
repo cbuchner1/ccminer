@@ -34,6 +34,8 @@ extern "C" void blake256hash(void *output, const void *input, int rounds = 14)
 
 #include "cuda_helper.h"
 
+#define MAXU 0xffffffffU
+
 // in cpu-miner.c
 extern bool opt_n_threads;
 extern bool opt_benchmark;
@@ -47,22 +49,13 @@ static uint32_t __align__(32) c_Target[8];
 __constant__
 static uint32_t __align__(32) c_data[20];
 
-#define MAXU 0xffffffffU
-
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
 
-__constant__
-#ifdef WIN32
-/* what the fuck ! */
-static uint8_t c_sigma[16][16];
-const uint8_t host_sigma[16][16]
-#else
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
+__constant__
 static uint32_t __align__(32) c_sigma[16][16];
-const uint32_t host_sigma[16][16]
-#endif
-= {
+const uint32_t host_sigma[16][16] = {
 	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
 	{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -152,28 +145,19 @@ __device__ static
 void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, int blakerounds)
 {
 	uint32_t /* __align__(8) */ m[16];
+	uint32_t /* __align__(8) */ v[16];
 
 	m[0] = block[0];
 	m[1] = block[1];
 	m[2] = block[2];
 	m[3] = block[3];
 
-	if (T0 == 0x200) {
-		//#pragma unroll 12
-		for (int i = 4; i < 16; ++i) {
-			m[i] = block[i];
-		}
-	} else {
-		//#pragma unroll 12
-		for (int i = 4; i < 16; ++i) {
-			m[i] = c_Padding[i];
-		}
+	for (uint32_t i = 4; i < 16; i++) {
+		m[i] = (T0 == 0x200) ? block[i] : c_Padding[i];
 	}
 
-	uint32_t /* __align__(8) */ v[16];
-
 	//#pragma unroll 8
-	for(int i = 0; i < 8; i++)
+	for(uint32_t i = 0; i < 8; i++)
 		v[i] = h[i];
 
 	v[ 8] = c_u256[0];
@@ -200,8 +184,10 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, in
 	}
 
 	//#pragma unroll 16
-	for(int i = 0; i < 16; i++)
-		h[i % 8] ^= v[i];
+	for (uint32_t i = 0; i < 16; i++) {
+		uint32_t j = i % 8;
+		h[j] ^= v[i];
+	}
 }
 
 __global__
@@ -306,13 +292,13 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	do {
 		// GPU HASH
 		uint32_t foundNonce = blake256_cpu_hash_80(thr_id, throughput, pdata[19], blakerounds);
-		if (foundNonce != 0xffffffff)
+		if (foundNonce != MAXU)
 		{
 			uint32_t endiandata[20];
 			uint32_t vhashcpu[8];
 			uint32_t Htarg = ptarget[7];
 
-			for (int k=0; k < 20; k++)
+			for (int k=0; k < 19; k++)
 				be32enc(&endiandata[k], pdata[k]);
 
 			be32enc(&endiandata[19], foundNonce);
