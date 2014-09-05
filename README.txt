@@ -1,27 +1,24 @@
 
-ccMiner release 1.3-tpruvot (Aug 21th 2014) - "X14 X15 Fresh"
--------------------------------------------------------------
+ccMiner release 1.4-tpruvot (Sept 04th 2014) - "X17 Blake NEOS"
+---------------------------------------------------------------
 
 ***************************************************************
 If you find this tool useful and like to support its continued 
           development, then consider a donation.
 
-   LTC donation address: LKS1WDKGED647msBQfLBHV3Ls8sveGncnm
-   BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM
-   YAC donation address: Y87sptDEcpLkLeAuex6qZioDbvy1qXZEj4
-   VTC donation address: VrjeFzMgvteCGarLw85KivBzmsiH9fqp4a
-   MAX donation address: mHrhQP9EFArechWxTFJ97s9D3jvcCvEEnt
-  DOGE donation address: DT9ghsGmez6ojVdEZgvaZbT2Z3TruXG6yP
-   HVC donation address: HNN3PyyTMkDo4RkEjkWSGMwqia1yD8mwJN
-   GRS donation address: FmJKJAhvyHWPeEVeLQHefr2naqgWc9ABTM
-   MYR donation address: MNHM7Q7HVfGpKDJgVJrY8ofwvmeugNewyf
-   JPC donation address: JYFBypVDkk583yKWY4M46TG5vXG8hfgD2U
-   SFR donation address: SR4b87aEnPfTs77bo9NnnaV21fiF6jQpAp
-   MNC donation address: MShgNUSYwybEbXLvJUtdNg1a7rUeiNgooK
-   BTQ donation address: 13GFwLiZL2DaA9XeE733PNrQX5QYLFsonS
-
 tpruvot@github:
-   BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
+  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
+  DRK  : XeVrkPrWB7pDbdFLfKhF1Z3xpqhsx6wkH3
+  NEO$ : NaEcVrdzoCWHUYXb7X8QoafoKS9UV69Yk4
+
+DJM34:
+  XCN donation address: CNh6F4h1byX7vvbmfQn4LMtsC4TYb8mgmn
+  BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
+  TAC donation address: TuqNvPoQxghHfzwnPpAxSTiYoN6FM8LM5p
+
+cbuchner v1.2:
+  LTC donation address: LKS1WDKGED647msBQfLBHV3Ls8sveGncnm
+  BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM
 
 ***************************************************************
 
@@ -36,6 +33,7 @@ JackpotCoin
 QuarkCoin family & AnimeCoin
 TalkCoin
 DarkCoin and other X11 coins
+NEOS blake (256 14-rounds)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL) implementations.
