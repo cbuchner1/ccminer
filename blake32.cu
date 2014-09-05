@@ -315,12 +315,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			for (int k=0; k < 20; k++)
 				be32enc(&endiandata[k], pdata[k]);
 
-			if (opt_debug && !opt_quiet) {
-				applog(LOG_DEBUG, "throughput=%u, start=%x, max=%x, pdata=%08x...%08x",
-					throughput, first_nonce, max_nonce, endiandata[0], endiandata[7]);
-				applog_hash((unsigned char *)pdata);
-			}
-
 			be32enc(&endiandata[19], foundNonce);
 
 			blake256hash(vhashcpu, endiandata, blakerounds);
@@ -348,11 +342,14 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1;
-	// reset the device to allow multiple instances
+#if 0
+	/* reset the device to allow multiple instances
+	 * could be made in cpu-miner... check later if required */
 	if (opt_n_threads == 1) {
 		CUDA_SAFE_CALL(cudaDeviceReset());
 		init[thr_id] = false;
 	}
+#endif
 	// wait proper end of all threads
 	cudaDeviceSynchronize();
 	return rc;
