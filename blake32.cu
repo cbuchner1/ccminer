@@ -42,10 +42,10 @@ extern int device_map[8];
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 __constant__
-static uint32_t __align__(32) c_PaddedMessage80[32]; // padded message (80 bytes + padding)
+static uint32_t __align__(32) c_Target[8];
 
 __constant__
-static uint32_t __align__(32) c_Target[8];
+static uint32_t __align__(32) c_data[20];
 
 #define MAXU 0xffffffffU
 
@@ -128,50 +128,70 @@ static const uint32_t __align__(32) c_u256[16] = {
 #define GS(a,b,c,d,x) { \
 	const uint32_t idx1 = c_sigma[i][x]; \
 	const uint32_t idx2 = c_sigma[i][x+1]; \
-	v[a] += (m[idx1] ^ u256[idx2]) + v[b]; \
+	v[a] += (m[idx1] ^ c_u256[idx2]) + v[b]; \
 	v[d] = SPH_ROTL32(v[d] ^ v[a], 16); \
 	v[c] += v[d]; \
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 12); \
 \
-	v[a] += (m[idx2] ^ u256[idx1]) + v[b]; \
+	v[a] += (m[idx2] ^ c_u256[idx1]) + v[b]; \
 	v[d] = SPH_ROTR32(v[d] ^ v[a], 8); \
 	v[c] += v[d]; \
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
 }
 
+/* Second part (64-80) msg never change, store it */
+__device__ __constant__
+static const uint32_t __align__(32) c_Padding[16] = {
+	0, 0, 0, 0,
+	0x80000000UL, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 1, 0, 640,
+};
+
 __device__ static
 void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, int blakerounds)
 {
-	uint32_t /* __align__(8) */ v[16];
 	uint32_t /* __align__(8) */ m[16];
 
-	const uint32_t* u256 = c_u256;
+	m[0] = block[0];
+	m[1] = block[1];
+	m[2] = block[2];
+	m[3] = block[3];
 
-	//#pragma unroll
-	for (int i = 0; i < 16; ++i) {
-		m[i] = block[i];
+	if (T0 == 0x200) {
+		//#pragma unroll 12
+		for (int i = 4; i < 16; ++i) {
+			m[i] = block[i];
+		}
+	} else {
+		//#pragma unroll 12
+		for (int i = 4; i < 16; ++i) {
+			m[i] = c_Padding[i];
+		}
 	}
+
+	uint32_t /* __align__(8) */ v[16];
 
 	//#pragma unroll 8
 	for(int i = 0; i < 8; i++)
 		v[i] = h[i];
 
-	v[ 8] = u256[0];
-	v[ 9] = u256[1];
-	v[10] = u256[2];
-	v[11] = u256[3];
+	v[ 8] = c_u256[0];
+	v[ 9] = c_u256[1];
+	v[10] = c_u256[2];
+	v[11] = c_u256[3];
 
-	v[12] = u256[4] ^ T0;
-	v[13] = u256[5] ^ T0;
-	v[14] = u256[6];
-	v[15] = u256[7];
+	v[12] = c_u256[4] ^ T0;
+	v[13] = c_u256[5] ^ T0;
+	v[14] = c_u256[6];
+	v[15] = c_u256[7];
 
 	for (int i = 0; i < blakerounds; i++) {
 		/* column step */
-		GS(0, 4, 0x8, 0xC, 0);
-		GS(1, 5, 0x9, 0xD, 2);
-		GS(2, 6, 0xA, 0xE, 4);
-		GS(3, 7, 0xB, 0xF, 6);
+		GS(0, 4, 0x8, 0xC, 0x0);
+		GS(1, 5, 0x9, 0xD, 0x2);
+		GS(2, 6, 0xA, 0xE, 0x4);
+		GS(3, 7, 0xB, 0xF, 0x6);
 		/* diagonal step */
 		GS(0, 5, 0xA, 0xF, 0x8);
 		GS(1, 6, 0xB, 0xC, 0xA);
@@ -191,37 +211,23 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 	if (thread < threads)
 	{
 		const uint32_t nounce = startNounce + thread;
-		uint32_t /* __align__(8) */ msg[16];
 		uint32_t h[8];
 
 		#pragma unroll
 		for(int i=0; i<8; i++)
 			h[i] = c_IV256[i];
 
-		blake256_compress(h, c_PaddedMessage80, 0x200, blakerounds); /* 512 = 0x200 */
+		blake256_compress(h, c_data, 512, blakerounds);
 
 		// ------ Close: Bytes 64 to 80 ------ 
 
-		msg[0] = c_PaddedMessage80[16];
-		msg[1] = c_PaddedMessage80[17];
-		msg[2] = c_PaddedMessage80[18];
-		msg[3] = nounce; /* our tested value */
-		msg[4] = 0x80000000UL; //cuda_swab32(0x80U);
+		uint32_t ending[4];
+		ending[0] = c_data[16];
+		ending[1] = c_data[17];
+		ending[2] = c_data[18];
+		ending[3] = nounce; /* our tested value */
 
-		msg[5] = 0;  // uchar[17 to 55]
-		msg[6] = 0;
-		msg[7] = 0;
-		msg[8] = 0;
-		msg[9] = 0;
-		msg[10] = 0;
-		msg[11] = 0;
-		msg[12] = 0;
-
-		msg[13] = 1;
-		msg[14] = 0;
-		msg[15] = 0x280;
-
-		blake256_compress(h, msg, 0x280, blakerounds);
+		blake256_compress(h, ending, 640, blakerounds);
 
 		for (int i = 7; i >= 0; i--) {
 			uint32_t hash = cuda_swab32(h[i]);
@@ -265,10 +271,9 @@ uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 __host__
 void blake256_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 {
-	uint32_t PaddedMessage[32];
-	memcpy(PaddedMessage, pdata, 80);
-	memset(&PaddedMessage[20], 0, 48);
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, sizeof(PaddedMessage), 0, cudaMemcpyHostToDevice));
+	uint32_t data[20];
+	memcpy(data, pdata, 80);
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_data, data, sizeof(data), 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_sigma, host_sigma, sizeof(host_sigma), 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
