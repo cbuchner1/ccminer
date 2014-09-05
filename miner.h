@@ -237,11 +237,11 @@ extern int scanhash_anime(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
-extern int scanhash_fresh(int thr_id, uint32_t *pdata,
+extern int scanhash_blake256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done);
+	unsigned long *hashes_done, uint32_t blakerounds);
 
-extern int scanhash_blake32(int thr_id, uint32_t *pdata,
+extern int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
@@ -392,7 +392,7 @@ bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
-void hashlog_remember_submit(char* jobid, uint32_t nounce);
+void hashlog_remember_submit(char* jobid, uint32_t nounce, uint32_t scanned_from);
 void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
@@ -420,7 +420,7 @@ void applog_hash(unsigned char *hash);
 
 void print_hash_tests(void);
 void animehash(void *state, const void *input);
-void blake32hash(void *output, const void *input);
+void blake256hash(void *output, const void *input, int rounds);
 void fresh_hash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);

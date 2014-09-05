@@ -128,6 +128,7 @@ struct workio_cmd {
 typedef enum {
 	ALGO_ANIME,
 	ALGO_BLAKE,
+	ALGO_BLAKECOIN,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
@@ -149,6 +150,7 @@ typedef enum {
 static const char *algo_names[] = {
 	"anime",
 	"blake",
+	"blakecoin",
 	"fresh",
 	"fugue256",
 	"groestl",
@@ -231,6 +233,7 @@ Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
                         anime     Animecoin hash\n\
                         blake     Blake 256 (like NEOS blake)\n\
+                        blakecoin Old Blake 256 (8 rounds)\n\
                         fresh     Freshcoin hash (shavite 80)\n\
                         fugue256  Fuguecoin hash\n\
                         groestl   Groestlcoin hash\n\
@@ -505,8 +508,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			goto out;
 		}
 
-		hashlog_remember_submit(work->job_id, nonce);
-		hashlog_remember_scan_range(work->job_id, work->scanned_from, work->scanned_to);
+		hashlog_remember_submit(work->job_id, nonce, work->scanned_from);
 
 	} else {
 
@@ -787,7 +789,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WHC)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WHC || opt_algo == ALGO_BLAKECOIN)
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	else
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -961,6 +963,8 @@ static void *miner_thread(void *userdata)
 			case ALGO_JACKPOT:
 				max64 = 0x1fffLL;
 				break;
+			case ALGO_BLAKECOIN:
+				max64 = 0x3ffffffLL;
 			case ALGO_BLAKE:
 				/* based on the 750Ti hashrate (100kH) */
 				max64 = 0x3ffffffLL;
@@ -1065,9 +1069,14 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_BLAKECOIN:
+			rc = scanhash_blake256(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done, 8);
+			break;
+
 		case ALGO_BLAKE:
-			rc = scanhash_blake32(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_blake256(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done, 14);
 			break;
 
 		case ALGO_FRESH:
@@ -1365,7 +1374,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4"
+#define PROGRAM_VERSION "1.4.1"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
