@@ -50,7 +50,7 @@ __constant__
 #ifdef WIN32
 /* what the fuck ! */
 static uint8_t c_sigma[16][16];
-const uint8_t host_sigma[16][16] =
+const uint8_t host_sigma[16][16]
 #else
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 static uint32_t __align__(32) c_sigma[16][16];
