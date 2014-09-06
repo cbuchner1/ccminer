@@ -557,6 +557,9 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 			rc = true;
 			break;
 		}
+		if (hash[1] == target[1]) {
+			applog(LOG_NOTICE, "We found a close match!");
+		}
 	}
 
 	if (!rc && opt_debug) {
@@ -1122,8 +1125,7 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 	sctx->next_diff = diff;
 	pthread_mutex_unlock(&sctx->work_lock);
 
-	if (opt_debug)
-		applog(LOG_DEBUG, "Stratum difficulty set to %g", diff);
+	applog(LOG_INFO, "Stratum difficulty set to %g", diff);
 
 	return true;
 }
