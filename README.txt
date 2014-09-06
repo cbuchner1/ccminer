@@ -1,5 +1,5 @@
 
-ccMiner release 1.4-tpruvot (Sept 04th 2014) - "X17 Blake NEOS"
+ccMiner release 1.4.1-tpruvot (Sep 06th 2014) - "Cached Blake"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -34,6 +34,7 @@ QuarkCoin family & AnimeCoin
 TalkCoin
 DarkCoin and other X11 coins
 NEOS blake (256 14-rounds)
+BlakeCoin (256 8-rounds)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL) implementations.
