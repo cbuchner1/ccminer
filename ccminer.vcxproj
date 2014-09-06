@@ -241,6 +241,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
     </ClCompile>
+    <ClCompile Include="crc32.c" />
     <ClCompile Include="fuguecoin.cpp" />
     <ClCompile Include="groestlcoin.cpp" />
     <ClCompile Include="hashlog.cpp" />

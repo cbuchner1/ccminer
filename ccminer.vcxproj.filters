@@ -96,6 +96,9 @@
     <ClCompile Include="cpu-miner.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="crc32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="hefty1.c">
       <Filter>Source Files</Filter>
     </ClCompile>
