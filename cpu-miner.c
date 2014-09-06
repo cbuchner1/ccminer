@@ -136,8 +136,9 @@ typedef enum {
 	ALGO_JACKPOT,
 	ALGO_MJOLLNIR,		/* Mjollnir hash */
 	ALGO_MYR_GR,
-	ALGO_QUARK,
 	ALGO_NIST5,
+	ALGO_PENTABLAKE,
+	ALGO_QUARK,
 	ALGO_WHC,
 	ALGO_X11,
 	ALGO_X13,
@@ -159,6 +160,7 @@ static const char *algo_names[] = {
 	"mjollnir",
 	"myr-gr",
 	"nist5",
+	"penta",
 	"quark",
 	"whirl",
 	"x11",
@@ -242,6 +244,7 @@ Options:\n\
                         mjollnir  Mjollnircoin hash\n\
                         myr-gr    Myriad-Groestl hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
+                        penta     Pentablake hash (5x Blake 512)\n\
                         quark     Quark hash\n\
                         whirl     Whirlcoin (old whirlpool)\n\
                         x11       X11 (DarkCoin) hash\n\
@@ -1086,6 +1089,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_NIST5:
 			rc = scanhash_nist5(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_PENTABLAKE:
+			rc = scanhash_pentablake(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

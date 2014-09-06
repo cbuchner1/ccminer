@@ -249,6 +249,10 @@ extern int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_pentablake(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern int scanhash_whc(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -284,6 +288,7 @@ struct work_restart {
 	char			padding[128 - sizeof(unsigned long)];
 };
 
+extern bool opt_benchmark;
 extern bool opt_debug;
 extern bool opt_debug_rpc;
 extern bool opt_quiet;
@@ -428,6 +433,7 @@ unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
 void nist5hash(void *state, const void *input);
+void pentablakehash(void *output, const void *input);
 void quarkhash(void *state, const void *input);
 void wcoinhash(void *state, const void *input);
 void x11hash(void *output, const void *input);

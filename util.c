@@ -1458,6 +1458,10 @@ void print_hash_tests(void)
 	printpfx("nist5", hash);
 
 	memset(hash, 0, sizeof hash);
+	pentablakehash(&hash[0], &buf[0]);
+	printpfx("pentablake", hash);
+
+	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
 

@@ -362,6 +362,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 					blake256hash(vhashcpu, endiandata, blakerounds);
 					if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
 						applog(LOG_NOTICE, "GPU found more than one result yippee!");
+						rc = 2;
 					} else {
 						extra_results[0] = MAXU;
 					}
@@ -380,9 +381,14 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			}
 		}
 
+		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
+			pdata[19] = max_nonce - first_nonce + 1;
+			break;
+		}
+
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
 exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1;
@@ -395,6 +401,6 @@ exit_scan:
 	}
 #endif
 	// wait proper end of all threads
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
 	return rc;
 }
