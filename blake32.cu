@@ -52,6 +52,8 @@ static uint32_t __align__(32) c_data[20];
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
 
+static uint32_t extra_results[2] = { MAXU, MAXU };
+
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 __constant__
 static uint32_t __align__(32) c_sigma[16][16];
@@ -225,9 +227,13 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 			}
 		}
 
-		/* keep the smallest nounce, hmm... */
-		if(resNounce[0] > nounce)
+		/* keep the smallest nounce, + extra one if found */
+		if (resNounce[0] > nounce) {
+			resNounce[1] = resNounce[0];
 			resNounce[0] = nounce;
+		}
+		else
+			resNounce[1] = nounce;
 	}
 }
 
@@ -242,14 +248,15 @@ uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
-	if (cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t)) != cudaSuccess)
+	if (cudaMemset(d_resNounce[thr_id], 0xff, 2*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
 	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id], blakerounds);
 	cudaDeviceSynchronize();
-	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
+	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		cudaThreadSynchronize();
-		result = *h_resNounce[thr_id];
+		result = h_resNounce[thr_id][0];
+		extra_results[0] = h_resNounce[thr_id][1];
 	}
 	return result;
 }
@@ -269,8 +276,19 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint32_t throughput = min(TPB * 2048, max_nonce - first_nonce);
+	uint32_t throughput = min(TPB * 4096, max_nonce - first_nonce);
 	int rc = 0;
+
+	if (extra_results[0] != MAXU) {
+		// possible extra result found in previous call
+		if (first_nonce <= extra_results[0] && max_nonce >= extra_results[0]) {
+			pdata[19] = extra_results[0];
+			*hashes_done = pdata[19] - first_nonce + 1;
+			extra_results[0] = MAXU;
+			rc = 1;
+			goto exit_scan;
+		}
+	}
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00000f;
@@ -279,13 +297,13 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		if (opt_n_threads > 1) {
 			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		}
-		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], sizeof(uint32_t)));
-		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], sizeof(uint32_t)));
+		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], 2*sizeof(uint32_t)));
+		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], 2*sizeof(uint32_t)));
 		init[thr_id] = true;
 	}
 
-	if (throughput < (TPB * 2048))
-		applog(LOG_WARNING, "throughput=%u, start=%x, max=%x", throughput, first_nonce, max_nonce);
+	if (opt_debug && throughput < (TPB * 4096))
+		applog(LOG_DEBUG, "throughput=%u, start=%x, max=%x", throughput, first_nonce, max_nonce);
 
 	blake256_cpu_setBlock_80(pdata, ptarget);
 
@@ -309,6 +327,18 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			{
 				pdata[19] = foundNonce;
 				rc = 1;
+
+				if (extra_results[0] != MAXU) {
+					// Rare but possible if the throughput is big
+					be32enc(&endiandata[19], extra_results[0]);
+					blake256hash(vhashcpu, endiandata, blakerounds);
+					if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
+						applog(LOG_NOTICE, "GPU found more than one result yippee!");
+					} else {
+						extra_results[0] = MAXU;
+					}
+				}
+
 				goto exit_scan;
 			}
 			else if (vhashcpu[7] > Htarg) {

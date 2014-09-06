@@ -1005,7 +1005,7 @@ static void *miner_thread(void *userdata)
 					work_restart[thr_id].restart = 1;
 					hashlog_purge_old();
 					// wait a bit for a new job...
-					usleep(1500*1000);
+					sleep(1);
 					(*nonceptr) = end_nonce + 1;
 					work_done = true;
 					continue;
