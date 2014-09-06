@@ -20,11 +20,11 @@ extern "C" {
 #include "sph/sph_hamsi.h"
 #include "sph/sph_fugue.h"
 #include "sph/sph_shabal.h"
+}
 
 #include "miner.h"
 
 #include "cuda_helper.h"
-}
 
 // from cpu-miner.c
 extern int device_map[8];
@@ -166,8 +166,6 @@ extern "C" void x14hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-
-extern bool opt_benchmark;
 
 extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,

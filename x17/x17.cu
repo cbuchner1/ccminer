@@ -26,17 +26,15 @@ extern "C"
 
 #include "sph/sph_sha2.h"
 #include "sph/sph_haval.h"
+}
 
 #include "miner.h"
-}
+#include "cuda_helper.h"
 
 static uint32_t *d_hash[8];
 
-
-// cpu-miner.c
+// in cpu-miner.c
 extern int device_map[8];
-extern bool opt_benchmark;
-
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -204,20 +202,12 @@ extern "C" int scanhash_x17(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-
-	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
-
 	const int throughput = 256*256*8;
-
-		if (opt_benchmark)
-				((uint32_t*)ptarget)[7] = 0x0000ff;
-
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t Htarg = ptarget[7];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = Htarg = 0x0000ff;
+		((uint32_t*)ptarget)[7] = Htarg = 0x00FF;
 
 	if (!init[thr_id])
 	{
