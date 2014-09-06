@@ -582,8 +582,8 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 
 	if (opt_debug && rc) {
 		timeval_subtract(&diff, &tv_end, &tv_start);
-		applog(LOG_DEBUG, "DEBUG: got new work in %d ms",
-		       diff.tv_sec * 1000 + diff.tv_usec / 1000);
+		applog(LOG_DEBUG, "DEBUG: got new work in %u µs",
+		       diff.tv_sec * 1000000 + diff.tv_usec);
 	}
 
 	json_decref(val);
@@ -1345,12 +1345,12 @@ static void *stratum_thread(void *userdata)
 			pthread_mutex_unlock(&g_work_lock);
 			if (stratum.job.clean) {
 				if (!opt_quiet)
-					applog(LOG_BLUE, "%s requested %s job %d restart, block %d", short_url, algo_names[opt_algo],
-						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
+					applog(LOG_BLUE, "%s send a new %s block %d", short_url, algo_names[opt_algo],
+						stratum.bloc_height);
 				restart_threads();
 				hashlog_purge_old();
 			} else if (!opt_quiet) {
-					applog(LOG_BLUE, "%s send %s job %d, block %d", short_url, algo_names[opt_algo],
+					applog(LOG_BLUE, "%s send job %d for block %d", short_url,
 						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
 			}
 		}
