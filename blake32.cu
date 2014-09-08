@@ -361,7 +361,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 					be32enc(&endiandata[19], extra_results[0]);
 					blake256hash(vhashcpu, endiandata, blakerounds);
 					if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
-						applog(LOG_NOTICE, "GPU found more than one result yippee!");
+						applog(LOG_NOTICE, "GPU found more than one result " CL_GRN "yippee!");
 						rc = 2;
 					} else {
 						extra_results[0] = MAXU;

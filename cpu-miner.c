@@ -181,7 +181,7 @@ bool want_stratum = true;
 bool have_stratum = false;
 static bool submit_old = false;
 bool use_syslog = false;
-bool use_colors = false;
+bool use_colors = true;
 static bool opt_background = false;
 bool opt_quiet = false;
 static int opt_retries = -1;
@@ -940,12 +940,11 @@ static void *miner_thread(void *userdata)
 		}
 		if (memcmp(work.data, g_work.data, wcmplen)) {
 			if (opt_debug) {
-				applog(LOG_DEBUG, "job %s work updated", g_work.job_id);
-				for (int n=0; n<wcmplen; n+=8) {
+				for (int n=0; n <= (wcmplen-8); n+=8) {
 					if (memcmp(work.data + n, g_work.data + n, 8)) {
-						applog(LOG_DEBUG, "diff detected at offset %d", n);
+						applog(LOG_DEBUG, "job %s work updated at offset %d:", g_work.job_id, n);
 						applog_hash((uint8_t*) work.data + n);
-						applog_hash((uint8_t*) g_work.data + n);
+						applog_compare_hash((uint8_t*) g_work.data + n, (uint8_t*) work.data + n);
 					}
 				}
 			}
@@ -953,9 +952,9 @@ static void *miner_thread(void *userdata)
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
 		} else if (memcmp(work.target, g_work.target, sizeof(work.target))) {
 			if (opt_debug) {
-				applog(LOG_DEBUG, "job %s target change", g_work.job_id);
+				applog(LOG_DEBUG, "job %s target change:", g_work.job_id);
 				applog_hash((uint8_t*) work.target);
-				applog_hash((uint8_t*) g_work.target);
+				applog_compare_hash((uint8_t*) g_work.target, (uint8_t*) work.target);
 			}
 			memcpy(work.target, g_work.target, sizeof(work.target));
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
@@ -1021,7 +1020,7 @@ static void *miner_thread(void *userdata)
 				stall |= (start_nonce > range.scanned[0] && start_nonce < range.scanned[1]);
 
 				if (stall) {
-					if (opt_algo)
+					if (opt_debug && !opt_quiet)
 						applog(LOG_DEBUG, "job done, wait for a new one...");
 					work_restart[thr_id].restart = 1;
 					hashlog_purge_old();
@@ -1464,12 +1463,13 @@ static void parse_arg (int key, char *arg)
 	case 'C':
 		use_colors = true;
 		break;
-	case 'q':
-		opt_quiet = true;
-		break;
 	case 'D':
 		opt_debug = true;
 		opt_debug_rpc = true;
+		break;
+	case 'q':
+		opt_quiet = true;
+		opt_debug_rpc = false;
 		break;
 	case 'p':
 		free(rpc_pass);

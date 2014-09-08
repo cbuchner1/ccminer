@@ -422,6 +422,7 @@ size_t time2str(char* buf, time_t timer);
 char* atime2str(time_t timer);
 
 void applog_hash(unsigned char *hash);
+void applog_compare_hash(unsigned char *hash, unsigned char *hash2);
 
 void print_hash_tests(void);
 void animehash(void *state, const void *input);

@@ -1401,6 +1401,20 @@ static char* format_hash(char* buf, unsigned char *hash)
 	return buf;
 }
 
+/* to debug diff in data */
+extern void applog_compare_hash(unsigned char *hash, unsigned char *hash2)
+{
+	char s[256] = "";
+	int len = 0;
+	for (int i=0; i < 32; i += 4) {
+		char *color = memcmp(hash+i, hash2+i, 4) ? CL_RED : CL_GRY;
+		len += sprintf(s+len, "%s%02x%02x%02x%02x " CL_GRY, color,
+			hash[i], hash[i+1], hash[i+2], hash[i+3]);
+		s[len] = '\0';
+	}
+	applog(LOG_DEBUG, "%s", s);
+}
+
 extern void applog_hash(unsigned char *hash)
 {
 	char s[128] = {'\0'};
