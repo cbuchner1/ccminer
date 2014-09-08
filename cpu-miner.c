@@ -938,6 +938,19 @@ static void *miner_thread(void *userdata)
 				g_work_time = time(NULL);
 			}
 		}
+		if (memcmp(work.target, g_work.target, sizeof(work.target))) {
+			if (opt_debug) {
+				applog(LOG_DEBUG, "job %s target change:", g_work.job_id);
+				applog_hash((uint8_t*) work.target);
+				applog_compare_hash((uint8_t*) g_work.target, (uint8_t*) work.target);
+			}
+			memcpy(work.target, g_work.target, sizeof(work.target));
+			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
+			/* on new target, ignoring nonce, clear sent data (hashlog) */
+			if (memcmp(work.target, g_work.target, sizeof(work.target) - 4)) {
+				hashlog_purge_job(work.job_id);
+			}
+		}
 		if (memcmp(work.data, g_work.data, wcmplen)) {
 			if (opt_debug) {
 				for (int n=0; n <= (wcmplen-8); n+=8) {
@@ -949,14 +962,6 @@ static void *miner_thread(void *userdata)
 				}
 			}
 			memcpy(&work, &g_work, sizeof(struct work));
-			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
-		} else if (memcmp(work.target, g_work.target, sizeof(work.target))) {
-			if (opt_debug) {
-				applog(LOG_DEBUG, "job %s target change:", g_work.job_id);
-				applog_hash((uint8_t*) work.target);
-				applog_compare_hash((uint8_t*) g_work.target, (uint8_t*) work.target);
-			}
-			memcpy(work.target, g_work.target, sizeof(work.target));
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
 		} else
 			(*nonceptr)++; //??
