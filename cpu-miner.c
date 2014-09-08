@@ -172,7 +172,6 @@ static const char *algo_names[] = {
 };
 
 bool opt_debug = false;
-bool opt_debug_rpc = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
 bool want_longpoll = true;
@@ -440,7 +439,7 @@ static int share_result(int result, const char *reason)
 				(result ? CL_GRN "yay!!!" : CL_RED "booooo")
 			:	(result ? "(yay!!!)" : "(booooo)"));
 
-	if (reason && !opt_quiet) {
+	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		if (strncmp(reason, "low difficulty share", 20) == 0) {
 			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
@@ -548,10 +547,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			hashlog_purge_job(work->job_id);
 
 		json_decref(val);
-	}
-
-	if (opt_debug_rpc) {
-		applog(LOG_DEBUG, "submit: %s", s);
 	}
 
 	rc = true;
@@ -792,13 +787,20 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
 	/* Generate merkle root */
-	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
-		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
-	else
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WHC || opt_algo == ALGO_BLAKECOIN)
-		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
-	else
-		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+	switch (opt_algo) {
+		case ALGO_HEAVY:
+		case ALGO_MJOLLNIR:
+			heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+			break;
+		case ALGO_FUGUE256:
+		case ALGO_GROESTL:
+		case ALGO_BLAKECOIN:
+		case ALGO_WHC:
+			SHA256((uint8_t*)sctx->job.coinbase, sctx->job.coinbase_size, (uint8_t*)merkle_root);
+			break;
+		default:
+			sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+	}
 
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
@@ -870,7 +872,9 @@ static void *miner_thread(void *userdata)
 	uint32_t end_nonce = 0xffffffffU / opt_n_threads * (thr_id + 1) - (thr_id + 1);
 	unsigned char *scratchbuf = NULL;
 	bool work_done = false;
+	bool extrajob = false;
 	char s[16];
+	int rc = 0;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
@@ -897,8 +901,6 @@ static void *miner_thread(void *userdata)
 		struct timeval tv_start, tv_end, diff;
 		int64_t max64;
 		uint64_t umax64;
-		bool extrajob = false;
-		int rc;
 
 		// &work.data[19]
 		int wcmplen = 76;
@@ -907,20 +909,21 @@ static void *miner_thread(void *userdata)
 		if (have_stratum) {
 			uint32_t sleeptime = 0;
 			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
-				sleeptime++;
-				usleep(50*1000);
-				if (sleeptime > 5) {
+				usleep(100*1000);
+				if (sleeptime > 4) {
 					extrajob = true;
 					break;
 				}
+				sleeptime++;
 			}
-			if (sleeptime)
+			if (sleeptime && opt_debug && !opt_quiet)
 				applog(LOG_DEBUG, "sleeptime: %u ms", sleeptime*100);
 			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 			pthread_mutex_lock(&g_work_lock);
 			extrajob |= work_done;
 			if ((*nonceptr) >= end_nonce || extrajob) {
 				work_done = false;
+				extrajob = false;
 				stratum_gen_work(&stratum, &g_work);
 			}
 		} else {
@@ -938,6 +941,22 @@ static void *miner_thread(void *userdata)
 				g_work_time = time(NULL);
 			}
 		}
+#if 0
+		if (!opt_benchmark && g_work.xnonce2_len == 0) {
+			applog(LOG_ERR, "work data not read yet");
+			extrajob = true;
+			work_done = true;
+			sleep(1);
+			continue;
+		}
+#endif
+		if (rc > 1) {
+			/* if we found more than one on last loop */
+			/* todo: handle an array to get them directly */
+			pthread_mutex_unlock(&g_work_lock);
+			goto continue_scan;
+		}
+
 		if (memcmp(work.target, g_work.target, sizeof(work.target))) {
 			if (opt_debug) {
 				applog(LOG_DEBUG, "job %s target change:", g_work.job_id);
@@ -947,7 +966,7 @@ static void *miner_thread(void *userdata)
 			memcpy(work.target, g_work.target, sizeof(work.target));
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
 			/* on new target, ignoring nonce, clear sent data (hashlog) */
-			if (memcmp(work.target, g_work.target, sizeof(work.target) - 4)) {
+			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
 				hashlog_purge_job(work.job_id);
 			}
 		}
@@ -1048,6 +1067,7 @@ static void *miner_thread(void *userdata)
 		(*nonceptr) = start_nonce;
 
 		hashes_done = 0;
+continue_scan:
 		gettimeofday(&tv_start, NULL);
 
 		/* scan nonces for a proof-of-work hash */
@@ -1163,8 +1183,11 @@ static void *miner_thread(void *userdata)
 		timeval_subtract(&diff, &tv_end, &tv_start);
 		if (diff.tv_usec || diff.tv_sec) {
 			pthread_mutex_lock(&stats_lock);
-			thr_hashrates[thr_id] =
-				hashes_done / (diff.tv_sec + 1e-6 * diff.tv_usec);
+			if (diff.tv_sec + 1e-6 * diff.tv_usec > 0.0) {
+				thr_hashrates[thr_id] = hashes_done / (diff.tv_sec + 1e-6 * diff.tv_usec);
+				if (rc > 1)
+					thr_hashrates[thr_id] = (rc * hashes_done) / (diff.tv_sec + 1e-6 * diff.tv_usec);
+			}
 			pthread_mutex_unlock(&stats_lock);
 		}
 		if (!opt_quiet) {
@@ -1372,7 +1395,6 @@ static void *stratum_thread(void *userdata)
 			pthread_mutex_lock(&g_work_lock);
 			stratum_gen_work(&stratum, &g_work);
 			time(&g_work_time);
-			pthread_mutex_unlock(&g_work_lock);
 			if (stratum.job.clean) {
 				if (!opt_quiet)
 					applog(LOG_BLUE, "%s send a new %s block %d", short_url, algo_names[opt_algo],
@@ -1383,6 +1405,7 @@ static void *stratum_thread(void *userdata)
 					applog(LOG_BLUE, "%s send job %d for block %d", short_url,
 						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
 			}
+			pthread_mutex_unlock(&g_work_lock);
 		}
 		
 		if (!stratum_socket_full(&stratum, 120)) {
@@ -1470,11 +1493,9 @@ static void parse_arg (int key, char *arg)
 		break;
 	case 'D':
 		opt_debug = true;
-		opt_debug_rpc = true;
 		break;
 	case 'q':
 		opt_quiet = true;
-		opt_debug_rpc = false;
 		break;
 	case 'p':
 		free(rpc_pass);

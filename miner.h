@@ -290,7 +290,6 @@ struct work_restart {
 
 extern bool opt_benchmark;
 extern bool opt_debug;
-extern bool opt_debug_rpc;
 extern bool opt_quiet;
 extern bool opt_protocol;
 extern int opt_timeout;
