@@ -460,11 +460,14 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool rc = false;
 
 	/* pass if the previous hash is not the current previous hash */
+	pthread_mutex_lock(&g_work_lock);
 	if (memcmp(work->data + 1, g_work.data + 1, 32)) {
+		pthread_mutex_unlock(&g_work_lock);
 		if (opt_debug)
 			applog(LOG_DEBUG, "DEBUG: stale work detected, discarding");
 		return true;
 	}
+	pthread_mutex_unlock(&g_work_lock);
 
 	if (have_stratum) {
 		uint32_t sent;
@@ -894,6 +897,7 @@ static void *miner_thread(void *userdata)
 		struct timeval tv_start, tv_end, diff;
 		int64_t max64;
 		uint64_t umax64;
+		bool extrajob = false;
 		int rc;
 
 		// &work.data[19]
@@ -901,13 +905,24 @@ static void *miner_thread(void *userdata)
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
 		if (have_stratum) {
-			while (time(NULL) >= (g_work_time + opt_scantime) && !work_done)
-				usleep(500*1000);
-			work_done = false;
-			pthread_mutex_lock(&g_work_lock);
+			uint32_t sleeptime = 0;
+			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
+				sleeptime++;
+				usleep(50*1000);
+				if (sleeptime > 5) {
+					extrajob = true;
+					break;
+				}
+			}
+			if (sleeptime)
+				applog(LOG_DEBUG, "sleeptime: %u ms", sleeptime*100);
 			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
-			if ((*nonceptr) >= end_nonce)
+			pthread_mutex_lock(&g_work_lock);
+			extrajob |= work_done;
+			if ((*nonceptr) >= end_nonce || extrajob) {
+				work_done = false;
 				stratum_gen_work(&stratum, &g_work);
+			}
 		} else {
 			int min_scantime = have_longpoll ? LP_SCANTIME : opt_scantime;
 			/* obtain new work from internal workio thread */
@@ -946,11 +961,11 @@ static void *miner_thread(void *userdata)
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
 		} else
 			(*nonceptr)++; //??
-		pthread_mutex_unlock(&g_work_lock);
 		work_restart[thr_id].restart = 0;
 
 		if (opt_debug)
 			applog(LOG_WARNING, "job %s %08x", g_work.job_id, (*nonceptr));
+		pthread_mutex_unlock(&g_work_lock);
 
 		/* adjust max_nonce to meet target scan time */
 		if (have_stratum)
@@ -962,15 +977,18 @@ static void *miner_thread(void *userdata)
 		max64 *= (int64_t)thr_hashrates[thr_id];
 
 		if (max64 <= 0) {
+			/* should not be set too high,
+			   else you can miss multiple nounces */
 			switch (opt_algo) {
 			case ALGO_JACKPOT:
 				max64 = 0x1fffLL;
 				break;
 			case ALGO_BLAKECOIN:
 				max64 = 0x3ffffffLL;
+				break;
 			case ALGO_BLAKE:
 				/* based on the 750Ti hashrate (100kH) */
-				max64 = 0x3ffffffLL;
+				max64 = 0x1ffffffLL;
 				break;
 			default:
 				max64 = 0xfffffLL;
@@ -1008,7 +1026,7 @@ static void *miner_thread(void *userdata)
 					work_restart[thr_id].restart = 1;
 					hashlog_purge_old();
 					// wait a bit for a new job...
-					sleep(1);
+					usleep(500*1000);
 					(*nonceptr) = end_nonce + 1;
 					work_done = true;
 					continue;
