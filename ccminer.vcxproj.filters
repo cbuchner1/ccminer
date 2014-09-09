@@ -52,6 +52,9 @@
     <Filter Include="Header Files\CUDA\heavy">
       <UniqueIdentifier>{3281db48-f394-49ea-a1ef-6ebd09828d50}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\qubit">
+      <UniqueIdentifier>{f3ed23a2-8ce7-41a5-b051-6da56047dc35}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\CUDA\x11">
       <UniqueIdentifier>{dd751f2d-bfd6-42c1-8f9b-cbe94e539353}</UniqueIdentifier>
     </Filter>
@@ -375,6 +378,18 @@
     </CudaCompile>
     <CudaCompile Include="quark\quarkcoin.cu">
       <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
+    <CudaCompile Include="qubit\deep.cu">
+      <Filter>Source Files\CUDA\qubit</Filter>
+    </CudaCompile>
+    <CudaCompile Include="qubit\doom.cu">
+      <Filter>Source Files\CUDA\qubit</Filter>
+    </CudaCompile>
+    <CudaCompile Include="qubit\qubit.cu">
+      <Filter>Source Files\CUDA\qubit</Filter>
+    </CudaCompile>
+    <CudaCompile Include="qubit\qubit_luffa512.cu">
+      <Filter>Source Files\CUDA\qubit</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_nist5.cu">
       <Filter>Source Files\CUDA</Filter>
