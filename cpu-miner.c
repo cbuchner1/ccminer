@@ -129,6 +129,8 @@ typedef enum {
 	ALGO_ANIME,
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
+	ALGO_DEEP,
+	ALGO_DOOM,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
@@ -139,6 +141,7 @@ typedef enum {
 	ALGO_NIST5,
 	ALGO_PENTABLAKE,
 	ALGO_QUARK,
+	ALGO_QUBIT,
 	ALGO_WHC,
 	ALGO_X11,
 	ALGO_X13,
@@ -152,6 +155,8 @@ static const char *algo_names[] = {
 	"anime",
 	"blake",
 	"blakecoin",
+	"deep",
+	"doom",
 	"fresh",
 	"fugue256",
 	"groestl",
@@ -162,6 +167,7 @@ static const char *algo_names[] = {
 	"nist5",
 	"penta",
 	"quark",
+	"qubit",
 	"whirl",
 	"x11",
 	"x13",
@@ -235,6 +241,8 @@ Options:\n\
                         anime     Animecoin hash\n\
                         blake     Blake 256 (like NEOS blake)\n\
                         blakecoin Old Blake 256 (8 rounds)\n\
+                        deep      Deepcoin hash\n\
+                        doom      Doomcoin hash\n\
                         fresh     Freshcoin hash (shavite 80)\n\
                         fugue256  Fuguecoin hash\n\
                         groestl   Groestlcoin hash\n\
@@ -245,6 +253,7 @@ Options:\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         penta     Pentablake hash (5x Blake 512)\n\
                         quark     Quark hash\n\
+                        qubit     Qubit hash\n\
                         whirl     Whirlcoin (old whirlpool)\n\
                         x11       X11 (DarkCoin) hash\n\
                         x13       X13 (MaruCoin) hash\n\
@@ -275,7 +284,7 @@ Options:\n\
       --no-longpoll     disable X-Long-Polling support\n\
       --no-stratum      disable X-Stratum support\n\
   -q, --quiet           disable per-thread hashmeter output\n\
-  -C, --color           enable colored output\n\
+  -K, --nocolor         disable colored output\n\
   -D, --debug           enable debug output\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n"
 #ifdef HAVE_SYSLOG_H
@@ -301,7 +310,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:CDhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
+	"a:c:CKDhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -312,7 +321,7 @@ static struct option const options[] = {
 	{ "cputest", 0, NULL, 1006 },
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
-	{ "color", 0, NULL, 'C' },
+	{ "nocolor", 0, NULL, 'K' },
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
 	{ "no-longpoll", 0, NULL, 1003 },
@@ -1083,6 +1092,16 @@ continue_scan:
 			                      max_nonce, &hashes_done, 0, MNR_BLKHDR_SZ);
 			break;
 
+		case ALGO_DEEP:
+			rc = scanhash_deep(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_DOOM:
+			rc = scanhash_doom(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
 		case ALGO_FUGUE256:
 			rc = scanhash_fugue256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
@@ -1106,6 +1125,11 @@ continue_scan:
 
 		case ALGO_QUARK:
 			rc = scanhash_quark(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_QUBIT:
+			rc = scanhash_qubit(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
@@ -1427,7 +1451,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4.2"
+#define PROGRAM_VERSION "1.4.3"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
@@ -1489,7 +1513,11 @@ static void parse_arg (int key, char *arg)
 		break;
 	}
 	case 'C':
+		/* color for compat */
 		use_colors = true;
+		break;
+	case 'K':
+		use_colors = false;
 		break;
 	case 'D':
 		opt_debug = true;
@@ -1801,8 +1829,7 @@ int main(int argc, char *argv[])
 #endif
 	printf("\t  based on pooler-cpuminer 2.3.2 (c) 2010 Jeff Garzik, 2012 pooler\n");
 	printf("\t    and HVC extension from http://hvc.1gh.com/" "\n\n");
-	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n");
-	printf("\t  BTC donation address: 16hJF5mceSojnTD3ZTUDqdRhDyPJzoRakM\n");
+	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n\n");
 	printf("\tInclude some of djm34 additions, cleaned by Tanguy Pruvot\n");
 	printf("\t  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
 

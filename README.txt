@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.2-tpruvot (Sep 09th 2014) - "Pentablake"
+ccMiner release 1.4.3-tpruvot (Sep 11th 2014) - "DJM34 Algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -35,6 +35,7 @@ TalkCoin
 DarkCoin and other X11 coins
 NEOS blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
+Deep, Doom, Goalcoin and Qubit
 Pentablake (Blake 512 x5)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
@@ -56,12 +57,15 @@ its command line interface and options.
   -a, --algo=ALGO       specify the algorithm to use
                           heavy       use to mine Heavycoin
                           mjollnir    use to mine Mjollnircoin
+                          deep        use to mine Deepcoin
+                          doom        use to mine Doomcoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
                           dmd-gr      use to mine Diamond-Groestl
                           myr-gr      use to mine Myriad-Groest
                           jackpot     use to mine Jackpotcoin
                           quark       use to mine Quarkcoin
+                          qubit       use to mine Qubit Algo
                           anime       use to mine Animecoin
                           blake       use to mine NEOS (Blake 256)
                           blakecoin   use to mine Old Blake 256
@@ -103,7 +107,7 @@ its command line interface and options.
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
   -c, --config=FILE     load a JSON-format configuration file
-  -C, --color           display colored output in a linux Terminal
+  -K, --nocolor         disable colored console output
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
 
@@ -153,6 +157,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Sep  11th 2O14
+                  add algos from djm34 (deep,doom,qubit)
 
   Sep.  1st 2014  add X17, optimized x15 and whirl
                   add blake (256 variant)
