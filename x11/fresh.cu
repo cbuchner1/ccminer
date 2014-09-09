@@ -5,9 +5,9 @@ extern "C" {
 #include "sph/sph_shavite.h"
 #include "sph/sph_simd.h"
 #include "sph/sph_echo.h"
+}
 #include "miner.h"
 #include "cuda_helper.h"
-}
 
 // to test gpu hash on a null buffer
 #define NULLTEST 0
@@ -15,7 +15,6 @@ extern "C" {
 static uint32_t *d_hash[8];
 
 extern int device_map[8];
-extern bool opt_benchmark;
 
 extern void x11_shavite512_cpu_init(int thr_id, int threads);
 extern void x11_shavite512_setBlock_80(void *pdata);
@@ -27,10 +26,6 @@ extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounc
 
 extern void x11_echo512_cpu_init(int thr_id, int threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
@@ -75,15 +70,6 @@ extern "C" void fresh_hash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
-#if NULLTEST
-static void print_hash(unsigned char *hash)
-{
-	for (int i=0; i < 32; i += 4) {
-		printf("%02x%02x%02x%02x ", hash[i], hash[i+1], hash[i+2], hash[i+3]);
-	}
-}
-#endif
-
 extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
@@ -92,15 +78,9 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const int throughput = 256*256*8;
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
-	uint32_t Htarg = ptarget[7];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = Htarg = 0x0000ff;
-
-#if NULLTEST
-	for (int k=0; k < 20; k++)
-		pdata[k] = 0;
-#endif
+		((uint32_t*)ptarget)[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
@@ -123,6 +103,8 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	x11_shavite512_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 	do {
+		uint32_t Htarg = ptarget[7];
+
 		uint32_t foundNonce;
 		int order = 0;
 

@@ -81,10 +81,6 @@ extern void x15_whirlpool_cpu_init(int thr_id, int threads, int mode);
 extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void x15_whirlpool_cpu_free(int thr_id);
 
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
-
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
 											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse, int order);

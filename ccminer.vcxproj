@@ -432,7 +432,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
     </CudaCompile>
-    <CudaCompile Include="quark\cuda_checkhash.cu">
+    <CudaCompile Include="cuda_checkhash.cu">
       <CInterleavedPTX>false</CInterleavedPTX>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>

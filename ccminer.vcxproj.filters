@@ -415,7 +415,7 @@
     <CudaCompile Include="x13\x13.cu">
       <Filter>Source Files\CUDA\x13</Filter>
     </CudaCompile>
-    <CudaCompile Include="quark\cuda_checkhash.cu">
+    <CudaCompile Include="cuda_checkhash.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="x15\x14.cu">

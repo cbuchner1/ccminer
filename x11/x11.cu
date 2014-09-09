@@ -1,4 +1,3 @@
-
 extern "C"
 {
 #include "sph/sph_blake.h"
@@ -13,13 +12,13 @@ extern "C"
 #include "sph/sph_shavite.h"
 #include "sph/sph_simd.h"
 #include "sph/sph_echo.h"
+}
 
 #include "miner.h"
 #include "cuda_helper.h"
 
 #include <stdio.h>
 #include <memory.h>
-}
 
 // in cpu-miner.c
 extern int device_map[8];
@@ -62,14 +61,9 @@ extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounc
 extern void x11_echo512_cpu_init(int thr_id, int threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
-
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
-extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, 
-											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse,
-											int order);
+extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
+                                          uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse, int order);
 
 // X11 Hashfunktion
 extern "C" void x11hash(void *output, const void *input)

@@ -7,6 +7,8 @@
 #define __shfl(var, srcLane, width) (uint32_t)(var)
 #endif
 
+#ifdef __CUDA_ARCH__
+
 __device__ __forceinline__
 void to_bitslice_quad(uint32_t *input, uint32_t *output)
 {
@@ -429,3 +431,11 @@ void from_bitslice_quad(uint32_t *input, uint32_t *output)
         if (threadIdx.x % 4) output[i] = output[i+1] = 0;
     }
 }
+
+#else
+
+/* host "fake" functions */
+#define from_bitslice_quad(st, out)
+#define to_bitslice_quad(in, msg) in[0] = (uint32_t) in[0];
+
+#endif /* device only code */

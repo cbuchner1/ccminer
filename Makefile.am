@@ -29,7 +29,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
 			  myriadgroestl.cpp cuda_myriadgroestl.cu \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
-			  JHA/cuda_jha_compactionTest.cu quark/cuda_checkhash.cu \
+			  JHA/cuda_jha_compactionTest.cu cuda_checkhash.cu \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
 			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu \
 			  quark/quarkcoin.cu quark/animecoin.cu \

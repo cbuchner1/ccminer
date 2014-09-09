@@ -14,7 +14,6 @@ extern "C"
 
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
@@ -43,10 +42,6 @@ extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 
 extern void quark_jh512_cpu_init(int thr_id, int threads);
 extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,

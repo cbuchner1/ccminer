@@ -9,66 +9,56 @@ __constant__ uint32_t pTarget[8];
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-__global__ void cuda_check_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
+__global__
+void cuda_check_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		// bestimme den aktuellen Zähler
+		// bestimme den aktuellen ZÃ¤hler
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
-		uint32_t *inpHash = &g_hash[16 * hashPosition];
+		uint32_t *inpHash = &g_hash[hashPosition<<4];
 
 		uint32_t hash[8];
-#pragma unroll 8
+
+		#pragma unroll 8
 		for (int i=0; i < 8; i++)
 			hash[i] = inpHash[i];
 
-		// kopiere Ergebnis
-		int i, position = -1;
-		bool rc = true;
-
-#pragma unroll 8
-		for (i = 7; i >= 0; i--) {
+		for (int i = 7; i >= 0; i--) {
 			if (hash[i] > pTarget[i]) {
-				if(position < i) {
-					position = i;
-					rc = false;
-				}
-	 		}
-	 		if (hash[i] < pTarget[i]) {
-				if(position < i) {
-					position = i;
-					rc = true;
-				}
-	 		}
+				return;
+			}
+			if (hash[i] < pTarget[i]) {
+				break;
+			}
 		}
 
-		if(rc == true)
-			if(resNounce[0] > nounce)
-				resNounce[0] = nounce;
+		if(resNounce[0] > nounce)
+			resNounce[0] = nounce;
 	}
 }
 
 // Setup-Funktionen
-__host__ void cuda_check_cpu_init(int thr_id, int threads)
+__host__
+void cuda_check_cpu_init(int thr_id, int threads)
 {
     cudaMallocHost(&h_resNounce[thr_id], 1*sizeof(uint32_t));
     cudaMalloc(&d_resNounce[thr_id], 1*sizeof(uint32_t));
 }
 
 // Target Difficulty setzen
-__host__ void cuda_check_cpu_setTarget(const void *ptarget)
+__host__
+void cuda_check_cpu_setTarget(const void *ptarget)
 {
 	// die Message zur Berechnung auf der GPU
-	cudaMemcpyToSymbol( pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 }
 
-__host__ uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
+__host__
+uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
 {
 	uint32_t result = 0xffffffff;
 	cudaMemset(d_resNounce[thr_id], 0xff, sizeof(uint32_t));
@@ -79,7 +69,7 @@ __host__ uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t start
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
+	// GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
 	cuda_check_gpu_hash_64 <<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, d_inputHash, d_resNounce[thr_id]);

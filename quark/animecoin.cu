@@ -6,14 +6,12 @@ extern "C"
 #include "sph/sph_skein.h"
 #include "sph/sph_jh.h"
 #include "sph/sph_keccak.h"
+}
 #include "miner.h"
 #include "cuda_helper.h"
-}
 
-// aus cpu-miner.c
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
@@ -42,10 +40,6 @@ extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 
 extern void quark_jh512_cpu_init(int thr_id, int threads);
 extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
@@ -165,7 +159,6 @@ struct HashPredicate
     uint32_t  m_startNonce;
 };
 
-extern bool opt_benchmark;
 
 extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
