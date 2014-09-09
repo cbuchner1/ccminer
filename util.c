@@ -1020,7 +1020,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	int merkle_count, i;
 	json_t *merkle_arr;
 	unsigned char **merkle;
-	int ntime;
+	int ntime, hoffset;
 
 	job_id = json_string_value(json_array_get(params, 0));
 	prevhash = json_string_value(json_array_get(params, 1));
@@ -1078,7 +1078,8 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	hex2bin(sctx->job.coinbase, coinb1, coinb1_size);
 	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
 
-	sctx->bloc_height = le16dec((uint8_t*) sctx->job.coinbase + 43);
+	hoffset = coinb1_size - 15; // 43;
+	sctx->bloc_height = le16dec((uint8_t*) sctx->job.coinbase + hoffset);
 	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id))
 		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
 	hex2bin(sctx->job.xnonce2 + sctx->xnonce2_size, coinb2, coinb2_size);
@@ -1125,7 +1126,7 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 	sctx->next_diff = diff;
 	pthread_mutex_unlock(&sctx->work_lock);
 
-	applog(LOG_INFO, "Stratum difficulty set to %g", diff);
+	applog(LOG_WARNING, "Stratum difficulty set to %g", diff);
 
 	return true;
 }
@@ -1220,10 +1221,6 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		goto out;
 	id = json_object_get(val, "id");
 	params = json_object_get(val, "params");
-
-	if (opt_debug_rpc) {
-		applog(LOG_DEBUG, "method: %s", s);
-	}
 
 	if (!strcasecmp(method, "mining.notify")) {
 		ret = stratum_notify(sctx, params);
@@ -1400,6 +1397,20 @@ static char* format_hash(char* buf, unsigned char *hash)
 	return buf;
 }
 
+/* to debug diff in data */
+extern void applog_compare_hash(unsigned char *hash, unsigned char *hash2)
+{
+	char s[256] = "";
+	int len = 0;
+	for (int i=0; i < 32; i += 4) {
+		char *color = memcmp(hash+i, hash2+i, 4) ? CL_RED : CL_GRY;
+		len += sprintf(s+len, "%s%02x%02x%02x%02x " CL_GRY, color,
+			hash[i], hash[i+1], hash[i+2], hash[i+3]);
+		s[len] = '\0';
+	}
+	applog(LOG_DEBUG, "%s", s);
+}
+
 extern void applog_hash(unsigned char *hash)
 {
 	char s[128] = {'\0'};
@@ -1456,6 +1467,10 @@ void print_hash_tests(void)
 	memset(hash, 0, sizeof hash);
 	nist5hash(&hash[0], &buf[0]);
 	printpfx("nist5", hash);
+
+	memset(hash, 0, sizeof hash);
+	pentablakehash(&hash[0], &buf[0]);
+	printpfx("pentablake", hash);
 
 	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);

@@ -21,10 +21,9 @@ extern "C"
 #include <memory.h>
 }
 
-// aus cpu-miner.c
+// in cpu-miner.c
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);
@@ -140,22 +139,17 @@ extern "C" void x11hash(void *output, const void *input)
 }
 
 
-extern bool opt_benchmark;
-
 extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
+	const int throughput = 256*256*8;
+	static bool init[8] = {0,0,0,0,0,0,0,0};
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
-	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*256*8;
-
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
@@ -186,8 +180,10 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
-		uint32_t foundNonce;
+		const uint32_t Htarg = ptarget[7];
+
 		int order = 0;
+		uint32_t foundNonce;
 
 		// Hash with CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
@@ -204,7 +200,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 		// Scan nach Gewinner Hashes auf der GPU
 		foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		if  (foundNonce != 0xffffffff)
+		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);

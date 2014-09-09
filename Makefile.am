@@ -16,7 +16,7 @@ bin_PROGRAMS	= ccminer
 ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
-			  cpu-miner.c util.c hefty1.c scrypt.c \
+			  cpu-miner.c util.c crc32.c hefty1.c scrypt.c \
 			  hashlog.cpp \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
@@ -33,7 +33,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
 			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu quark/quarkcoin.cu quark/animecoin.cu \
 			  quark/cuda_quark_compactionTest.cu \
-			  cuda_nist5.cu blake32.cu \
+			  cuda_nist5.cu blake32.cu pentablake.cu \
 			  sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/sha2.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \

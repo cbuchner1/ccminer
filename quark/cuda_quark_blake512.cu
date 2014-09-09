@@ -50,59 +50,60 @@ const uint64_t c_u512[16] =
   0x0801f2e2858efc16ULL, 0x636920d871574e69ULL
 };
 
-#define G(a,b,c,d,e)          \
-    v[a] += (m[sigma[i][e]] ^ u512[sigma[i][e+1]]) + v[b];\
-    v[d] = ROTR( v[d] ^ v[a],32);        \
-    v[c] += v[d];           \
-    v[b] = ROTR( v[b] ^ v[c],25);        \
-    v[a] += (m[sigma[i][e+1]] ^ u512[sigma[i][e]])+v[b];  \
-    v[d] = ROTR( v[d] ^ v[a],16);        \
-    v[c] += v[d];           \
-    v[b] = ROTR( v[b] ^ v[c],11);
-
+#define G(a,b,c,d,x) { \
+	uint32_t idx1 = sigma[i][x]; \
+	uint32_t idx2 = sigma[i][x+1]; \
+	v[a] += (m[idx1] ^ u512[idx2]) + v[b]; \
+	v[d] = ROTR( v[d] ^ v[a], 32); \
+	v[c] += v[d]; \
+	v[b] = ROTR( v[b] ^ v[c], 25); \
+	v[a] += (m[idx2] ^ u512[idx1]) + v[b]; \
+	v[d] = ROTR( v[d] ^ v[a], 16); \
+	v[c] += v[d]; \
+	v[b] = ROTR( v[b] ^ v[c], 11); \
+}
 
 __device__ static
-void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t ((*sigma)[16]), const uint64_t *u512, const int bits )
+void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t ((*sigma)[16]), const uint64_t *u512, const int T0)
 {
     uint64_t v[16], m[16], i;
 
-#pragma unroll 16
-    for( i = 0; i < 16; ++i ) {
-        m[i] = cuda_swab64(block[i]);
-    }
+	#pragma unroll 16
+	for( i = 0; i < 16; i++) {
+		m[i] = cuda_swab64(block[i]);
+	}
 
-#pragma unroll 8
-    for( i = 0; i < 8; ++i )  v[i] = h[i];
+	#pragma unroll 8
+	for (i = 0; i < 8; i++)
+		v[i] = h[i];
 
-    v[ 8] = u512[0];
-    v[ 9] = u512[1];
-    v[10] = u512[2];
-    v[11] = u512[3];
-    v[12] = u512[4];
-    v[13] = u512[5];
-    v[14] = u512[6];
-    v[15] = u512[7];
+	v[ 8] = u512[0];
+	v[ 9] = u512[1];
+	v[10] = u512[2];
+	v[11] = u512[3];
+	v[12] = u512[4] ^ T0;
+	v[13] = u512[5] ^ T0;
+	v[14] = u512[6];
+	v[15] = u512[7];
 
-    v[12] ^= bits;
-    v[13] ^= bits;
+	//#pragma unroll 16
+	for( i = 0; i < 16; ++i )
+	{
+		/* column step */
+		G( 0, 4, 8, 12, 0 );
+		G( 1, 5, 9, 13, 2 );
+		G( 2, 6, 10, 14, 4 );
+		G( 3, 7, 11, 15, 6 );
+		/* diagonal step */
+		G( 0, 5, 10, 15, 8 );
+		G( 1, 6, 11, 12, 10 );
+		G( 2, 7, 8, 13, 12 );
+		G( 3, 4, 9, 14, 14 );
+	}
 
-//#pragma unroll 16
-    for( i = 0; i < 16; ++i )
-    {
-        /* column step */
-        G( 0, 4, 8, 12, 0 );
-        G( 1, 5, 9, 13, 2 );
-        G( 2, 6, 10, 14, 4 );
-        G( 3, 7, 11, 15, 6 );
-        /* diagonal step */
-        G( 0, 5, 10, 15, 8 );
-        G( 1, 6, 11, 12, 10 );
-        G( 2, 7, 8, 13, 12 );
-        G( 3, 4, 9, 14, 14 );
-    }
-
-#pragma unroll 16
-    for( i = 0; i < 16; ++i )  h[i % 8] ^= v[i];
+	#pragma unroll 16
+	for( i = 0; i < 16; ++i )
+		h[i % 8] ^= v[i];
 }
 
 __device__ __constant__
@@ -114,7 +115,8 @@ static const uint64_t d_constMem[8] = {
 	0x510e527fade682d1ULL,
 	0x9b05688c2b3e6c1fULL,
 	0x1f83d9abfb41bd6bULL,
-	0x5be0cd19137e2179ULL };
+	0x5be0cd19137e2179ULL
+};
 
 // Hash-Padding
 __device__ __constant__
@@ -126,7 +128,8 @@ static const uint64_t d_constHashPadding[8] = {
 	0,
 	0x0100000000000000ull,
 	0,
-	0x0002000000000000ull };
+	0x0002000000000000ull
+};
 
 __global__ __launch_bounds__(256, 4)
 void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
@@ -145,48 +148,42 @@ void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_n
 	if (thread < threads)
 #endif
 	{
-		uint8_t i;
-		// bestimme den aktuellen Zähler
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
 		int hashPosition = nounce - startNounce;
 		uint64_t *inpHash = &g_hash[hashPosition<<3]; // hashPosition * 8
 
-		// 128 Byte für die Message
+		// 128 Bytes
 		uint64_t buf[16];
 
-		// State vorbereiten
+		// State
 		uint64_t h[8];
 		#pragma unroll 8
-		for (i=0;i<8;i++)
+		for (int i=0;i<8;i++)
 			h[i] = d_constMem[i];
 
-		// Message für die erste Runde in Register holen
+		// Message for first round
 		#pragma unroll 8
-		for (i=0; i < 8; ++i)
+		for (int i=0; i < 8; ++i)
 			buf[i] = inpHash[i];
 
 		#pragma unroll 8
-		for (i=0; i < 8; i++)
+		for (int i=0; i < 8; i++)
 			buf[i+8] = d_constHashPadding[i];
 
-		// die einzige Hashing-Runde
+		// Ending round
 		quark_blake512_compress( h, buf, c_sigma, c_u512, 512 );
 
-#if __CUDA_ARCH__ >= 130
-		// ausschliesslich 32 bit Operationen sofern die SM1.3 double intrinsics verfügbar sind
+#if __CUDA_ARCH__ <= 350
 		uint32_t *outHash = (uint32_t*)&g_hash[8 * hashPosition];
 		#pragma unroll 8
-		for (i=0; i < 8; ++i) {
+		for (int i=0; i < 8; i++) {
 			outHash[2*i+0] = cuda_swab32( _HIWORD(h[i]) );
 			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
 		}
 #else
-		// in dieser Version passieren auch ein paar 64 Bit Shifts
 		uint64_t *outHash = &g_hash[8 * hashPosition];
-		#pragma unroll 8
-		for (i=0; i < 8; ++i)
-		{
+		for (int i=0; i < 8; i++) {
 			outHash[i] = cuda_swab64(h[i]);
 		}
 #endif
@@ -198,45 +195,38 @@ __global__ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, vo
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		// State vorbereiten
 		uint64_t h[8];
-		// 128 Byte für die Message
 		uint64_t buf[16];
-		uint8_t i;
-		// bestimme den aktuellen Zähler
 		uint32_t nounce = startNounce + thread;
 
 		#pragma unroll 8
-		for(i=0;i<8;i++)
+		for(int i=0; i<8; i++)
 			h[i] = d_constMem[i];
 
 		// Message für die erste Runde in Register holen
 		#pragma unroll 16
-		for (i=0; i < 16; ++i) buf[i] = c_PaddedMessage80[i];
+		for (int i=0; i < 16; ++i)
+			buf[i] = c_PaddedMessage80[i];
 
-		// die Nounce durch die thread-spezifische ersetzen
-		buf[9] = REPLACE_HIWORD(buf[9], cuda_swab32(nounce));
+		// The test Nonce
+		((uint32_t*)buf)[19] = cuda_swab32(nounce);
 
-		// die einzige Hashing-Runde
 		quark_blake512_compress( h, buf, c_sigma, c_u512, 640 );
 
-		// Hash rauslassen
-#if __CUDA_ARCH__ >= 130
-		// ausschliesslich 32 bit Operationen sofern die SM1.3 double intrinsics verfügbar sind
+#if __CUDA_ARCH__ <= 350
 		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
 		#pragma unroll 8
-		for (i=0; i < 8; ++i) {
-			outHash[2*i+0] = cuda_swab32( _HIWORD(h[i]) );
+		for (uint32_t i=0; i < 8; i++) {
+			outHash[2*i]   = cuda_swab32( _HIWORD(h[i]) );
 			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
 		}
 #else
-		// in dieser Version passieren auch ein paar 64 Bit Shifts
 		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
-		#pragma unroll 8
-		for (i=0; i < 8; ++i) {
+		for (uint32_t i=0; i < 8; i++) {
 			outHash[i] = cuda_swab64( h[i] );
 		}
 #endif
+
 	}
 }
 

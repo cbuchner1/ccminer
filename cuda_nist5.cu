@@ -5,9 +5,11 @@ extern "C"
 #include "sph/sph_skein.h"
 #include "sph/sph_jh.h"
 #include "sph/sph_keccak.h"
-#include "miner.h"
-#include "cuda_helper.h"
 }
+
+#include "miner.h"
+
+#include "cuda_helper.h"
 
 // aus cpu-miner.c
 extern int device_map[8];
@@ -74,9 +76,6 @@ extern "C" void nist5hash(void *state, const void *input)
     memcpy(state, hash, 32);
 }
 
-
-extern bool opt_benchmark;
-
 extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
@@ -84,7 +83,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		((uint32_t*)ptarget)[7] = 0x00FF;
 
 	const uint32_t Htarg = ptarget[7];
 

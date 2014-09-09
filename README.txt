@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.1-tpruvot (Sep 06th 2014) - "Cached Blake"
+ccMiner release 1.4.2-tpruvot (Sep 09th 2014) - "Pentablake"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -35,6 +35,7 @@ TalkCoin
 DarkCoin and other X11 coins
 NEOS blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
+Pentablake (Blake 512 x5)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL) implementations.
@@ -65,6 +66,7 @@ its command line interface and options.
                           blake       use to mine NEOS (Blake 256)
                           blakecoin   use to mine Old Blake 256
                           nist5       use to mine TalkCoin
+                          penta       use to mine Joincoin / Pentablake
                           fresh       use to mine Freshcoin
                           whirl       use to mine Whirlcoin
                           x11         use to mine DarkCoin

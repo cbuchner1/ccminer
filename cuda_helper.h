@@ -12,6 +12,8 @@
 
 #include <stdint.h>
 
+extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+
 extern __device__ __device_builtin__ void __syncthreads(void);
 
 #ifndef __CUDA_ARCH__

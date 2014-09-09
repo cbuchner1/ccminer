@@ -21,14 +21,11 @@ extern "C" {
 #include "sph/sph_fugue.h"
 #include "sph/sph_shabal.h"
 #include "sph/sph_whirlpool.h"
+}
 
 #include "miner.h"
 
 #include "cuda_helper.h"
-}
-
-// to test gpu hash on a null buffer
-#define NULLTEST 0
 
 // from cpu-miner.c
 extern int device_map[8];
@@ -91,8 +88,6 @@ extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNo
 extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
 											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse, int order);
-
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 // X15 CPU Hash function
 extern "C" void x15hash(void *output, const void *input)
@@ -181,17 +176,6 @@ extern "C" void x15hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-#if NULLTEST
-static void print_hash(unsigned char *hash)
-{
-	for (int i=0; i < 32; i += 4) {
-		printf("%02x%02x%02x%02x ", hash[i], hash[i+1], hash[i+2], hash[i+3]);
-	}
-}
-#endif
-
-extern bool opt_benchmark;
-
 extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
@@ -203,12 +187,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	uint32_t Htarg = ptarget[7];
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = Htarg = 0x0000ff;
-
-#if NULLTEST
-	for (int k=0; k < 20; k++)
-		pdata[k] = 0;
-#endif
+		((uint32_t*)ptarget)[7] = Htarg = 0x00FF;
 
 	if (!init[thr_id])
 	{
@@ -259,12 +238,6 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-#if NULLTEST
-		uint32_t buf[8]; memset(buf, 0, sizeof buf);
-		CUDA_SAFE_CALL(cudaMemcpy(buf, d_hash[thr_id], sizeof buf, cudaMemcpyDeviceToHost));
-		CUDA_SAFE_CALL(cudaThreadSynchronize());
-		print_hash((unsigned char*)buf); printf("\n");
-#endif
 		/* Scan with GPU */
 		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
