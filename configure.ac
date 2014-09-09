@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [2014.09.09])
+AC_INIT([ccminer], [2014.09.11])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM

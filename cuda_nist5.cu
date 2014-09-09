@@ -11,7 +11,7 @@ extern "C"
 
 #include "cuda_helper.h"
 
-// aus cpu-miner.c
+// in cpu-miner.c
 extern int device_map[8];
 
 // Speicher für Input/Output der verketteten Hashfunktionen
@@ -33,9 +33,6 @@ extern void quark_keccak512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 extern void quark_skein512_cpu_init(int thr_id, int threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 // Original nist5hash Funktion aus einem miner Quelltext
 extern "C" void nist5hash(void *state, const void *input)
@@ -46,30 +43,25 @@ extern "C" void nist5hash(void *state, const void *input)
     sph_keccak512_context ctx_keccak;
     sph_skein512_context ctx_skein;
     
-    unsigned char hash[64];
+    uint8_t hash[64];
 
     sph_blake512_init(&ctx_blake);
-    // ZBLAKE;
     sph_blake512 (&ctx_blake, input, 80);
     sph_blake512_close(&ctx_blake, (void*) hash);
     
     sph_groestl512_init(&ctx_groestl);
-    // ZGROESTL;
     sph_groestl512 (&ctx_groestl, (const void*) hash, 64);
     sph_groestl512_close(&ctx_groestl, (void*) hash);
 
     sph_jh512_init(&ctx_jh);
-    // ZJH;
     sph_jh512 (&ctx_jh, (const void*) hash, 64);
     sph_jh512_close(&ctx_jh, (void*) hash);
 
     sph_keccak512_init(&ctx_keccak);
-    // ZKECCAK;
     sph_keccak512 (&ctx_keccak, (const void*) hash, 64);
     sph_keccak512_close(&ctx_keccak, (void*) hash);
 
     sph_skein512_init(&ctx_skein);
-    // ZSKEIN;
     sph_skein512 (&ctx_skein, (const void*) hash, 64);
     sph_skein512_close(&ctx_skein, (void*) hash);
 

@@ -205,13 +205,13 @@ extern int scanhash_sha256d(int thr_id, uint32_t *pdata,
 
 extern unsigned char *scrypt_buffer_alloc();
 
-extern int scanhash_scrypt(int thr_id, uint32_t *pdata,
-	unsigned char *scratchbuf, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done);
-
-extern int scanhash_heavy(int thr_id, uint32_t *pdata,
+extern int scanhash_deep(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done, uint32_t maxvote, int blocklen);
+	unsigned long *hashes_done);
+
+extern int scanhash_doom(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
 
 extern int scanhash_fugue256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -220,6 +220,10 @@ extern int scanhash_fugue256(int thr_id, uint32_t *pdata,
 extern int scanhash_groestlcoin(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
+
+extern int scanhash_heavy(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done, uint32_t maxvote, int blocklen);
 
 extern int scanhash_myriad(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -252,6 +256,14 @@ extern int scanhash_nist5(int thr_id, uint32_t *pdata,
 extern int scanhash_pentablake(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
+
+extern int scanhash_qubit(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
+extern int scanhash_scrypt(int thr_id, uint32_t *pdata,
+	unsigned char *scratchbuf, const uint32_t *ptarget,
+	uint32_t max_nonce, unsigned long *hashes_done);
 
 extern int scanhash_whc(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -426,6 +438,8 @@ void applog_compare_hash(unsigned char *hash, unsigned char *hash2);
 void print_hash_tests(void);
 void animehash(void *state, const void *input);
 void blake256hash(void *output, const void *input, int rounds);
+void deephash(void *state, const void *input);
+void doomhash(void *state, const void *input);
 void fresh_hash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
@@ -435,6 +449,7 @@ void myriadhash(void *state, const void *input);
 void nist5hash(void *state, const void *input);
 void pentablakehash(void *output, const void *input);
 void quarkhash(void *state, const void *input);
+void qubithash(void *state, const void *input);
 void wcoinhash(void *state, const void *input);
 void x11hash(void *output, const void *input);
 void x13hash(void *output, const void *input);

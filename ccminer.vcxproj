@@ -432,7 +432,7 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
     </CudaCompile>
-    <CudaCompile Include="quark\cuda_checkhash.cu">
+    <CudaCompile Include="cuda_checkhash.cu">
       <CInterleavedPTX>false</CInterleavedPTX>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
@@ -459,6 +459,26 @@ copy "$(CudaToolkitBinDir)\cudart64*.dll" "$(OutDir)"</Command>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="quark\quarkcoin.cu">
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
+      <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+    </CudaCompile>
+    <CudaCompile Include="qubit\deep.cu">
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
+      <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+    </CudaCompile>
+    <CudaCompile Include="qubit\doom.cu">
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
+      <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+    </CudaCompile>
+    <CudaCompile Include="qubit\qubit.cu">
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
+      <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
+    </CudaCompile>
+    <CudaCompile Include="qubit\qubit_luffa512.cu">
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options=-O2 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>

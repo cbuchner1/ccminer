@@ -1441,6 +1441,14 @@ void print_hash_tests(void)
 	printpfx("blake", hash);
 
 	memset(hash, 0, sizeof hash);
+	deephash(&hash[0], &buf[0]);
+	printpfx("deep", hash);
+
+	memset(hash, 0, sizeof hash);
+	doomhash(&hash[0], &buf[0]);
+	printpfx("doom", hash);
+
+	memset(hash, 0, sizeof hash);
 	fresh_hash(&hash[0], &buf[0]);
 	printpfx("fresh", hash);
 
@@ -1475,6 +1483,10 @@ void print_hash_tests(void)
 	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
+
+	memset(hash, 0, sizeof hash);
+	qubithash(&hash[0], &buf[0]);
+	printpfx("qubit", hash);
 
 	memset(hash, 0, sizeof hash);
 	wcoinhash(&hash[0], &buf[0]);

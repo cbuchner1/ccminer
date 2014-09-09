@@ -5,14 +5,13 @@ extern "C"
 #include "sph/sph_groestl.h"
 #include "sph/sph_jh.h"
 #include "sph/sph_skein.h"
-#include "miner.h"
-#include "cuda_helper.h"
 }
 
-// aus cpu-miner.c
+#include "miner.h"
+#include "cuda_helper.h"
+
 extern int device_map[8];
 
-// Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void jackpot_keccak512_cpu_init(int thr_id, int threads);
@@ -30,10 +29,6 @@ extern void quark_jh512_cpu_hash_64(int thr_id, int threads, uint32_t startNounc
 
 extern void quark_skein512_cpu_init(int thr_id, int threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 extern void jackpot_compactTest_cpu_init(int thr_id, int threads);
 extern void jackpot_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable, 

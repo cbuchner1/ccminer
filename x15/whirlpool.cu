@@ -9,20 +9,17 @@ extern "C"
 
 // from cpu-miner.c
 extern int device_map[8];
-extern bool opt_benchmark;
 
 // Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void x15_whirlpool_cpu_init(int thr_id, int threads, int mode);
+extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
 extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
 extern void whirlpool512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void cuda_check_cpu_init(int thr_id, int threads);
-extern void cuda_check_cpu_setTarget(const void *ptarget);
-extern uint32_t cuda_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 // CPU Hash function
 extern "C" void wcoinhash(void *state, const void *input)
