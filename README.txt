@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.3-tpruvot (Sep 11th 2014) - "DJM34 Algos"
+ccMiner release 1.4.3-tpruvot (Sep 10th 2014) - "Qubit and Doom"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -158,8 +158,11 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Sep  11th 2O14
-                  add algos from djm34 (deep,doom,qubit)
+  Sep. 10th 2O14  add algos from djm34 (deep,doom,qubit)
+                  Goalcoin seems to be dead, not imported.
+                  Create also the pentablake algo (5x Blake 512)
+
+  Sept  6th 2014  Almost twice the speed on blake256 algos with the "midstate" cache
 
   Sep.  1st 2014  add X17, optimized x15 and whirl
                   add blake (256 variant)
