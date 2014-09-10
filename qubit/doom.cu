@@ -51,7 +51,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		qubit_luffa512_cpu_init(thr_id, throughput);
 
@@ -86,7 +86,12 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
+
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

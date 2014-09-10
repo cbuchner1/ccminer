@@ -136,6 +136,7 @@ typedef enum {
 	ALGO_GROESTL,
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_JACKPOT,
+	ALGO_LUFFA_DOOM,
 	ALGO_MJOLLNIR,		/* Mjollnir hash */
 	ALGO_MYR_GR,
 	ALGO_NIST5,
@@ -156,12 +157,13 @@ static const char *algo_names[] = {
 	"blake",
 	"blakecoin",
 	"deep",
-	"doom",
+	"doom", /* is luffa */
 	"fresh",
 	"fugue256",
 	"groestl",
 	"heavy",
 	"jackpot",
+	"luffa",
 	"mjollnir",
 	"myr-gr",
 	"nist5",
@@ -242,12 +244,12 @@ Options:\n\
                         blake     Blake 256 (like NEOS blake)\n\
                         blakecoin Old Blake 256 (8 rounds)\n\
                         deep      Deepcoin hash\n\
-                        doom      Doomcoin hash\n\
                         fresh     Freshcoin hash (shavite 80)\n\
                         fugue256  Fuguecoin hash\n\
                         groestl   Groestlcoin hash\n\
                         heavy     Heavycoin hash\n\
                         jackpot   Jackpot hash\n\
+                        luffa     Doomcoin hash\n\
                         mjollnir  Mjollnircoin hash\n\
                         myr-gr    Myriad-Groestl hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\

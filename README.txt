@@ -58,12 +58,12 @@ its command line interface and options.
                           heavy       use to mine Heavycoin
                           mjollnir    use to mine Mjollnircoin
                           deep        use to mine Deepcoin
-                          doom        use to mine Doomcoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
                           dmd-gr      use to mine Diamond-Groestl
                           myr-gr      use to mine Myriad-Groest
                           jackpot     use to mine Jackpotcoin
+                          luffa       use to mine Doomcoin
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit Algo
                           anime       use to mine Animecoin

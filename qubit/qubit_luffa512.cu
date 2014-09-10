@@ -23,13 +23,20 @@
 
 #include "cuda_helper.h"
 
+#define MAXU 0xffffffffU
+
 typedef unsigned char BitSequence;
 
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
-__constant__ uint32_t pTarget[8];
+__constant__ uint32_t c_Target[8];
 
-uint32_t *d_lnounce[8];
-uint32_t *d_LNonce[8];
+static uint32_t *h_resNounce[8];
+static uint32_t *d_resNounce[8];
+
+#define NBN 1 /* max results, could be 2, see blake32.cu */
+#if NBN > 1
+static uint32_t extra_results[2] = { MAXU, MAXU };
+#endif
 
 typedef struct {
 	uint32_t buffer[8]; /* Buffer to be hashed */
@@ -380,64 +387,75 @@ void qubit_luffa512_gpu_finalhash_80(int threads, uint32_t startNounce, void *ou
 	{
 		uint32_t nounce = startNounce + thread;
 		union {
-		uint64_t buf64[16];
-		uint32_t buf32[32];
+			uint64_t buf64[16];
+			uint32_t buf32[32];
 		} buff;
 		uint32_t Hash[16];
 
-#pragma unroll 16
+		#pragma unroll 16
 		for (int i=0; i < 16; ++i) buff.buf64[i] = c_PaddedMessage80[i];
 
-		// die Nounce durch die thread-spezifische ersetzen
+		// Tested nonce
 		buff.buf64[9] = REPLACE_HIWORD(buff.buf64[9], cuda_swab32(nounce));
 
-
 		hashState state;
-#pragma unroll 40
+		#pragma unroll 40
 		for(int i=0;i<40;i++) state.chainv[i] = c_IV[i];
-#pragma unroll 8
+
+		#pragma unroll 8
 		for(int i=0;i<8;i++) state.buffer[i] = 0;
+
 		Update512(&state, (BitSequence*)buff.buf32);
 		finalization512(&state, Hash);
 
-		bool rc = true;
+		/* dont ask me why not a simple if (Hash[i] > c_Target[i]) return;
+		 * we lose 20% in perfs without the position test */
 		int position = -1;
-#pragma unroll 8
+		#pragma unroll 8
 		for (int i = 7; i >= 0; i--) {
-			if (Hash[i] > pTarget[i]) {
-				if(position < i) {
-					position = i;
-					rc = false;
+			if (Hash[i] > c_Target[i]) {
+				if (position < i) {
+					return;
 				}
-
 			}
-			if (Hash[i] < pTarget[i]) {
-				if(position < i) {
+			if (Hash[i] < c_Target[i]) {
+				if (position < i) {
 					position = i;
-					rc = true;
+					//break; /* impact perfs, unroll ? */
 				}
 			}
 		}
 
-		if(rc && resNounce[0] > nounce)
+#if NBN == 1
+		if (resNounce[0] > nounce) {
 			resNounce[0] = nounce;
+		}
+#else
+		/* keep the smallest nounce, + extra one if found */
+		if (resNounce[0] > nounce) {
+			resNounce[1] = resNounce[0];
+			resNounce[0] = nounce;
+		} else {
+			resNounce[1] = nounce;
+		}
+#endif
 	}
 }
 
 __host__
 void qubit_luffa512_cpu_init(int thr_id, int threads)
 {
-	cudaMemcpyToSymbol( c_IV, h2_IV, sizeof(h2_IV), 0, cudaMemcpyHostToDevice );
-	cudaMemcpyToSymbol( c_CNS, h2_CNS, sizeof(h2_CNS), 0, cudaMemcpyHostToDevice );
-	cudaMalloc(&d_LNonce[thr_id], sizeof(uint32_t));
-	cudaMallocHost(&d_lnounce[thr_id], 1*sizeof(uint32_t));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_IV, h2_IV, sizeof(h2_IV), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_CNS, h2_CNS, sizeof(h2_CNS), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], NBN * sizeof(uint32_t)));
+	CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], NBN * sizeof(uint32_t)));
 }
 
 __host__
 uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash,int order)
 {
-	uint32_t result = 0xffffffff;
-	cudaMemset(d_LNonce[thr_id], 0xffffffff, sizeof(uint32_t));
+	uint32_t result = MAXU;
+	cudaMemset(d_resNounce[thr_id], 0xff, NBN * sizeof(uint32_t));
 	const int threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -445,11 +463,15 @@ uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t start
 
 	size_t shared_size = 0;
 
-	qubit_luffa512_gpu_finalhash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash, d_LNonce[thr_id]);
-	MyStreamSynchronize(NULL, order, thr_id);
-	cudaMemcpy(d_lnounce[thr_id], d_LNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	//cudaThreadSynchronize();
-	result = *d_lnounce[thr_id];
+	qubit_luffa512_gpu_finalhash_80 <<<grid, block, shared_size>>> (threads, startNounce, d_outputHash, d_resNounce[thr_id]);
+	cudaDeviceSynchronize();
+	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], NBN * sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
+		//cudaThreadSynchronize();
+		result = h_resNounce[thr_id][0];
+#if NBN > 1
+		extra_results[0] = h_resNounce[thr_id][1];
+#endif
+	}
 	return result;
 }
 
@@ -462,7 +484,7 @@ void qubit_luffa512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, u
 	dim3 block(threadsperblock);
 	size_t shared_size = 0;
 
-	qubit_luffa512_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+	qubit_luffa512_gpu_hash_80 <<<grid, block, shared_size>>> (threads, startNounce, d_outputHash);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
@@ -470,6 +492,7 @@ __host__
 void qubit_luffa512_cpu_setBlock_80(void *pdata)
 {
 	unsigned char PaddedMessage[128];
+
 	memcpy(PaddedMessage, pdata, 80);
 	memset(PaddedMessage+80, 0, 48);
 	PaddedMessage[80] = 0x80;
@@ -477,20 +500,21 @@ void qubit_luffa512_cpu_setBlock_80(void *pdata)
 	PaddedMessage[126] = 0x02;
 	PaddedMessage[127] = 0x80;
 
-	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 }
 
 __host__
 void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget)
 {
 	unsigned char PaddedMessage[128];
+
 	memcpy(PaddedMessage, pdata, 80);
 	memset(PaddedMessage+80, 0, 48);
 	PaddedMessage[80] = 0x80;
 	PaddedMessage[111] = 1;
 	PaddedMessage[126] = 0x02;
 	PaddedMessage[127] = 0x80;
-	cudaMemcpyToSymbol( pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 
-	cudaMemcpyToSymbol( c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 }

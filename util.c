@@ -1475,10 +1475,6 @@ void print_hash_tests(void)
 	printpfx("deep", hash);
 
 	memset(hash, 0, sizeof hash);
-	doomhash(&hash[0], &buf[0]);
-	printpfx("doom", hash);
-
-	memset(hash, 0, sizeof hash);
 	fresh_hash(&hash[0], &buf[0]);
 	printpfx("fresh", hash);
 
@@ -1497,6 +1493,10 @@ void print_hash_tests(void)
 	memset(hash, 0, sizeof hash);
 	jackpothash(&hash[0], &buf[0]);
 	printpfx("jackpot", hash);
+
+	memset(hash, 0, sizeof hash);
+	doomhash(&hash[0], &buf[0]);
+	printpfx("luffa", hash);
 
 	memset(hash, 0, sizeof hash);
 	myriadhash(&hash[0], &buf[0]);
