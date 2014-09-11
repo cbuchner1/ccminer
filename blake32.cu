@@ -241,13 +241,18 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 
 		blake256_compress(h, ending, 640, blakerounds);
 
+		int pos = -1;
+		#pragma unroll 8
 		for (int i = 7; i >= 0; i--) {
 			uint32_t hash = cuda_swab32(h[i]);
 			if (hash > c_Target[i]) {
 				return;
 			}
 			if (hash < c_Target[i]) {
-				break;
+			/* dont ask me why, we lose 8MH/s in perfs
+			   without the int variable */
+				if (pos < i) pos = i;
+				//break;
 			}
 		}
 
@@ -382,7 +387,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		}
 
 		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
-			pdata[19] = max_nonce - first_nonce + 1;
+			pdata[19] = max_nonce;
 			break;
 		}
 

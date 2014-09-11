@@ -1453,7 +1453,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4.3"
+#define PROGRAM_VERSION "1.4.4"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
