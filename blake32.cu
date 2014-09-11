@@ -50,16 +50,19 @@ static uint32_t __align__(32) c_Target[8];
 __constant__
 static uint32_t __align__(32) c_data[20];
 
+/* 8 adapters max (-t threads) */
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
-static uint32_t extra_results[2] = { MAXU, MAXU };
+
+/* max count of found nounces in one call */
+#define NBN 2
+static uint32_t extra_results[NBN-1] = { MAXU };
 
 #define USE_CACHE 1
+/* midstate hash cache, this algo is run on 2 parts */
 #if USE_CACHE
-__device__
-static uint32_t cache[8];
-__device__
-static uint32_t prevsum = 0;
+__device__ static uint32_t cache[8];
+__device__ static uint32_t prevsum = 0;
 #endif
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
@@ -103,30 +106,6 @@ static const uint32_t __align__(32) c_u256[16] = {
 	SPH_C32(0xC0AC29B7), SPH_C32(0xC97C50DD),
 	SPH_C32(0x3F84D5B5), SPH_C32(0xB5470917)
 };
-
-#if 0
-#define GS(m0, m1, c0, c1, a, b, c, d)   do { \
-		a = SPH_T32(a + b + (m0 ^ c1)); \
-		d = SPH_ROTR32(d ^ a, 16); \
-		c = SPH_T32(c + d); \
-		b = SPH_ROTR32(b ^ c, 12); \
-		a = SPH_T32(a + b + (m1 ^ c0)); \
-		d = SPH_ROTR32(d ^ a, 8); \
-		c = SPH_T32(c + d); \
-		b = SPH_ROTR32(b ^ c, 7); \
-	} while (0)
-
-#define ROUND_S(r)   do { \
-	GS(Mx(r, 0x0), Mx(r, 0x1), CSx(r, 0x0), CSx(r, 0x1), v[0], v[4], v[0x8], v[0xC]); \
-	GS(Mx(r, 0x2), Mx(r, 0x3), CSx(r, 0x2), CSx(r, 0x3), v[1], v[5], v[0x9], v[0xD]); \
-	GS(Mx(r, 0x4), Mx(r, 0x5), CSx(r, 0x4), CSx(r, 0x5), v[2], v[6], v[0xA], v[0xE]); \
-	GS(Mx(r, 0x6), Mx(r, 0x7), CSx(r, 0x6), CSx(r, 0x7), v[3], v[7], v[0xB], v[0xF]); \
-	GS(Mx(r, 0x8), Mx(r, 0x9), CSx(r, 0x8), CSx(r, 0x9), v[0], v[5], v[0xA], v[0xF]); \
-	GS(Mx(r, 0xA), Mx(r, 0xB), CSx(r, 0xA), CSx(r, 0xB), v[1], v[6], v[0xB], v[0xC]); \
-	GS(Mx(r, 0xC), Mx(r, 0xD), CSx(r, 0xC), CSx(r, 0xD), v[2], v[7], v[0x8], v[0xD]); \
-	GS(Mx(r, 0xE), Mx(r, 0xF), CSx(r, 0xE), CSx(r, 0xF), v[3], v[4], v[0x9], v[0xE]); \
-} while (0)
-#endif
 
 #define GS(a,b,c,d,x) { \
 	const uint32_t idx1 = c_sigma[i][x]; \
@@ -240,22 +219,21 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 		ending[3] = nounce; /* our tested value */
 
 		blake256_compress(h, ending, 640, blakerounds);
-
-		int pos = -1;
-		#pragma unroll 8
+#if 0
 		for (int i = 7; i >= 0; i--) {
 			uint32_t hash = cuda_swab32(h[i]);
 			if (hash > c_Target[i]) {
 				return;
 			}
 			if (hash < c_Target[i]) {
-			/* dont ask me why, we lose 8MH/s in perfs
-			   without the int variable */
-				if (pos < i) pos = i;
-				//break;
+				break;
 			}
 		}
-
+#else
+		/* do not test all parts, fulltest() will do it */
+		if (cuda_swab32(h[7]) <= c_Target[7])
+#endif
+#if NBN == 2
 		/* keep the smallest nounce, + extra one if found */
 		if (resNounce[0] > nounce) {
 			resNounce[1] = resNounce[0];
@@ -263,6 +241,9 @@ void blake256_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resN
 		}
 		else
 			resNounce[1] = nounce;
+#else
+		resNounce[0] = nounce;
+#endif
 	}
 }
 
@@ -277,15 +258,16 @@ uint32_t blake256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 	size_t shared_size = 0;
 
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
-	if (cudaMemset(d_resNounce[thr_id], 0xff, 2*sizeof(uint32_t)) != cudaSuccess)
+	if (cudaMemset(d_resNounce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
 	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id], blakerounds, crcsum);
 	cudaDeviceSynchronize();
-	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		cudaThreadSynchronize();
+	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
+		//cudaThreadSynchronize(); /* seems no more required */
 		result = h_resNounce[thr_id][0];
-		extra_results[0] = h_resNounce[thr_id][1];
+		for (int n=0; n < (NBN-1); n++)
+			extra_results[n] = h_resNounce[thr_id][n+1];
 	}
 	return result;
 }
@@ -309,6 +291,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	uint32_t crcsum = MAXU;
 	int rc = 0;
 
+#if NBN > 1
 	if (extra_results[0] != MAXU) {
 		// possible extra result found in previous call
 		if (first_nonce <= extra_results[0] && max_nonce >= extra_results[0]) {
@@ -319,6 +302,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			goto exit_scan;
 		}
 	}
+#endif
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00000f;
@@ -327,8 +311,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		if (opt_n_threads > 1) {
 			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
 		}
-		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], 2*sizeof(uint32_t)));
-		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], 2*sizeof(uint32_t)));
+		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], NBN * sizeof(uint32_t)));
+		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], NBN * sizeof(uint32_t)));
 		init[thr_id] = true;
 	}
 
@@ -375,14 +359,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 				goto exit_scan;
 			}
-			else if (vhashcpu[7] > Htarg) {
-				applog(LOG_WARNING, "GPU #%d: result for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[7], Htarg);
-			}
-			else if (vhashcpu[6] > ptarget[6]) {
-				applog(LOG_WARNING, "GPU #%d: hash[6] for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[6], ptarget[6]);
-			}
-			else {
-				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
+			else if (opt_debug) {
+				applog(LOG_DEBUG, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
@@ -397,15 +375,5 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1;
-#if 0
-	/* reset the device to allow multiple instances
-	 * could be made in cpu-miner... check later if required */
-	if (opt_n_threads == 1) {
-		CUDA_SAFE_CALL(cudaDeviceReset());
-		init[thr_id] = false;
-	}
-#endif
-	// wait proper end of all threads
-	//cudaDeviceSynchronize();
 	return rc;
 }
