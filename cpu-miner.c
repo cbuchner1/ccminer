@@ -789,6 +789,11 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	unsigned char merkle_root[64];
 	int i;
 
+	if (!sctx->job.job_id) {
+		/* job not yet retrieved */
+		return;
+	}
+
 	pthread_mutex_lock(&sctx->work_lock);
 
 	// store the job ntime as high part of jobid
