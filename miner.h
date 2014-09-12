@@ -243,7 +243,7 @@ extern int scanhash_anime(int thr_id, uint32_t *pdata,
 
 extern int scanhash_blake256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done, uint32_t blakerounds);
+	unsigned long *hashes_done, int8_t blakerounds);
 
 extern int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -437,7 +437,7 @@ void applog_compare_hash(unsigned char *hash, unsigned char *hash2);
 
 void print_hash_tests(void);
 void animehash(void *state, const void *input);
-void blake256hash(void *output, const void *input, int rounds);
+void blake256hash(void *output, const void *input, int8_t rounds);
 void deephash(void *state, const void *input);
 void doomhash(void *state, const void *input);
 void fresh_hash(void *state, const void *input);
