@@ -178,7 +178,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, co
 
 __global__
 void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNounce,
-	const uint8_t nClzTarget, const int crcsum, const int rounds)
+	const uint64_t highTarget, const int crcsum, const int rounds)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -223,12 +223,11 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 
 		// compare count of leading zeros h[6] + h[7]
 		uint64_t high64 = ((uint64_t*)h)[3];
-		uint32_t clz = cuda_clz64(high64);
-
-		if (clz >= nClzTarget)
+		if (high64 <= highTarget)
 #if NBN == 2
 		/* keep the smallest nounce, + extra one if found */
 		if (resNounce[0] > nounce) {
+			// printf("%llx %llx \n", high64, highTarget);
 			resNounce[1] = resNounce[0];
 			resNounce[0] = nounce;
 		}
@@ -241,7 +240,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 }
 
 __host__
-uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint8_t clzTarget,
+uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint64_t highTarget,
 	const uint32_t crcsum, const int8_t rounds)
 {
 	const int threadsperblock = TPB;
@@ -255,7 +254,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
-	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNonce, d_resNonce[thr_id], clzTarget, crcsum, (int) rounds);
+	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
 	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		//cudaThreadSynchronize(); /* seems no more required */
@@ -282,7 +281,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint32_t throughput = min(TPB * 4096, max_nonce - first_nonce);
 	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
-	uint32_t clzTarget = cuda_clz64(targetHigh);
 	uint32_t crcsum = MAXU;
 	int rc = 0;
 
@@ -318,7 +316,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	do {
 		// GPU HASH
-		uint32_t foundNonce = blake256_cpu_hash_80(thr_id, throughput, pdata[19], (uint8_t) clzTarget, crcsum, blakerounds);
+		uint32_t foundNonce = blake256_cpu_hash_80(thr_id, throughput, pdata[19], targetHigh, crcsum, blakerounds);
 		if (foundNonce != MAXU)
 		{
 			uint32_t endiandata[20];

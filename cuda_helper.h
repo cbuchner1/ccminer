@@ -289,7 +289,7 @@ uint64_t ROTR64(const uint64_t x, const int offset)
 #endif
 
 // 64-bit ROTATE LEFT
-#if __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT
+#if __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT == 1
 __device__ __forceinline__
 uint64_t ROTL64(const uint64_t value, const int offset) {
 	uint2 result;
@@ -302,7 +302,7 @@ uint64_t ROTL64(const uint64_t value, const int offset) {
 	}
 	return  __double_as_longlong(__hiloint2double(result.y, result.x));
 }
-#elif __CUDA_ARCH__ >= 120
+#elif __CUDA_ARCH__ >= 120 && USE_ROT_ASM_OPT == 2
 __device__ __forceinline__
 uint64_t ROTL64(const uint64_t x, const int offset)
 {
@@ -321,63 +321,6 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 #else
 /* host */
 #define ROTL64(x, n)  (((x) << (n)) | ((x) >> (64 - (n))))
-#endif
-
-#ifdef WIN32
-#include <intrin.h>
-static uint32_t __inline __builtin_clz(uint32_t x) {
-	unsigned long r = 0;
-	_BitScanReverse(&r, x);
-	return (31-r);
-}
-static uint32_t __inline __builtin_ctz(uint32_t x) {
-	unsigned long r = 0;
-	_BitScanForward(&r, x);
-	return r;
-}
-#endif
-
-/* count leading zeros of a 64bit int */
-#if __CUDA_ARCH__ >= 200
-__device__
-static uint32_t cuda_clz64(const uint64_t x)
-{
-	uint32_t result;
-	asm("clz.b64 %0, %1;\n"
-		: "=r"(result) : "l"(x));
-	return result;
-}
-#else
-/* host */
-static uint32_t cuda_clz64(const uint64_t x)
-{
-	uint32_t u32 = (x >> 32);
-	uint32_t result = u32 ? __builtin_clz(u32) : 32;
-	if (result == 32) {
-		u32 = (uint32_t) x;
-		result += (u32 ? __builtin_clz(u32) : 32);
-	}
-	return result;
-}
-#endif
-
-/* count trailing zeros of a 32bit int */
-#if __CUDA_ARCH__ >= 200
-__device__
-static uint32_t cuda_ctz32(const uint32_t x)
-{
-	uint32_t result;
-	asm("brev.b32 %1, %1;\n\t"
-		"clz.b32 %0, %1;\n"
-		: "=r"(result) : "r"(x));
-	return result;
-}
-#else
-/* host */
-static uint32_t cuda_ctz32(const uint32_t x)
-{
-	return x ? __builtin_ctz(x) : 32;
-}
 #endif
 
 #endif // #ifndef CUDA_HELPER_H
