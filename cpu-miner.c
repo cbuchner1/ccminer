@@ -1105,6 +1105,7 @@ continue_scan:
 			break;
 
 		case ALGO_DOOM:
+		case ALGO_LUFFA_DOOM:
 			rc = scanhash_doom(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;

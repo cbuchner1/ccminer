@@ -177,7 +177,7 @@ copy "$(CudaToolkitBinDir)\cudart32*.dll" "$(OutDir)"</Command>
     <CudaCompile>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>false</Keep>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_50,sm_50;compute_50,sm_52</CodeGeneration>
       <Defines>
       </Defines>
     </CudaCompile>

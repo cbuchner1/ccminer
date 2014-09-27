@@ -25,7 +25,7 @@ This project requires some libraries to be built :
 
 - Curl
 
-- pthreads
+- pthreads (in tree)
 
 You can download prebuilt .lib and dll on the [bitcointalk forum thread](https://bitcointalk.org/?topic=167229.0)
 
