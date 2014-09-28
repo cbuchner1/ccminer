@@ -257,12 +257,12 @@ static size_t resp_hdr_cb(void *ptr, size_t size, size_t nmemb, void *user_data)
 		goto out;
 
 	if (!strcasecmp("X-Long-Polling", key)) {
-		hi->lp_path = val;	/* steal memory reference */
+		hi->lp_path = val;	/* X-Mining-Extensions: longpoll */
 		val = NULL;
 	}
 
 	if (!strcasecmp("X-Reject-Reason", key)) {
-		hi->reason = val;	/* steal memory reference */
+		hi->reason = val;	/* X-Mining-Extensions: reject-reason */
 		val = NULL;
 	}
 
@@ -389,7 +389,7 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	headers = curl_slist_append(headers, "Content-Type: application/json");
 	headers = curl_slist_append(headers, len_hdr);
 	headers = curl_slist_append(headers, "User-Agent: " USER_AGENT);
-	headers = curl_slist_append(headers, "X-Mining-Extensions: midstate");
+	headers = curl_slist_append(headers, "X-Mining-Extensions: longpoll midstate reject-reason");
 	headers = curl_slist_append(headers, "Accept:"); /* disable Accept hdr*/
 	headers = curl_slist_append(headers, "Expect:"); /* disable Expect hdr*/
 
@@ -433,7 +433,7 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 
 	if (opt_protocol) {
 		char *s = json_dumps(val, JSON_INDENT(3));
-		applog(LOG_DEBUG, "JSON protocol response:\n%s", s);
+		applog(LOG_DEBUG, "JSON protocol response:\n%s\n", s);
 		free(s);
 	}
 
@@ -476,15 +476,22 @@ err_out:
 	return NULL;
 }
 
-char *bin2hex(const unsigned char *p, size_t len)
+void cbin2hex(char *out, const char *in, size_t len)
 {
-	unsigned int i;
+	if (out) {
+		unsigned int i;
+		for (i = 0; i < len; i++)
+			sprintf(out + (i * 2), "%02x", (uint8_t)in[i]);
+	}
+}
+
+char *bin2hex(const unsigned char *in, size_t len)
+{
 	char *s = (char*)malloc((len * 2) + 1);
 	if (!s)
 		return NULL;
 
-	for (i = 0; i < len; i++)
-		sprintf(s + (i * 2), "%02x", (unsigned int) p[i]);
+	cbin2hex(s, (const char *) in, len);
 
 	return s;
 }
@@ -1433,7 +1440,7 @@ extern void applog_compare_hash(unsigned char *hash, unsigned char *hash2)
 	char s[256] = "";
 	int len = 0;
 	for (int i=0; i < 32; i += 4) {
-		char *color = memcmp(hash+i, hash2+i, 4) ? CL_RED : CL_GRY;
+		char *color = memcmp(hash+i, hash2+i, 4) ? CL_WHT : CL_GRY;
 		len += sprintf(s+len, "%s%02x%02x%02x%02x " CL_GRY, color,
 			hash[i], hash[i+1], hash[i+2], hash[i+3]);
 		s[len] = '\0';

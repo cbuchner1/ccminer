@@ -362,6 +362,10 @@ struct work {
 
 	uint32_t scanned_from;
 	uint32_t scanned_to;
+
+	/* deprecated, but maybe useful
+	   for some 256-bit algos */
+	uint32_t midstate[8];
 };
 
 static struct work g_work;
@@ -420,6 +424,13 @@ static bool work_decode(const json_t *val, struct work *work)
 		work->data[i] = le32dec(work->data + i);
 	for (i = 0; i < ARRAY_SIZE(work->target); i++)
 		work->target[i] = le32dec(work->target + i);
+
+	if (opt_algo == ALGO_ANIME || opt_algo == ALGO_BLAKE /* || opt_algo == ALGO_SHA256D || opt_algo == ALGO_SCRYPT */) {
+		jobj_binary(val, "midstate", work->midstate, sizeof(work->midstate));
+	}
+
+	/* use work ntime as job id (solo-mining) */
+	cbin2hex(work->job_id, (const char*)&work->data[17], 4);
 
 	return true;
 
@@ -594,8 +605,13 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 
 	if (opt_debug && rc) {
 		timeval_subtract(&diff, &tv_end, &tv_start);
-		applog(LOG_DEBUG, "DEBUG: got new work in %u µs",
-		       diff.tv_sec * 1000000 + diff.tv_usec);
+		/* anime : {"error":null,"result":{
+		"target":  "0000000000000000000000000000000000000000000000000000331a07000000",
+		"midstate":"57049c1d01d724567a1eb1886c5142cb79e7048f2ef206bee32441a90f3ec49e",
+		"hash1":"00000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000010000",
+		"data":"000000701bfd5bf1745a10bde7cab641e90b196146410b2b28d60d57b90f0b3d0000000454b7169957e174da9575c67bc4da6ba9d204ca04c8ff5ef05cb06c2cd38e92065427a8331d071a3300000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000080020000"},
+		"id":0} */
+		applog(LOG_DEBUG, "got new work %s", work->job_id);
 	}
 
 	json_decref(val);
@@ -1459,7 +1475,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4.4"
+#define PROGRAM_VERSION "1.4.5"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"

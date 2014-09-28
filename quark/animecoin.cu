@@ -140,7 +140,7 @@ extern "C" void animehash(void *state, const void *input)
     memcpy(state, hash, 32);
 }
 
-
+/*
 struct HashPredicate
 {    
     HashPredicate(uint32_t *hashes, uint32_t startNonce) :
@@ -158,7 +158,7 @@ struct HashPredicate
     uint32_t *m_hashes;
     uint32_t  m_startNonce;
 };
-
+*/
 
 extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -170,7 +170,6 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		((uint32_t*)ptarget)[7] = 0x00000f;
 
 	const uint32_t Htarg = ptarget[7];
-
 	const int throughput = 256*2048; // 100;
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
@@ -178,8 +177,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		// Konstanten kopieren, Speicher belegen
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
@@ -190,10 +188,10 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		cuda_check_cpu_init(thr_id, throughput);
 		quark_compactTest_cpu_init(thr_id, throughput);
 
-		cudaMalloc(&d_animeNonces[thr_id], sizeof(uint32_t)*throughput);
-		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput);
-		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput);
-		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_animeNonces[thr_id], sizeof(uint32_t)*throughput));
+		CUDA_SAFE_CALL(cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput));
+		CUDA_SAFE_CALL(cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput));
+		CUDA_SAFE_CALL(cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput));
 
 		init[thr_id] = true;
 	}
@@ -269,17 +267,22 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
 
 				pdata[19] = foundNonce;
-				*hashes_done = (foundNonce - first_nonce + 1)/2;
+				*hashes_done = foundNonce - first_nonce + 1;
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
+		if ((uint64_t)pdata[19] + throughput > (uint64_t)max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
+
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = (pdata[19] - first_nonce + 1)/2;
+	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
