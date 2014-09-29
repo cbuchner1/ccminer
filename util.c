@@ -271,6 +271,9 @@ static size_t resp_hdr_cb(void *ptr, size_t size, size_t nmemb, void *user_data)
 		val = NULL;
 	}
 
+	if (!strcasecmp("X-Nonce-Range", key)) {
+		/* todo when available: X-Mining-Extensions: noncerange */
+	}
 out:
 	free(key);
 	free(val);
@@ -333,7 +336,7 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	struct upload_buffer upload_data;
 	json_error_t err;
 	struct curl_slist *headers = NULL;
-	char len_hdr[64];
+	char len_hdr[64], hashrate_hdr[64];
 	char curl_err_str[CURL_ERROR_SIZE];
 	long timeout = longpoll ? opt_timeout : 30;
 	struct header_info hi = {0};
@@ -383,13 +386,14 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	upload_data.buf = rpc_req;
 	upload_data.len = strlen(rpc_req);
 	upload_data.pos = 0;
-	sprintf(len_hdr, "Content-Length: %lu",
-		(unsigned long) upload_data.len);
+	sprintf(len_hdr, "Content-Length: %lu", (unsigned long) upload_data.len);
+	sprintf(hashrate_hdr, "X-Mining-Hashrate: %llu", global_hashrate);
 
 	headers = curl_slist_append(headers, "Content-Type: application/json");
 	headers = curl_slist_append(headers, len_hdr);
 	headers = curl_slist_append(headers, "User-Agent: " USER_AGENT);
-	headers = curl_slist_append(headers, "X-Mining-Extensions: longpoll midstate reject-reason");
+	headers = curl_slist_append(headers, "X-Mining-Extensions: longpoll noncerange reject-reason");
+	headers = curl_slist_append(headers, hashrate_hdr);
 	headers = curl_slist_append(headers, "Accept:"); /* disable Accept hdr*/
 	headers = curl_slist_append(headers, "Expect:"); /* disable Expect hdr*/
 

@@ -321,6 +321,7 @@ extern int stratum_thr_id;
 extern struct work_restart *work_restart;
 extern bool opt_trust_pool;
 extern uint16_t opt_vote;
+extern uint64_t global_hashrate;
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"

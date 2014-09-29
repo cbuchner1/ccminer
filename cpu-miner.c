@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <math.h>
 #include <sys/time.h>
 #include <time.h>
 #include <signal.h>
@@ -224,6 +225,7 @@ static pthread_mutex_t stats_lock;
 static unsigned long accepted_count = 0L;
 static unsigned long rejected_count = 0L;
 static double *thr_hashrates;
+uint64_t global_hashrate = 0;
 
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
@@ -360,12 +362,13 @@ struct work {
 	size_t xnonce2_len;
 	unsigned char xnonce2[32];
 
+	union {
+		uint32_t u32[2];
+		uint64_t u64[1];
+	} noncerange;
+
 	uint32_t scanned_from;
 	uint32_t scanned_to;
-
-	/* deprecated, but maybe useful
-	   for some 256-bit algos */
-	uint32_t midstate[8];
 };
 
 static struct work g_work;
@@ -425,8 +428,14 @@ static bool work_decode(const json_t *val, struct work *work)
 	for (i = 0; i < ARRAY_SIZE(work->target); i++)
 		work->target[i] = le32dec(work->target + i);
 
-	if (opt_algo == ALGO_ANIME || opt_algo == ALGO_BLAKE /* || opt_algo == ALGO_SHA256D || opt_algo == ALGO_SCRYPT */) {
-		jobj_binary(val, "midstate", work->midstate, sizeof(work->midstate));
+	json_t *jr = json_object_get(val, "noncerange");
+	if (jr) {
+		const char * hexstr = json_string_value(jr);
+		if (likely(hexstr)) {
+			// never seen yet...
+			hex2bin((unsigned char*)work->noncerange.u64, hexstr, 8);
+			applog(LOG_DEBUG, "received noncerange: %08x-%08x", work->noncerange.u32[0], work->noncerange.u32[1]);
+		}
 	}
 
 	/* use work ntime as job id (solo-mining) */
@@ -450,7 +459,9 @@ static int share_result(int result, const char *reason)
 		hashrate += thr_hashrates[i];
 	result ? accepted_count++ : rejected_count++;
 	pthread_mutex_unlock(&stats_lock);
-	
+
+	global_hashrate = llround(hashrate);
+
 	sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", 1e-3 * hashrate);
 	applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s khash/s %s",
 			accepted_count,
@@ -974,12 +985,12 @@ static void *miner_thread(void *userdata)
 			}
 		}
 #if 0
-		if (!opt_benchmark && g_work.xnonce2_len == 0) {
+		if (!opt_benchmark && g_work.job_id[0] == '\0') {
 			applog(LOG_ERR, "work data not read yet");
 			extrajob = true;
 			work_done = true;
 			sleep(1);
-			continue;
+			//continue;
 		}
 #endif
 		if (rc > 1) {
@@ -991,7 +1002,8 @@ static void *miner_thread(void *userdata)
 
 		if (memcmp(work.target, g_work.target, sizeof(work.target))) {
 			if (opt_debug) {
-				applog(LOG_DEBUG, "job %s target change:", g_work.job_id);
+				uint64_t target64 = g_work.target[7] * 0x100000000ULL + g_work.target[6];
+				applog(LOG_DEBUG, "job %s target change: %llx", g_work.job_id, target64);
 				applog_hash((uint8_t*) work.target);
 				applog_compare_hash((uint8_t*) g_work.target, (uint8_t*) work.target);
 			}
@@ -1004,6 +1016,7 @@ static void *miner_thread(void *userdata)
 		}
 		if (memcmp(work.data, g_work.data, wcmplen)) {
 			if (opt_debug) {
+#if 0
 				for (int n=0; n <= (wcmplen-8); n+=8) {
 					if (memcmp(work.data + n, g_work.data + n, 8)) {
 						applog(LOG_DEBUG, "job %s work updated at offset %d:", g_work.job_id, n);
@@ -1011,6 +1024,7 @@ static void *miner_thread(void *userdata)
 						applog_compare_hash((uint8_t*) g_work.data + n, (uint8_t*) work.data + n);
 					}
 				}
+#endif
 			}
 			memcpy(&work, &g_work, sizeof(struct work));
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
@@ -1019,7 +1033,7 @@ static void *miner_thread(void *userdata)
 		work_restart[thr_id].restart = 0;
 
 		if (opt_debug)
-			applog(LOG_WARNING, "job %s %08x", g_work.job_id, (*nonceptr));
+			applog(LOG_DEBUG, "job %s %08x", g_work.job_id, (*nonceptr));
 		pthread_mutex_unlock(&g_work_lock);
 
 		/* adjust max_nonce to meet target scan time */
@@ -1244,12 +1258,13 @@ continue_scan:
 			applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
 				device_map[thr_id], device_name[thr_id], s);
 		}
-		if (opt_benchmark && thr_id == opt_n_threads - 1) {
+		if (thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
-			int i;
-			for (i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
+			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += thr_hashrates[i];
-			if (i == opt_n_threads) {
+
+			global_hashrate = llround(hashrate);
+			if (opt_benchmark) {
 				sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate / 1000.);
 				applog(LOG_NOTICE, "Total: %s kH/s", s);
 			}
@@ -1265,8 +1280,10 @@ continue_scan:
 		hashlog_remember_scan_range(work.job_id, work.scanned_from, work.scanned_to);
 
 		/* if nonce found, submit work */
-		if (rc && !opt_benchmark && !submit_work(mythr, &work))
-			break;
+		if (rc && !opt_benchmark) {
+			if (!submit_work(mythr, &work))
+				break;
+		}
 	}
 
 out:
