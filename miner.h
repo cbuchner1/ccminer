@@ -85,6 +85,8 @@ enum {
 #else
 #define bswap_32(x) ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u) \
                    | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
+#define bswap_64(x) (((uint64_t) bswap_32((uint32_t)((x) & 0xffffffffu)) << 32) \
+                   | (uint64_t) bswap_32((uint32_t)((x) >> 32)))
 #endif
 
 static inline uint32_t swab32(uint32_t v)
@@ -94,6 +96,30 @@ static inline uint32_t swab32(uint32_t v)
 #else
 	return bswap_32(v);
 #endif
+}
+
+static inline uint64_t swab64(uint64_t v)
+{
+#ifdef WANT_BUILTIN_BSWAP
+	return __builtin_bswap64(v);
+#else
+	return bswap_64(v);
+#endif
+}
+
+static inline void swab256(void *dest_p, const void *src_p)
+{
+	uint32_t *dest = (uint32_t *) dest_p;
+	const uint32_t *src = (const uint32_t *) src_p;
+
+	dest[0] = swab32(src[7]);
+	dest[1] = swab32(src[6]);
+	dest[2] = swab32(src[5]);
+	dest[3] = swab32(src[4]);
+	dest[4] = swab32(src[3]);
+	dest[5] = swab32(src[2]);
+	dest[6] = swab32(src[1]);
+	dest[7] = swab32(src[0]);
 }
 
 #ifdef HAVE_SYS_ENDIAN_H

@@ -370,6 +370,8 @@ struct work {
 		uint64_t u64[1];
 	} noncerange;
 
+	double difficulty;
+
 	uint32_t scanned_from;
 	uint32_t scanned_to;
 };
@@ -450,6 +452,27 @@ err_out:
 	return false;
 }
 
+/**
+ * Calculate the work difficulty as double
+ */
+static void calc_diff(struct work *work, int known)
+{
+	// sample for diff 32.53 : 00000007de5f0000
+	const uint64_t diffone = 0xFFFF000000000000ull;
+	uint64_t *data64, d64;
+	char rtarget[32];
+
+	swab256(rtarget, work->target);
+	data64 = (uint64_t *)(rtarget + 3); /* todo: index (3) can be tuned here */
+	d64 = swab64(*data64);
+	if (unlikely(!d64))
+		d64 = 1;
+	work->difficulty = (double)diffone / d64;
+	if (opt_difficulty > 0.) {
+		work->difficulty /= opt_difficulty;
+	}
+}
+
 static int share_result(int result, const char *reason)
 {
 	char s[345];
@@ -502,6 +525,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_DEBUG, "DEBUG: stale work detected, discarding");
 		return true;
 	}
+	calc_diff(work, 0);
 	pthread_mutex_unlock(&g_work_lock);
 
 	if (have_stratum) {
@@ -1000,13 +1024,13 @@ static void *miner_thread(void *userdata)
 		}
 
 		if (memcmp(work.target, g_work.target, sizeof(work.target))) {
+			calc_diff(&g_work, 0);
 			if (opt_debug) {
 				uint64_t target64 = g_work.target[7] * 0x100000000ULL + g_work.target[6];
-				applog(LOG_DEBUG, "job %s target change: %llx", g_work.job_id, target64);
-				applog_hash((uint8_t*) work.target);
-				applog_compare_hash((uint8_t*) g_work.target, (uint8_t*) work.target);
+				applog(LOG_DEBUG, "job %s target change: %llx (%.1f)", g_work.job_id, target64, g_work.difficulty);
 			}
 			memcpy(work.target, g_work.target, sizeof(work.target));
+			work.difficulty = g_work.difficulty;
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
 			/* on new target, ignoring nonce, clear sent data (hashlog) */
 			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
