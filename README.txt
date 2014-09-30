@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.4-tpruvot (Sep 27th 2014) - "GTX 750 & 900"
+ccMiner release 1.4.5-tpruvot (Oct 1st 2014) - ""
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -35,7 +35,7 @@ TalkCoin
 DarkCoin and other X11 coins
 NEOS blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
-Deep, Doom, Goalcoin and Qubit
+Deep, Doom and Qubit
 Pentablake (Blake 512 x5)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
@@ -103,11 +103,10 @@ its command line interface and options.
   -q, --quiet           disable per-thread hashmeter output
   -D, --debug           enable debug output
   -P, --protocol-dump   verbose dump of protocol-level activities
-  -B, --background      run the miner in the background
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
   -c, --config=FILE     load a JSON-format configuration file
-  -K, --nocolor         disable colored console output
+  -K, --no-color        disable colored console output
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
 

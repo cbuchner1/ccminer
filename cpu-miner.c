@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2010 Jeff Garzik
  * Copyright 2012-2014 pooler
  *
@@ -21,11 +21,14 @@
 #include <sys/time.h>
 #include <time.h>
 #include <signal.h>
+
+#include <curl/curl.h>
+#include <jansson.h>
+#include <openssl/sha.h>
+
 #ifdef WIN32
 #include <windows.h>
 #include <stdint.h>
-#include "compat/winansi.h"
-BOOL WINAPI ConsoleHandler(DWORD);
 #else
 #include <errno.h>
 #include <sys/resource.h>
@@ -37,15 +40,15 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #include <sys/sysctl.h>
 #endif
 #endif
-#include <jansson.h>
-#include <curl/curl.h>
-#include <openssl/sha.h>
+
 #include "compat.h"
 #include "miner.h"
 
 #ifdef WIN32
 #include <Mmsystem.h>
 #pragma comment(lib, "winmm.lib")
+#include "compat/winansi.h"
+BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
@@ -288,7 +291,7 @@ Options:\n\
       --no-longpoll     disable X-Long-Polling support\n\
       --no-stratum      disable X-Stratum support\n\
   -q, --quiet           disable per-thread hashmeter output\n\
-  -K, --nocolor         disable colored output\n\
+  -K, --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n"
 #ifdef HAVE_SYSLOG_H
@@ -325,7 +328,7 @@ static struct option const options[] = {
 	{ "cputest", 0, NULL, 1006 },
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
-	{ "nocolor", 0, NULL, 'K' },
+	{ "no-color", 0, NULL, 'K' },
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
 	{ "no-longpoll", 0, NULL, 1003 },
@@ -614,15 +617,11 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 
 	rc = work_decode(json_object_get(val, "result"), work);
 
-	if (opt_debug && rc) {
+	if (opt_protocol && rc) {
 		timeval_subtract(&diff, &tv_end, &tv_start);
-		/* anime : {"error":null,"result":{
-		"target":  "0000000000000000000000000000000000000000000000000000331a07000000",
-		"midstate":"57049c1d01d724567a1eb1886c5142cb79e7048f2ef206bee32441a90f3ec49e",
-		"hash1":"00000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000010000",
-		"data":"000000701bfd5bf1745a10bde7cab641e90b196146410b2b28d60d57b90f0b3d0000000454b7169957e174da9575c67bc4da6ba9d204ca04c8ff5ef05cb06c2cd38e92065427a8331d071a3300000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000080020000"},
-		"id":0} */
-		applog(LOG_DEBUG, "got new work %s", work->job_id);
+		/* show time because curl can be slower against versions/config */
+		applog(LOG_DEBUG, "got new work in %u µs",
+			diff.tv_sec * 1000000 + diff.tv_usec);
 	}
 
 	json_decref(val);
@@ -1280,8 +1279,8 @@ continue_scan:
 		hashlog_remember_scan_range(work.job_id, work.scanned_from, work.scanned_to);
 
 		/* if nonce found, submit work */
-		if (rc && !opt_benchmark) {
-			if (!submit_work(mythr, &work))
+		if (rc) {
+			if (!opt_benchmark && !submit_work(mythr, &work))
 				break;
 		}
 	}

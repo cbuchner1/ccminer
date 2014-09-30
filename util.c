@@ -263,6 +263,7 @@ static size_t resp_hdr_cb(void *ptr, size_t size, size_t nmemb, void *user_data)
 
 	if (!strcasecmp("X-Reject-Reason", key)) {
 		hi->reason = val;	/* X-Mining-Extensions: reject-reason */
+		//applog(LOG_WARNING, "%s:%s", key, val);
 		val = NULL;
 	}
 
