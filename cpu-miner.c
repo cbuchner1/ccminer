@@ -44,6 +44,11 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 
+#if 1 || defined(USE_WRAPNVML)
+#define USE_WRAPNVML 1
+#include "wrapnvml.h"
+#endif
+
 #define PROGRAM_NAME		"minerd"
 #define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
@@ -57,6 +62,7 @@ extern "C"
 int cuda_num_devices();
 void cuda_devicenames();
 int cuda_finddevice(char *name);
+
 #ifdef __cplusplus
 }
 #endif
@@ -195,6 +201,10 @@ static pthread_mutex_t stats_lock;
 static unsigned long accepted_count = 0L;
 static unsigned long rejected_count = 0L;
 static double *thr_hashrates;
+
+#if defined(USE_WRAPNVML)
+wrap_nvml_handle *nvmlh = NULL;
+#endif
 
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
@@ -384,7 +394,7 @@ static void share_result(int result, const char *reason)
 		hashrate += thr_hashrates[i];
 	result ? accepted_count++ : rejected_count++;
 	pthread_mutex_unlock(&stats_lock);
-	
+
 	sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", 1e-3 * hashrate);
 	applog(LOG_INFO, "accepted: %lu/%lu (%.2f%%), %s khash/s %s",
 		   accepted_count,
@@ -942,13 +952,42 @@ static void *miner_thread(void *userdata)
 			pthread_mutex_unlock(&stats_lock);
 		}
 		if (!opt_quiet) {
+
+#if defined(USE_WRAPNVML)
+                if (nvmlh != NULL) {
+                        unsigned int tempC=0, fanpcnt=0, mwatts=0;
+                        char gputempbuf[64], gpufanbuf[64], gpupowbuf[64];
+                        strcpy(gputempbuf, " N/A");
+                        strcpy(gpufanbuf, " N/A");
+                        strcpy(gpupowbuf, " N/A");
+
+#if 1
+                        if (wrap_nvml_get_tempC(nvmlh, device_map[thr_id], &tempC) == 0)
+                                sprintf(gputempbuf, "%3dC", tempC);
+
+                        if (wrap_nvml_get_fanpcnt(nvmlh, device_map[thr_id], &fanpcnt) == 0)
+                                sprintf(gpufanbuf, "%3d%%", fanpcnt);
+
+                        if (wrap_nvml_get_power_usage(nvmlh, device_map[thr_id], &mwatts) == 0)
+                                sprintf(gpupowbuf, "%dW", (mwatts / 1000));
+#endif
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
-			applog(LOG_INFO, "GPU #%d: %s, %s khash/s",
-				device_map[thr_id], device_name[thr_id], s);
+                        applog(LOG_INFO, "GPU #%d: %s, Temp: %s Fan: %s Power: %s  %s khash/s",
+                                device_map[thr_id], device_name[thr_id], gputempbuf, gpufanbuf, gpupowbuf, s);
 //			applog(LOG_INFO, "thread %d: %lu hashes, %s khash/s",
 //				thr_id, hashes_done, s);
+		} else {
+#endif
+
+			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
+                                1e-3 * thr_hashrates[thr_id]);
+			applog(LOG_INFO, "GPU #%d: %s  %s khash/s",
+                                device_map[thr_id], device_name[thr_id], s);
 		}
+
+		}
+
 		if (opt_benchmark && thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
 			for (i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
@@ -1609,6 +1648,14 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 	}
+#if defined(USE_WRAPNVML)
+        nvmlh = wrap_nvml_create();
+        if (nvmlh == NULL) {
+                applog(LOG_INFO, "NVML GPU monitoring is not available.");
+        } else {
+                applog(LOG_INFO, "NVML GPU temperature, fan, power monitoring enabled.");
+        }
+#endif
 	if (want_stratum) {
 		/* init stratum thread info */
 		stratum_thr_id = opt_n_threads + 2;
