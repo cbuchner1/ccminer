@@ -139,6 +139,7 @@ typedef enum {
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
 	ALGO_HEAVY,		/* Heavycoin hash */
+	ALGO_KECCAK,
 	ALGO_JACKPOT,
 	ALGO_LUFFA_DOOM,
 	ALGO_MJOLLNIR,		/* Mjollnir hash */
@@ -166,6 +167,7 @@ static const char *algo_names[] = {
 	"fugue256",
 	"groestl",
 	"heavy",
+	"keccak",
 	"jackpot",
 	"luffa",
 	"mjollnir",
@@ -253,6 +255,7 @@ Options:\n\
                         fugue256  Fuguecoin hash\n\
                         groestl   Groestlcoin hash\n\
                         heavy     Heavycoin hash\n\
+                        keccak    Keccak-256 (Maxcoin) hash\n\
                         jackpot   Jackpot hash\n\
                         luffa     Doomcoin hash\n\
                         mjollnir  Mjollnircoin hash\n\
@@ -860,6 +863,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			break;
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
+		case ALGO_KECCAK:
 		case ALGO_BLAKECOIN:
 		case ALGO_WHC:
 			SHA256((uint8_t*)sctx->job.coinbase, sctx->job.coinbase_size, (uint8_t*)merkle_root);
@@ -925,6 +929,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+	else if (opt_algo == ALGO_KECCAK)
+		diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 }
@@ -1145,6 +1151,11 @@ continue_scan:
 		case ALGO_HEAVY:
 			rc = scanhash_heavy(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done, work.maxvote, HEAVYCOIN_BLKHDR_SZ);
+			break;
+
+		case ALGO_KECCAK:
+			rc = scanhash_keccak256(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
 			break;
 
 		case ALGO_MJOLLNIR:

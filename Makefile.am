@@ -25,6 +25,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  heavy/cuda_hefty1.cu heavy/cuda_hefty1.h \
 			  heavy/cuda_keccak512.cu heavy/cuda_keccak512.h \
 			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
+			  keccak/cuda_keccak256.cu keccak/keccak256.cu \
 			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
 			  myriadgroestl.cpp cuda_myriadgroestl.cu \
@@ -65,6 +66,9 @@ nvcc_FLAGS += $(JANSSON_INCLUDES) --ptxas-options="-v"
 
 blake32.o: blake32.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
+
+keccak/cuda_keccak256.o: keccak/cuda_keccak256.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=92 -o $@ -c $<
 
 qubit/qubit_luffa512.o: qubit/qubit_luffa512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<

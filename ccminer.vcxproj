@@ -383,6 +383,10 @@
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
+    <CudaCompile Include="keccak\cuda_keccak256.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">92</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="keccak\keccak256.cu" />
     <CudaCompile Include="pentablake.cu">
       <MaxRegCount>80</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-O2 -dlcm=cg" %(AdditionalOptions)</AdditionalOptions>

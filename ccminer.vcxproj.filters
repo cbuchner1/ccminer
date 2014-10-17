@@ -67,6 +67,9 @@
     <Filter Include="Source Files\jansson">
       <UniqueIdentifier>{17b56151-79ec-4a32-bac3-9d94ae7f68fe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\keccak">
+      <UniqueIdentifier>{9762c92c-9677-4044-8292-ff6ba4bfdd89}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -462,6 +465,12 @@
     </CudaCompile>
     <CudaCompile Include="pentablake.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="keccak\cuda_keccak256.cu">
+      <Filter>Source Files\CUDA\keccak</Filter>
+    </CudaCompile>
+    <CudaCompile Include="keccak\keccak256.cu">
+      <Filter>Source Files\CUDA\keccak</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

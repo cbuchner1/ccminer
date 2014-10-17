@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.5-tpruvot (Oct 1st 2014) - ""
+ccMiner release 1.4.5-tpruvot (Oct 1st 2014) - "Keccak 256"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -35,6 +35,7 @@ TalkCoin
 DarkCoin and other X11 coins
 NEOS blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
+Keccak (Maxcoin)
 Deep, Doom and Qubit
 Pentablake (Blake 512 x5)
 
@@ -55,14 +56,15 @@ This code is based on the pooler cpuminer 2.3.2 release and inherits
 its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
-                          heavy       use to mine Heavycoin
                           mjollnir    use to mine Mjollnircoin
                           deep        use to mine Deepcoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
                           dmd-gr      use to mine Diamond-Groestl
                           myr-gr      use to mine Myriad-Groest
+                          heavy       use to mine Heavycoin
                           jackpot     use to mine Jackpotcoin
+                          keccak      use to mine Maxcoin
                           luffa       use to mine Doomcoin
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit Algo

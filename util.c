@@ -1503,6 +1503,10 @@ void print_hash_tests(void)
 	printpfx("heavy", hash);
 
 	memset(hash, 0, sizeof hash);
+	keccak256_hash(&hash[0], &buf[0]);
+	printpfx("keccak", hash);
+
+	memset(hash, 0, sizeof hash);
 	jackpothash(&hash[0], &buf[0]);
 	printpfx("jackpot", hash);
 
