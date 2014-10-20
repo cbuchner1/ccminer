@@ -159,12 +159,18 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Oct. 20th 2O14  v1.4.5
-                  Add algo from djm34 repo (maxcoin)
+  Oct. 20th 2014  v1.4.5
+                  Add keccak algo from djm34 repo (maxcoin)
                   Curl 7.35 and OpenSSL are now included in the binary (and win tree)
                   Enhance windows terminal support (--help was broken)
 
-  Sep. 10th 2O14  Add algos from djm34 (deep,doom,qubit)
+  Sep. 27th 2014  v1.4.4
+                  First SM 5.2 Release (GTX 970 & 980)
+                  CUDA Runtime included in binary
+                  Colors enabled by default
+
+  Sep. 10th 2014  v1.4.3
+                  Add algos from djm34 repo (deep, doom, qubit)
                   Goalcoin seems to be dead, not imported.
                   Create also the pentablake algo (5x Blake 512)
 
