@@ -28,9 +28,6 @@
     <Filter Include="Header Files\CUDA">
       <UniqueIdentifier>{a0f072d0-a831-4c23-8d64-7a026521df9c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\code">
-      <UniqueIdentifier>{fe39ded0-754b-415f-a284-038a15a0aa55}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\CUDA\JHA">
       <UniqueIdentifier>{d8f2e173-a0a5-455b-8efc-42511b585156}</UniqueIdentifier>
     </Filter>
