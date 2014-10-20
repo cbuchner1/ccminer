@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.5-tpruvot (Oct 1st 2014) - "Keccak 256"
+ccMiner release 1.4.5-tpruvot (Oct 20th 2014) - "Keccak 256"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -9,12 +9,12 @@ If you find this tool useful and like to support its continued
 tpruvot@github:
   BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
   DRK  : XeVrkPrWB7pDbdFLfKhF1Z3xpqhsx6wkH3
-  NEO$ : NaEcVrdzoCWHUYXb7X8QoafoKS9UV69Yk4
+  NEOS : NaEcVrdzoCWHUYXb7X8QoafoKS9UV69Yk4
+  XST  : S9TqZucWgT6ajZLDBxQnHUtmkotCEHn9z9
 
 DJM34:
   XCN donation address: CNh6F4h1byX7vvbmfQn4LMtsC4TYb8mgmn
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
-  TAC donation address: TuqNvPoQxghHfzwnPpAxSTiYoN6FM8LM5p
 
 cbuchner v1.2:
   LTC donation address: LKS1WDKGED647msBQfLBHV3Ls8sveGncnm
@@ -159,7 +159,12 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Sep. 10th 2O14  add algos from djm34 (deep,doom,qubit)
+  Oct. 20th 2O14  v1.4.5
+                  Add algo from djm34 repo (maxcoin)
+                  Curl 7.35 and OpenSSL are now included in the binary (and win tree)
+                  Enhance windows terminal support (--help was broken)
+
+  Sep. 10th 2O14  Add algos from djm34 (deep,doom,qubit)
                   Goalcoin seems to be dead, not imported.
                   Create also the pentablake algo (5x Blake 512)
 

@@ -12,6 +12,7 @@ extern int device_map[8];
 #define SHL(x, n)			((x) << (n))
 #define SHR(x, n)			((x) >> (n))
 
+#if __CUDA_ARCH__ >= 320
 __device__
 uint64_t skein_rotl64(const uint64_t x, const int offset)
 {
@@ -30,8 +31,6 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 	);
 	return res;
 }
-
-#if __CUDA_ARCH__ >= 350
 #undef ROTL64
 #define ROTL64 skein_rotl64
 #endif
