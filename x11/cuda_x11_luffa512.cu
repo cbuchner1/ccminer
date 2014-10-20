@@ -20,9 +20,6 @@
 
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 typedef unsigned char BitSequence;
 
 typedef struct {
@@ -41,11 +38,17 @@ typedef struct {
     a[1+(8*j)] = a[0+(8*j)] ^ tmp;\
     a[0+(8*j)] = tmp;
 
+#if __CUDA_ARCH__ < 350
+#define LROT(x,bits) ((x << bits) | (x >> (32 - bits)))
+#else
+#define LROT(x, bits) __funnelshift_l(x, x, bits)
+#endif
+
 #define TWEAK(a0,a1,a2,a3,j)\
-    a0 = (a0<<(j))|(a0>>(32-j));\
-    a1 = (a1<<(j))|(a1>>(32-j));\
-    a2 = (a2<<(j))|(a2>>(32-j));\
-    a3 = (a3<<(j))|(a3>>(32-j));
+    a0 = LROT(a0,j);\
+    a1 = LROT(a1,j);\
+    a2 = LROT(a2,j);\
+    a3 = LROT(a3,j);
 
 #define STEP(c0,c1)\
     SUBCRUMB(chainv[0],chainv[1],chainv[2],chainv[3],tmp);\
@@ -77,13 +80,13 @@ typedef struct {
 
 #define MIXWORD(a0,a4)\
     a4 ^= a0;\
-    a0  = (a0<<2) | (a0>>(30));\
+    a0  = LROT(a0,2);\
     a0 ^= a4;\
-    a4  = (a4<<14) | (a4>>(18));\
+    a4  = LROT(a4,14);\
     a4 ^= a0;\
-    a0  = (a0<<10) | (a0>>(22));\
+    a0  = LROT(a0,10);\
     a0 ^= a4;\
-    a4  = (a4<<1) | (a4>>(31));
+    a4  = LROT(a4,1);
 
 #define ADD_CONSTANT(a0,b0,c0,c1)\
     a0 ^= c0;\
