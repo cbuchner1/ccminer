@@ -7,9 +7,6 @@
 
 #define USE_SHUFFLE 0
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 // die Message it Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 
@@ -106,18 +103,6 @@ void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t 
 		h[i % 8] ^= v[i];
 }
 
-__device__ __constant__
-static const uint64_t d_constMem[8] = {
-	0x6a09e667f3bcc908ULL,
-	0xbb67ae8584caa73bULL,
-	0x3c6ef372fe94f82bULL,
-	0xa54ff53a5f1d36f1ULL,
-	0x510e527fade682d1ULL,
-	0x9b05688c2b3e6c1fULL,
-	0x1f83d9abfb41bd6bULL,
-	0x5be0cd19137e2179ULL
-};
-
 // Hash-Padding
 __device__ __constant__
 static const uint64_t d_constHashPadding[8] = {
@@ -157,10 +142,16 @@ void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_n
 		uint64_t buf[16];
 
 		// State
-		uint64_t h[8];
-		#pragma unroll 8
-		for (int i=0;i<8;i++)
-			h[i] = d_constMem[i];
+		uint64_t h[8] = {
+			0x6a09e667f3bcc908ULL,
+			0xbb67ae8584caa73bULL,
+			0x3c6ef372fe94f82bULL,
+			0xa54ff53a5f1d36f1ULL,
+			0x510e527fade682d1ULL,
+			0x9b05688c2b3e6c1fULL,
+			0x1f83d9abfb41bd6bULL,
+			0x5be0cd19137e2179ULL
+		};
 
 		// Message for first round
 		#pragma unroll 8
@@ -195,13 +186,19 @@ __global__ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, vo
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint64_t h[8];
 		uint64_t buf[16];
 		uint32_t nounce = startNounce + thread;
 
-		#pragma unroll 8
-		for(int i=0; i<8; i++)
-			h[i] = d_constMem[i];
+		uint64_t h[8] = {
+			0x6a09e667f3bcc908ULL,
+			0xbb67ae8584caa73bULL,
+			0x3c6ef372fe94f82bULL,
+			0xa54ff53a5f1d36f1ULL,
+			0x510e527fade682d1ULL,
+			0x9b05688c2b3e6c1fULL,
+			0x1f83d9abfb41bd6bULL,
+			0x5be0cd19137e2179ULL
+		};
 
 		// Message für die erste Runde in Register holen
 		#pragma unroll 16

@@ -318,6 +318,25 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 	: "=l"(result) : "l"(x), "r"(offset));
 	return result;
 }
+#elif __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT == 3
+__device__
+uint64_t ROTL64(const uint64_t x, const int offset)
+{
+	uint64_t res;
+	asm("{\n\t"
+		".reg .u32 tl,th,vl,vh;\n\t"
+		".reg .pred p;\n\t"
+		"mov.b64 {tl,th}, %1;\n\t"
+		"shf.l.wrap.b32 vl, tl, th, %2;\n\t"
+		"shf.l.wrap.b32 vh, th, tl, %2;\n\t"
+		"setp.lt.u32 p, %2, 32;\n\t"
+		"@!p mov.b64 %0, {vl,vh};\n\t"
+		"@p  mov.b64 %0, {vh,vl};\n\t"
+		"}"
+		: "=l"(res) : "l"(x) , "r"(offset)
+	);
+	return res;
+}
 #else
 /* host */
 #define ROTL64(x, n)  (((x) << (n)) | ((x) >> (64 - (n))))

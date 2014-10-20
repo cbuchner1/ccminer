@@ -5,5 +5,5 @@
 
 #--ptxas-options=\"-v -dlcm=cg\""
 
-CUDA_CFLAGS="-O2" ./configure "CFLAGS=-O2" "CXXFLAGS=-O2" --with-cuda=/usr/local/cuda
+CUDA_CFLAGS="-O3" ./configure "CFLAGS=-O3" "CXXFLAGS=-O3" --with-cuda=/usr/local/cuda
 
