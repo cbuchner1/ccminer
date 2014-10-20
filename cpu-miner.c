@@ -246,32 +246,32 @@ struct option {
 static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
-  -a, --algo=ALGO       specify the algorithm to use\n\
-                        anime     Animecoin hash\n\
-                        blake     Blake 256 (like NEOS blake)\n\
-                        blakecoin Old Blake 256 (8 rounds)\n\
-                        deep      Deepcoin hash\n\
-                        fresh     Freshcoin hash (shavite 80)\n\
-                        fugue256  Fuguecoin hash\n\
-                        groestl   Groestlcoin hash\n\
-                        heavy     Heavycoin hash\n\
-                        keccak    Keccak-256 (Maxcoin) hash\n\
-                        jackpot   Jackpot hash\n\
-                        luffa     Doomcoin hash\n\
-                        mjollnir  Mjollnircoin hash\n\
-                        myr-gr    Myriad-Groestl hash\n\
-                        nist5     NIST5 (TalkCoin) hash\n\
-                        penta     Pentablake hash (5x Blake 512)\n\
-                        quark     Quark hash\n\
-                        qubit     Qubit hash\n\
-                        whirl     Whirlcoin (old whirlpool)\n\
-                        x11       X11 (DarkCoin) hash\n\
-                        x13       X13 (MaruCoin) hash\n\
-                        x14       X14 hash\n\
-                        x15       X15 hash\n\
-                        x17       X17 (peoplecurrency) hash\n\
-                        dmd-gr    Diamond-Groestl hash\n\
-  -d, --devices         takes a comma separated list of CUDA devices to use.\n\
+  -a, --algo=ALGO       specify the hash algorithm to use\n\
+			anime       Animecoin\n\
+			blake       Blake 256 (SFR/NEOS)\n\
+			blakecoin   Fast Blake 256 (8 rounds)\n\
+			deep        Deepcoin\n\
+			dmd-gr      Diamond-Groestl\n\
+			fresh       Freshcoin (shavite 80)\n\
+			fugue256    Fuguecoin\n\
+			groestl     Groestlcoin\n\
+			heavy       Heavycoin\n\
+			jackpot     Jackpot\n\
+			keccak      Keccak-256 (Maxcoin)\n\
+			luffa       Doomcoin\n\
+			mjollnir    Mjollnircoin\n\
+			myr-gr      Myriad-Groestl\n\
+			nist5       NIST5 (TalkCoin)\n\
+			penta       Pentablake hash (5x Blake 512)\n\
+			quark       Quark\n\
+			qubit       Qubit\n\
+			x11         X11 (DarkCoin)\n\
+			x13         X13 (MaruCoin)\n\
+			x14         X14\n\
+			x15         X15\n\
+			x17         X17 (peoplecurrency)\n\
+			whirl       Whirlcoin (old whirlpool)\n\
+  -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
                         (matching 2nd gt640 in the PC)\n\
