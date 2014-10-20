@@ -318,7 +318,7 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 	: "=l"(result) : "l"(x), "r"(offset));
 	return result;
 }
-#elif __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT == 3
+#elif __CUDA_ARCH__ >= 320 && USE_ROT_ASM_OPT == 3
 __device__
 uint64_t ROTL64(const uint64_t x, const int offset)
 {

@@ -1496,12 +1496,12 @@ static void *stratum_thread(void *userdata)
 			time(&g_work_time);
 			if (stratum.job.clean) {
 				if (!opt_quiet)
-					applog(LOG_BLUE, "%s send a new %s block %d", short_url, algo_names[opt_algo],
+					applog(LOG_BLUE, "%s sent %s block %d", short_url, algo_names[opt_algo],
 						stratum.bloc_height);
 				restart_threads();
 				hashlog_purge_old();
 			} else if (!opt_quiet) {
-					applog(LOG_BLUE, "%s send job %d for block %d", short_url,
+					applog(LOG_BLUE, "%s asks job %d for block %d", short_url,
 						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
 			}
 			pthread_mutex_unlock(&g_work_lock);
@@ -1526,7 +1526,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4.5"
+#define PROGRAM_VERSION "1.4.6"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
