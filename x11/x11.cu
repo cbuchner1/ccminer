@@ -147,7 +147,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		// Konstanten kopieren, Speicher belegen
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		quark_blake512_cpu_init(thr_id, throughput);
