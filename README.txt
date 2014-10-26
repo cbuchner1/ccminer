@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.5-tpruvot (Oct 20th 2014) - "Keccak 256"
+ccMiner release 1.4.6-tpruvot (Oct 26th 2014) - "S3"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -13,7 +13,6 @@ tpruvot@github:
   XST  : S9TqZucWgT6ajZLDBxQnHUtmkotCEHn9z9
 
 DJM34:
-  XCN donation address: CNh6F4h1byX7vvbmfQn4LMtsC4TYb8mgmn
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
 
 cbuchner v1.2:
@@ -24,7 +23,7 @@ cbuchner v1.2:
 
 >>> Introduction <<<
 
-This is a CUDA accelerated mining application for use with
+This is a CUDA accelerated mining application which handle :
 
 HeavyCoin & MjollnirCoin
 FugueCoin
@@ -38,9 +37,10 @@ BlakeCoin (256 8-rounds)
 Keccak (Maxcoin)
 Deep, Doom and Qubit
 Pentablake (Blake 512 x5)
+S3 (OneCoin)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
-over competing AMD (OpenCL) implementations.
+over competing AMD (OpenCL Only) implementations.
 
 We did not take a big effort on improving usability, so please set
 your parameters carefuly.
@@ -56,24 +56,25 @@ This code is based on the pooler cpuminer 2.3.2 release and inherits
 its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
-                          mjollnir    use to mine Mjollnircoin
+                          anime       use to mine Animecoin
+                          blake       use to mine NEOS (Blake 256)
+                          blakecoin   use to mine Old Blake 256
                           deep        use to mine Deepcoin
+                          dmd-gr      use to mine Diamond-Groestl
+                          fresh       use to mine Freshcoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
-                          dmd-gr      use to mine Diamond-Groestl
-                          myr-gr      use to mine Myriad-Groest
                           heavy       use to mine Heavycoin
                           jackpot     use to mine Jackpotcoin
                           keccak      use to mine Maxcoin
                           luffa       use to mine Doomcoin
-                          quark       use to mine Quarkcoin
-                          qubit       use to mine Qubit Algo
-                          anime       use to mine Animecoin
-                          blake       use to mine NEOS (Blake 256)
-                          blakecoin   use to mine Old Blake 256
+                          mjollnir    use to mine Mjollnircoin
+                          myr-gr      use to mine Myriad-Groest
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
-                          fresh       use to mine Freshcoin
+                          quark       use to mine Quarkcoin
+                          qubit       use to mine Qubit Algo
+                          s3          use to mine 1coin
                           whirl       use to mine Whirlcoin
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
@@ -108,7 +109,7 @@ its command line interface and options.
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
   -c, --config=FILE     load a JSON-format configuration file
-  -K, --no-color        disable colored console output
+      --no-color        disable colored console output
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
 
@@ -117,37 +118,30 @@ its command line interface and options.
 
 
 Example for Heavycoin Mining on heavycoinpool.com with a single gpu in your system
-
-ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 8
-
+    ccminer.exe -t 1 -a heavy -o stratum+tcp://stratum01.heavycoinpool.com:5333 -u <<username.worker>> -p <<workerpassword>> -v 8
 
 
 Example for Heavycoin Mining on hvc.1gh.com with a dual gpu in your system
-
-ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 8
-
+    ccminer.exe -t 2 -a heavy -o stratum+tcp://hvcpool.1gh.com:5333 -u <<WALLET>> -p x -v 8
 
 
 Example for Fuguecoin solo-mining with 4 gpu's in your system and a Fuguecoin-wallet running on localhost
-
-ccminer.exe -q -s 1 -t 4 -a fugue256 -o http://localhost:9089 -u <<myusername>> -p <<mypassword>>
+    ccminer.exe -q -s 1 -t 4 -a fugue256 -o http://localhost:9089 -u <<myusername>> -p <<mypassword>>
 
 
 Example for Fuguecoin pool mining on dwarfpool.com with all your GPUs
-
-ccminer.exe -q -a fugue256 -o stratum+tcp://erebor.dwarfpool.com:3340 -u YOURWALLETADDRESS.1 -p YOUREMAILADDRESS
+    ccminer.exe -q -a fugue256 -o stratum+tcp://erebor.dwarfpool.com:3340 -u YOURWALLETADDRESS.1 -p YOUREMAILADDRESS
 
 
 Example for Groestlcoin solo mining
+    ccminer.exe -q -s 1 -a groestl -o http://127.0.0.1:1441 -u USERNAME -p PASSWORD
 
-ccminer.exe -q -s 1 -a groestl -o http://127.0.0.1:1441 -u USERNAME -p PASSWORD
 
+For solo-mining you typically use -o http://127.0.0.1:xxxx where xxxx represents
+the rpcport number specified in your wallet's .conf file and you have to pass the same username
+and password with -O (or -u -p) as specified in the wallet config.
 
-For solo-mining you typically use -o 127.0.0.1:xxxx where xxxx represents
-the RPC portnumber specified in your wallet's .conf file and you have to
-pass the same username and password with -O as specified in the wallet's
-.conf file. The wallet must also be started with the -server option and
-the server flag in the wallet's .conf file set to 1
+The wallet must also be started with the -server option and/or with the server=1 flag in the .conf file
 
 
 >>> Additional Notes <<<
@@ -158,6 +152,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Oct. 26th 2014  v1.4.6
+                  Add S3 algo reusing existing code (onecoin)
+                  Small X11 (simd512) enhancement
 
   Oct. 20th 2014  v1.4.5
                   Add keccak algo from djm34 repo (maxcoin)
@@ -250,8 +248,10 @@ Notable contributors to this application are:
 
 Christian Buchner, Christian H. (Germany): CUDA implementation 
 
-Tanguy Pruvot : CUDA, blake, general code cleanup, tuneup for linux (Makefiles)
-                and some vstudio 2013 stuff...
+djm34, tsiv : Recent CUDA algos
+
+Tanguy Pruvot : 750Ti tuning, blake, colors, general code cleanup/opts
+                linux Config/Makefile and vstudio stuff...
 
 and also many thanks to anyone else who contributed to the original
 cpuminer application (Jeff Garzik, pooler), it's original HVC-fork
@@ -264,3 +264,4 @@ With kind regards,
 
    Christian Buchner ( Christian.Buchner@gmail.com )
    Christian H. ( Chris84 )
+   Tanguy Pruvot ( tpruvot@github )
