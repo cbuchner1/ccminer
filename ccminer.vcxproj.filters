@@ -469,5 +469,8 @@
     <CudaCompile Include="keccak\keccak256.cu">
       <Filter>Source Files\CUDA\keccak</Filter>
     </CudaCompile>
+    <CudaCompile Include="x11\s3.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

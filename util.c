@@ -1535,6 +1535,10 @@ void print_hash_tests(void)
 	printpfx("qubit", hash);
 
 	memset(hash, 0, sizeof hash);
+	s3hash(&hash[0], &buf[0]);
+	printpfx("S3", hash);
+
+	memset(hash, 0, sizeof hash);
 	wcoinhash(&hash[0], &buf[0]);
 	printpfx("whirl", hash);
 

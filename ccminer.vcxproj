@@ -509,6 +509,7 @@
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">%(AdditionalOptions)</AdditionalOptions>
       <TargetMachinePlatform Condition="'$(Platform)'=='x64'">64</TargetMachinePlatform>
     </CudaCompile>
+    <CudaCompile Include="x11\s3.cu" />
     <CudaCompile Include="x11\simd_functions.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </CudaCompile>

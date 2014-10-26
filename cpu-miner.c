@@ -148,6 +148,7 @@ typedef enum {
 	ALGO_PENTABLAKE,
 	ALGO_QUARK,
 	ALGO_QUBIT,
+	ALGO_S3,
 	ALGO_WHC,
 	ALGO_X11,
 	ALGO_X13,
@@ -176,6 +177,7 @@ static const char *algo_names[] = {
 	"penta",
 	"quark",
 	"qubit",
+	"s3",
 	"whirl",
 	"x11",
 	"x13",
@@ -265,6 +267,7 @@ Options:\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
+			s3          S3 (1Coin)\n\
 			x11         X11 (DarkCoin)\n\
 			x13         X13 (MaruCoin)\n\
 			x14         X14\n\
@@ -1232,6 +1235,11 @@ continue_scan:
 
 		case ALGO_PENTABLAKE:
 			rc = scanhash_pentablake(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_S3:
+			rc = scanhash_s3(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
