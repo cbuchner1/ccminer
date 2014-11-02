@@ -1462,11 +1462,33 @@ extern void applog_hash(unsigned char *hash)
 #define printpfx(n,h) \
 	printf("%s%12s%s: %s\n", CL_BLU, n, CL_N, format_hash(s, h))
 
+extern bool opt_tracegpu;
+void do_gpu_tests(void)
+{
+#ifdef _DEBUG
+	unsigned long done;
+	char s[128] = { '\0' };
+	unsigned char buf[128], hash[128];
+	uint32_t tgt[8] = { 0 };
+	memset(buf, 0, sizeof buf);
+	buf[0] = 1; buf[64] = 2;
+	opt_tracegpu = true;
+	work_restart = (struct work_restart*) malloc(sizeof(struct work_restart));
+	work_restart[0].restart = 1;
+	tgt[6] = 0xffff;
+	scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
+	free(work_restart);
+	work_restart = NULL;
+	opt_tracegpu = false;
+#endif
+}
+
 void print_hash_tests(void)
 {
 	char s[128] = {'\0'};
 	unsigned char buf[128], hash[128];
 	memset(buf, 0, sizeof buf);
+	// buf[0] = 1; buf[64] = 2;
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
@@ -1481,6 +1503,8 @@ void print_hash_tests(void)
 	memset(hash, 0, sizeof hash);
 	blake256hash(&hash[0], &buf[0], 14);
 	printpfx("blake", hash);
+
+	do_gpu_tests();
 
 	memset(hash, 0, sizeof hash);
 	deephash(&hash[0], &buf[0]);
