@@ -16,8 +16,9 @@ extern "C" {
 #include <memory.h>
 }
 
-/* threads per block */
+/* threads per block and throughput (intensity) */
 #define TPB 128
+#define INTENSITY (1 << 20) // = 1048576 nonces per call
 
 /* added in sph_blake.c */
 extern "C" int blake256_rounds = 14;
@@ -25,15 +26,15 @@ extern "C" int blake256_rounds = 14;
 /* hash by cpu with blake 256 */
 extern "C" void blake256hash(void *output, const void *input, int8_t rounds = 14)
 {
-	unsigned char hash[64];
+	uchar hash[64];
 	sph_blake256_context ctx;
 
 	blake256_rounds = rounds;
 
 	sph_blake256_init(&ctx);
 	sph_blake256(&ctx, input, 80);
-
 	sph_blake256_close(&ctx, hash);
+
 	memcpy(output, hash, 32);
 }
 
@@ -46,11 +47,10 @@ extern bool opt_n_threads;
 extern bool opt_tracegpu;
 extern int device_map[8];
 
-__constant__
 #if PRECALC64
-static uint32_t __align__(32) c_data[11];
+__constant__ uint32_t _ALIGN(32) d_data[12];
 #else
-static uint32_t __align__(32) c_data[20];
+__constant__ static uint32_t _ALIGN(32) c_data[20];
 /* midstate hash cache, this algo is run on 2 parts */
 __device__ static uint32_t cache[8];
 __device__ static uint32_t prevsum = 0;
@@ -62,14 +62,13 @@ extern "C" uint32_t crc32_u32t(const uint32_t *buf, size_t size);
 static uint32_t *d_resNonce[8];
 static uint32_t *h_resNonce[8];
 
-/* max count of found nounces in one call */
+/* max count of found nonces in one call */
 #define NBN 2
 static uint32_t extra_results[NBN] = { MAXU };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 __constant__
-static uint32_t __align__(32) c_sigma[16][16];
-const uint32_t host_sigma[16][16] = {
+static uint32_t _ALIGN(32) c_sigma[16][16] = {
 	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
 	{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -136,8 +135,8 @@ static const uint32_t __align__(32) c_Padding[16] = {
 __device__ static
 void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, const int rounds)
 {
-	uint32_t /* __align__(8) */ m[16];
-	uint32_t /* __align__(8) */ v[16];
+	uint32_t /*_ALIGN(8)*/ m[16];
+	uint32_t v[16];
 
 	m[0] = block[0];
 	m[1] = block[1];
@@ -193,13 +192,13 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, co
 
 #if !PRECALC64 /* original method */
 __global__
-void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNounce,
+void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce,
 	const uint64_t highTarget, const int crcsum, const int rounds)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		const uint32_t nounce = startNonce + thread;
+		const uint32_t nonce = startNonce + thread;
 		uint32_t h[8];
 
 		#pragma unroll
@@ -227,7 +226,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 		ending[0] = c_data[16];
 		ending[1] = c_data[17];
 		ending[2] = c_data[18];
-		ending[3] = nounce; /* our tested value */
+		ending[3] = nonce; /* our tested value */
 
 		blake256_compress(h, ending, 640, rounds);
 
@@ -238,16 +237,16 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 		uint64_t high64 = ((uint64_t*)h)[3];
 		if (high64 <= highTarget)
 #if NBN == 2
-		/* keep the smallest nounce, + extra one if found */
-		if (resNounce[0] > nounce) {
+		/* keep the smallest nonce, + extra one if found */
+		if (resNonce[0] > nonce) {
 			// printf("%llx %llx \n", high64, highTarget);
-			resNounce[1] = resNounce[0];
-			resNounce[0] = nounce;
+			resNonce[1] = resNonce[0];
+			resNonce[0] = nonce;
 		}
 		else
-			resNounce[1] = nounce;
+			resNonce[1] = nonce;
 #else
-		resNounce[0] = nounce;
+		resNonce[0] = nonce;
 #endif
 	}
 }
@@ -284,7 +283,6 @@ void blake256_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 	uint32_t data[20];
 	memcpy(data, pdata, 80);
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_data, data, sizeof(data), 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_sigma, host_sigma, sizeof(host_sigma), 0, cudaMemcpyHostToDevice));
 }
 #else
 
@@ -292,52 +290,50 @@ void blake256_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 /* Precalculated 1st 64-bytes block (midstate) method */
 
 __global__
-void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uint32_t *resNounce,
+void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce,
 	const uint64_t highTarget, const int rounds, const bool trace)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		const uint32_t nounce = startNonce + thread;
-		uint32_t h[8];
+		const uint32_t nonce = startNonce + thread;
+		uint32_t _ALIGN(16) h[8];
 
 		#pragma unroll
-		for(int i=0; i<8; i++) {
-			h[i] = c_data[i];
+		for(int i=0; i < 8; i++) {
+			h[i] = d_data[i];
 		}
 
 		// ------ Close: Bytes 64 to 80 ------
 
-		uint32_t ending[4];
-		ending[0] = c_data[8];
-		ending[1] = c_data[9];
-		ending[2] = c_data[10];
-		ending[3] = nounce; /* our tested value */
+		uint32_t _ALIGN(16) ending[4];
+		ending[0] = d_data[8];
+		ending[1] = d_data[9];
+		ending[2] = d_data[10];
+		ending[3] = nonce; /* our tested value */
 
 		blake256_compress(h, ending, 640, rounds);
 
 		//if (h[7] == 0 && high64 <= highTarget) {
 		if (h[7] == 0) {
 #if NBN == 2
-			/* keep the smallest nounce, + extra one if found */
-			if (resNounce[0] > nounce) {
+			/* keep the smallest nonce, + extra one if found */
+			if (resNonce[0] > nonce) {
 				// printf("%llx %llx \n", high64, highTarget);
-				resNounce[1] = resNounce[0];
-				resNounce[0] = nounce;
+				resNonce[1] = resNonce[0];
+				resNonce[0] = nonce;
 			}
 			else
-				resNounce[1] = nounce;
+				resNonce[1] = nonce;
 #else
-			resNounce[0] = nounce;
+			resNonce[0] = nonce;
 #endif
 			if (trace) {
 #ifdef _DEBUG
-				printf("tgt:  %16llx\n", highTarget);
 				uint64_t high64 = ((uint64_t*)h)[3];
 				printf("gpu:  %16llx\n", high64);
-				printf("gpu:  %16llx\n", cuda_swab64(h64));
-				printf("gpu:  %16x\n", cuda_swab32(h[6]));
-				printf("gpu: %08x %08x\n", h[6], h[7]);
+				printf("gpu: %08x.%08x\n", h[7], h[6]);
+				printf("tgt:  %16llx\n", highTarget);
 #endif
 			}
 		}
@@ -380,7 +376,7 @@ static void blake256mid(uint32_t *output, const uint32_t *input, int8_t rounds =
 	sph_blake256_init(&ctx);
 	sph_blake256(&ctx, input, 64);
 
-	memcpy(output, (uchar*)ctx.H, 32);
+	memcpy(output, (void*)ctx.H, 32);
 }
 
 __host__
@@ -391,8 +387,7 @@ void blake256_cpu_setBlock_16(uint32_t *penddata, const uint32_t *midstate, cons
 	data[8] = penddata[0];
 	data[9] = penddata[1];
 	data[10]= penddata[2];
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_data, data, 32 + 12, 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_sigma, host_sigma, sizeof(host_sigma), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_data, data, 32 + 12, 0, cudaMemcpyHostToDevice));
 }
 #endif
 
@@ -409,7 +404,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	uint32_t crcsum;
 #endif
 	/* todo: -i param */
-	uint32_t throughput = min(256 * 4096, max_nonce - first_nonce);
+	uint32_t throughput = min(INTENSITY, max_nonce - first_nonce);
 
 	int rc = 0;
 
@@ -501,7 +496,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			else if (opt_debug) {
 				applog_hash((uint8_t*)ptarget);
 				applog_compare_hash((uint8_t*)vhashcpu,(uint8_t*)ptarget);
-				applog(LOG_DEBUG, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_DEBUG, "GPU #%d: result for nonce %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
