@@ -4,7 +4,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#if defined(_MSC_VER)
+#if defined(__INTELLISENSE__)
 /* reduce warnings */
 #include <device_functions.h>
 #include <device_launch_parameters.h>

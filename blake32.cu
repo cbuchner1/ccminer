@@ -386,7 +386,7 @@ static void blake256mid(uint32_t *output, const uint32_t *input, int8_t rounds =
 __host__
 void blake256_cpu_setBlock_16(uint32_t *penddata, const uint32_t *midstate, const uint32_t *ptarget)
 {
-	uint32_t data[11];
+	uint32_t _ALIGN(64) data[11];
 	memcpy(data, midstate, 32);
 	data[8] = penddata[0];
 	data[9] = penddata[1];
@@ -402,9 +402,9 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint64_t targetHigh = ((uint64_t*)ptarget)[3]; // 0x00000000.0fffffff
-	uint32_t endiandata[20];
+	uint32_t _ALIGN(64) endiandata[20];
 #if PRECALC64
-	uint32_t midstate[8];
+	uint32_t _ALIGN(64) midstate[8];
 #else
 	uint32_t crcsum;
 #endif

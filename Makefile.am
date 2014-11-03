@@ -49,10 +49,13 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  x17/x17.cu x17/cuda_x17_haval512.cu x17/cuda_x17_sha512.cu \
 			  x11/s3.cu
 
+if HAVE_WINDOWS
+ccminer_SOURCES += compat/winansi.c
+endif
 
 ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
 ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
-ccminer_CPPFLAGS	= -msse2 @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
+ccminer_CPPFLAGS	= @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(CPPFLAGS) $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
 nvcc_ARCH  = -gencode=arch=compute_50,code=\"sm_50,compute_50\"
 #nvcc_ARCH += -gencode=arch=compute_35,code=\"sm_35,compute_35\"

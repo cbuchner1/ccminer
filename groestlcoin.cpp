@@ -42,13 +42,8 @@ void sha256func(unsigned char *hash, const unsigned char *data, int len)
 
 extern "C" void groestlhash(void *state, const void *input)
 {
-    // Tryout GPU-groestl
-
-    sph_groestl512_context     ctx_groestl[2];
-    static unsigned char pblank[1];
-    uint32_t mask = 8;
-    uint32_t zero = 0;
-
+    // CPU-groestl
+    sph_groestl512_context ctx_groestl[2];
 
     //these uint512 in the c++ source of the client are backed by an array of uint32
     uint32_t hashA[16], hashB[16];    

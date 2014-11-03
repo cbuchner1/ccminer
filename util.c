@@ -382,7 +382,7 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	curl_easy_setopt(curl, CURLOPT_POST, 1);
 
 	if (opt_protocol)
-		applog(LOG_DEBUG, "JSON protocol request:\n%s\n", rpc_req);
+		applog(LOG_DEBUG, "JSON protocol request:\n%s", rpc_req);
 
 	upload_data.buf = rpc_req;
 	upload_data.len = strlen(rpc_req);
@@ -479,6 +479,33 @@ err_out:
 	curl_slist_free_all(headers);
 	curl_easy_reset(curl);
 	return NULL;
+}
+
+/**
+ * Unlike malloc, calloc set the memory to zero
+ */
+void *aligned_calloc(int size)
+{
+	const int ALIGN = 64; // cache line
+#ifdef _MSC_VER
+	void* res = _aligned_malloc(size, ALIGN);
+	memset(res, 0, size);
+	return res;
+#else
+	void *mem = calloc(1, size+ALIGN+sizeof(void*));
+	void **ptr = (void**)((size_t)(mem+ALIGN+sizeof(void*)) & ~(ALIGN-1));
+	ptr[-1] = mem;
+	return ptr;
+#endif
+}
+
+void aligned_free(void *ptr)
+{
+#ifdef _MSC_VER
+	return _aligned_free(ptr);
+#else
+	free(((void**)ptr)[-1]);
+#endif
 }
 
 void cbin2hex(char *out, const char *in, size_t len)

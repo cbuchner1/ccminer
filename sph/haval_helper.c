@@ -149,7 +149,7 @@ static void
 SPH_XCAT(SPH_XCAT(haval, PASSES), _close)(sph_haval_context *sc,
 	unsigned ub, unsigned n, void *dst)
 {
-	unsigned current,j;
+	unsigned current;
 	DSTATE;
 
 #if SPH_64

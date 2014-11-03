@@ -51,6 +51,14 @@ void *alloca (size_t);
 # endif
 #endif
 
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 0
+# define _ALIGN(x) __align__(x)
+#elif _MSC_VER
+# define _ALIGN(x) __declspec(align(x))
+#else
+# define _ALIGN(x) __attribute__ ((aligned(x)))
+#endif
+
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>
 #define LOG_BLUE 0x10 /* unique value */
@@ -199,6 +207,10 @@ static inline void le16enc(void *pp, uint16_t x)
 	p[1] = (x >> 8) & 0xff;
 }
 #endif
+
+/* used for struct work */
+void *aligned_calloc(int size);
+void aligned_free(void *ptr);
 
 #if JANSSON_MAJOR_VERSION >= 2
 #define JSON_LOADS(str, err_ptr) json_loads((str), 0, (err_ptr))

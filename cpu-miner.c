@@ -383,7 +383,7 @@ struct work {
 	uint32_t scanned_to;
 };
 
-static struct work g_work;
+static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
 
@@ -484,11 +484,10 @@ static int share_result(int result, const char *reason)
 {
 	char s[345];
 	double hashrate;
-	int i, ret = 0;
 
 	hashrate = 0.;
 	pthread_mutex_lock(&stats_lock);
-	for (i = 0; i < opt_n_threads; i++)
+	for (int i = 0; i < opt_n_threads; i++)
 		hashrate += thr_hashrates[i];
 	result ? accepted_count++ : rejected_count++;
 	pthread_mutex_unlock(&stats_lock);
@@ -651,8 +650,8 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 	if (opt_protocol && rc) {
 		timeval_subtract(&diff, &tv_end, &tv_start);
 		/* show time because curl can be slower against versions/config */
-		applog(LOG_DEBUG, "got new work in %u µs",
-			diff.tv_sec * 1000000 + diff.tv_usec);
+		applog(LOG_DEBUG, "got new work in %.2f ms",
+		       (1000.0 * diff.tv_sec) + (0.001 * diff.tv_usec));
 	}
 
 	json_decref(val);
@@ -667,7 +666,7 @@ static void workio_cmd_free(struct workio_cmd *wc)
 
 	switch (wc->cmd) {
 	case WC_SUBMIT_WORK:
-		free(wc->u.work);
+		aligned_free(wc->u.work);
 		break;
 	default: /* do nothing */
 		break;
@@ -682,7 +681,7 @@ static bool workio_get_work(struct workio_cmd *wc, CURL *curl)
 	struct work *ret_work;
 	int failures = 0;
 
-	ret_work = (struct work*)calloc(1, sizeof(*ret_work));
+	ret_work = (struct work*)aligned_calloc(sizeof(*ret_work));
 	if (!ret_work)
 		return false;
 
@@ -690,7 +689,7 @@ static bool workio_get_work(struct workio_cmd *wc, CURL *curl)
 	while (!get_upstream_work(curl, ret_work)) {
 		if (unlikely((opt_retries >= 0) && (++failures > opt_retries))) {
 			applog(LOG_ERR, "json_rpc_call failed, terminating workio thread");
-			free(ret_work);
+			aligned_free(ret_work);
 			return false;
 		}
 
@@ -702,7 +701,7 @@ static bool workio_get_work(struct workio_cmd *wc, CURL *curl)
 
 	/* send work to requesting thread */
 	if (!tq_push(wc->thr->q, ret_work))
-		free(ret_work);
+		aligned_free(ret_work);
 
 	return true;
 }
@@ -822,7 +821,7 @@ static bool submit_work(struct thr_info *thr, const struct work *work_in)
 	if (!wc)
 		return false;
 
-	wc->u.work = (struct work *)malloc(sizeof(*work_in));
+	wc->u.work = (struct work *)aligned_calloc(sizeof(*work_in));
 	if (!wc->u.work)
 		goto err_out;
 
@@ -946,7 +945,6 @@ static void *miner_thread(void *userdata)
 	struct work work;
 	uint32_t max_nonce;
 	uint32_t end_nonce = 0xffffffffU / opt_n_threads * (thr_id + 1) - (thr_id + 1);
-	unsigned char *scratchbuf = NULL;
 	bool work_done = false;
 	bool extrajob = false;
 	char s[16];

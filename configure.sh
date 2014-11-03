@@ -5,5 +5,7 @@
 
 #--ptxas-options=\"-v -dlcm=cg\""
 
-CUDA_CFLAGS="-O3" ./configure "CFLAGS=-O3" "CXXFLAGS=-O3" --with-cuda=/usr/local/cuda
+extracflags="-march=native -D_REENTRANT -falign-functions=16 -falign-jumps=16 -falign-labels=16"
+
+CUDA_CFLAGS="-O3 -Xcompiler -Wall" ./configure CXXFLAGS="-O3 $extracflags" --with-cuda=/usr/local/cuda
 

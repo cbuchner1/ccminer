@@ -219,10 +219,9 @@ extern "C" void hashlog_purge_all(void)
 extern "C" void hashlog_dump_job(char* jobid)
 {
 	if (opt_debug) {
-		int deleted = 0;
 		uint64_t njobid = hextouint(jobid);
 		uint64_t keypfx = (njobid << 32);
-		uint32_t sz = tlastshares.size();
+		// uint32_t sz = tlastshares.size();
 		std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 		while (i != tlastshares.end()) {
 			if ((keypfx & i->first) == keypfx) {
