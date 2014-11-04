@@ -74,6 +74,8 @@ enum {
 };
 #endif
 
+typedef unsigned char uchar;
+
 #undef unlikely
 #undef likely
 #if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)

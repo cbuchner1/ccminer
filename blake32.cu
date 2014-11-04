@@ -8,8 +8,6 @@
 
 #include "miner.h"
 
-typedef unsigned char uchar;
-
 extern "C" {
 #include "sph/sph_blake.h"
 #include <stdint.h>

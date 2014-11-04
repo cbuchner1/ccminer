@@ -163,7 +163,7 @@ static size_t all_data_cb(const void *ptr, size_t size, size_t nmemb,
 	size_t len = size * nmemb;
 	size_t oldlen, newlen;
 	void *newmem;
-	static const unsigned char zero = 0;
+	static const uchar zero = 0;
 
 	oldlen = db->len;
 	newlen = oldlen + len;
@@ -517,7 +517,7 @@ void cbin2hex(char *out, const char *in, size_t len)
 	}
 }
 
-char *bin2hex(const unsigned char *in, size_t len)
+char *bin2hex(const uchar *in, size_t len)
 {
 	char *s = (char*)malloc((len * 2) + 1);
 	if (!s)
@@ -528,7 +528,7 @@ char *bin2hex(const unsigned char *in, size_t len)
 	return s;
 }
 
-bool hex2bin(unsigned char *p, const char *hexstr, size_t len)
+bool hex2bin(uchar *p, const char *hexstr, size_t len)
 {
 	char hex_byte[3];
 	char *ep;
@@ -542,7 +542,7 @@ bool hex2bin(unsigned char *p, const char *hexstr, size_t len)
 		}
 		hex_byte[0] = hexstr[0];
 		hex_byte[1] = hexstr[1];
-		*p = (unsigned char) strtol(hex_byte, &ep, 16);
+		*p = (uchar) strtol(hex_byte, &ep, 16);
 		if (*ep) {
 			applog(LOG_ERR, "hex2bin failed on '%s'", hex_byte);
 			return false;
@@ -609,8 +609,8 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 			be32enc(hash_be + i, hash[7 - i]);
 			be32enc(target_be + i, target[7 - i]);
 		}
-		hash_str = bin2hex((unsigned char *)hash_be, 32);
-		target_str = bin2hex((unsigned char *)target_be, 32);
+		hash_str = bin2hex((uchar *)hash_be, 32);
+		target_str = bin2hex((uchar *)target_be, 32);
 
 		applog(LOG_DEBUG, "DEBUG: %s\nHash:   %s\nTarget: %s",
 			rc ? "hash <= target"
@@ -976,7 +976,7 @@ start:
 	free(sctx->xnonce1);
 	sctx->session_id = sid ? strdup(sid) : NULL;
 	sctx->xnonce1_size = strlen(xnonce1) / 2;
-	sctx->xnonce1 = (unsigned char*)malloc(sctx->xnonce1_size);
+	sctx->xnonce1 = (uchar*) malloc(sctx->xnonce1_size);
 	hex2bin(sctx->xnonce1, xnonce1, sctx->xnonce1_size);
 	sctx->xnonce2_size = xn2_size;
 	sctx->next_diff = 1.0;
@@ -1088,7 +1088,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	bool clean, ret = false;
 	int merkle_count, i;
 	json_t *merkle_arr;
-	unsigned char **merkle;
+	uchar **merkle;
 	int ntime;
 
 	job_id = json_string_value(json_array_get(params, 0));
@@ -1113,15 +1113,15 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	}
 
 	/* store stratum server time diff */
-	hex2bin((unsigned char *)&ntime, stime, 4);
+	hex2bin((uchar *)&ntime, stime, 4);
 	ntime = swab32(ntime) - (uint32_t) time(0);
 	if (ntime > sctx->srvtime_diff) {
 		sctx->srvtime_diff = ntime;
-		if (!opt_quiet)
+		if (!opt_quiet && ntime > 20)
 			applog(LOG_DEBUG, "stratum time is at least %ds in the future", ntime);
 	}
 
-	merkle = (unsigned char**)malloc(merkle_count * sizeof(char *));
+	merkle = (uchar**) malloc(merkle_count * sizeof(char *));
 	for (i = 0; i < merkle_count; i++) {
 		const char *s = json_string_value(json_array_get(merkle_arr, i));
 		if (!s || strlen(s) != 64) {
@@ -1131,7 +1131,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 			applog(LOG_ERR, "Stratum notify: invalid Merkle branch");
 			goto out;
 		}
-		merkle[i] = (unsigned char*)malloc(32);
+		merkle[i] = (uchar*) malloc(32);
 		hex2bin(merkle[i], s, 32);
 	}
 
@@ -1142,7 +1142,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	sctx->job.coinbase_size = coinb1_size + sctx->xnonce1_size +
 	                          sctx->xnonce2_size + coinb2_size;
 
-	sctx->job.coinbase = (unsigned char*)realloc(sctx->job.coinbase, sctx->job.coinbase_size);
+	sctx->job.coinbase = (uchar*) realloc(sctx->job.coinbase, sctx->job.coinbase_size);
 	sctx->job.xnonce2 = sctx->job.coinbase + coinb1_size + sctx->xnonce1_size;
 	hex2bin(sctx->job.coinbase, coinb1, coinb1_size);
 	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
@@ -1456,7 +1456,7 @@ char* atime2str(time_t timer)
 }
 
 /* sprintf can be used in applog */
-static char* format_hash(char* buf, unsigned char *hash)
+static char* format_hash(char* buf, uchar *hash)
 {
 	int len = 0;
 	for (int i=0; i < 32; i += 4) {
@@ -1467,7 +1467,7 @@ static char* format_hash(char* buf, unsigned char *hash)
 }
 
 /* to debug diff in data */
-extern void applog_compare_hash(unsigned char *hash, unsigned char *hash2)
+extern void applog_compare_hash(uchar *hash, uchar *hash2)
 {
 	char s[256] = "";
 	int len = 0;
@@ -1480,7 +1480,7 @@ extern void applog_compare_hash(unsigned char *hash, unsigned char *hash2)
 	applog(LOG_DEBUG, "%s", s);
 }
 
-extern void applog_hash(unsigned char *hash)
+extern void applog_hash(uchar *hash)
 {
 	char s[128] = {'\0'};
 	applog(LOG_DEBUG, "%s", format_hash(s, hash));
@@ -1495,15 +1495,19 @@ void do_gpu_tests(void)
 #ifdef _DEBUG
 	unsigned long done;
 	char s[128] = { '\0' };
-	unsigned char buf[128], hash[128];
+	uchar buf[128], hash[128];
 	uint32_t tgt[8] = { 0 };
+
 	memset(buf, 0, sizeof buf);
 	buf[0] = 1; buf[64] = 2;
+
 	opt_tracegpu = true;
 	work_restart = (struct work_restart*) malloc(sizeof(struct work_restart));
 	work_restart[0].restart = 1;
 	tgt[6] = 0xffff;
+
 	scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
+
 	free(work_restart);
 	work_restart = NULL;
 	opt_tracegpu = false;
@@ -1513,9 +1517,9 @@ void do_gpu_tests(void)
 void print_hash_tests(void)
 {
 	char s[128] = {'\0'};
-	unsigned char buf[128], hash[128];
+	uchar buf[128], hash[128];
 	memset(buf, 0, sizeof buf);
-	// buf[0] = 1; buf[64] = 2;
+	// buf[0] = 1; buf[64] = 2; // for endian tests
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
@@ -1530,8 +1534,6 @@ void print_hash_tests(void)
 	memset(hash, 0, sizeof hash);
 	blake256hash(&hash[0], &buf[0], 14);
 	printpfx("blake", hash);
-
-	do_gpu_tests();
 
 	memset(hash, 0, sizeof hash);
 	deephash(&hash[0], &buf[0]);
@@ -1614,4 +1616,6 @@ void print_hash_tests(void)
 	printpfx("X17", hash);
 
 	printf("\n");
+
+	do_gpu_tests();
 }

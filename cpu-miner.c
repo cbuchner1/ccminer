@@ -225,6 +225,7 @@ struct thr_info *thr_info;
 static int work_thr_id;
 int longpoll_thr_id = -1;
 int stratum_thr_id = -1;
+bool stratum_need_reset = false;
 struct work_restart *work_restart = NULL;
 static struct stratum_ctx stratum;
 
@@ -370,7 +371,7 @@ struct work {
 
 	char job_id[128];
 	size_t xnonce2_len;
-	unsigned char xnonce2[32];
+	uchar xnonce2[32];
 
 	union {
 		uint32_t u32[2];
@@ -411,7 +412,7 @@ static bool jobj_binary(const json_t *obj, const char *key,
 		applog(LOG_ERR, "JSON key '%s' is not a string", key);
 		return false;
 	}
-	if (!hex2bin((unsigned char*)buf, hexstr, buflen))
+	if (!hex2bin((uchar*)buf, hexstr, buflen))
 		return false;
 
 	return true;
@@ -445,7 +446,7 @@ static bool work_decode(const json_t *val, struct work *work)
 		const char * hexstr = json_string_value(jr);
 		if (likely(hexstr)) {
 			// never seen yet...
-			hex2bin((unsigned char*)work->noncerange.u64, hexstr, 8);
+			hex2bin((uchar*)work->noncerange.u64, hexstr, 8);
 			applog(LOG_DEBUG, "received noncerange: %08x-%08x", work->noncerange.u32[0], work->noncerange.u32[1]);
 		}
 	}
@@ -517,7 +518,6 @@ static int share_result(int result, const char *reason)
 
 static bool submit_upstream_work(CURL *curl, struct work *work)
 {
-	char *str = NULL;
 	json_t *val, *res, *reason;
 	char s[345];
 	int i;
@@ -528,7 +528,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	if (memcmp(work->data + 1, g_work.data + 1, 32)) {
 		pthread_mutex_unlock(&g_work_lock);
 		if (opt_debug)
-			applog(LOG_DEBUG, "DEBUG: stale work detected, discarding");
+			applog(LOG_DEBUG, "stale work detected, discarding");
 		return true;
 	}
 	calc_diff(work, 0);
@@ -544,39 +544,44 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		le32enc(&nonce, work->data[19]);
 		be16enc(&nvote, *((uint16_t*)&work->data[20]));
 
-		ntimestr = bin2hex((const unsigned char *)(&ntime), 4);
-		noncestr = bin2hex((const unsigned char *)(&nonce), 4);
-		xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
-		nvotestr = bin2hex((const unsigned char *)(&nvote), 2);
+		noncestr = bin2hex((const uchar*)(&nonce), 4);
 
 		sent = hashlog_already_submittted(work->job_id, nonce);
 		if (sent > 0) {
 			sent = (uint32_t) time(NULL) - sent;
 			if (!opt_quiet) {
-				applog(LOG_WARNING, "skip submit, nonce %s was already sent %u seconds ago", noncestr, sent);
+				applog(LOG_WARNING, "nonce %s was already sent %u seconds ago", noncestr, sent);
 				hashlog_dump_job(work->job_id);
 			}
-			rc = true;
-			goto out;
+			free(noncestr);
+			// prevent useless computing on some pools
+			stratum_need_reset = true;
+			for (int i = 0; i < opt_n_threads; i++)
+				work_restart[i].restart = 1;
+			return true;
 		}
 
+		ntimestr = bin2hex((const uchar*)(&ntime), 4);
+		xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
+
 		if (opt_algo == ALGO_HEAVY) {
+			nvotestr = bin2hex((const uchar*)(&nvote), 2);
 			sprintf(s,
 				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
 				rpc_user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr);
+			free(nvotestr);
 		} else {
 			sprintf(s,
 				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
 				rpc_user, work->job_id + 8, xnonce2str, ntimestr, noncestr);
 		}
+		free(xnonce2str);
 		free(ntimestr);
 		free(noncestr);
-		free(xnonce2str);
-		free(nvotestr);
 
 		if (unlikely(!stratum_send_line(&stratum, s))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
-			goto out;
+			return false;
 		}
 
 		hashlog_remember_submit(work->job_id, nonce, work->scanned_from);
@@ -584,15 +589,16 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	} else {
 
 		/* build hex string */
+		char *str = NULL;
 
 		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
 			for (i = 0; i < ARRAY_SIZE(work->data); i++)
 				le32enc(work->data + i, work->data[i]);
-			}
-			str = bin2hex((unsigned char *)work->data, sizeof(work->data));
-			if (unlikely(!str)) {
-				applog(LOG_ERR, "submit_upstream_work OOM");
-				goto out;
+		}
+		str = bin2hex((uchar*)work->data, sizeof(work->data));
+		if (unlikely(!str)) {
+			applog(LOG_ERR, "submit_upstream_work OOM");
+			return false;
 		}
 
 		/* build JSON-RPC request */
@@ -604,7 +610,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		val = json_rpc_call(curl, rpc_url, rpc_userpass, s, false, false, NULL);
 		if (unlikely(!val)) {
 			applog(LOG_ERR, "submit_upstream_work json_rpc_call failed");
-			goto out;
+			return false;
 		}
 
 		res = json_object_get(val, "result");
@@ -613,13 +619,11 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			hashlog_purge_job(work->job_id);
 
 		json_decref(val);
+
+		free(str);
 	}
 
-	rc = true;
-
-out:
-	free(str);
-	return rc;
+	return true;
 }
 
 static const char *rpc_req =
@@ -842,7 +846,7 @@ err_out:
 
 static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
-	unsigned char merkle_root[64];
+	uchar merkle_root[64];
 	int i;
 
 	if (!sctx->job.job_id) {
@@ -1475,6 +1479,12 @@ static void *stratum_thread(void *userdata)
 	while (1) {
 		int failures = 0;
 
+		if (stratum_need_reset) {
+			stratum_need_reset = false;
+			stratum_disconnect(&stratum);
+			applog(LOG_DEBUG, "stratum connection reset");
+		}
+
 		while (!stratum.curl) {
 			pthread_mutex_lock(&g_work_lock);
 			g_work_time = 0;
@@ -1503,11 +1513,11 @@ static void *stratum_thread(void *userdata)
 			time(&g_work_time);
 			if (stratum.job.clean) {
 				if (!opt_quiet)
-					applog(LOG_BLUE, "%s sent %s block %d", short_url, algo_names[opt_algo],
+					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
 						stratum.bloc_height);
 				restart_threads();
 				hashlog_purge_old();
-			} else if (!opt_quiet) {
+			} else if (opt_debug && !opt_quiet) {
 					applog(LOG_BLUE, "%s asks job %d for block %d", short_url,
 						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
 			}
@@ -1902,18 +1912,17 @@ int main(int argc, char *argv[])
 	long flags;
 	int i;
 
-	printf("*** ccMiner for nVidia GPUs by Christian Buchner and Christian H. ***\n");
-	printf("\t This is the forked version "PROGRAM_VERSION" (tpruvot@github)\n");
+	printf("*** ccminer " PROGRAM_VERSION " for nVidia GPUs by tpruvot@github ***\n");
 #ifdef WIN32
-	printf("\t  Built with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
+	printf("\tBuilt with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
 #else
-	printf("\t  Built with the nVidia CUDA SDK 6.5\n\n");
+	printf("\tBuilt with the nVidia CUDA SDK 6.5\n\n");
 #endif
-	printf("\t  based on pooler-cpuminer 2.3.2 (c) 2010 Jeff Garzik, 2012 pooler\n");
-	printf("\t    and HVC extension from http://hvc.1gh.com/" "\n\n");
-	printf("\tCuda additions Copyright 2014 Christian Buchner, Christian H.\n\n");
-	printf("\tInclude some of djm34 additions, cleaned by Tanguy Pruvot\n");
-	printf("\t  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
+	printf("  Based on pooler cpuminer 2.3.2\n");
+	printf("  CUDA support by Christian Buchner and Christian H.\n");
+	printf("  Include some of djm34 additions\n\n");
+
+	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
@@ -2028,6 +2037,7 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 	}
+
 	if (want_stratum) {
 		/* init stratum thread info */
 		stratum_thr_id = opt_n_threads + 2;

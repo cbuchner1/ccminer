@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.6-tpruvot (Oct 26th 2014) - "S3"
+ccMiner release 1.4.7-tpruvot (Nov 2014) - "Blake update"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -152,6 +152,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Nov       2014  v1.4.7
+                  Rewrite blake algo
+                  Update windows prebuilt curl to 7.38.0
 
   Oct. 26th 2014  v1.4.6
                   Add S3 algo reusing existing code (onecoin)
