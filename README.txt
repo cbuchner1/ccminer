@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.0-tpruvot (Nov 2014) - "Extra nonce"
+ccMiner release 1.5.0-tpruvot (27 Nov 2014) - "Extra nonce"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -169,14 +169,15 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-                  v1.5.0
+  Nov. 27th 2014  v1.5.0
                   Upgrade compat jansson to 2.6 (for windows)
                   Add pool mining.set_extranonce support
                   Allow intermediate intensity with decimals
-                  Allow increased scan ranges (wip)
+                  Update prebuilt x86 openssl lib to 1.0.1i
+                  Fix heavy algo on linux (broken since 1.4)
                   Some internal changes to use the C++ compiler
                   New API 1.2 with some new commands (read only)
-                  Add most sp x11/x15 optimisations
+                  Add some of sp x11/x15 optimisations (and tsiv x13)
 
   Nov. 15th 2014  v1.4.9
                   Support of nvml and nvapi(windows) to monitor gpus
