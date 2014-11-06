@@ -75,41 +75,38 @@ __device__ __forceinline__ void cuda_echo_round(
 	}
 
 	// Mix Columns
-#pragma unroll 4
-	for(int i=0;i<4;i++) // Schleife über je 2*uint32_t
+	#pragma unroll
+	for (int i = 0; i<4; i++) // Schleife über je 2*uint32_t
 	{
-#pragma unroll 4
-		for(int j=0;j<4;j++) // Schleife über die elemnte
+		#pragma unroll 64
+		for (int idx = 0; idx<64; idx += 16) // Schleife über die elemnte
 		{
-			int idx = j<<2; // j*4
 
-			uint32_t a = W[ ((idx + 0)<<2) + i];
-			uint32_t b = W[ ((idx + 1)<<2) + i];
-			uint32_t c = W[ ((idx + 2)<<2) + i];
-			uint32_t d = W[ ((idx + 3)<<2) + i];
+			uint32_t a = W[idx + i];
+			uint32_t b = W[idx + i + 4];
+			uint32_t c = W[idx + i + 8];
+			uint32_t d = W[idx + i + 12];
 
 			uint32_t ab = a ^ b;
 			uint32_t bc = b ^ c;
 			uint32_t cd = c ^ d;
 
-			uint32_t t;
-			t = ((ab & 0x80808080) >> 7);
-			uint32_t abx = t<<4 ^ t<<3 ^ t<<1 ^ t;
-			t = ((bc & 0x80808080) >> 7);
-			uint32_t bcx = t<<4 ^ t<<3 ^ t<<1 ^ t;
-			t = ((cd & 0x80808080) >> 7);
-			uint32_t cdx = t<<4 ^ t<<3 ^ t<<1 ^ t;
+			uint32_t t, t2, t3;
+			t = (ab & 0x80808080);
+			t2 = (bc & 0x80808080);
+			t3 = (cd & 0x80808080);
 
-			abx ^= ((ab & 0x7F7F7F7F) << 1);
-			bcx ^= ((bc & 0x7F7F7F7F) << 1);
-			cdx ^= ((cd & 0x7F7F7F7F) << 1);
+			uint32_t abx = (t >> 7) * 27 ^ ((ab^t) << 1);
+			uint32_t bcx = (t2 >> 7) * 27 ^ ((bc^t2) << 1);
+			uint32_t cdx = (t3 >> 7) * 27 ^ ((cd^t3) << 1);
 
-			W[ ((idx + 0)<<2) + i] = abx ^ bc ^ d;
-			W[ ((idx + 1)<<2) + i] = bcx ^ a ^ cd;
-			W[ ((idx + 2)<<2) + i] = cdx ^ ab ^ d;
-			W[ ((idx + 3)<<2) + i] = abx ^ bcx ^ cdx ^ ab ^ c;
+			W[idx + i] = abx ^ bc ^ d;
+			W[idx + i + 4] = bcx ^ a ^ cd;
+			W[idx + i + 8] = cdx ^ ab ^ d;
+			W[idx + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
 		}
 	}
+
 }
 
 __global__ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
