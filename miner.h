@@ -352,6 +352,7 @@ extern bool opt_benchmark;
 extern bool opt_debug;
 extern bool opt_quiet;
 extern bool opt_protocol;
+extern bool opt_tracegpu;
 extern int opt_timeout;
 extern bool want_longpoll;
 extern bool have_longpoll;

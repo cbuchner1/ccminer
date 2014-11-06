@@ -188,7 +188,6 @@ static const char *algo_names[] = {
 };
 
 bool opt_debug = false;
-bool opt_tracegpu = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
 bool want_longpoll = true;

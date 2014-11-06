@@ -42,7 +42,6 @@ extern "C" void blake256hash(void *output, const void *input, int8_t rounds = 14
 
 // in cpu-miner.c
 extern bool opt_n_threads;
-extern bool opt_tracegpu;
 extern int device_map[8];
 
 #if PRECALC64

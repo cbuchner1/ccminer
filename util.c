@@ -16,7 +16,6 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
-#include <stdbool.h>
 #include <inttypes.h>
 #include <unistd.h>
 #include <jansson.h>
@@ -35,6 +34,8 @@
 #include "compat.h"
 #include "miner.h"
 #include "elist.h"
+
+bool opt_tracegpu = false;
 
 struct data_buffer {
 	void		*buf;
@@ -502,7 +503,7 @@ void *aligned_calloc(int size)
 void aligned_free(void *ptr)
 {
 #ifdef _MSC_VER
-	return _aligned_free(ptr);
+	_aligned_free(ptr);
 #else
 	free(((void**)ptr)[-1]);
 #endif
@@ -1489,13 +1490,12 @@ extern void applog_hash(uchar *hash)
 #define printpfx(n,h) \
 	printf("%s%12s%s: %s\n", CL_BLU, n, CL_N, format_hash(s, h))
 
-extern bool opt_tracegpu;
 void do_gpu_tests(void)
 {
 #ifdef _DEBUG
 	unsigned long done;
 	char s[128] = { '\0' };
-	uchar buf[128], hash[128];
+	uchar buf[128];
 	uint32_t tgt[8] = { 0 };
 
 	memset(buf, 0, sizeof buf);
