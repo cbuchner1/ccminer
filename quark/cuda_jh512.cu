@@ -66,12 +66,27 @@ const unsigned char h_E8_bitslice_roundconstant[42][32]={
 {0xaa,0x25,0xce,0x93,0xbd,0x2,0x69,0xd8,0x5a,0xf6,0x43,0xfd,0x1a,0x73,0x8,0xf9,0xc0,0x5f,0xef,0xda,0x17,0x4a,0x19,0xa5,0x97,0x4d,0x66,0x33,0x4c,0xfd,0x21,0x6a},
 {0x35,0xb4,0x98,0x31,0xdb,0x41,0x15,0x70,0xea,0x1e,0xf,0xbb,0xed,0xcd,0x54,0x9b,0x9a,0xd0,0x63,0xa1,0x51,0x97,0x40,0x72,0xf6,0x75,0x9d,0xbf,0x91,0x47,0x6f,0xe2}};
 
-/*swapping bit 2i with bit 2i+1 of 32-bit x*/
-#define SWAP1(x)   (x) = ((((x) & 0x55555555UL) << 1) | (((x) & 0xaaaaaaaaUL) >> 1));
-/*swapping bits 4i||4i+1 with bits 4i+2||4i+3 of 32-bit x*/
-#define SWAP2(x)   (x) = ((((x) & 0x33333333UL) << 2) | (((x) & 0xccccccccUL) >> 2));
-/*swapping bits 8i||8i+1||8i+2||8i+3 with bits 8i+4||8i+5||8i+6||8i+7 of 32-bit x*/
-#define SWAP4(x)   (x) = ((((x) & 0x0f0f0f0fUL) << 4) | (((x) & 0xf0f0f0f0UL) >> 4));
+#define SWAP4(x,y)\
+	y = (x & 0xf0f0f0f0UL); \
+	x ^= y; \
+	y >>= 4; \
+	x <<= 4; \
+	x |= y;
+
+#define SWAP2(x,y)\
+	y = (x & 0xccccccccUL); \
+	x ^= y; \
+	y >>= 2; \
+	x <<= 2; \
+	x |= y;
+
+#define SWAP1(x,y)\
+	y = (x & 0xaaaaaaaaUL); \
+	x ^= y; \
+	y >>= 1; \
+	x += x; \
+	x |= y;
+
 /*swapping bits 16i||16i+1||......||16i+7  with bits 16i+8||16i+9||......||16i+15 of 32-bit x*/
 //#define SWAP8(x)   (x) = ((((x) & 0x00ff00ffUL) << 8) | (((x) & 0xff00ff00UL) >> 8));
 #define SWAP8(x) (x) = __byte_perm(x, x, 0x2301);
@@ -126,8 +141,11 @@ __device__ __forceinline__ void RoundFunction0(hashState* state, uint32_t roundn
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
-#pragma unroll 4
-		for (int i = 0; i < 4; i++) SWAP1(state->x[j][i]);
+		uint32_t y;
+		SWAP1(state->x[j][0], y);
+		SWAP1(state->x[j][1], y);
+		SWAP1(state->x[j][2], y);
+		SWAP1(state->x[j][3], y);
 	}
 }
 
@@ -138,8 +156,11 @@ __device__ __forceinline__ void RoundFunction1(hashState* state, uint32_t roundn
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
-#pragma unroll 4
-		for (int i = 0; i < 4; i++) SWAP2(state->x[j][i]);
+		uint32_t y;
+		SWAP2(state->x[j][0], y);
+		SWAP2(state->x[j][1], y);
+		SWAP2(state->x[j][2], y);
+		SWAP2(state->x[j][3], y);
 	}
 }
 
@@ -150,8 +171,11 @@ __device__ __forceinline__ void RoundFunction2(hashState* state, uint32_t roundn
 #pragma unroll 4
 	for (int j = 1; j < 8; j = j+2)
 	{
-#pragma unroll 4
-		for (int i = 0; i < 4; i++) SWAP4(state->x[j][i]);
+		uint32_t y;
+		SWAP4(state->x[j][0], y);
+		SWAP4(state->x[j][1], y);
+		SWAP4(state->x[j][2], y);
+		SWAP4(state->x[j][3], y);
 	}
 }
 
@@ -309,7 +333,8 @@ __device__ __forceinline__ void JHHash(const uint32_t *data, uint32_t *hashval)
 }
 
 // Die Hash-Funktion
-__global__ void quark_jh512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__ __launch_bounds__(256, 3)
+void quark_jh512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
