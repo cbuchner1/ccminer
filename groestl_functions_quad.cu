@@ -1,6 +1,7 @@
 #include "cuda_helper.h"
 
-__device__ __forceinline__ void G256_Mul2(uint32_t *regs)
+__device__ __forceinline__
+void G256_Mul2(uint32_t *regs)
 {
     uint32_t tmp = regs[7];
     regs[7] = regs[6];
@@ -13,7 +14,8 @@ __device__ __forceinline__ void G256_Mul2(uint32_t *regs)
     regs[0] = tmp;
 }
 
-__device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int round)
+__device__ __forceinline__
+void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int rnd)
 {
     x0 = ~x0;
     x1 = ~x1;
@@ -24,35 +26,48 @@ __device__ __forceinline__ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32
     x6 = ~x6;
     x7 = ~x7;
 
-    if ((threadIdx.x & 0x03) == 3) {
-        x0 ^= ((- (round & 0x01)    ) & 0xFFFF0000);
-        x1 ^= ((-((round & 0x02)>>1)) & 0xFFFF0000);
-        x2 ^= ((-((round & 0x04)>>2)) & 0xFFFF0000);
-        x3 ^= ((-((round & 0x08)>>3)) & 0xFFFF0000);
-        x4 ^= 0xAAAA0000;
-        x5 ^= 0xCCCC0000;
-        x6 ^= 0xF0F00000;
-        x7 ^= 0xFF000000;
-    }
+#if 0
+    if ((threadIdx.x & 3) != 3)
+        return;
+
+    int andmask = 0xFFFF0000;
+#else
+    /* from sp: weird but faster */
+    int andmask = ((~((threadIdx.x & 0x03) - 3)) & 0xFFFF0000);
+#endif
+
+    x0 ^= ((- (rnd & 0x01)    ) & andmask);
+    x1 ^= ((-((rnd & 0x02)>>1)) & andmask);
+    x2 ^= ((-((rnd & 0x04)>>2)) & andmask);
+    x3 ^= ((-((rnd & 0x08)>>3)) & andmask);
+
+    x4 ^= (0xAAAA0000 & andmask);
+    x5 ^= (0xCCCC0000 & andmask);
+    x6 ^= (0xF0F00000 & andmask);
+    x7 ^= (0xFF000000 & andmask);
 }
 
-__device__ __forceinline__ void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int round)
+__device__ __forceinline__
+void G256_AddRoundConstantP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0, int rnd)
 {
-    if ((threadIdx.x & 0x03) == 0)
-    {
-        x4 ^= 0xAAAA;
-        x5 ^= 0xCCCC;
-        x6 ^= 0xF0F0;
-        x7 ^= 0xFF00;
+    if (threadIdx.x & 3)
+        return;
 
-        x0 ^= ((- (round & 0x01)    ) & 0xFFFF);
-        x1 ^= ((-((round & 0x02)>>1)) & 0xFFFF);
-        x2 ^= ((-((round & 0x04)>>2)) & 0xFFFF);
-        x3 ^= ((-((round & 0x08)>>3)) & 0xFFFF);
-    }
+    int andmask = 0xFFFF;
+
+    x0 ^= ((- (rnd & 0x01)    ) & andmask);
+    x1 ^= ((-((rnd & 0x02)>>1)) & andmask);
+    x2 ^= ((-((rnd & 0x04)>>2)) & andmask);
+    x3 ^= ((-((rnd & 0x08)>>3)) & andmask);
+
+    x4 ^= 0xAAAAU;
+    x5 ^= 0xCCCCU;
+    x6 ^= 0xF0F0U;
+    x7 ^= 0xFF00U;
 }
 
-__device__ __forceinline__ void G16mul_quad(uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0,
+__device__ __forceinline__
+void G16mul_quad(uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0,
                                        uint32_t &y3, uint32_t &y2, uint32_t &y1, uint32_t &y0)
 {
     uint32_t t0,t1,t2;
@@ -70,7 +85,8 @@ __device__ __forceinline__ void G16mul_quad(uint32_t &x3, uint32_t &x2, uint32_t
     x0 = (x0 & y0) ^ t0 ^ t2;
 }
 
-__device__ __forceinline__ void G256_inv_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0)
+__device__ __forceinline__
+void G256_inv_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0)
 {
     uint32_t t0,t1,t2,t3,t4,t5,t6,a,b;
 
@@ -106,7 +122,8 @@ __device__ __forceinline__ void G256_inv_quad(uint32_t &x7, uint32_t &x6, uint32
     G16mul_quad(x7, x6, x5, x4, t1, t0, t3, t2);
 }
 
-__device__ __forceinline__ void transAtoX_quad(uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3, uint32_t &x4, uint32_t &x5, uint32_t &x6, uint32_t &x7)
+__device__ __forceinline__
+void transAtoX_quad(uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3, uint32_t &x4, uint32_t &x5, uint32_t &x6, uint32_t &x7)
 {
     uint32_t t0, t1;
     t0 = x0 ^ x1 ^ x2;
@@ -121,7 +138,8 @@ __device__ __forceinline__ void transAtoX_quad(uint32_t &x0, uint32_t &x1, uint3
     x5 = x0 ^ t1;
 }
 
-__device__ __forceinline__ void transXtoA_quad(uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3, uint32_t &x4, uint32_t &x5, uint32_t &x6, uint32_t &x7)
+__device__ __forceinline__
+void transXtoA_quad(uint32_t &x0, uint32_t &x1, uint32_t &x2, uint32_t &x3, uint32_t &x4, uint32_t &x5, uint32_t &x6, uint32_t &x7)
 {
     uint32_t t0,t2,t3,t5;
 
@@ -145,7 +163,8 @@ __device__ __forceinline__ void transXtoA_quad(uint32_t &x0, uint32_t &x1, uint3
     x5 = t5;    
 }
 
-__device__ __forceinline__ void sbox_quad(uint32_t *r)
+__device__ __forceinline__
+void sbox_quad(uint32_t *r)
 {
     transAtoX_quad(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]);
 
@@ -159,7 +178,8 @@ __device__ __forceinline__ void sbox_quad(uint32_t *r)
     r[6] = ~r[6];
 }
 
-__device__ __forceinline__ void G256_ShiftBytesP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0)
+__device__ __forceinline__
+void G256_ShiftBytesP_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0)
 {
     uint32_t t0,t1;
 
@@ -200,7 +220,8 @@ __device__ __forceinline__ void G256_ShiftBytesP_quad(uint32_t &x7, uint32_t &x6
     x7 = __byte_perm(t0, t1, 0x5410);
 }
 
-__device__ __forceinline__ void G256_ShiftBytesQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0)
+__device__ __forceinline__
+void G256_ShiftBytesQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x4, uint32_t &x3, uint32_t &x2, uint32_t &x1, uint32_t &x0)
 {
     uint32_t t0,t1;
 
@@ -250,7 +271,8 @@ __device__ __forceinline__ void G256_ShiftBytesQ_quad(uint32_t &x7, uint32_t &x6
 #define __shfl(var, srcLane, width) (uint32_t)(var)
 #endif
 
-__device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
+__device__ __forceinline__
+void G256_MixFunction_quad(uint32_t *r)
 {
 #define SHIFT64_16(hi, lo)    __byte_perm(lo, hi, 0x5432)
 #define A(v, u)             __shfl((int)r[v], ((threadIdx.x+u)&0x03), 4)
@@ -284,7 +306,8 @@ __device__ __forceinline__ void G256_MixFunction_quad(uint32_t *r)
 #undef X
 }
 
-__device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *r)
+__device__ __forceinline__
+void groestl512_perm_P_quad(uint32_t *r)
 {
     for(int round=0;round<14;round++)
     {
@@ -295,7 +318,8 @@ __device__ __forceinline__ void groestl512_perm_P_quad(uint32_t *r)
     }
 }
 
-__device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *r)
+__device__ __forceinline__
+void groestl512_perm_Q_quad(uint32_t *r)
 {    
     for(int round=0;round<14;round++)
     {
@@ -306,7 +330,8 @@ __device__ __forceinline__ void groestl512_perm_Q_quad(uint32_t *r)
     }
 }
 
-__device__ __forceinline__ void groestl512_progressMessage_quad(uint32_t *state, uint32_t *message)
+__device__ __forceinline__
+void groestl512_progressMessage_quad(uint32_t *state, uint32_t *message)
 {
 #pragma unroll 8
     for(int u=0;u<8;u++) state[u] = message[u];
