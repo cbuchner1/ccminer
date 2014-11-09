@@ -811,7 +811,7 @@ static bool get_work(struct thr_info *thr, struct work *work)
 
 	/* copy returned work into storage provided by caller */
 	memcpy(work, work_heap, sizeof(*work));
-	free(work_heap);
+	aligned_free(work_heap);
 
 	return true;
 }
