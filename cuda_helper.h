@@ -4,10 +4,11 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#if defined(__INTELLISENSE__)
-/* reduce warnings */
+#ifdef __INTELLISENSE__
+/* reduce vstudio warnings (__byteperm, blockIdx...) */
 #include <device_functions.h>
 #include <device_launch_parameters.h>
+#define __launch_bounds__(max_tpb, min_blocks)
 #endif
 
 #include <stdint.h>
