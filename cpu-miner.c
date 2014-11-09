@@ -235,6 +235,8 @@ static unsigned long rejected_count = 0L;
 static double *thr_hashrates;
 uint64_t global_hashrate = 0;
 
+uint32_t opt_work_size = 0; /* default */
+
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
 #else
@@ -279,6 +281,7 @@ Options:\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
                         (matching 2nd gt640 in the PC)\n\
+  -i  --intensity=N     GPU intensity 0-31 (default: auto) \n\
   -f, --diff            Divide difficulty by this factor (std is 1) \n\
   -v, --vote=VOTE       block reward vote (for HeavyCoin)\n\
   -m, --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
@@ -298,7 +301,7 @@ Options:\n\
       --no-longpoll     disable X-Long-Polling support\n\
       --no-stratum      disable X-Stratum support\n\
   -q, --quiet           disable per-thread hashmeter output\n\
-  -K, --no-color        disable colored output\n\
+      --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n"
 #ifdef HAVE_SYSLOG_H
@@ -324,7 +327,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:CKDhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
+	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -335,9 +338,10 @@ static struct option const options[] = {
 	{ "cputest", 0, NULL, 1006 },
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
-	{ "no-color", 0, NULL, 'K' },
+	{ "no-color", 0, NULL, 1002 },
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
+	{ "intensity", 1, NULL, 'i' },
 	{ "no-longpoll", 0, NULL, 1003 },
 	{ "no-stratum", 0, NULL, 1007 },
 	{ "pass", 1, NULL, 'p' },
@@ -1603,12 +1607,12 @@ static void parse_arg (int key, char *arg)
 		}
 		break;
 	}
-	case 'C':
-		/* color for compat */
-		use_colors = true;
-		break;
-	case 'K':
-		use_colors = false;
+	case 'i':
+		v = atoi(arg);
+		if (v < 0 || v > 31)
+			show_usage_and_exit(1);
+		if (v > 0) /* 0 = default */
+			opt_work_size = (1 << v);
 		break;
 	case 'D':
 		opt_debug = true;
@@ -1737,6 +1741,9 @@ static void parse_arg (int key, char *arg)
 	case 1001:
 		free(opt_cert);
 		opt_cert = strdup(arg);
+		break;
+	case 1002:
+		use_colors = false;
 		break;
 	case 1005:
 		opt_benchmark = true;
