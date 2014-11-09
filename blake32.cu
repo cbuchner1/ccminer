@@ -16,7 +16,6 @@ extern "C" {
 
 /* threads per block and throughput (intensity) */
 #define TPB 128
-#define INTENSITY (1 << 20) // = 1048576 nonces per call
 
 /* added in sph_blake.c */
 extern "C" int blake256_rounds = 14;
@@ -393,15 +392,15 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 {
 	const uint32_t first_nonce = pdata[19];
 	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-	uint64_t targetHigh = ((uint64_t*)ptarget)[3]; // 0x00000000.0fffffff
+	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
 	uint32_t _ALIGN(64) endiandata[20];
 #if PRECALC64
 	uint32_t _ALIGN(64) midstate[8];
 #else
 	uint32_t crcsum;
 #endif
-	/* todo: -i param */
-	uint32_t throughput = min(INTENSITY, max_nonce - first_nonce);
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 20); // 1048576 nonces per call
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	int rc = 0;
 

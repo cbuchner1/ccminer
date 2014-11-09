@@ -46,9 +46,8 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x000f;
 
-	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*256*8*8;
+	int throughput = opt_work_size ? opt_work_size : (1 << 22); // 256*256*8*8
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id]) {
@@ -72,10 +71,9 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 		uint32_t foundNonce = keccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
-
 			uint32_t vhash64[8];
+			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
-
 			keccak256_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {

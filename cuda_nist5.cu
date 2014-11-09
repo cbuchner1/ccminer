@@ -77,9 +77,8 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00FF;
 
-	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*4096; // 100;
+	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
@@ -119,6 +118,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
+			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
 			nist5hash(vhash64, endiandata);
 

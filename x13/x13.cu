@@ -162,7 +162,8 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 
 	const uint32_t Htarg = ptarget[7];
 
-	const int throughput = 256*256*8;
+	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])

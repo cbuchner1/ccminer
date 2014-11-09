@@ -57,14 +57,15 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
+	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
 #ifdef WIN32
 	// reduce a bit the intensity on windows
-	const int throughput = 256 * 256 * 8;
+	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
 #else
-	const int throughput = 256 * 256 * 8 * 2;
+	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*256*8*2;
 #endif
-
-	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xF;

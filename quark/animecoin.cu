@@ -170,7 +170,8 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		((uint32_t*)ptarget)[7] = 0x00000f;
 
 	const uint32_t Htarg = ptarget[7];
-	const int throughput = 256*2048; // 100;
+	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*2048*2
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
