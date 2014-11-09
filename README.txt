@@ -86,7 +86,8 @@ its command line interface and options.
                         Alternatively give string names of your card like
                         gtx780ti or gt640#2 (matching 2nd gt640 in the PC).
 
-  -f, --diff            Divide difficulty by this factor (std is 1) \n\
+  -i, --intensity       GPU threads per call 0-31 (default: 0=auto)
+  -f, --diff            Divide difficulty by this factor (std is 1)
   -v, --vote            Heavycoin block vote (default: 512)
   -o, --url=URL         URL of mining server (default: " DEF_RPC_URL ")
   -O, --userpass=U:P    username:password pair for mining server
@@ -153,8 +154,10 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Nov       2014  v1.4.7
+  Nov. 11th 2014  v1.4.7
                   Rewrite blake algo
+                  Add the -i (gpu threads/intensity parameter)
+                  Add some X11 optimisations based on sp_ commits
                   Update windows prebuilt curl to 7.38.0
 
   Oct. 26th 2014  v1.4.6
