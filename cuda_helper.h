@@ -343,7 +343,7 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 #endif
 
 __device__ __forceinline__
-uint64_t SWAPDWORDS(const uint64_t value)
+uint64_t SWAPDWORDS(uint64_t value)
 {
 #if __CUDA_ARCH__ >= 320
 	uint2 temp;

@@ -32,8 +32,8 @@ void G256_AddRoundConstantQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint3
 
     int andmask = 0xFFFF0000;
 #else
-    /* from sp: weird but faster */
-    int andmask = ((~((threadIdx.x & 0x03) - 3)) & 0xFFFF0000);
+    /* from sp: faster (branching problem with if ?) */
+    uint32_t andmask = -((threadIdx.x & 3) == 3) & 0xFFFF0000U;
 #endif
 
     x0 ^= ((- (rnd & 0x01)    ) & andmask);
