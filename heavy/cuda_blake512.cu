@@ -66,7 +66,7 @@ const uint64_t host_u512[16] =
 
 #define G(a,b,c,d,e)          \
     v[a] += (m[sigma[i][e]] ^ u512[sigma[i][e+1]]) + v[b];\
-    v[d] = ROTR64( v[d] ^ v[a],32);        \
+    v[d] = SWAPDWORDS( v[d] ^ v[a]);        \
     v[c] += v[d];           \
     v[b] = ROTR64( v[b] ^ v[c],25);        \
     v[a] += (m[sigma[i][e+1]] ^ u512[sigma[i][e]])+v[b];  \

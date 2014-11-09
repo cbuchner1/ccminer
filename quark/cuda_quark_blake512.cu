@@ -7,7 +7,6 @@
 
 #define USE_SHUFFLE 0
 
-// die Message it Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 
 // ---------------------------- BEGIN CUDA quark_blake512 functions ------------------------------------
@@ -51,7 +50,7 @@ const uint64_t c_u512[16] =
 	uint32_t idx1 = sigma[i][x]; \
 	uint32_t idx2 = sigma[i][x+1]; \
 	v[a] += (m[idx1] ^ u512[idx2]) + v[b]; \
-	v[d] = ROTR( v[d] ^ v[a], 32); \
+	v[d] = SWAPDWORDS(v[d] ^ v[a]); \
 	v[c] += v[d]; \
 	v[b] = ROTR( v[b] ^ v[c], 25); \
 	v[a] += (m[idx2] ^ u512[idx1]) + v[b]; \

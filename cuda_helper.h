@@ -36,7 +36,7 @@ extern const uint3 threadIdx;
 
 #define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
 
-#if __CUDA_ARCH__ < 350
+#if __CUDA_ARCH__ < 320
 // Kepler (Compute 3.0)
 #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
 #else
@@ -253,7 +253,7 @@ uint64_t shl_t64(uint64_t x, uint32_t n)
 #endif
 
 // 64-bit ROTATE RIGHT
-#if __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT == 1
+#if __CUDA_ARCH__ >= 320 && USE_ROT_ASM_OPT == 1
 /* complicated sm >= 3.5 one (with Funnel Shifter beschleunigt), to bench */
 __device__ __forceinline__
 uint64_t ROTR64(const uint64_t value, const int offset) {
@@ -289,7 +289,7 @@ uint64_t ROTR64(const uint64_t x, const int offset)
 #endif
 
 // 64-bit ROTATE LEFT
-#if __CUDA_ARCH__ >= 350 && USE_ROT_ASM_OPT == 1
+#if __CUDA_ARCH__ >= 320 && USE_ROT_ASM_OPT == 1
 __device__ __forceinline__
 uint64_t ROTL64(const uint64_t value, const int offset) {
 	uint2 result;
@@ -341,5 +341,18 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 /* host */
 #define ROTL64(x, n)  (((x) << (n)) | ((x) >> (64 - (n))))
 #endif
+
+__device__ __forceinline__
+uint64_t SWAPDWORDS(const uint64_t value)
+{
+#if __CUDA_ARCH__ >= 320
+	uint2 temp;
+	asm("mov.b64 {%0, %1}, %2; ": "=r"(temp.x), "=r"(temp.y) : "l"(value));
+	asm("mov.b64 %0, {%1, %2}; ": "=l"(value) : "r"(temp.y), "r"(temp.x));
+	return value;
+#else
+	return ROTL64(value, 32);
+#endif
+}
 
 #endif // #ifndef CUDA_HELPER_H

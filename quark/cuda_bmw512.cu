@@ -12,12 +12,14 @@ __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + paddi
 #define SHL(x, n)            ((x) << (n))
 #define SHR(x, n)            ((x) >> (n))
 
-#define CONST_EXP2    q[i+0] + ROTL64(q[i+1], 5)  + q[i+2] + ROTL64(q[i+3], 11) + \
-                    q[i+4] + ROTL64(q[i+5], 27) + q[i+6] + ROTL64(q[i+7], 32) + \
-                    q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
-                    q[i+12] + ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
+#define CONST_EXP2 \
+    q[i+0] + ROTL64(q[i+1], 5)  + q[i+2] + ROTL64(q[i+3], 11) + \
+    q[i+4] + ROTL64(q[i+5], 27) + q[i+6] + SWAPDWORDS(q[i+7]) + \
+    q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
+    q[i+12] + ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
 
-__device__ void Compression512(uint64_t *msg, uint64_t *hash)
+__device__
+void Compression512(uint64_t *msg, uint64_t *hash)
 {
     // Compression ref. implementation
     uint64_t tmp;
