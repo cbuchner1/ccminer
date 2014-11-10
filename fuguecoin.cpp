@@ -1,11 +1,11 @@
 #include "uint256.h"
 #include "sph/sph_fugue.h"
 
-#include "cpuminer-config.h"
 #include "miner.h"
 
 #include <string.h>
 #include <stdint.h>
+#include <algorithm>
 #include <cuda_fugue256.h>
 
 extern "C" void my_fugue256_init(void *cc);
@@ -24,8 +24,11 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	uint32_t max_nonce, unsigned long *hashes_done)
 {	
 	uint32_t start_nonce = pdata[19]++;
-	const uint32_t Htarg = ptarget[7];
-	const uint32_t throughPut = 4096 * 128;
+	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 19);
+	throughPut = std::min(throughPut, max_nonce - start_nonce);
+
+	if (opt_benchmark)
+		((uint32_t*)ptarget)[7] = 0xf;
 
 	// init
 	static bool init[8] = { false, false, false, false, false, false, false, false };
@@ -51,6 +54,8 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		if(foundNounce < 0xffffffff)
 		{
 			uint32_t hash[8];
+			const uint32_t Htarg = ptarget[7];
+
 			endiandata[19] = SWAP32(foundNounce);
 			sph_fugue256_context ctx_fugue;
 			sph_fugue256_init(&ctx_fugue);
@@ -60,20 +65,23 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			if (hash[7] <= Htarg && fulltest(hash, ptarget))
 			{
 				pdata[19] = foundNounce;
-				*hashes_done = foundNounce - start_nonce;
+				*hashes_done = foundNounce - start_nonce + 1;
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
 			}
 		}
 
-		if (pdata[19] + throughPut < pdata[19])
+		if ((uint64_t) pdata[19] + throughPut > (uint64_t) max_nonce) {
 			pdata[19] = max_nonce;
-		else pdata[19] += throughPut;
+			break;
+		}
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+		pdata[19] += throughPut;
+
+	} while (!work_restart[thr_id].restart);
 	
-	*hashes_done = pdata[19] - start_nonce;
+	*hashes_done = pdata[19] - start_nonce + 1;
 	return 0;
 }
 

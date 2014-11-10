@@ -141,7 +141,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00FF;
+		((uint32_t*)ptarget)[7] = 0x00F;
 
 	if (!init[thr_id])
 	{
@@ -239,7 +239,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 
 				pdata[19] = foundNonce;
-				*hashes_done = (foundNonce - first_nonce + 1)/2;
+				*hashes_done = foundNonce - first_nonce + 1;
 				return 1;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
@@ -250,6 +250,6 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = (pdata[19] - first_nonce + 1)/2;
+	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }

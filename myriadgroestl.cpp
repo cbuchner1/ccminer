@@ -1,14 +1,12 @@
 #include "uint256.h"
 #include "sph/sph_groestl.h"
 
-#include "cpuminer-config.h"
 #include "miner.h"
 
 #include <string.h>
 #include <stdint.h>
 #include <openssl/sha.h>
-
-extern bool opt_benchmark;
+#include <algorithm>
 
 void myriadgroestl_cpu_init(int thr_id, int threads);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
@@ -44,14 +42,14 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
         ((uint32_t*)ptarget)[7] = 0x000000ff;
 
 	uint32_t start_nonce = pdata[19]++;
-	const uint32_t throughPut = 128 * 1024;
+
+	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 17);
+	throughPut = std::min(throughPut, max_nonce - start_nonce);
 
 	uint32_t *outputHash = (uint32_t*)malloc(throughPut * 16 * sizeof(uint32_t));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
-
-	const uint32_t Htarg = ptarget[7];
 
 	// init
 	static bool init[8] = { false, false, false, false, false, false, false, false };
@@ -74,6 +72,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	do {
 		// GPU
 		uint32_t foundNounce = 0xFFFFFFFF;
+		const uint32_t Htarg = ptarget[7];
 
 		myriadgroestl_cpu_hash(thr_id, throughPut, pdata[19], outputHash, &foundNounce);
 
@@ -85,7 +84,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			if (tmpHash[7] <= Htarg && 
 					fulltest(tmpHash, ptarget)) {
 						pdata[19] = foundNounce;
-						*hashes_done = foundNounce - start_nonce;
+						*hashes_done = foundNounce - start_nonce + 1;
 						free(outputHash);
 				return true;
 			} else {
@@ -95,13 +94,15 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			foundNounce = 0xffffffff;
 		}
 
-		if (pdata[19] + throughPut < pdata[19])
+		if ((uint64_t) pdata[19] + throughPut > (uint64_t) max_nonce) {
 			pdata[19] = max_nonce;
-		else pdata[19] += throughPut;
+			break;
+		}
+		pdata[19] += throughPut;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
-	
-	*hashes_done = pdata[19] - start_nonce;
+	} while (!work_restart[thr_id].restart);
+
+	*hashes_done = pdata[19] - start_nonce + 1;
 	free(outputHash);
 	return 0;
 }
