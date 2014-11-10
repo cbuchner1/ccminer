@@ -1087,12 +1087,10 @@ static void *miner_thread(void *userdata)
 			/* should not be set too high,
 			   else you can miss multiple nounces */
 			switch (opt_algo) {
-			case ALGO_JACKPOT:
-				max64 = 0x1fffLL;
-				break;
 			case ALGO_BLAKECOIN:
 				max64 = 0x3ffffffLL;
 				break;
+			case ALGO_JACKPOT:
 			case ALGO_BLAKE:
 				/* based on the 750Ti hashrate (100kH) */
 				max64 = 0x1ffffffLL;
@@ -1304,7 +1302,7 @@ continue_scan:
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
 			applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
-				device_map[thr_id], device_name[thr_id], s);
+				device_map[thr_id], device_name[device_map[thr_id]], s);
 		}
 		if (thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
