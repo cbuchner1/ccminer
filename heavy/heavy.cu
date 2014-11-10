@@ -412,7 +412,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
                     if (fulltest(foundhash, ptarget)) {
                         uint32_t verification[8];
                         pdata[19] += nonce - pdata[19];
-                        heavycoin_hash((unsigned char *)verification, (const unsigned char *)pdata, blocklen);
+                        heavycoin_hash((uchar*)verification, (uchar*)pdata, blocklen);
                         if (memcmp(verification, foundhash, 8*sizeof(uint32_t))) {
                             applog(LOG_ERR, "hash for nonce=$%08X does not validate on CPU!\n", nonce);
                         }
@@ -440,7 +440,7 @@ exit:
     return rc;
 }
 
-void heavycoin_hash(unsigned char* output, const unsigned char* input, int len)
+void heavycoin_hash(uchar* output, const uchar* input, int len)
 {
     unsigned char hash1[32];
     unsigned char hash2[32];
