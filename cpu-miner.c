@@ -1090,9 +1090,11 @@ static void *miner_thread(void *userdata)
 			case ALGO_BLAKECOIN:
 				max64 = 0x3ffffffLL;
 				break;
-			case ALGO_JACKPOT:
 			case ALGO_BLAKE:
-				/* based on the 750Ti hashrate (100kH) */
+			case ALGO_DOOM:
+			case ALGO_JACKPOT:
+			case ALGO_KECCAK:
+			case ALGO_LUFFA_DOOM:
 				max64 = 0x1ffffffLL;
 				break;
 			default:

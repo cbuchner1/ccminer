@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.7-tpruvot (Nov 2014) - "Blake update"
+ccMiner release 1.4.7-tpruvot (Nov 2014) - "Blake Intensity"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -158,6 +158,7 @@ features.
                   Rewrite blake algo
                   Add the -i (gpu threads/intensity parameter)
                   Add some X11 optimisations based on sp_ commits
+                  Fix quark reported hashrate and benchmark mode for some algos
                   Update windows prebuilt curl to 7.38.0
 
   Oct. 26th 2014  v1.4.6
