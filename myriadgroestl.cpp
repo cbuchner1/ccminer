@@ -16,6 +16,12 @@ void myriadgroestl_cpu_hash(int thr_id, int threads, uint32_t startNounce, void 
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
+#ifdef _MSC_VER
+#define MIN min
+#else
+#define MIN std::min
+#endif
+
 extern "C" void myriadhash(void *state, const void *input)
 {
     sph_groestl512_context     ctx_groestl;
@@ -44,7 +50,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 	uint32_t start_nonce = pdata[19]++;
 
 	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 17);
-	throughPut = std::min(throughPut, max_nonce - start_nonce);
+	throughPut = MIN(throughPut, max_nonce - start_nonce);
 
 	uint32_t *outputHash = (uint32_t*)malloc(throughPut * 16 * sizeof(uint32_t));
 

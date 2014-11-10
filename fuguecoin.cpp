@@ -13,6 +13,12 @@ extern "C" void my_fugue256(void *cc, const void *data, size_t len);
 extern "C" void my_fugue256_close(void *cc, void *dst);
 extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst);
 
+#ifdef _MSC_VER
+#define MIN min
+#else
+#define MIN std::min
+#endif
+
 // vorbereitete Kontexte nach den ersten 80 Bytes
 sph_fugue256_context  ctx_fugue_const[8];
 
@@ -25,7 +31,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 {	
 	uint32_t start_nonce = pdata[19]++;
 	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 19);
-	throughPut = std::min(throughPut, max_nonce - start_nonce);
+	throughPut = MIN(throughPut, max_nonce - start_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;
