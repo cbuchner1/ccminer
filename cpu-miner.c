@@ -500,7 +500,8 @@ static int share_result(int result, const char *reason)
 
 	pthread_mutex_lock(&stats_lock);
 	hashrate = stats_get_speed(-1);
-	if (hashrate == 0.) {
+	if (hashrate < 0.001) {
+		hashrate = 0.;
 		for (int i = 0; i < opt_n_threads; i++)
 			hashrate += thr_hashrates[i];
 	}
@@ -1320,7 +1321,8 @@ continue_scan:
 		}
 		if (thr_id == opt_n_threads - 1) {
 			double hashrate = stats_get_speed(-1);
-			if (hashrate == 0.) {
+			if (hashrate < 0.001) {
+				hashrate = 0.;
 				for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 					hashrate += thr_hashrates[i];
 			}

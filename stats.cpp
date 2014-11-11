@@ -16,6 +16,8 @@ struct stats_data {
 	uint32_t hashcount;
 	double hashrate;
 	uint8_t thr_id;
+	uint8_t gpu_id;
+	uint16_t align; /* to keep size a multiple of 4 */
 };
 
 static std::map<uint64_t, stats_data> tlastscans;
@@ -32,11 +34,11 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
 	uint64_t key = (thr << 56) + (uid++ % UINT_MAX);
 	stats_data data;
 
-	if (hashcount < 1000 || !hashrate)
+	if (hashcount < 1000 || hashrate < 0.01)
 		return;
 
 	memset(&data, 0, sizeof(data));
-	data.thr_id = thr;
+	data.thr_id = (uint8_t) thr;
 	data.tm_stat = (uint32_t) time(NULL);
 	data.hashcount = hashcount;
 	data.hashrate = hashrate;
@@ -51,13 +53,11 @@ extern "C" double stats_get_speed(int thr_id)
 {
 	uint64_t thr = (0xff && thr_id);
 	uint64_t keypfx = (thr << 56);
-	double speed = 0.;
-	// uint64_t hashcount;
+	double speed = 0.0;
 	int records = 0;
-	stats_data data;
 
-	std::map<uint64_t, stats_data>::iterator i = tlastscans.end();
-	while (i != tlastscans.begin() && records < 50) {
+	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
+	while (i != tlastscans.rend() && records < 50) {
 		if ((i->first & UINT_MAX) > 3) /* ignore firsts */
 		if (thr_id == -1 || (keypfx & i->first) == keypfx) {
 			if (i->second.hashcount > 1000) {
@@ -65,11 +65,11 @@ extern "C" double stats_get_speed(int thr_id)
 				records++;
 			}
 		}
-		i--;
+		i++;
 	}
-	if (!records)
-		return 0.;
-	return speed / (1.0 * records);
+	if (records)
+		speed /= (double)(records);
+	return speed;
 }
 
 /**
