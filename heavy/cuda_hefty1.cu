@@ -2,18 +2,8 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
-#include <device_functions.h>
 
 #define USE_SHARED 1
-
-// aus cpu-miner.c
-extern int device_map[8];
-
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// diese Struktur wird in der Init Funktion angefordert
-static cudaDeviceProp props[8];
 
 // globaler Speicher für alle HeftyHashes aller Threads
 uint32_t *d_heftyHashes[8];
@@ -305,8 +295,6 @@ __host__ void hefty_cpu_init(int thr_id, int threads)
 {
     cudaSetDevice(device_map[thr_id]);
 
-    cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
-
     // Kopiere die Hash-Tabellen in den GPU-Speicher
     cudaMemcpyToSymbol(    hefty_gpu_constantTable,
                         hefty_cpu_constantTable,
@@ -397,7 +385,7 @@ __host__ void hefty_cpu_hash(int thr_id, int threads, int startNounce)
 {
     // Compute 3.x und 5.x Geräte am besten mit 768 Threads ansteuern,
     // alle anderen mit 512 Threads.
-    int threadsperblock = (props[thr_id].major >= 3) ? 768 : 512;
+    int threadsperblock = (device_sm[device_map[thr_id]] >= 300) ? 768 : 512;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);

@@ -213,6 +213,7 @@ uint16_t opt_vote = 9999;
 static int num_processors;
 int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
 char *device_name[8]; // CB
+int device_sm[8];
 static char *rpc_url;
 static char *rpc_userpass;
 static char *rpc_user, *rpc_pass;

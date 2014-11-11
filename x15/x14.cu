@@ -26,9 +26,6 @@ extern "C" {
 
 #include "cuda_helper.h"
 
-// from cpu-miner.c
-extern int device_map[8];
-
 // Memory for the hash functions
 static uint32_t *d_hash[8];
 

@@ -8,12 +8,6 @@
 
 #define USE_SHARED 1
 
-// aus cpu-miner.c
-extern int device_map[8];
-
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 uint32_t *d_fugue256_hashoutput[8];
 uint32_t *d_resultNonce[8];
 
@@ -726,7 +720,7 @@ fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHas
 
 void fugue256_cpu_init(int thr_id, int threads)
 {
-    cudaSetDevice(device_map[thr_id]);
+	cudaSetDevice(device_map[thr_id]);
 
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);

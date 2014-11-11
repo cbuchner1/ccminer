@@ -17,6 +17,8 @@ extern "C" {
 /* threads per block and throughput (intensity) */
 #define TPB 128
 
+extern int opt_n_threads;
+
 /* added in sph_blake.c */
 extern "C" int blake256_rounds = 14;
 
@@ -38,10 +40,6 @@ extern "C" void blake256hash(void *output, const void *input, int8_t rounds = 14
 #include "cuda_helper.h"
 
 #define MAXU 0xffffffffU
-
-// in cpu-miner.c
-extern bool opt_n_threads;
-extern int device_map[8];
 
 #if PRECALC64
 __constant__ uint32_t _ALIGN(32) d_data[12];
@@ -399,7 +397,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 #else
 	uint32_t crcsum;
 #endif
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 20); // 1048576 nonces per call
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 20;
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << intensity);
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	int rc = 0;

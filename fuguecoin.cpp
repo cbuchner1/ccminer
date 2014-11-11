@@ -13,6 +13,9 @@ extern "C" void my_fugue256(void *cc, const void *data, size_t len);
 extern "C" void my_fugue256_close(void *cc, void *dst);
 extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst);
 
+extern int device_map[8];
+extern int device_sm[8];
+
 #ifdef _MSC_VER
 #define MIN min
 #else
@@ -30,7 +33,8 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	uint32_t max_nonce, unsigned long *hashes_done)
 {	
 	uint32_t start_nonce = pdata[19]++;
-	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 19);
+	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 19;
+	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << intensity);
 	throughPut = MIN(throughPut, max_nonce - start_nonce);
 
 	if (opt_benchmark)

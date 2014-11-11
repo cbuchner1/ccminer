@@ -19,7 +19,6 @@
 #include "cuda_helper.h"
 
 extern char *device_name[8];
-extern int device_map[8];
 
 // CUDA Devices on the System
 extern "C" int cuda_num_devices()
@@ -66,6 +65,7 @@ extern "C" void cuda_devicenames()
 		cudaGetDeviceProperties(&props, device_map[i]);
 
 		device_name[i] = strdup(props.name);
+		device_sm[i] = props.major * 100 + props.minor * 10;
 	}
 }
 

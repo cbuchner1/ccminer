@@ -14,8 +14,6 @@ extern "C" {
 
 static uint32_t *d_hash[8];
 
-extern int device_map[8];
-
 extern void x11_shavite512_cpu_init(int thr_id, int threads);
 extern void x11_shavite512_setBlock_80(void *pdata);
 extern void x11_shavite512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);

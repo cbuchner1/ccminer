@@ -46,9 +46,7 @@ extern "C" void pentablakehash(void *output, const void *input)
 #define MAXU 0xffffffffU
 
 // in cpu-miner.c
-extern bool opt_n_threads;
-extern bool opt_benchmark;
-extern int device_map[8];
+extern int opt_n_threads;
 
 __constant__
 static uint32_t __align__(32) c_Target[8];

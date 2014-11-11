@@ -6,15 +6,6 @@
 #include "cuda_helper.h"
 #include <host_defines.h>
 
-// aus cpu-miner.c
-extern int device_map[8];
-
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// diese Struktur wird in der Init Funktion angefordert
-static cudaDeviceProp props[8];
-
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
 extern uint32_t *d_resultNonce[8];
@@ -101,8 +92,6 @@ void groestlcoin_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *resN
 __host__ void groestlcoin_cpu_init(int thr_id, int threads)
 {
     cudaSetDevice(device_map[thr_id]);
-
-    cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
 
     // Speicher für Gewinner-Nonce belegen
     cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 

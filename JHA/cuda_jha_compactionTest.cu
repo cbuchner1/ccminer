@@ -4,12 +4,6 @@
 #include "cuda_helper.h"
 #include <sm_30_intrinsics.h>
 
-// aus cpu-miner.c
-extern int device_map[8];
-
-// diese Struktur wird in der Init Funktion angefordert
-static cudaDeviceProp props[8];
-
 static uint32_t *d_tempBranch1Nonces[8];
 static uint32_t *d_numValid[8];
 static uint32_t *h_numValid[8];
@@ -40,8 +34,6 @@ cuda_compactTestFunction_t h_JackpotTrueFunction[8], h_JackpotFalseFunction[8];
 // Setup-Funktionen
 __host__ void jackpot_compactTest_cpu_init(int thr_id, int threads)
 {
-	cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
-
 	cudaMemcpyFromSymbol(&h_JackpotTrueFunction[thr_id], d_JackpotTrueFunction, sizeof(cuda_compactTestFunction_t));
 	cudaMemcpyFromSymbol(&h_JackpotFalseFunction[thr_id], d_JackpotFalseFunction, sizeof(cuda_compactTestFunction_t));
 

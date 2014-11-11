@@ -13,8 +13,6 @@ extern "C" {
 
 #include <stdint.h>
 
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 extern void x11_shavite512_cpu_init(int thr_id, int threads);

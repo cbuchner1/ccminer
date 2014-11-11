@@ -4,9 +4,6 @@
 
 #include "cuda_helper.h"
 
-// aus cpu-miner.c
-extern int device_map[8];
-
 // Take a look at: https://www.schneier.com/skein1.3.pdf
 
 #define SHL(x, n)			((x) << (n))

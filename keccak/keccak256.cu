@@ -14,9 +14,6 @@ extern "C"
 
 #include "cuda_helper.h"
 
-// in cpu-miner.c
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 extern void keccak256_cpu_init(int thr_id, int threads);

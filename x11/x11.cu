@@ -20,9 +20,6 @@ extern "C"
 #include <stdio.h>
 #include <memory.h>
 
-// in cpu-miner.c
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);

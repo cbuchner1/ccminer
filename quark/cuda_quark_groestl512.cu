@@ -8,15 +8,6 @@
 #define TPB 256
 #define THF 4
 
-// aus cpu-miner.c
-extern int device_map[8];
-
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
-// diese Struktur wird in der Init Funktion angefordert
-static cudaDeviceProp props[8];
-
 // 64 Register Variante für Compute 3.0
 #include "groestl_functions_quad.cu"
 #include "bitslice_transformations_quad.cu"
@@ -127,7 +118,6 @@ __global__ void __launch_bounds__(TPB, THF)
 // Setup-Funktionen
 __host__ void quark_groestl512_cpu_init(int thr_id, int threads)
 {
-    cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
 }
 
 __host__ void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

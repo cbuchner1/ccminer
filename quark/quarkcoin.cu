@@ -12,8 +12,6 @@ extern "C"
 
 #include "cuda_helper.h"
 
-extern int device_map[8];
-
 static uint32_t *d_hash[8];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes

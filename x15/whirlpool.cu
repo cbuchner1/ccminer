@@ -7,10 +7,8 @@ extern "C"
 #include "miner.h"
 }
 
-// from cpu-miner.c
-extern int device_map[8];
+#include "cuda_helper.h"
 
-// Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void x15_whirlpool_cpu_init(int thr_id, int threads, int mode);
