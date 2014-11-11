@@ -17,13 +17,17 @@ struct stats_data {
 	double hashrate;
 	uint8_t thr_id;
 	uint8_t gpu_id;
-	uint16_t align; /* to keep size a multiple of 4 */
+	uint8_t ignored;
+	uint8_t align; /* to keep size a multiple of 4 */
 };
 
 static std::map<uint64_t, stats_data> tlastscans;
 static uint64_t uid = 0;
 
 #define STATS_PURGE_TIMEOUT 5*60
+
+extern uint64_t global_hashrate;
+extern int opt_n_threads;
 
 /**
  * Store speed per thread (todo: compute here)
@@ -34,7 +38,12 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
 	uint64_t key = (thr << 56) + (uid++ % UINT_MAX);
 	stats_data data;
 
+	// to enough hashes to give right stats
 	if (hashcount < 1000 || hashrate < 0.01)
+		return;
+
+	// first hash rates are often erroneous
+	if (uid <= opt_n_threads)
 		return;
 
 	memset(&data, 0, sizeof(data));
@@ -42,6 +51,12 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
 	data.tm_stat = (uint32_t) time(NULL);
 	data.hashcount = hashcount;
 	data.hashrate = hashrate;
+	if (global_hashrate && uid > 10) {
+		// prevent stats on too high vardiff (erroneous rates)
+		double ratio = (hashrate / (1.0 * global_hashrate));
+		if (ratio < 0.4 || ratio > 1.6)
+			data.ignored = 1;
+	}
 	tlastscans[key] = data;
 }
 
@@ -58,7 +73,8 @@ extern "C" double stats_get_speed(int thr_id)
 
 	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
 	while (i != tlastscans.rend() && records < 50) {
-		if ((i->first & UINT_MAX) > 3) /* ignore firsts */
+		/* ignore n firsts */
+		if (!i->second.ignored)
 		if (thr_id == -1 || (keypfx & i->first) == keypfx) {
 			if (i->second.hashcount > 1000) {
 				speed += i->second.hashrate;
