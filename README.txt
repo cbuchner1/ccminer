@@ -155,11 +155,12 @@ features.
 >>> RELEASE HISTORY <<<
 
   Nov. 11th 2014  v1.4.7
-                  Average hashrate (based on the 50 last scans)
+                  Average hashrate (based on the 20 last scans)
                   Rewrite blake algo
                   Add the -i (gpu threads/intensity parameter)
                   Add some X11 optimisations based on sp_ commits
                   Fix quark reported hashrate and benchmark mode for some algos
+                  Enhance json config file param (int/float/false) (-c config.json)
                   Update windows prebuilt curl to 7.38.0
 
   Oct. 26th 2014  v1.4.6

@@ -1853,11 +1853,23 @@ static void parse_config(void)
 			char *s = strdup(json_string_value(val));
 			if (!s)
 				break;
-			// applog(LOG_DEBUG, "%s -%c %s", options[i].name, options[i].val, s);
 			parse_arg(options[i].val, s);
 			free(s);
-		} else if (!options[i].has_arg && json_is_true(val))
-			parse_arg(options[i].val, "");
+		}
+		else if (options[i].has_arg && json_is_integer(val)) {
+			char buf[16];
+			sprintf(buf, "%d", json_integer_value(val));
+			parse_arg(options[i].val, buf);
+		}
+		else if (options[i].has_arg && json_is_real(val)) {
+			char buf[16];
+			sprintf(buf, "%f", json_real_value(val));
+			parse_arg(options[i].val, buf);
+		}
+		else if (!options[i].has_arg) {
+			if (json_is_true(val))
+				parse_arg(options[i].val, "");
+		}
 		else
 			applog(LOG_ERR, "JSON option %s invalid",
 				options[i].name);
