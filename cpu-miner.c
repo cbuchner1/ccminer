@@ -205,7 +205,7 @@ int opt_timeout = 270;
 static int opt_scantime = 5;
 static json_t *opt_config;
 static const bool opt_time = true;
-static sha256_algos opt_algo = ALGO_HEAVY;
+static sha256_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
 static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
@@ -336,13 +336,13 @@ static struct option const options[] = {
 	{ "background", 0, NULL, 'B' },
 #endif
 	{ "benchmark", 0, NULL, 1005 },
-	{ "cputest", 0, NULL, 1006 },
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
-	{ "no-color", 0, NULL, 1002 },
+	{ "cputest", 0, NULL, 1006 },
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
+	{ "no-color", 0, NULL, 1002 },
 	{ "no-longpoll", 0, NULL, 1003 },
 	{ "no-stratum", 0, NULL, 1007 },
 	{ "pass", 1, NULL, 'p' },
@@ -1590,7 +1590,7 @@ static void show_usage_and_exit(int status)
 	proper_exit(status);
 }
 
-static void parse_arg (int key, char *arg)
+static void parse_arg(int key, char *arg)
 {
 	char *p;
 	int v, i;
@@ -1827,6 +1827,9 @@ static void parse_arg (int key, char *arg)
 		use_colors = false;
 }
 
+/**
+ * Parse json config file
+ */
 static void parse_config(void)
 {
 	int i;
@@ -1836,6 +1839,7 @@ static void parse_config(void)
 		return;
 
 	for (i = 0; i < ARRAY_SIZE(options); i++) {
+
 		if (!options[i].name)
 			break;
 		if (!strcmp(options[i].name, "config"))
@@ -1849,6 +1853,7 @@ static void parse_config(void)
 			char *s = strdup(json_string_value(val));
 			if (!s)
 				break;
+			// applog(LOG_DEBUG, "%s -%c %s", options[i].name, options[i].val, s);
 			parse_arg(options[i].val, s);
 			free(s);
 		} else if (!options[i].has_arg && json_is_true(val))
@@ -1856,11 +1861,6 @@ static void parse_config(void)
 		else
 			applog(LOG_ERR, "JSON option %s invalid",
 				options[i].name);
-	}
-
-	if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
-		fprintf(stderr, "Heavycoin hash requires block reward vote parameter (see --vote)\n");
-		show_usage_and_exit(1);
 	}
 }
 
@@ -1885,13 +1885,13 @@ static void parse_cmdline(int argc, char *argv[])
 		show_usage_and_exit(1);
 	}
 
+	parse_config();
+
 	if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
 		fprintf(stderr, "%s: Heavycoin hash requires block reward vote parameter (see --vote)\n",
 			argv[0]);
 		show_usage_and_exit(1);
 	}
-
-	parse_config();
 }
 
 #ifndef WIN32
@@ -1954,11 +1954,10 @@ int main(int argc, char *argv[])
 
 	pthread_mutex_init(&applog_lock, NULL);
 	num_processors = cuda_num_devices();
+	cuda_devicenames();
 
 	/* parse command line */
 	parse_cmdline(argc, argv);
-
-	cuda_devicenames();
 
 	if (!opt_benchmark && !rpc_url) {
 		fprintf(stderr, "%s: no URL supplied\n", argv[0]);
