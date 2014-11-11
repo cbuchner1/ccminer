@@ -470,6 +470,11 @@ void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);
 void hashlog_dump_job(char* jobid);
 
+void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate);
+double stats_get_speed(int thr_id);
+void stats_purge_old(void);
+void stats_purge_all(void);
+
 struct thread_q;
 
 extern struct thread_q *tq_new(void);

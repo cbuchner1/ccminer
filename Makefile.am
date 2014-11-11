@@ -17,7 +17,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
 			  cpu-miner.c util.c crc32.c hefty1.c scrypt.c \
-			  hashlog.cpp \
+			  hashlog.cpp stats.cpp cuda.cu \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
 			  heavy/cuda_combine.cu heavy/cuda_combine.h \

@@ -155,6 +155,7 @@ features.
 >>> RELEASE HISTORY <<<
 
   Nov. 11th 2014  v1.4.7
+                  Average hashrate (based on the 50 last scans)
                   Rewrite blake algo
                   Add the -i (gpu threads/intensity parameter)
                   Add some X11 optimisations based on sp_ commits

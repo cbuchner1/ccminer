@@ -391,11 +391,20 @@ static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
 
-
+/**
+ * Exit app
+ */
 void proper_exit(int reason)
 {
 	cuda_devicereset();
+
 	hashlog_purge_all();
+	stats_purge_all();
+
+#ifdef WIN32
+	timeEndPeriod(1); // else never executed
+#endif
+
 	exit(reason);
 }
 
@@ -487,12 +496,14 @@ static void calc_diff(struct work *work, int known)
 static int share_result(int result, const char *reason)
 {
 	char s[345];
-	double hashrate;
+	double hashrate = 0.;
 
-	hashrate = 0.;
 	pthread_mutex_lock(&stats_lock);
-	for (int i = 0; i < opt_n_threads; i++)
-		hashrate += thr_hashrates[i];
+	hashrate = stats_get_speed(-1);
+	if (hashrate == 0.) {
+		for (int i = 0; i < opt_n_threads; i++)
+			hashrate += thr_hashrates[i];
+	}
 	result ? accepted_count++ : rejected_count++;
 	pthread_mutex_unlock(&stats_lock);
 
@@ -1297,6 +1308,7 @@ continue_scan:
 				thr_hashrates[thr_id] = hashes_done / (diff.tv_sec + 1e-6 * diff.tv_usec);
 				if (rc > 1)
 					thr_hashrates[thr_id] = (rc * hashes_done) / (diff.tv_sec + 1e-6 * diff.tv_usec);
+				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id]);
 			}
 			pthread_mutex_unlock(&stats_lock);
 		}
@@ -1307,15 +1319,18 @@ continue_scan:
 				device_map[thr_id], device_name[device_map[thr_id]], s);
 		}
 		if (thr_id == opt_n_threads - 1) {
-			double hashrate = 0.;
-			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
-				hashrate += thr_hashrates[i];
-
-			global_hashrate = llround(hashrate);
+			double hashrate = stats_get_speed(-1);
+			if (hashrate == 0.) {
+				for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
+					hashrate += thr_hashrates[i];
+			}
 			if (opt_benchmark) {
 				sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate / 1000.);
 				applog(LOG_NOTICE, "Total: %s kH/s", s);
 			}
+
+			// X-Mining-Hashrate
+			global_hashrate = llround(hashrate);
 		}
 
 		if (rc) {
@@ -1520,6 +1535,7 @@ static void *stratum_thread(void *userdata)
 						stratum.bloc_height);
 				restart_threads();
 				hashlog_purge_old();
+				stats_purge_old();
 			} else if (opt_debug && !opt_quiet) {
 					applog(LOG_BLUE, "%s asks job %d for block %d", short_url,
 						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
@@ -2095,6 +2111,8 @@ int main(int argc, char *argv[])
 #endif
 
 	applog(LOG_INFO, "workio thread dead, exiting.");
+
+	proper_exit(0);
 
 	return 0;
 }
