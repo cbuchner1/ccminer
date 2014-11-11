@@ -24,13 +24,15 @@ struct stats_data {
 static std::map<uint64_t, stats_data> tlastscans;
 static uint64_t uid = 0;
 
+#define STATS_AVG_SAMPLES 20
 #define STATS_PURGE_TIMEOUT 5*60
 
 extern uint64_t global_hashrate;
 extern int opt_n_threads;
+extern int device_map[8];
 
 /**
- * Store speed per thread (todo: compute here)
+ * Store speed per thread (todo: compute vardiff ?)
  */
 extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate)
 {
@@ -43,7 +45,7 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
 		return;
 
 	// first hash rates are often erroneous
-	if (uid <= opt_n_threads)
+	if (uid < opt_n_threads * 2)
 		return;
 
 	memset(&data, 0, sizeof(data));
@@ -51,6 +53,7 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
 	data.tm_stat = (uint32_t) time(NULL);
 	data.hashcount = hashcount;
 	data.hashrate = hashrate;
+	data.gpu_id = device_map[thr_id];
 	if (global_hashrate && uid > 10) {
 		// prevent stats on too high vardiff (erroneous rates)
 		double ratio = (hashrate / (1.0 * global_hashrate));
@@ -72,8 +75,7 @@ extern "C" double stats_get_speed(int thr_id)
 	int records = 0;
 
 	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
-	while (i != tlastscans.rend() && records < 50) {
-		/* ignore n firsts */
+	while (i != tlastscans.rend() && records < STATS_AVG_SAMPLES) {
 		if (!i->second.ignored)
 		if (thr_id == -1 || (keypfx & i->first) == keypfx) {
 			if (i->second.hashcount > 1000) {
@@ -81,7 +83,7 @@ extern "C" double stats_get_speed(int thr_id)
 				records++;
 			}
 		}
-		i++;
+		++i;
 	}
 	if (records)
 		speed /= (double)(records);
@@ -98,14 +100,14 @@ extern "C" void stats_purge_old(void)
 	uint32_t sz = tlastscans.size();
 	std::map<uint64_t, stats_data>::iterator i = tlastscans.begin();
 	while (i != tlastscans.end()) {
-		if ((now - i->second.tm_stat) > STATS_PURGE_TIMEOUT) {
+		if (i->second.ignored || (now - i->second.tm_stat) > STATS_PURGE_TIMEOUT) {
 			deleted++;
 			tlastscans.erase(i++);
 		}
 		else ++i;
 	}
 	if (opt_debug && deleted) {
-		applog(LOG_DEBUG, "hashlog: %d/%d purged", deleted, sz);
+		applog(LOG_DEBUG, "stats: %d/%d records purged", deleted, sz);
 	}
 }
 
