@@ -51,6 +51,21 @@ void *alloca (size_t);
 # endif
 #endif
 
+#ifdef __INTELLISENSE__
+/* should be in stdint.h but... */
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+typedef __int32 int32_t;
+typedef unsigned __int32 uint32_t;
+typedef __int16 int16_t;
+typedef unsigned __int16 uint16_t;
+typedef __int16 int8_t;
+typedef unsigned __int16 uint8_t;
+
+typedef unsigned __int32 time_t;
+typedef char *  va_list;
+#endif
+
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 0
 # define _ALIGN(x) __align__(x)
 #elif _MSC_VER
