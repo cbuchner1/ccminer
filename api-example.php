@@ -2,6 +2,7 @@
 /**
  * Sample Request API to ccminer
  */
+defined('API_HOST') || define('API_HOST', '127.0.0.1');
 defined('API_PORT') || define('API_PORT', 4068);
 
 function getsock($port)
@@ -15,7 +16,7 @@ function getsock($port)
 		return NULL;
 	}
 
-	$res = socket_connect($socket, '127.0.0.1', $port);
+	$res = socket_connect($socket, API_HOST, $port);
 	if ($res === false) {
 		$error = socket_strerror(socket_last_error());
 		$msg = "socket connect($port) failed";

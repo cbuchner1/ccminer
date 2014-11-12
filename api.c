@@ -87,8 +87,9 @@ static struct IP4ACCESS *ipaccess = NULL;
 // Socket is on 127.0.0.1
 #define QUEUE	10
 
-#define LOCAL_ADDR_V4 "127.0.0.1"
-static const char *localaddr = LOCAL_ADDR_V4;
+#define ALLIP4 "0.0.0.0"
+
+static const char *localaddr = "127.0.0.1";
 static const char *UNAVAILABLE = " - API will not be available";
 static char *buffer = NULL;
 static time_t startup = 0;
@@ -96,13 +97,12 @@ static int bye = 0;
 
 extern int opt_intensity;
 extern int opt_n_threads;
-extern int opt_api_listen;
+extern char *opt_api_allow;
+extern int opt_api_listen; /* port */
 extern uint64_t global_hashrate;
 extern uint32_t accepted_count;
 extern uint32_t rejected_count;
 
-char *opt_api_allow = LOCAL_ADDR_V4;
-int opt_api_network = 1;
 #define gpu_threads opt_n_threads
 
 extern void get_currentalgo(char* buf, int sz);
@@ -162,8 +162,8 @@ static void gpustatus(int thr_id)
 static char *getsummary(char *params)
 {
 	char algo[64] = "";
-	int uptime = (time(NULL) - startup);
-	double accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
+	time_t uptime = (time(NULL) - startup);
+	double accps = (60.0 * accepted_count) / (uptime ? (uint32_t) uptime : 1.0);
 
 	get_currentalgo(algo, sizeof(algo));
 
@@ -206,11 +206,6 @@ static void send_result(SOCKETTYPE c, char *result)
 	n = send(c, result, strlen(result) + 1, 0);
 }
 
-/*
- * Interpret [W:]IP[/Prefix][,[R|W:]IP2[/Prefix2][,...]] --api-allow option
- *      special case of 0/0 allows /0 (means all IP addresses)
- */
-#define ALLIP4 "0/0"
 /*
  * N.B. IP4 addresses are by Definition 32bit big endian on all platforms
  */
@@ -285,8 +280,8 @@ static void setup_ipaccess()
 				dot = strchr(ptr, '.');
 				if (dot)
 					*(dot++) = '\0';
-
 				octet = atoi(ptr);
+
 				if (octet < 0 || octet > 0xff)
 					goto popipo; // skip invalid
 
@@ -319,11 +314,11 @@ static bool check_connect(struct sockaddr_in *cli, char **connectaddr, char *gro
 			if ((client_ip & ipaccess[i].mask) == ipaccess[i].ip) {
 				addrok = true;
 				*group = ipaccess[i].group;
+				applog(LOG_BLUE, "ip accepted %x", ipaccess[i].ip);
 				break;
 			}
 		}
-	} else if (opt_api_network)
-		addrok = true;
+	}
 	else
 		addrok = (strcmp(*connectaddr, localaddr) == 0);
 
@@ -332,7 +327,7 @@ static bool check_connect(struct sockaddr_in *cli, char **connectaddr, char *gro
 
 static void api()
 {
-	const char *addr = localaddr;
+	const char *addr = opt_api_allow;
 	short int port = opt_api_listen; // 4068
 	char buf[MYBUFSIZ];
 	int c, n, bound;
@@ -375,7 +370,7 @@ static void api()
 
 	memset(&serv, 0, sizeof(serv));
 	serv.sin_family = AF_INET;
-	serv.sin_addr.s_addr = inet_addr(localaddr);
+	serv.sin_addr.s_addr = inet_addr(addr);
 	if (serv.sin_addr.s_addr == (in_addr_t)INVINETADDR) {
 		applog(LOG_ERR, "API initialisation 2 failed (%s)%s", strerror(errno), UNAVAILABLE);
 		return;
@@ -413,7 +408,6 @@ static void api()
 		else
 			bound = 1;
 	}
-
 
 	if (bound == 0) {
 		applog(LOG_ERR, "API bind to port %d failed (%s)%s", port, binderror, UNAVAILABLE);

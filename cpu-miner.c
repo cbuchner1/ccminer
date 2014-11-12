@@ -241,7 +241,8 @@ int opt_statsavg = 20;
 int opt_intensity = 0;
 uint32_t opt_work_size = 0; /* default */
 
-int opt_api_listen = 4068;
+char *opt_api_allow = "127.0.0.1"; /* 0.0.0.0 for all ips */
+int opt_api_listen = 4068; /* 0 to disable */
 
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
@@ -310,7 +311,9 @@ Options:\n\
   -q, --quiet           disable per-thread hashmeter output\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
-  -P, --protocol-dump   verbose dump of protocol-level activities\n"
+  -P, --protocol-dump   verbose dump of protocol-level activities\n\
+  -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n"
+
 #ifdef HAVE_SYSLOG_H
 "\
   -S, --syslog          use system log for output messages\n"
@@ -334,10 +337,11 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:";
+	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:b:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
+	{ "api-bind", 1, NULL, 'b' },
 #ifndef WIN32
 	{ "background", 0, NULL, 'B' },
 #endif
@@ -1578,7 +1582,6 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4.8"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
@@ -1586,7 +1589,7 @@ static void show_version_and_exit(void)
 		"pthreads static %s\n"
 #endif
 		"%s\n",
-		PACKAGE_STRING, PROGRAM_VERSION,
+		PACKAGE_NAME, PACKAGE_VERSION,
 #ifdef WIN32
 		PTW32_VERSION_STRING,
 #endif
@@ -1620,6 +1623,19 @@ static void parse_arg(int key, char *arg)
 		}
 		if (i == ARRAY_SIZE(algo_names))
 			show_usage_and_exit(1);
+		break;
+	case 'b':
+		p = strstr(arg, ":");
+		if (p) {
+			/* ip:port */
+			if (p - arg > 0) {
+				opt_api_allow = strdup(arg);
+				opt_api_allow[p - arg] = '\0';
+			}
+			opt_api_listen = atoi(p + 1);
+		}
+		else if (arg)
+			opt_api_listen = atoi(arg);
 		break;
 	case 'B':
 		opt_background = true;
@@ -1969,7 +1985,7 @@ int main(int argc, char *argv[])
 	long flags;
 	int i;
 
-	printf("*** ccminer " PROGRAM_VERSION " for nVidia GPUs by tpruvot@github ***\n");
+	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by tpruvot@github ***\n");
 #ifdef WIN32
 	printf("\tBuilt with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
 #else

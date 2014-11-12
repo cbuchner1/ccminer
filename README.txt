@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.7-tpruvot (Nov 2014) - "Blake Intensity"
+ccMiner release 1.4.8-tpruvot (12 Nov 2014) - "API Stats"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -107,6 +107,7 @@ its command line interface and options.
   -q, --quiet           disable per-thread hashmeter output
   -D, --debug           enable debug output
   -P, --protocol-dump   verbose dump of protocol-level activities
+  -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
   -c, --config=FILE     load a JSON-format configuration file
@@ -153,6 +154,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Nov. 12th 2014  v1.4.8
+                  Add a basic API and sample php json wrapper
+                  Fix displayed hashrate for multi gpus systems
 
   Nov. 11th 2014  v1.4.7
                   Average hashrate (based on the 20 last scans)
