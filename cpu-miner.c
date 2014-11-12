@@ -235,6 +235,7 @@ static unsigned long accepted_count = 0L;
 static unsigned long rejected_count = 0L;
 static double *thr_hashrates;
 uint64_t global_hashrate = 0;
+int opt_statsavg = 20;
 
 uint32_t opt_work_size = 0; /* default */
 
@@ -299,6 +300,7 @@ Options:\n\
   -T, --timeout=N       network timeout, in seconds (default: 270)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
                           long polling is unavailable, in seconds (default: 5)\n\
+  -N, --statsavg        number of samples used to display hashrate (default: 20)\n\
       --no-longpoll     disable X-Long-Polling support\n\
       --no-stratum      disable X-Stratum support\n\
   -q, --quiet           disable per-thread hashmeter output\n\
@@ -328,7 +330,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:";
+	"a:c:i:Dhp:Px:qr:R:s:t:T:o:u:O:Vd:f:mv:N:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -352,6 +354,7 @@ static struct option const options[] = {
 	{ "retries", 1, NULL, 'r' },
 	{ "retry-pause", 1, NULL, 'R' },
 	{ "scantime", 1, NULL, 's' },
+	{ "statsavg", 1, NULL, 'N' },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
 #endif
@@ -1566,7 +1569,7 @@ out:
 	return NULL;
 }
 
-#define PROGRAM_VERSION "1.4.7"
+#define PROGRAM_VERSION "1.4.8"
 static void show_version_and_exit(void)
 {
 	printf("%s v%s\n"
@@ -1636,6 +1639,12 @@ static void parse_arg(int key, char *arg)
 		break;
 	case 'D':
 		opt_debug = true;
+		break;
+	case 'N':
+		v = atoi(arg);
+		if (v < 1)
+			opt_statsavg = INT_MAX;
+		opt_statsavg = v;
 		break;
 	case 'q':
 		opt_quiet = true;

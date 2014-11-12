@@ -25,10 +25,11 @@ static std::map<uint64_t, stats_data> tlastscans;
 static uint64_t uid = 0;
 
 #define STATS_AVG_SAMPLES 20
-#define STATS_PURGE_TIMEOUT 5*60
+#define STATS_PURGE_TIMEOUT 180*60 /* 180 mn */
 
 extern uint64_t global_hashrate;
 extern int opt_n_threads;
+extern int opt_statsavg;
 extern int device_map[8];
 
 /**
@@ -75,7 +76,7 @@ extern "C" double stats_get_speed(int thr_id)
 	int records = 0;
 
 	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
-	while (i != tlastscans.rend() && records < STATS_AVG_SAMPLES) {
+	while (i != tlastscans.rend() && records < opt_statsavg) {
 		if (!i->second.ignored)
 		if (thr_id == -1 || (keypfx & i->first) == keypfx) {
 			if (i->second.hashcount > 1000) {
@@ -87,6 +88,9 @@ extern "C" double stats_get_speed(int thr_id)
 	}
 	if (records)
 		speed /= (double)(records);
+	if (thr_id == -1)
+		speed *= (double)(opt_n_threads);
+
 	return speed;
 }
 
