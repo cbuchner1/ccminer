@@ -142,7 +142,7 @@ typedef enum {
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
 	ALGO_LUFFA_DOOM,
-	ALGO_MJOLLNIR,		/* Mjollnir hash */
+	ALGO_MJOLLNIR,		/* Hefty hash */
 	ALGO_MYR_GR,
 	ALGO_NIST5,
 	ALGO_PENTABLAKE,
@@ -445,7 +445,7 @@ static bool work_decode(const json_t *val, struct work *work)
 	}
 	if (opt_algo == ALGO_HEAVY) {
 		if (unlikely(!jobj_binary(val, "maxvote", &work->maxvote, sizeof(work->maxvote)))) {
-			work->maxvote = 1024;
+			work->maxvote = 2048;
 		}
 	} else work->maxvote = 0;
 
@@ -485,6 +485,11 @@ static void calc_diff(struct work *work, int known)
 
 	swab256(rtarget, work->target);
 	data64 = (uint64_t *)(rtarget + 3); /* todo: index (3) can be tuned here */
+
+	if (opt_algo == ALGO_HEAVY) {
+		data64 = (uint64_t *)(rtarget + 2);
+	}
+
 	d64 = swab64(*data64);
 	if (unlikely(!d64))
 		d64 = 1;
@@ -866,7 +871,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	int i;
 
 	if (!sctx->job.job_id) {
-		/* job not yet retrieved */
+		// applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
 		return;
 	}
 
@@ -915,7 +920,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 	work->data[17] = le32dec(sctx->job.ntime);
 	work->data[18] = le32dec(sctx->job.nbits);
-	if (opt_algo == ALGO_MJOLLNIR)
+	if (opt_algo == ALGO_MJOLLNIR || opt_algo == ALGO_HEAVY)
 	{
 		for (i = 0; i < 20; i++)
 			work->data[i] = be32dec((uint32_t *)&work->data[i]);
@@ -924,18 +929,14 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	work->data[20] = 0x80000000;
 	work->data[31] = (opt_algo == ALGO_MJOLLNIR) ? 0x000002A0 : 0x00000280;
 
-	// HeavyCoin
+	// HeavyCoin (vote / reward)
 	if (opt_algo == ALGO_HEAVY) {
-		uint16_t *ext;
-		work->maxvote = 1024;
-		ext = (uint16_t*)(&work->data[20]);
+		work->maxvote = 2048;
+		uint16_t *ext = (uint16_t*)(&work->data[20]);
 		ext[0] = opt_vote;
 		ext[1] = be16dec(sctx->job.nreward);
-
-		for (i = 0; i < 20; i++)
-			work->data[i] = be32dec((uint32_t *)&work->data[i]);
+		// applog(LOG_DEBUG, "DEBUG: vote=%hx reward=%hx", ext[0], ext[1]);
 	}
-	//
 
 	pthread_mutex_unlock(&sctx->work_lock);
 
@@ -1678,7 +1679,7 @@ static void parse_arg(int key, char *arg)
 		break;
 	case 'v':
 		v = atoi(arg);
-		if (v < 0 || v > 1024)	/* sanity check */
+		if (v < 0 || v > 8192)	/* sanity check */
 			show_usage_and_exit(1);
 		opt_vote = (uint16_t)v;
 		break;
@@ -1858,7 +1859,7 @@ static void parse_config(void)
 		}
 		else if (options[i].has_arg && json_is_integer(val)) {
 			char buf[16];
-			sprintf(buf, "%d", json_integer_value(val));
+			sprintf(buf, "%d", (int) json_integer_value(val));
 			parse_arg(options[i].val, buf);
 		}
 		else if (options[i].has_arg && json_is_real(val)) {
