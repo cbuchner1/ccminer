@@ -360,7 +360,6 @@ struct cgpu_info {
 	int rejected;
 	int hw_errors;
 	double khashes;
-	double utility;
 	int intensity;
 #ifdef HAVE_HWMONITORING
 	bool has_monitoring;

@@ -91,7 +91,7 @@ static struct IP4ACCESS *ipaccess = NULL;
 static const char *localaddr = LOCAL_ADDR_V4;
 static const char *UNAVAILABLE = " - API will not be available";
 static char *buffer = NULL;
-
+static time_t startup = 0;
 static int bye = 0;
 
 extern int opt_intensity;
@@ -111,16 +111,12 @@ extern void get_currentalgo(char* buf, int sz);
 
 static void gpustatus(int thr_id)
 {
-	char buf[BUFSIZ];
+	char buf[MYBUFSIZ];
 	float gt;
 	int gf, gp;
 
-
 	if (thr_id >= 0 && thr_id < gpu_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
-
-		int total_secs = 1; // todo
-		cgpu->utility = cgpu->accepted / ( total_secs ? total_secs : 1 ) * 60;
 
 #ifdef HAVE_HWMONITORING
 		// todo
@@ -153,10 +149,9 @@ static void gpustatus(int thr_id)
 		cgpu->khashes = stats_get_speed(thr_id) / 1000.0;
 
 		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;FANP=%d;KHS=%.2f;"
-			"ACC=%d;REJ=%d;HWF=%d;U=%.2f;I=%d|",
+			"HWF=%d;I=%d|",
 			thr_id, gt, gf, gp, cgpu->khashes,
-			cgpu->accepted, cgpu->rejected, cgpu->hw_errors,
-			cgpu->utility, cgpu->intensity);
+			cgpu->hw_errors, cgpu->intensity);
 
 		strcat(buffer, buf);
 	}
@@ -167,12 +162,18 @@ static void gpustatus(int thr_id)
 static char *getsummary(char *params)
 {
 	char algo[64] = "";
+	int uptime = (time(NULL) - startup);
+	double accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
+
 	get_currentalgo(algo, sizeof(algo));
+
 	*buffer = '\0';
 	sprintf(buffer, "NAME=%s;VER=%s;API=%s;"
-		"ALGO=%s;KHS=%.2f|",
+		"ALGO=%s;KHS=%.2f;ACC=%d;REJ=%d;ACCMN=%.3f;UPTIME=%d|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
-		algo, (double)global_hashrate / 1000.0);
+		algo, (double)global_hashrate / 1000.0,
+		accepted_count, rejected_count,
+		accps, uptime);
 	return buffer;
 }
 
@@ -224,18 +225,13 @@ static void setup_ipaccess()
 		proper_exit(1);//, "Failed to malloc ipaccess buf");
 
 	strcpy(buf, opt_api_allow);
-
 	ipcount = 1;
 	ptr = buf;
 	while (*ptr) if (*(ptr++) == ',')
 		ipcount++;
 
 	// possibly more than needed, but never less
-	#ifdef _MSC_VER
-	ipaccess = (IP4ACCESS *) calloc(ipcount, sizeof(struct IP4ACCESS));
-	#else
-	ipaccess = calloc(ipcount, sizeof(struct IP4ACCESS));
-	#endif
+	ipaccess = (struct IP4ACCESS *) calloc(ipcount, sizeof(struct IP4ACCESS));
 	if (unlikely(!ipaccess))
 		proper_exit(1);//, "Failed to calloc ipaccess");
 
@@ -338,7 +334,7 @@ static void api()
 {
 	const char *addr = localaddr;
 	short int port = opt_api_listen; // 4068
-	char buf[BUFSIZ];
+	char buf[MYBUFSIZ];
 	int c, n, bound;
 	char *connectaddr;
 	char *binderror;
@@ -453,7 +449,7 @@ static void api()
 				connectaddr, addrok ? "Accepted" : "Ignored");
 
 		if (addrok) {
-			n = recv(c, &buf[0], BUFSIZ - 1, 0);
+			n = recv(c, &buf[0], MYBUFSIZ - 1, 0);
 			// applog(LOG_DEBUG, "API: recv command: (%d) '%s'", n, buf);
 			if (!SOCKETFAIL(n)) {
 				buf[n] = '\0';
@@ -478,10 +474,12 @@ static void api()
 	free(buffer);
 }
 
+/* external access */
 void *api_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info*)userdata;
 
+	startup = time(NULL);
 	api();
 
 	tq_freeze(mythr->q);
