@@ -314,7 +314,6 @@ static bool check_connect(struct sockaddr_in *cli, char **connectaddr, char *gro
 			if ((client_ip & ipaccess[i].mask) == ipaccess[i].ip) {
 				addrok = true;
 				*group = ipaccess[i].group;
-				applog(LOG_BLUE, "ip accepted %x", ipaccess[i].ip);
 				break;
 			}
 		}

@@ -157,6 +157,7 @@ features.
 
   Nov. 12th 2014  v1.4.8
                   Add a basic API and sample php json wrapper
+		  Add statsavg (def 20) and api-bind parameters
                   Fix displayed hashrate for multi gpus systems
 
   Nov. 11th 2014  v1.4.7
