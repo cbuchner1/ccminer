@@ -352,10 +352,41 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+/* api related */
+void *api_thread(void *userdata);
+
+struct cgpu_info {
+	int accepted;
+	int rejected;
+	int hw_errors;
+	double khashes;
+	double utility;
+	int intensity;
+#ifdef HAVE_HWMONITORING
+	bool has_monitoring;
+	int gpu_engine;
+	int min_engine;
+	int gpu_fan;
+	int min_fan;
+	int gpu_memclock;
+	int gpu_memdiff;
+	int gpu_powertune;
+	float gpu_vddc;
+#endif
+};
+
+struct thr_api {
+	int id;
+	pthread_t pth;
+	struct thread_q	*q;
+};
+/* end of api */
+
 struct thr_info {
 	int		id;
 	pthread_t	pth;
 	struct thread_q	*q;
+	struct cgpu_info gpu;
 };
 
 struct work_restart {
@@ -382,6 +413,7 @@ extern pthread_mutex_t applog_lock;
 extern struct thr_info *thr_info;
 extern int longpoll_thr_id;
 extern int stratum_thr_id;
+extern int api_thr_id;
 extern struct work_restart *work_restart;
 extern bool opt_trust_pool;
 extern uint16_t opt_vote;

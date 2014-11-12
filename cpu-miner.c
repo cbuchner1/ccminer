@@ -129,7 +129,7 @@ struct workio_cmd {
 	} u;
 };
 
-typedef enum {
+enum sha_algos {
 	ALGO_ANIME,
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
@@ -156,7 +156,7 @@ typedef enum {
 	ALGO_X15,
 	ALGO_X17,
 	ALGO_DMD_GR,
-} sha256_algos;
+};
 
 static const char *algo_names[] = {
 	"anime",
@@ -205,12 +205,12 @@ int opt_timeout = 270;
 static int opt_scantime = 5;
 static json_t *opt_config;
 static const bool opt_time = true;
-static sha256_algos opt_algo = ALGO_X11;
+static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
 static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
-static int num_processors;
+int num_processors;
 int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
 char *device_name[8]; // CB
 int device_sm[8];
@@ -223,21 +223,25 @@ char *opt_proxy;
 long opt_proxy_type;
 struct thr_info *thr_info;
 static int work_thr_id;
+struct thr_api *thr_api;
 int longpoll_thr_id = -1;
 int stratum_thr_id = -1;
+int api_thr_id = -1;
 bool stratum_need_reset = false;
 struct work_restart *work_restart = NULL;
 static struct stratum_ctx stratum;
 
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
-static unsigned long accepted_count = 0L;
-static unsigned long rejected_count = 0L;
+uint32_t accepted_count = 0L;
+uint32_t rejected_count = 0L;
 static double *thr_hashrates;
 uint64_t global_hashrate = 0;
 int opt_statsavg = 20;
-
+int opt_intensity = 0;
 uint32_t opt_work_size = 0; /* default */
+
+int opt_api_listen = 4068;
 
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
@@ -394,6 +398,11 @@ struct work {
 static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
+
+void get_currentalgo(char* buf, int sz)
+{
+	snprintf(buf, sz, "%s", algo_names[opt_algo]);
+}
 
 /**
  * Exit app
@@ -1605,7 +1614,7 @@ static void parse_arg(int key, char *arg)
 		for (i = 0; i < ARRAY_SIZE(algo_names); i++) {
 			if (algo_names[i] &&
 			    !strcmp(arg, algo_names[i])) {
-				opt_algo = (sha256_algos)i;
+				opt_algo = (enum sha_algos)i;
 				break;
 			}
 		}
@@ -1634,6 +1643,7 @@ static void parse_arg(int key, char *arg)
 		v = atoi(arg);
 		if (v < 0 || v > 31)
 			show_usage_and_exit(1);
+		opt_intensity = v;
 		if (v > 0) /* 0 = default */
 			opt_work_size = (1 << v);
 		break;
@@ -2046,10 +2056,10 @@ int main(int argc, char *argv[])
 	if (!work_restart)
 		return 1;
 
-	thr_info = (struct thr_info *)calloc(opt_n_threads + 3, sizeof(*thr));
+	thr_info = (struct thr_info *)calloc(opt_n_threads + 4, sizeof(*thr));
 	if (!thr_info)
 		return 1;
-	
+
 	thr_hashrates = (double *) calloc(opt_n_threads, sizeof(double));
 	if (!thr_hashrates)
 		return 1;
@@ -2101,6 +2111,22 @@ int main(int argc, char *argv[])
 
 		if (have_stratum)
 			tq_push(thr_info[stratum_thr_id].q, strdup(rpc_url));
+	}
+
+	if (opt_api_listen) {
+		/* api thread */
+		api_thr_id = opt_n_threads + 3;
+		thr = &thr_info[api_thr_id];
+		thr->id = api_thr_id;
+		thr->q = tq_new();
+		if (!thr->q)
+			return 1;
+
+		/* start stratum thread */
+		if (unlikely(pthread_create(&thr->pth, NULL, api_thread, thr))) {
+			applog(LOG_ERR, "api thread create failed");
+			return 1;
+		}
 	}
 
 	/* start mining threads */

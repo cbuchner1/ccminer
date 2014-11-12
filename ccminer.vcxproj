@@ -240,6 +240,7 @@
     <ClCompile Include="groestlcoin.cpp" />
     <ClCompile Include="hashlog.cpp" />
     <ClCompile Include="stats.cpp" />
+    <ClCompile Include="api.c" />
     <ClCompile Include="hefty1.c" />
     <ClCompile Include="myriadgroestl.cpp" />
     <ClCompile Include="scrypt.c">
