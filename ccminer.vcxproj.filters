@@ -192,7 +192,7 @@
     <ClCompile Include="stats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="api.cpp">
+    <ClCompile Include="api.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

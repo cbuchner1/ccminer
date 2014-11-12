@@ -10,6 +10,12 @@
  */
 #define APIVERSION "1.0"
 
+#ifdef _MSC_VER
+# define  _WINSOCK_DEPRECATED_NO_WARNINGS
+# include <winsock2.h>
+# include <mstcpip.h>
+#endif
+
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -29,7 +35,7 @@
 #include "compat.h"
 #include "miner.h"
 
-#ifndef WIN32
+#ifndef _MSC_VER
 # include <errno.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
@@ -43,12 +49,12 @@
 # define SOCKETINIT {}
 # define SOCKERRMSG strerror(errno)
 #else
-# include <winsock2.h>
 # define SOCKETTYPE SOCKET
 # define SOCKETFAIL(a) ((a) == SOCKET_ERROR)
 # define INVSOCK INVALID_SOCKET
 # define INVINETADDR INADDR_NONE
 # define CLOSESOCKET closesocket
+#define in_addr_t uint32_t
 #endif
 
 #define GROUP(g) (toupper(g))
@@ -125,7 +131,9 @@ static void gpustatus(int thr_id)
 		}
 		else
 #endif
-		gt = gf = gp = 0;
+		{
+			gt = 0.0;  gf = gp = 0;
+		}
 
 		// todo: can be 0 if set by algo (auto)
 		if (opt_intensity == 0 && opt_work_size) {
@@ -186,7 +194,7 @@ struct CMDS {
 
 #define CMDMAX 2
 
-static void send_result(int c, char *result)
+static void send_result(SOCKETTYPE c, char *result)
 {
 	int n;
 
@@ -194,7 +202,7 @@ static void send_result(int c, char *result)
 		result = "";
 
 	// ignore failure - it's closed immediately anyway
-	n = write(c, result, strlen(result)+1);
+	n = send(c, result, strlen(result) + 1, 0);
 }
 
 /*
@@ -211,7 +219,7 @@ static void setup_ipaccess()
 	int ipcount, mask, octet, i;
 	char group;
 
-	buf = malloc(strlen(opt_api_allow) + 1);
+	buf = (char*) calloc(1, strlen(opt_api_allow) + 1);
 	if (unlikely(!buf))
 		proper_exit(1);//, "Failed to malloc ipaccess buf");
 
@@ -223,7 +231,11 @@ static void setup_ipaccess()
 		ipcount++;
 
 	// possibly more than needed, but never less
+	#ifdef _MSC_VER
+	ipaccess = (IP4ACCESS *) calloc(ipcount, sizeof(struct IP4ACCESS));
+	#else
 	ipaccess = calloc(ipcount, sizeof(struct IP4ACCESS));
+	#endif
 	if (unlikely(!ipaccess))
 		proper_exit(1);//, "Failed to calloc ipaccess");
 
@@ -354,7 +366,7 @@ static void api()
 		}
 	}
 
-	apisock = calloc(1, sizeof(*apisock));
+	apisock = (SOCKETTYPE*) calloc(1, sizeof(*apisock));
 	*apisock = INVSOCK;
 
 	sleep(1);
@@ -420,7 +432,7 @@ static void api()
 		return;
 	}
 
-	buffer = malloc(MYBUFSIZ+1);
+	buffer = (char *) calloc(1, MYBUFSIZ + 1);
 
 	counter = 0;
 	while (bye == 0) {
@@ -441,10 +453,9 @@ static void api()
 				connectaddr, addrok ? "Accepted" : "Ignored");
 
 		if (addrok) {
-			n = read(c, &buf[0], BUFSIZ-1);
-			if (n < 0)
-				close(c);
-			else {
+			n = recv(c, &buf[0], BUFSIZ - 1, 0);
+			// applog(LOG_DEBUG, "API: recv command: (%d) '%s'", n, buf);
+			if (!SOCKETFAIL(n)) {
 				buf[n] = '\0';
 				params = strchr(buf, '|');
 				if (params != NULL)
@@ -454,7 +465,7 @@ static void api()
 					if (strcmp(buf, cmds[i].name) == 0) {
 						result = (cmds[i].func)(params);
 						send_result(c, result);
-						close(c);
+						CLOSESOCKET(c);
 						break;
 					}
 				}
