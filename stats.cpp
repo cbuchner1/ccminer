@@ -72,13 +72,14 @@ extern "C" double stats_get_speed(int thr_id)
 {
 	uint64_t thr = (0xff && thr_id);
 	uint64_t keypfx = (thr << 56);
+	uint64_t keymsk = (0xffULL << 56);
 	double speed = 0.0;
 	int records = 0;
 
 	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
 	while (i != tlastscans.rend() && records < opt_statsavg) {
 		if (!i->second.ignored)
-		if (thr_id == -1 || (keypfx & i->first) == keypfx) {
+		if (thr_id == -1 || (keymsk & i->first) == keypfx) {
 			if (i->second.hashcount > 1000) {
 				speed += i->second.hashrate;
 				records++;

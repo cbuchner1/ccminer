@@ -90,7 +90,7 @@ void applog(int prio, const char *fmt, ...)
 		va_copy(ap2, ap);
 		len = vsnprintf(NULL, 0, fmt, ap2) + 1;
 		va_end(ap2);
-		buf = alloca(len);
+		buf = (char*) alloca(len);
 		if (vsnprintf(buf, len, fmt, ap) >= 0)
 			syslog(prio, "%s", buf);
 	}
@@ -1473,7 +1473,7 @@ extern void applog_compare_hash(uchar *hash, uchar *hash2)
 	char s[256] = "";
 	int len = 0;
 	for (int i=0; i < 32; i += 4) {
-		char *color = memcmp(hash+i, hash2+i, 4) ? CL_WHT : CL_GRY;
+		const char *color = memcmp(hash+i, hash2+i, 4) ? CL_WHT : CL_GRY;
 		len += sprintf(s+len, "%s%02x%02x%02x%02x " CL_GRY, color,
 			hash[i], hash[i+1], hash[i+2], hash[i+3]);
 		s[len] = '\0';

@@ -114,8 +114,6 @@ extern uint32_t rejected_count;
 static void gpustatus(int thr_id)
 {
 	char buf[MYBUFSIZ];
-	float gt;
-	int gp, gf;
 
 	if (thr_id >= 0 && thr_id < gpu_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
@@ -125,16 +123,12 @@ static void gpustatus(int thr_id)
 #ifdef USE_WRAPNVML
 		// todo
 		if (1 || cgpu->has_monitoring) {
-			gf = gpu_fanpercent(cgpu);
-			gt = gpu_temp(cgpu);
-			gp = gpu_power(cgpu);
-			// gpu_clock(cgpu);
+			cgpu->gpu_temp = gpu_temp(cgpu);
+			cgpu->gpu_fan = gpu_fanpercent(cgpu);
+			cgpu->gpu_power = gpu_power(cgpu);
+			//cgpu->gpu_clock = gpu_clock(cgpu);
 		}
-		else
 #endif
-		{
-			gt = 0.0;  gf = gp = 0;
-		}
 
 		// todo: can be 0 if set by algo (auto)
 		if (opt_intensity == 0 && opt_work_size) {
@@ -155,7 +149,7 @@ static void gpustatus(int thr_id)
 
 		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;POWER=%d;KHS=%.2f;"
 			"HWF=%d;I=%d|",
-			thr_id, gt, gf, gp, cgpu->khashes,
+			thr_id, cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_power, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
 		strcat(buffer, buf);
@@ -174,7 +168,7 @@ static char *getsummary(char *params)
 
 	*buffer = '\0';
 	sprintf(buffer, "NAME=%s;VER=%s;API=%s;"
-		"ALGO=%s;KHS=%.2f;ACC=%d;REJ=%d;ACCMN=%.3f;UPTIME=%.1f|",
+		"ALGO=%s;KHS=%.2f;ACC=%d;REJ=%d;ACCMN=%.3f;UPTIME=%.0f|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
 		algo, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,

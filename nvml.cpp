@@ -19,7 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
+#include <string.h>
 #ifndef _MSC_VER
 #include <libgen.h>
 #endif
@@ -28,13 +28,21 @@
 #include "cuda_runtime.h"
 #include "nvml.h"
 
+extern wrap_nvml_handle *hnvml;
+extern int device_map[8];
+
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
  */
 #if defined(_MSC_VER) || defined(_WIN32) || defined(_WIN64)
 	#include <windows.h>
 	static void *wrap_dlopen(const char *filename) {
-		return (void *)LoadLibrary(filename);
+		HMODULE h = LoadLibrary(filename);
+		if (!h && opt_debug) {
+			applog(LOG_DEBUG, "dlopen(%d): failed to load %s", 
+				GetLastError(), filename);
+		}
+		return (void*)h;
 	}
 	static void *wrap_dlsym(void *h, const char *sym) {
 		return (void *)GetProcAddress((HINSTANCE)h, sym);
@@ -46,9 +54,16 @@
 #else
 	/* assume we can use dlopen itself... */
 	#include <dlfcn.h>
+	#include <errno.h>
 	static void *wrap_dlopen(const char *filename) {
-		return dlopen(filename, RTLD_NOW);
+		void *h = dlopen(filename, RTLD_NOW);
+		if (h == NULL && opt_debug) {
+			applog(LOG_DEBUG, "dlopen(%d): failed to load %s", 
+				errno, filename);
+		}
+		return (void*)h;
 	}
+
 	static void *wrap_dlsym(void *h, const char *sym) {
 		return dlsym(h, sym);
 	}
@@ -57,7 +72,7 @@
 	}
 #endif
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -66,51 +81,27 @@ wrap_nvml_handle * wrap_nvml_create()
 	int i=0;
 	wrap_nvml_handle *nvmlh = NULL;
 
-	/*
-	 * We use hard-coded library installation locations for the time being...
-	 * No idea where or if libnvidia-ml.so is installed on MacOS X, a
-	 * deep scouring of the filesystem on one of the Mac CUDA build boxes
-	 * I used turned up nothing, so for now it's not going to work on OSX.
-	 */
-#if defined(_WIN64)
-	/* 64-bit Windows */
-#define  libnvidia_ml "%PROGRAMFILES%/NVIDIA Corporation/NVSMI/nvml.dll"
-#elif defined(_WIN32) || defined(_MSC_VER)
-	/* 32-bit Windows */
-#define  libnvidia_ml "%PROGRAMFILES%/NVIDIA Corporation/NVSMI/nvml.dll"
-#elif defined(__linux) && (defined(__i386__) || defined(__ARM_ARCH_7A__))
-	/* 32-bit linux assumed */
-#define  libnvidia_ml "/usr/lib32/libnvidia-ml.so"
-#elif defined(__linux)
-	/* 64-bit linux assumed */
-#define  libnvidia_ml "/usr/lib/libnvidia-ml.so"
+#if defined(WIN32)
+	/* Windows (do not use slashes, else ExpandEnvironmentStrings will mix them) */
+#define  libnvidia_ml "%PROGRAMFILES%\\NVIDIA Corporation\\NVSMI\\nvml.dll"
 #else
-#error "Unrecognized platform: need NVML DLL path for this platform..."
+	/* linux assumed */
+#define  libnvidia_ml "libnvidia-ml.so"
 #endif
 
-#if WIN32
 	char tmp[512];
-	ExpandEnvironmentStringsA(libnvidia_ml, tmp, sizeof(tmp));
+#ifdef WIN32
+	ExpandEnvironmentStrings(libnvidia_ml, tmp, sizeof(tmp));
 #else
-	char tmp[512] = libnvidia_ml;
+	strcpy(tmp, libnvidia_ml);
 #endif
 
 	void *nvml_dll = wrap_dlopen(tmp);
 	if (nvml_dll == NULL) {
 #ifdef WIN32
-		char lib[] = "nvml.dll";
-#else
-		char lib[64] = { '\0' };
-		snprintf(lib, sizeof(lib), "%s", basename(tmp));
-		/* try dlopen without path, here /usr/lib/nvidia-340/libnvidia-ml.so */
+		nvml_dll = wrap_dlopen("nvml.dll");
+		if (nvml_dll == NULL)
 #endif
-		nvml_dll = wrap_dlopen(lib);
-		if (opt_debug)
-			applog(LOG_DEBUG, "dlopen: %s=%p", lib, nvml_dll);
-	}
-	if (nvml_dll == NULL) {
-		if (opt_debug)
-			applog(LOG_DEBUG, "dlopen(%d): failed to load %s", errno, tmp);
 		return NULL;
 	}
 
@@ -120,9 +111,10 @@ wrap_nvml_handle * wrap_nvml_create()
 
 	nvmlh->nvmlInit = (wrap_nvmlReturn_t (*)(void))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlInit_v2");
-	if (!nvmlh->nvmlInit)
+	if (!nvmlh->nvmlInit) {
 		nvmlh->nvmlInit = (wrap_nvmlReturn_t (*)(void))
 			wrap_dlsym(nvmlh->nvml_dll, "nvmlInit");
+	}
 	nvmlh->nvmlDeviceGetCount = (wrap_nvmlReturn_t (*)(int *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetCount_v2");
 	nvmlh->nvmlDeviceGetHandleByIndex = (wrap_nvmlReturn_t (*)(int, wrap_nvmlDevice_t *))
@@ -153,11 +145,10 @@ wrap_nvml_handle * wrap_nvml_create()
 			nvmlh->nvmlDeviceGetPciInfo == NULL ||
 			nvmlh->nvmlDeviceGetName == NULL ||
 			nvmlh->nvmlDeviceGetTemperature == NULL ||
-			nvmlh->nvmlDeviceGetFanSpeed == NULL ||
-			nvmlh->nvmlDeviceGetPowerUsage == NULL)
+			nvmlh->nvmlDeviceGetFanSpeed == NULL)
 	{
 		if (opt_debug)
-			applog(LOG_DEBUG, "Failed to obtain all required NVML function pointers");
+			applog(LOG_DEBUG, "Failed to obtain required NVML function pointers");
 		wrap_dlclose(nvmlh->nvml_dll);
 		free(nvmlh);
 		return NULL;
@@ -342,14 +333,11 @@ int wrap_nvml_destroy(wrap_nvml_handle *nvmlh)
 
 /* api functions */
 
-extern wrap_nvml_handle *nvmlh;
-extern int device_map[8];
-
 unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 {
 	unsigned int pct = 0;
-	if (nvmlh) {
-		wrap_nvml_get_fanpcnt(nvmlh, device_map[gpu->thr_id], &pct);
+	if (hnvml) {
+		wrap_nvml_get_fanpcnt(hnvml, device_map[gpu->thr_id], &pct);
 	}
 	return pct;
 }
@@ -357,9 +345,9 @@ unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 double gpu_temp(struct cgpu_info *gpu)
 {
 	double tc = 0.0;
-	if (nvmlh) {
+	if (hnvml) {
 		unsigned int tmp = 0;
-		wrap_nvml_get_tempC(nvmlh, device_map[gpu->thr_id], &tmp);
+		wrap_nvml_get_tempC(hnvml, device_map[gpu->thr_id], &tmp);
 		tc = (double) tmp;
 	}
 	return tc;
@@ -368,8 +356,8 @@ double gpu_temp(struct cgpu_info *gpu)
 unsigned int gpu_clock(struct cgpu_info *gpu)
 {
 	unsigned int freq = 0;
-	if (nvmlh) {
-		wrap_nvml_get_clock(nvmlh, device_map[gpu->thr_id], NVML_CLOCK_SM, &freq);
+	if (hnvml) {
+		wrap_nvml_get_clock(hnvml, device_map[gpu->thr_id], NVML_CLOCK_SM, &freq);
 	}
 	return freq;
 }
@@ -377,8 +365,8 @@ unsigned int gpu_clock(struct cgpu_info *gpu)
 unsigned int gpu_power(struct cgpu_info *gpu)
 {
 	unsigned int mw = 0;
-	if (nvmlh) {
-		wrap_nvml_get_power_usage(nvmlh, device_map[gpu->thr_id], &mw);
+	if (hnvml) {
+		wrap_nvml_get_power_usage(hnvml, device_map[gpu->thr_id], &mw);
 	}
 	return mw;
 }
@@ -386,9 +374,8 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 int gpu_pstate(struct cgpu_info *gpu)
 {
 	int pstate = 0;
-	if (nvmlh) {
-		wrap_nvml_get_pstate(nvmlh, device_map[gpu->thr_id], &pstate);
-		//gpu->gpu_pstate = pstate;
+	if (hnvml) {
+		wrap_nvml_get_pstate(hnvml, device_map[gpu->thr_id], &pstate);
 	}
 	return pstate;
 }
@@ -433,7 +420,7 @@ int gpu_pstate(struct cgpu_info *gpu)
 *	nvmlDeviceGetFanSpeed
 	nvmlDeviceGetGpuOperationMode
 	nvmlDeviceGetHandleByIndex
-	nvmlDeviceGetHandleByIndex_v2
+*	nvmlDeviceGetHandleByIndex_v2
 	nvmlDeviceGetHandleByPciBusId
 	nvmlDeviceGetHandleByPciBusId_v2
 	nvmlDeviceGetHandleBySerial
@@ -450,7 +437,7 @@ int gpu_pstate(struct cgpu_info *gpu)
 	nvmlDeviceGetMinorNumber
 	nvmlDeviceGetMultiGpuBoard
 	nvmlDeviceGetName
-	nvmlDeviceGetPciInfo
+*	nvmlDeviceGetPciInfo
 	nvmlDeviceGetPciInfo_v2
 *	nvmlDeviceGetPerformanceState
 	nvmlDeviceGetPersistenceMode

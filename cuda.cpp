@@ -27,7 +27,7 @@ extern int device_map[8];
 extern int device_sm[8];
 
 // CUDA Devices on the System
-extern "C" int cuda_num_devices()
+int cuda_num_devices()
 {
 	int version;
 	cudaError_t err = cudaDriverGetVersion(&version);
@@ -54,7 +54,7 @@ extern "C" int cuda_num_devices()
 	return GPU_N;
 }
 
-extern "C" void cuda_devicenames()
+void cuda_devicenames()
 {
 	cudaError_t err;
 	int GPU_N;
@@ -76,7 +76,7 @@ extern "C" void cuda_devicenames()
 }
 
 // Can't be called directly in cpu-miner.c
-extern "C" void cuda_devicereset()
+void cuda_devicereset()
 {
 	cudaDeviceReset();
 }
@@ -103,7 +103,7 @@ static bool substringsearch(const char *haystack, const char *needle, int &match
 }
 
 // CUDA Gerät nach Namen finden (gibt Geräte-Index zurück oder -1)
-extern "C" int cuda_finddevice(char *name)
+int cuda_finddevice(char *name)
 {
 	int num = cuda_num_devices();
 	int match = 0;

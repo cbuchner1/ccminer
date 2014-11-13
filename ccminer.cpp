@@ -9,7 +9,6 @@
  */
 
 #include "cpuminer-config.h"
-#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,21 +55,15 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
-// from cuda.cu
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+// from cuda.cpp
 int cuda_num_devices();
 void cuda_devicenames();
 void cuda_devicereset();
 int cuda_finddevice(char *name);
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef USE_WRAPNVML
 #include "nvml.h"
+wrap_nvml_handle *hnvml = NULL;
 #endif
 
 #ifdef __linux /* Linux specific policy and affinity management */
@@ -246,10 +239,6 @@ uint32_t opt_work_size = 0; /* default */
 
 char *opt_api_allow = "127.0.0.1"; /* 0.0.0.0 for all ips */
 int opt_api_listen = 4068; /* 0 to disable */
-
-#ifdef USE_WRAPNVML
-wrap_nvml_handle *nvmlh = NULL;
-#endif
 
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
@@ -429,8 +418,8 @@ void proper_exit(int reason)
 	timeEndPeriod(1); // else never executed
 #endif
 #ifdef USE_WRAPNVML
-	if (nvmlh)
-		wrap_nvml_destroy(nvmlh);
+	if (hnvml)
+		wrap_nvml_destroy(hnvml);
 #endif
 	exit(reason);
 }
@@ -463,11 +452,11 @@ static bool work_decode(const json_t *val, struct work *work)
 	
 	if (unlikely(!jobj_binary(val, "data", work->data, sizeof(work->data)))) {
 		applog(LOG_ERR, "JSON inval data");
-		goto err_out;
+		return false;
 	}
 	if (unlikely(!jobj_binary(val, "target", work->target, sizeof(work->target)))) {
 		applog(LOG_ERR, "JSON inval target");
-		goto err_out;
+		return false;
 	}
 	if (opt_algo == ALGO_HEAVY) {
 		if (unlikely(!jobj_binary(val, "maxvote", &work->maxvote, sizeof(work->maxvote)))) {
@@ -494,9 +483,6 @@ static bool work_decode(const json_t *val, struct work *work)
 	cbin2hex(work->job_id, (const char*)&work->data[17], 4);
 
 	return true;
-
-err_out:
-	return false;
 }
 
 /**
@@ -2140,8 +2126,8 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef USE_WRAPNVML
-	nvmlh = wrap_nvml_create();
-	if (nvmlh) {
+	hnvml = wrap_nvml_create();
+	if (hnvml) {
 		// todo: link threads info gpu
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
 	} else {

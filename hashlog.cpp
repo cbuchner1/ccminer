@@ -63,8 +63,7 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint32_t scanned_from)
 {
 	uint64_t njobid = hextouint(jobid);
-	uint64_t keyall = (njobid << 32);
-	uint64_t key = keyall + nonce;
+	uint64_t key = (njobid << 32) + nonce;
 	hashlog_data data;
 
 	memset(&data, 0, sizeof(data));
@@ -80,12 +79,12 @@ extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint32_t sc
 extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to)
 {
 	uint64_t njobid = hextouint(jobid);
-	uint64_t keyall = (njobid << 32);
+	uint64_t key = (njobid << 32);
 	uint64_t range = hashlog_get_scan_range(jobid);
 	hashlog_data data;
 
 	// global scan range of a job
-	data = tlastshares[keyall];
+	data = tlastshares[key];
 	if (range == 0) {
 		memset(&data, 0, sizeof(data));
 	} else {
@@ -110,7 +109,7 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
 
 	data.tm_upd = (uint32_t) time(NULL);
 
-	tlastshares[keyall] = data;
+	tlastshares[key] = data;
 /* 	applog(LOG_BLUE, "job %s range : %x %x -> %x %x", jobid,
 		scanned_from, scanned_to, data.scanned_from, data.scanned_to); */
 }
@@ -124,13 +123,14 @@ extern "C" uint64_t hashlog_get_scan_range(char* jobid)
 	uint64_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
+	uint64_t keymsk = (0xffffffffULL << 32);
 	hashlog_data data;
 
 	data.scanned_from = 0;
 	data.scanned_to = 0;
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
-		if ((keypfx & i->first) == keypfx && i->second.scanned_to > ret) {
+		if ((keymsk & i->first) == keypfx && i->second.scanned_to > ret) {
 			if (i->second.scanned_to > data.scanned_to)
 				data.scanned_to = i->second.scanned_to;
 			if (i->second.scanned_from < data.scanned_from || data.scanned_from == 0)
