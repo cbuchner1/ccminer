@@ -56,7 +56,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
-// from heavy.cu
+// from cuda.cu
 #ifdef __cplusplus
 extern "C"
 {
@@ -69,6 +69,9 @@ int cuda_finddevice(char *name);
 }
 #endif
 
+#ifdef USE_WRAPNVML
+#include "nvml.h"
+#endif
 
 #ifdef __linux /* Linux specific policy and affinity management */
 #include <sched.h>
@@ -243,6 +246,10 @@ uint32_t opt_work_size = 0; /* default */
 
 char *opt_api_allow = "127.0.0.1"; /* 0.0.0.0 for all ips */
 int opt_api_listen = 4068; /* 0 to disable */
+
+#ifdef USE_WRAPNVML
+wrap_nvml_handle *nvmlh = NULL;
+#endif
 
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
@@ -421,7 +428,10 @@ void proper_exit(int reason)
 #ifdef WIN32
 	timeEndPeriod(1); // else never executed
 #endif
-
+#ifdef USE_WRAPNVML
+	if (nvmlh)
+		wrap_nvml_destroy(nvmlh);
+#endif
 	exit(reason);
 }
 
@@ -2128,6 +2138,16 @@ int main(int argc, char *argv[])
 		if (have_stratum)
 			tq_push(thr_info[stratum_thr_id].q, strdup(rpc_url));
 	}
+
+#ifdef USE_WRAPNVML
+	nvmlh = wrap_nvml_create();
+	if (nvmlh) {
+		// todo: link threads info gpu
+		applog(LOG_INFO, "NVML GPU monitoring enabled.");
+	} else {
+		applog(LOG_INFO, "NVML GPU monitoring is not available.");
+	}
+#endif
 
 	if (opt_api_listen) {
 		/* api thread */

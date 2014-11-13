@@ -356,21 +356,20 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 void *api_thread(void *userdata);
 
 struct cgpu_info {
+	int thr_id;
 	int accepted;
 	int rejected;
 	int hw_errors;
 	double khashes;
 	int intensity;
-#ifdef HAVE_HWMONITORING
+#ifdef USE_WRAPNVML
 	bool has_monitoring;
-	int gpu_engine;
-	int min_engine;
-	int gpu_fan;
-	int min_fan;
-	int gpu_memclock;
-	int gpu_memdiff;
-	int gpu_powertune;
-	float gpu_vddc;
+	float gpu_temp;
+	unsigned int gpu_fan;
+	unsigned int gpu_power;
+	unsigned int gpu_clock;
+	unsigned int gpu_memclock;
+	double gpu_vddc;
 #endif
 };
 
@@ -456,6 +455,7 @@ extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
 extern void diff_to_target(uint32_t *target, double diff);
+extern void get_currentalgo(char* buf, int sz);
 
 struct stratum_job {
 	char *job_id;

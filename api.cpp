@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.0"
+#define APIVERSION "1.1"
 
 #ifdef _MSC_VER
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -34,6 +34,10 @@
 
 #include "compat.h"
 #include "miner.h"
+
+#ifdef USE_WRAPNVML
+#include "nvml.h"
+#endif
 
 #ifndef _MSC_VER
 # include <errno.h>
@@ -105,25 +109,26 @@ extern uint32_t rejected_count;
 
 #define gpu_threads opt_n_threads
 
-extern void get_currentalgo(char* buf, int sz);
-
 /***************************************************************/
 
 static void gpustatus(int thr_id)
 {
 	char buf[MYBUFSIZ];
 	float gt;
-	int gf, gp;
+	int gp, gf;
 
 	if (thr_id >= 0 && thr_id < gpu_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 
-#ifdef HAVE_HWMONITORING
+		cgpu->thr_id = thr_id;
+
+#ifdef USE_WRAPNVML
 		// todo
-		if (gpu->has_monitoring) {
-			gt = gpu_temp(gpu);
-			gf = gpu_fanspeed(gpu);
-			gp = gpu_fanpercent(gpu);
+		if (1 || cgpu->has_monitoring) {
+			gf = gpu_fanpercent(cgpu);
+			gt = gpu_temp(cgpu);
+			gp = gpu_power(cgpu);
+			// gpu_clock(cgpu);
 		}
 		else
 #endif
@@ -148,7 +153,7 @@ static void gpustatus(int thr_id)
 
 		cgpu->khashes = stats_get_speed(thr_id) / 1000.0;
 
-		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;FANP=%d;KHS=%.2f;"
+		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;POWER=%d;KHS=%.2f;"
 			"HWF=%d;I=%d|",
 			thr_id, gt, gf, gp, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
@@ -162,14 +167,14 @@ static void gpustatus(int thr_id)
 static char *getsummary(char *params)
 {
 	char algo[64] = "";
-	time_t uptime = (time(NULL) - startup);
-	double accps = (60.0 * accepted_count) / (uptime ? (uint32_t) uptime : 1.0);
+	double uptime = difftime(time(NULL), startup);
+	double accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
 
 	get_currentalgo(algo, sizeof(algo));
 
 	*buffer = '\0';
 	sprintf(buffer, "NAME=%s;VER=%s;API=%s;"
-		"ALGO=%s;KHS=%.2f;ACC=%d;REJ=%d;ACCMN=%.3f;UPTIME=%d|",
+		"ALGO=%s;KHS=%.2f;ACC=%d;REJ=%d;ACCMN=%.3f;UPTIME=%.1f|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
 		algo, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,
@@ -186,7 +191,7 @@ static char *getstats(char *params)
 }
 
 struct CMDS {
-	char *name;
+	const char *name;
 	char *(*func)(char *);
 } cmds[] = {
 	{ "summary", getsummary },
@@ -195,15 +200,18 @@ struct CMDS {
 
 #define CMDMAX 2
 
-static void send_result(SOCKETTYPE c, char *result)
+static int send_result(SOCKETTYPE c, char *result)
 {
 	int n;
 
-	if (result == NULL)
-		result = "";
+	if (!result) {
+		n = send(c, "", 1, 0);
+	} else {
+		// ignore failure - it's closed immediately anyway
+		n = send(c, result, strlen(result) + 1, 0);
+	}
 
-	// ignore failure - it's closed immediately anyway
-	n = send(c, result, strlen(result) + 1, 0);
+	return n;
 }
 
 /*
@@ -400,7 +408,8 @@ static void api()
 			if ((time(NULL) - bindstart) > 61)
 				break;
 			else {
-				applog(LOG_ERR, "API bind to port %d failed - trying again in 15sec", port);
+				if (!opt_quiet || opt_debug)
+					applog(LOG_WARNING, "API bind to port %d failed - trying again in 15sec", port);
 				sleep(15);
 			}
 		}
@@ -409,7 +418,7 @@ static void api()
 	}
 
 	if (bound == 0) {
-		applog(LOG_ERR, "API bind to port %d failed (%s)%s", port, binderror, UNAVAILABLE);
+		applog(LOG_WARNING, "API bind to port %d failed (%s)%s", port, binderror, UNAVAILABLE);
 		free(apisock);
 		return;
 	}

@@ -1,5 +1,5 @@
 
-ccMiner release 1.4.8-tpruvot (12 Nov 2014) - "API Stats"
+ccMiner release 1.4.9-tpruvot (Nov 2014) - "GPU Monitoring"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -155,9 +155,13 @@ features.
 
 >>> RELEASE HISTORY <<<
 
+  Nov. 13th 2014  v1.4.9
+                  Add nvml unit to monitor nvidia cards (api)
+                  API: small changes, bump v1.1
+
   Nov. 12th 2014  v1.4.8
                   Add a basic API and sample php json wrapper
-		  Add statsavg (def 20) and api-bind parameters
+                  Add statsavg (def 20) and api-bind parameters
                   Fix displayed hashrate for multi gpus systems
 
   Nov. 11th 2014  v1.4.7

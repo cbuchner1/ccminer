@@ -9,16 +9,22 @@
 #endif
 
 // include thrust
+#ifndef __cplusplus
 #include <thrust/version.h>
 #include <thrust/remove.h>
 #include <thrust/device_vector.h>
 #include <thrust/iterator/constant_iterator.h>
+#else
+#include <ctype.h>
+#endif
 
 #include "miner.h"
 
-#include "cuda_helper.h"
+#include "cuda_runtime.h"
 
 extern char *device_name[8];
+extern int device_map[8];
+extern int device_sm[8];
 
 // CUDA Devices on the System
 extern "C" int cuda_num_devices()

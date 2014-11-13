@@ -1,8 +1,9 @@
+# allow to use Host cuda functions in C/C++
+DEF_INCLUDES = @CUDA_INCLUDES@
 
+JANSSON_INCLUDES=
 if WANT_JANSSON
 JANSSON_INCLUDES= -I$(top_srcdir)/compat/jansson
-else
-JANSSON_INCLUDES=
 endif
 
 EXTRA_DIST		= autogen.sh README.txt LICENSE.txt \
@@ -17,7 +18,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
 			  cpu-miner.c util.c crc32.c hefty1.c scrypt.c \
-			  api.c hashlog.cpp stats.cpp cuda.cu \
+			  api.cpp hashlog.cpp stats.cpp cuda.cpp \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
 			  heavy/cuda_combine.cu heavy/cuda_combine.h \
@@ -49,19 +50,25 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  x17/x17.cu x17/cuda_x17_haval512.cu x17/cuda_x17_sha512.cu \
 			  x11/s3.cu
 
+if HAVE_NVML
+ccminer_SOURCES += nvml.cpp
+nvml_defs = -DUSE_WRAPNVML
+nvml_libs = -ldl
+endif
+
 if HAVE_WINDOWS
 ccminer_SOURCES += compat/winansi.c
 endif
 
-ccminer_LDFLAGS		= $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
-ccminer_LDADD		= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@
-ccminer_CPPFLAGS	= @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(CPPFLAGS) $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
+ccminer_LDFLAGS  = $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
+ccminer_LDADD    = @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@ $(nvml_libs)
+ccminer_CPPFLAGS = @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(CPPFLAGS) $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) $(DEF_INCLUDES) $(nvml_defs) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
 nvcc_ARCH  = -gencode=arch=compute_50,code=\"sm_50,compute_50\"
 #nvcc_ARCH += -gencode=arch=compute_35,code=\"sm_35,compute_35\"
 #nvcc_ARCH += -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 
-nvcc_FLAGS = $(nvcc_ARCH) -I . @CUDA_CFLAGS@
+nvcc_FLAGS = $(nvcc_ARCH) @CUDA_INCLUDES@ -I. @CUDA_CFLAGS@
 nvcc_FLAGS += $(JANSSON_INCLUDES) --ptxas-options="-v"
 
 # we're now targeting all major compute architectures within one binary.
