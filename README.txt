@@ -156,8 +156,8 @@ features.
 >>> RELEASE HISTORY <<<
 
   Nov. 13th 2014  v1.4.9
-                  Add nvml unit to monitor nvidia cards (api)
-                  API: small changes, bump v1.1
+                  Support of nvml and nvapi to monitor gpus
+                  api: Fix multi gpus stats, bump API v1.1
 
   Nov. 12th 2014  v1.4.8
                   Add a basic API and sample php json wrapper
