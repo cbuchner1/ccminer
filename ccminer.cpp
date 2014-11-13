@@ -2126,13 +2126,16 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef USE_WRAPNVML
+	// todo: link threads info gpu
 	hnvml = wrap_nvml_create();
-	if (hnvml) {
-		// todo: link threads info gpu
+	if (hnvml)
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
-	} else {
-		applog(LOG_INFO, "NVML GPU monitoring is not available.");
-	}
+#ifdef WIN32 /* _WIN32 = x86 only, WIN32 for both _WIN32 & _WIN64 */
+	else if (wrap_nvapi_init() == -1)
+		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
+#endif
+	else
+		applog(LOG_INFO, "GPU monitoring is not available.");
 #endif
 
 	if (opt_api_listen) {

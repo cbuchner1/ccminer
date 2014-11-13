@@ -130,6 +130,11 @@ int wrap_nvml_get_power_usage(wrap_nvml_handle *nvmlh,
                               int gpuindex,
                               unsigned int *milliwatts);
 
+/* nvapi functions */
+#ifdef WIN32
+int wrap_nvapi_init();
+#endif
+
 /* api functions */
 
 #include "miner.h"

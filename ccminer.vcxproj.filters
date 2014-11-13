@@ -67,6 +67,9 @@
     <Filter Include="Source Files\CUDA\keccak">
       <UniqueIdentifier>{9762c92c-9677-4044-8292-ff6ba4bfdd89}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\compat\nvapi">
+      <UniqueIdentifier>{ef6f9983-bda5-4fb2-adfa-ac4f29b74f25}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -313,6 +316,36 @@
     </ClInclude>
     <ClInclude Include="compat\winansi.h">
       <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="nvml.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_ccminer.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_lite_sli.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_lite_stereo.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_lite_surround.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_lite_common.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_lite_d3dext.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_lite_salend.h">
+      <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\nvapi\nvapi_lite_salstart.h">
+      <Filter>Header Files\compat\nvapi</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

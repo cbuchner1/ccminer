@@ -331,7 +331,103 @@ int wrap_nvml_destroy(wrap_nvml_handle *nvmlh)
 	return 0;
 }
 
+/**
+ * nvapi alternative for windows x86 binaries
+ * nvml api doesn't exists as 32bit dll :///
+ */
+#ifdef WIN32
+#include "nvapi/nvapi_ccminer.h"
+
+static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };
+static NvPhysicalGpuHandle phys[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+static NvU32 nvapi_dev_cnt = 0;
+
+int nvapi_temperature(unsigned int devNum, unsigned int *temperature)
+{
+	NvAPI_Status ret;
+
+	if (devNum >= nvapi_dev_cnt)
+		return -1;
+
+	NV_GPU_THERMAL_SETTINGS thermal;
+	thermal.version = NV_GPU_THERMAL_SETTINGS_VER;
+	ret = NvAPI_GPU_GetThermalSettings(phys[devNum], 0, &thermal);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetThermalSettings: %s", string);
+		return -1;
+	}
+
+	(*temperature) = (unsigned int) thermal.sensor[0].currentTemp;
+
+	return 0;
+}
+
+
+int nvapi_fanspeed(unsigned int devNum, unsigned int *speed)
+{
+	NvAPI_Status ret;
+
+	if (devNum >= nvapi_dev_cnt)
+		return -1;
+
+	NvU32 fanspeed = 0;
+	ret = NvAPI_GPU_GetTachReading(phys[devNum], &fanspeed);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetTachReading: %s", string);
+		return -1;
+	}
+
+	(*speed) = (unsigned int) fanspeed;
+
+	return 0;
+}
+
+int wrap_nvapi_init()
+{
+	NvAPI_Status ret = NvAPI_Initialize();
+	if (!ret == NVAPI_OK){
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI NvAPI_Initialize: %s", string);
+		return -1;
+	}
+
+	ret = NvAPI_EnumPhysicalGPUs(phys, &nvapi_dev_cnt);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI NvAPI_EnumPhysicalGPUs: %s", string);
+		return -1;
+	}
+
+#if 0
+	NvAPI_ShortString ver;
+	NvAPI_GetInterfaceVersionString(ver);
+	applog(LOG_DEBUG, "NVAPI Version: %s", ver);
+
+	NvAPI_ShortString name;
+	ret = NvAPI_GPU_GetFullName(phys[devNum], name);
+	if (ret != NVAPI_OK){
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetFullName: %s", string);
+	}
+#endif
+
+	return 0;
+}
+#endif
+
 /* api functions */
+static unsigned int fan_speed_max = 2000; /* assume 2000 rpm as default, auto-updated */
 
 unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 {
@@ -339,17 +435,34 @@ unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 	if (hnvml) {
 		wrap_nvml_get_fanpcnt(hnvml, device_map[gpu->thr_id], &pct);
 	}
+#ifdef WIN32
+	else {
+		unsigned int rpm = 0;
+		nvapi_fanspeed(device_map[gpu->thr_id], &rpm);
+		pct = (rpm * 100) / fan_speed_max;
+		if (pct > 100) {
+			pct = 100;
+			fan_speed_max = rpm;
+		}
+	}
+#endif
 	return pct;
 }
 
 double gpu_temp(struct cgpu_info *gpu)
 {
 	double tc = 0.0;
+	unsigned int tmp = 0;
 	if (hnvml) {
-		unsigned int tmp = 0;
 		wrap_nvml_get_tempC(hnvml, device_map[gpu->thr_id], &tmp);
 		tc = (double) tmp;
 	}
+#ifdef WIN32
+	else {
+		nvapi_temperature(device_map[gpu->thr_id], &tmp);
+		tc = (double)tmp;
+	}
+#endif
 	return tc;
 }
 
