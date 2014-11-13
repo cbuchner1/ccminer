@@ -27,11 +27,11 @@ function translateField($key)
 	$intl['VER'] = 'Version';
 
 	$intl['ALGO'] = 'Algorithm';
-	$intl['KHS'] = 'Hashrate (kH/s)';
+	$intl['KHS'] = 'Hash rate (kH/s)';
 	$intl['ACC'] = 'Accepted shares';
 	$intl['ACCMN'] = 'Accepted / mn';
 	$intl['REJ'] = 'Rejected';
-	$intl['UPTIME'] = 'Miner uptime';
+	$intl['UPTIME'] = 'Miner up time';
 
 	$intl['TEMP'] = 'T°c';
 	$intl['FAN'] = 'Fan %';
@@ -42,26 +42,49 @@ function translateField($key)
 		return $key;
 }
 
+function translateValue($key,$val)
+{
+	if ($key == 'UPTIME') {
+		$min = floor(intval($val) / 60);
+		$sec = intval($val) % 60;
+		$val = "${min}mn ${sec}s";
+	}
+	return $val;
+}
+
 function displayData($data)
 {
 	$htm = '';
+	$totals = array();
 	foreach ($data as $name => $stats) {
 		$htm .= '<table id="tb_'.$name.'" class="stats">'."\n";
 		$htm .= '<tr><th class="machine" colspan="2">'.$name."</th></tr>\n";
-		foreach ($stats['summary'] as $key=>$val) {
-			if (!empty($val))
-				$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
-					'<td class="val">'.$val."</td></tr>\n";
-		}
-		foreach ($stats['stats'] as $g=>$gpu) {
-			$htm .= '<tr><th class="gpu" colspan="2">'.$g."</th></tr>\n";
-			foreach ($gpu as $key=>$val) {
+		if (!empty($stats)) {
+			$summary = $stats['summary'];
+			foreach ($summary as $key=>$val) {
 				if (!empty($val))
-				$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
-					'<td class="val">'.$val."</td></tr>\n";
+					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
+						'<td class="val">'.translateValue($key, $val)."</td></tr>\n";
+			}
+			$totals[$summary['ALGO']] += floatval($summary['KHS']);
+			foreach ($stats['stats'] as $g=>$gpu) {
+				$htm .= '<tr><th class="gpu" colspan="2">'.$g."</th></tr>\n";
+				foreach ($gpu as $key=>$val) {
+					if (!empty($val))
+					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
+						'<td class="val">'.translateValue($key, $val)."</td></tr>\n";
+				}
 			}
 		}
 		$htm .= "</table>\n";
+	}
+	// totals
+	if (!empty($totals)) {
+		$htm .= '<div class="totals"><h2>Total Hash rate</h2>'."\n";
+		foreach ($totals as $algo => $hashrate) {
+			$htm .= '<li><span class="algo">'.$algo.":</span>$hashrate kH/s</li>\n";
+		}
+		$htm .= '</div>';
 	}
 	return $htm;
 }
@@ -71,12 +94,18 @@ $data = getdataFromPears();
 ?>
 <html>
 <head>
-<title>ccminer rig api sample</title>
+	<title>ccminer rig api sample</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="refresh" content="10">
 <style type="text/css">
-body { color:#cccccc; background:#1d1d1d; margin:30px 30px 0px 30px; padding:0px; font-size:.8em; font-family:Arial,Helvetica,sans-serif; }
+body {
+	color:#cccccc; background:#1d1d1d; margin:30px 30px 0px 30px; padding:0px;
+	font-size:.8em; font-family:Arial,Helvetica,sans-serif;
+}
 a { color:#aaaaaa; text-decoration: none; }
 a:focus { outline-style:none; }
 .clear { clear: both; }
+
 div#page, div#header, div#footer {
 	margin: auto;
 	width: 950px;
@@ -100,7 +129,6 @@ div#footer {
 	text-align: center;
 	color: #666666;
 	text-shadow: rgba(0, 0, 0, 0.8) 0px 1px 0px;
-	padding-top: 8px;
 }
 #header h1 { padding: 12px; font-size: 20px; }
 #footer p { margin: 12px 24px; }
@@ -110,6 +138,11 @@ th.machine { color: darkcyan; padding: 16px 0px 0px 0px; text-align: left; borde
 th.gpu { color: white; padding: 3px 3px; font: bolder; text-align: left; background: rgba(65, 65, 65, 0.85); }
 td.key { width: 40px; max-width: 120px; }
 td.val { width: 70px; max-width: 180px; color: white; }
+
+div.totals { margin: 16px; }
+div.totals h2 { color: darkcyan; font-size: 16px; margin-bottom: 4px; }
+div.totals li { list-style-type: none; font-size: 16px; margin-left: 4px; margin-bottom: 8px; }
+li span.algo { display: inline-block; width: 50px; max-width: 120px; }
 
 </style>
 </head>
