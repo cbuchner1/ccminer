@@ -37,7 +37,7 @@ extern int device_map[8];
  */
 extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate)
 {
-	uint64_t thr = (0xff && thr_id);
+	uint64_t thr = (0xff & thr_id);
 	uint64_t key = (thr << 56) + (uid++ % UINT_MAX);
 	stats_data data;
 
@@ -70,7 +70,7 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
  */
 extern "C" double stats_get_speed(int thr_id)
 {
-	uint64_t thr = (0xff && thr_id);
+	uint64_t thr = (0xff & thr_id);
 	uint64_t keypfx = (thr << 56);
 	uint64_t keymsk = (0xffULL << 56);
 	double speed = 0.0;
