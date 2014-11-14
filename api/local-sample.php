@@ -5,6 +5,10 @@
 defined('API_HOST') || define('API_HOST', '127.0.0.1');
 defined('API_PORT') || define('API_PORT', 4068);
 
+// 3 seconds max.
+set_time_limit(3);
+error_reporting(0);
+
 function getsock($port)
 {
 	$socket = null;
@@ -106,10 +110,11 @@ function request($cmd)
 
 ob_start();
 $summary = request('summary');
-$stats   = request('stats');
+$threads = request('threads');
+$histo   = request('histo');
 ob_end_clean();
 //echo ob_get_clean()."\n";
 
 header("Content-Type: application/json");
-echo json_encode(compact('summary', 'stats'))."\n";
+echo json_encode(compact('summary', 'threads', 'histo'))."\n";
 ?>

@@ -7,6 +7,10 @@ $configs = array(
 	//'EPSYTOUR'=>'epsytour.php', /* copy local.php file and edit target IP:PORT */
 );
 
+// 5 seconds max.
+set_time_limit(5);
+error_reporting(0);
+
 function getdataFromPears()
 {
 	global $host, $configs;
@@ -22,7 +26,7 @@ function getdataFromPears()
 
 function ignoreField($key)
 {
-	$ignored = array('API','VER');
+	$ignored = array('API','VER','GPU','CARD');
 	return in_array($key, $ignored);
 }
 
@@ -33,6 +37,7 @@ function translateField($key)
 	$intl['VER'] = 'Version';
 
 	$intl['ALGO'] = 'Algorithm';
+	$intl['GPUS'] = 'GPUs';
 	$intl['KHS'] = 'Hash rate (kH/s)';
 	$intl['ACC'] = 'Accepted shares';
 	$intl['ACCMN'] = 'Accepted / mn';
@@ -84,9 +89,11 @@ function displayData($data)
 					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
 						'<td class="val">'.translateValue($key, $val, $summary)."</td></tr>\n";
 			}
-			$totals[$summary['ALGO']] += floatval($summary['KHS']);
-			foreach ($stats['stats'] as $g=>$gpu) {
-				$htm .= '<tr><th class="gpu" colspan="2">'.$g."</th></tr>\n";
+			if (isset($summary['KHS']))
+				$totals[$summary['ALGO']] += floatval($summary['KHS']);
+			foreach ($stats['threads'] as $g=>$gpu) {
+				$card = isset($gpu['CARD']) ? $gpu['CARD'] : '';
+				$htm .= '<tr><th class="gpu" colspan="2">'.$g." $card</th></tr>\n";
 				foreach ($gpu as $key=>$val) {
 					if (!empty($val) && !ignoreField($key))
 					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
