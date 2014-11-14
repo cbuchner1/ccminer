@@ -1317,16 +1317,32 @@ continue_scan:
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", *nonceptr, swab32(*nonceptr));
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
+
 		if (diff.tv_usec || diff.tv_sec) {
+
+			/* hashrate factors for some algos */
+			double rate_factor = 1.0;
+			switch (opt_algo) {
+				case ALGO_JACKPOT:
+				case ALGO_QUARK:
+					// to stay comparable to other ccminer forks or pools
+					rate_factor = 0.5;
+					break;
+			}
+
+			/* store thread hashrate */
 			pthread_mutex_lock(&stats_lock);
 			if (diff.tv_sec + 1e-6 * diff.tv_usec > 0.0) {
 				thr_hashrates[thr_id] = hashes_done / (diff.tv_sec + 1e-6 * diff.tv_usec);
 				if (rc > 1)
 					thr_hashrates[thr_id] = (rc * hashes_done) / (diff.tv_sec + 1e-6 * diff.tv_usec);
+				thr_hashrates[thr_id] *= rate_factor;
 				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id]);
 			}
 			pthread_mutex_unlock(&stats_lock);
 		}
+
+		/* output */
 		if (!opt_quiet) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);

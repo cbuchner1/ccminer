@@ -160,9 +160,12 @@ features.
                   api: Fix multi gpus stats, bump API v1.1
 
   Nov. 12th 2014  v1.4.8
-                  Add a basic API and sample php json wrapper
+                  Add a basic API and sample php json wrapper + ui
+                  Add Nvidia monitoring (nvapi/nvml) support
                   Add statsavg (def 20) and api-bind parameters
+                  Add support of telnet queries to the api
                   Fix displayed hashrate for multi gpus systems
+                  Restore quark/jackpot previous speed (differently)
 
   Nov. 11th 2014  v1.4.7
                   Average hashrate (based on the 20 last scans)

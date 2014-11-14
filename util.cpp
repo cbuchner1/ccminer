@@ -1,6 +1,7 @@
 /*
  * Copyright 2010 Jeff Garzik
  * Copyright 2012-2014 pooler
+ * Copyright 2014 ccminer team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -8,7 +9,7 @@
  * any later version.  See COPYING for more details.
  */
 
-#define _GNU_SOURCE
+//#define _GNU_SOURCE
 #include "cpuminer-config.h"
 
 #include <stdio.h>
@@ -493,8 +494,8 @@ void *aligned_calloc(int size)
 	memset(res, 0, size);
 	return res;
 #else
-	void *mem = calloc(1, size+ALIGN+sizeof(void*));
-	void **ptr = (void**)((size_t)(mem+ALIGN+sizeof(void*)) & ~(ALIGN-1));
+	void *mem = calloc(1, size+ALIGN+sizeof(uintptr_t));
+	void **ptr = (void**)((size_t)(((uintptr_t)(mem))+ALIGN+sizeof(uintptr_t)) & ~(ALIGN-1));
 	ptr[-1] = mem;
 	return ptr;
 #endif
