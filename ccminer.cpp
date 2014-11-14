@@ -2131,7 +2131,7 @@ int main(int argc, char *argv[])
 	if (hnvml)
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
 #ifdef WIN32 /* _WIN32 = x86 only, WIN32 for both _WIN32 & _WIN64 */
-	else if (wrap_nvapi_init() == -1)
+	else if (wrap_nvapi_init() == 0)
 		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
 #endif
 	else

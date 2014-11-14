@@ -280,8 +280,8 @@ int wrap_nvml_get_clock(wrap_nvml_handle *nvmlh, int cudaindex, int type, unsign
 
 	wrap_nvmlReturn_t res = nvmlh->nvmlDeviceGetClockInfo(nvmlh->devs[gpuindex], (wrap_nvmlClockType_t) type, freq);
 	if (res != WRAPNVML_SUCCESS) {
-		if (opt_debug)
-			applog(LOG_DEBUG, "nvmlDeviceGetClockInfo: %s", nvmlh->nvmlErrorString(res));
+		//if (opt_debug)
+		//	applog(LOG_DEBUG, "nvmlDeviceGetClockInfo: %s", nvmlh->nvmlErrorString(res));
 		return -1;
 	}
 
@@ -297,8 +297,8 @@ int wrap_nvml_get_power_usage(wrap_nvml_handle *nvmlh, int cudaindex, unsigned i
 
 	wrap_nvmlReturn_t res = nvmlh->nvmlDeviceGetPowerUsage(nvmlh->devs[gpuindex], milliwatts);
 	if (res != WRAPNVML_SUCCESS) {
-		if (opt_debug)
-			applog(LOG_DEBUG, "nvmlDeviceGetPowerUsage: %s", nvmlh->nvmlErrorString(res));
+		//if (opt_debug)
+		//	applog(LOG_DEBUG, "nvmlDeviceGetPowerUsage: %s", nvmlh->nvmlErrorString(res));
 		return -1;
 	}
 
@@ -365,7 +365,6 @@ int nvapi_temperature(unsigned int devNum, unsigned int *temperature)
 	return 0;
 }
 
-
 int nvapi_fanspeed(unsigned int devNum, unsigned int *speed)
 {
 	NvAPI_Status ret;
@@ -384,6 +383,55 @@ int nvapi_fanspeed(unsigned int devNum, unsigned int *speed)
 	}
 
 	(*speed) = (unsigned int) fanspeed;
+
+	return 0;
+}
+
+int nvapi_getclock(unsigned int devNum, unsigned int *freq)
+{
+	NvAPI_Status ret;
+
+	if (devNum >= nvapi_dev_cnt)
+		return -1;
+
+	NV_GPU_CLOCK_FREQUENCIES_V2 clocks;
+	clocks.version = NV_GPU_CLOCK_FREQUENCIES_VER_2;
+	clocks.ClockType = NV_GPU_CLOCK_FREQUENCIES_CURRENT_FREQ; // CURRENT/BASE/BOOST
+	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &clocks);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetAllClockFrequencies: %s", string);
+		return -1;
+	} else {
+		// GRAPHICS/MEMORY
+		(*freq) = (unsigned int)clocks.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency;
+	}
+
+	return 0;
+}
+
+int nvapi_getpower(unsigned int devNum, unsigned int *power)
+{
+	NvAPI_Status ret;
+
+	if (devNum >= nvapi_dev_cnt)
+		return -1;
+
+	NV_GPU_PERF_PSTATE_ID CurrentPstate = NVAPI_GPU_PERF_PSTATE_UNDEFINED; /* 16 */
+	ret = NvAPI_GPU_GetCurrentPstate(phys[devNum], &CurrentPstate);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetCurrentPstate: %s", string);
+		return -1;
+	}
+	else {
+		// get pstate for the moment... often 0 = P0
+		(*power) = (unsigned int)CurrentPstate;
+	}
 
 	return 0;
 }
@@ -426,8 +474,10 @@ int wrap_nvapi_init()
 }
 #endif
 
-/* api functions */
-static unsigned int fan_speed_max = 2000; /* assume 2000 rpm as default, auto-updated */
+/* api functions -------------------------------------- */
+
+// assume 2500 rpm as default, auto-updated if more
+static unsigned int fan_speed_max = 2500;
 
 unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 {
@@ -469,18 +519,33 @@ double gpu_temp(struct cgpu_info *gpu)
 unsigned int gpu_clock(struct cgpu_info *gpu)
 {
 	unsigned int freq = 0;
+	int support = -1;
 	if (hnvml) {
-		wrap_nvml_get_clock(hnvml, device_map[gpu->thr_id], NVML_CLOCK_SM, &freq);
+		support = wrap_nvml_get_clock(hnvml, device_map[gpu->thr_id], NVML_CLOCK_SM, &freq);
 	}
+#ifdef WIN32
+	if (support == -1) {
+		nvapi_getclock(device_map[gpu->thr_id], &freq);
+	}
+#endif
 	return freq;
 }
 
 unsigned int gpu_power(struct cgpu_info *gpu)
 {
 	unsigned int mw = 0;
+	int support = -1;
 	if (hnvml) {
-		wrap_nvml_get_power_usage(hnvml, device_map[gpu->thr_id], &mw);
+		support = wrap_nvml_get_power_usage(hnvml, device_map[gpu->thr_id], &mw);
 	}
+#ifdef WIN32
+	if (support == -1) {
+		unsigned int pstate = 0;
+		nvapi_getpower(device_map[gpu->thr_id], &pstate);
+		//todo : convert ?
+		mw = pstate;
+	}
+#endif
 	return mw;
 }
 

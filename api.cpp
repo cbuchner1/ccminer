@@ -128,7 +128,7 @@ static void gpustatus(int thr_id)
 			cgpu->gpu_temp = gpu_temp(cgpu);
 			cgpu->gpu_fan = gpu_fanpercent(cgpu);
 			cgpu->gpu_power = gpu_power(cgpu);
-			//cgpu->gpu_clock = gpu_clock(cgpu);
+			cgpu->gpu_clock = gpu_clock(cgpu);
 		}
 #endif
 
@@ -149,9 +149,10 @@ static void gpustatus(int thr_id)
 
 		cgpu->khashes = stats_get_speed(thr_id) / 1000.0;
 
-		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;POWER=%d;KHS=%.2f;"
+		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;FREQ=%d;POWER=%d;KHS=%.2f;"
 			"HWF=%d;I=%d|",
-			thr_id, cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_power, cgpu->khashes,
+			thr_id, cgpu->gpu_temp, cgpu->gpu_fan, 
+			cgpu->gpu_clock, cgpu->gpu_power, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
 		strcat(buffer, buf);
@@ -457,9 +458,11 @@ static void api()
 				connectaddr, addrok ? "Accepted" : "Ignored");
 
 		if (addrok) {
+			bool fail;
 			n = recv(c, &buf[0], SOCK_REC_BUFSZ, 0);
 
-			if (SOCKETFAIL(n))
+			fail = SOCKETFAIL(n);
+			if (fail)
 				buf[0] = '\0';
 			else if (n > 0 && buf[n-1] == '\n') {
 				/* telnet compat \r\n */
@@ -469,10 +472,10 @@ static void api()
 			}
 			buf[n] = '\0';
 
-			if (opt_debug && opt_protocol)
+			if (opt_debug && opt_protocol && n > 0)
 				applog(LOG_DEBUG, "API: recv command: (%d) '%s'+char(%x)", n, buf, buf[n-1]);
 
-			if (!SOCKETFAIL(n)) {
+			if (!fail) {
 				params = strchr(buf, '|');
 				if (params != NULL)
 					*(params++) = '\0';

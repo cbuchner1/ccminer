@@ -35,6 +35,7 @@ function translateField($key)
 
 	$intl['TEMP'] = 'T°c';
 	$intl['FAN'] = 'Fan %';
+	$intl['FREQ'] = 'Freq.';
 
 	if (isset($intl[$key]))
 		return $intl[$key];
