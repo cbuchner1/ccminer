@@ -31,7 +31,6 @@
 extern wrap_nvml_handle *hnvml;
 extern int num_processors; // gpus
 extern int device_map[8];
-extern char* device_name[8];
 
 static uint32_t device_bus_ids[8] = { 0 };
 
@@ -462,14 +461,21 @@ int wrap_nvapi_init()
 		return -1;
 	}
 
+	for (int g = 0; g < num_processors; g++) {
+		cudaDeviceProp props;
+		if (cudaGetDeviceProperties(&props, g) == cudaSuccess)
+			device_bus_ids[g] = props.pciBusID;
+	}
+
 	for (NvU8 i = 0; i < nvapi_dev_cnt; i++) {
 		NvAPI_ShortString name;
 		nvapi_dev_map[i] = i; // default mapping
 		ret = NvAPI_GPU_GetFullName(phys[i], name);
 		if (ret == NVAPI_OK) {
 			for (int g = 0; g < num_processors; g++) {
-				//todo : device_bus_ids, could be wrong on rigs
-				if (strcmp(device_name[g], name) == 0 && nvapi_dev_map[i] == i) {
+				NvU32 busId;
+				ret = NvAPI_GPU_GetBusId(phys[i], &busId);
+				if (ret == NVAPI_OK && busId == device_bus_ids[g]) {
 					nvapi_dev_map[i] = g;
 					break;
 				}
@@ -562,7 +568,6 @@ int gpu_pstate(struct cgpu_info *gpu)
 	if (support == -1) {
 		unsigned int pst = 0;
 		nvapi_getpstate(nvapi_dev_map[gpu->thr_id], &pst);
-		//todo : convert ?
 		pstate = (int) pst;
 	}
 #endif
