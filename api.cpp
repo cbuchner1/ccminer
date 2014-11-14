@@ -205,19 +205,15 @@ static char *getstats(char *params)
 static char *gethistory(char *params)
 {
 	struct stats_data data[20];
-	int thr = atoi(params ? params : "-1");
+	int thr = params ? atoi(params) : -1;
 	char *p = buffer;
-	if (!thr)
-		thr = -1;
 	*buffer = '\0';
 	int records = stats_get_history(thr, data, ARRAY_SIZE(data));
 	for (int i = 0; i < records; i++) {
-		char time[16];
 		time_t ts = data[i].tm_stat;
-		time2str(time, ts);
-		p += sprintf(p, "GPU=%d;KHS=%.2f;DIFF=%.6f;COUNT=%u;FOUND=%u;TS=%u;TIME=%s|",
+		p += sprintf(p, "GPU=%d;KHS=%.2f;DIFF=%.6f;COUNT=%u;FOUND=%u;TS=%u|",
 			data[i].gpu_id, data[i].hashrate, data[i].difficulty, data[i].hashcount,
-			data[i].hashfound, (uint32_t)ts, time);
+			data[i].hashfound, (uint32_t)ts);
 	}
 	return buffer;
 }
@@ -508,13 +504,16 @@ static void api()
 			}
 			buf[n] = '\0';
 
-			if (opt_debug && opt_protocol && n > 0)
-				applog(LOG_DEBUG, "API: recv command: (%d) '%s'+char(%x)", n, buf, buf[n-1]);
+			//if (opt_debug && opt_protocol && n > 0)
+			//	applog(LOG_DEBUG, "API: recv command: (%d) '%s'+char(%x)", n, buf, buf[n-1]);
 
 			if (!fail) {
 				params = strchr(buf, '|');
 				if (params != NULL)
 					*(params++) = '\0';
+
+				if (opt_debug && opt_protocol && n > 0)
+					applog(LOG_DEBUG, "API: exec command %s(%s)", buf, params);
 
 				for (i = 0; i < CMDMAX; i++) {
 					if (strcmp(buf, cmds[i].name) == 0) {
