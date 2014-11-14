@@ -58,7 +58,7 @@
 # define INVSOCK INVALID_SOCKET
 # define INVINETADDR INADDR_NONE
 # define CLOSESOCKET closesocket
-#define in_addr_t uint32_t
+# define in_addr_t uint32_t
 #endif
 
 #define GROUP(g) (toupper(g))
@@ -87,6 +87,8 @@ static struct IP4ACCESS *ipaccess = NULL;
 //  though a PC with 100s of CPUs may exceed the size ...
 // Current code assumes it can socket send this size also
 #define MYBUFSIZ	16384
+
+#define SOCK_REC_BUFSZ  256
 
 // Socket is on 127.0.0.1
 #define QUEUE	10
@@ -184,27 +186,37 @@ static char *getstats(char *params)
 	return buffer;
 }
 
+static char *gethelp(char *params);
 struct CMDS {
 	const char *name;
 	char *(*func)(char *);
 } cmds[] = {
 	{ "summary", getsummary },
 	{ "stats",   getstats },
+	/* keep it the last */
+	{ "help",    gethelp },
 };
+#define CMDMAX ARRAY_SIZE(cmds)
 
-#define CMDMAX 2
+static char *gethelp(char *params)
+{
+	*buffer = '\0';
+	char * p = buffer;
+	for (int i = 0; i < CMDMAX-1; i++)
+		p += sprintf(p, "%s\n", cmds[i].name);
+	return buffer;
+}
+
 
 static int send_result(SOCKETTYPE c, char *result)
 {
 	int n;
-
 	if (!result) {
 		n = send(c, "", 1, 0);
 	} else {
 		// ignore failure - it's closed immediately anyway
 		n = send(c, result, strlen(result) + 1, 0);
 	}
-
 	return n;
 }
 
@@ -440,15 +452,27 @@ static void api()
 		}
 
 		addrok = check_connect(&cli, &connectaddr, &group);
-		if (opt_protocol)
+		if (opt_debug && opt_protocol)
 			applog(LOG_DEBUG, "API: connection from %s - %s",
 				connectaddr, addrok ? "Accepted" : "Ignored");
 
 		if (addrok) {
-			n = recv(c, &buf[0], MYBUFSIZ - 1, 0);
-			// applog(LOG_DEBUG, "API: recv command: (%d) '%s'", n, buf);
+			n = recv(c, &buf[0], SOCK_REC_BUFSZ, 0);
+
+			if (SOCKETFAIL(n))
+				buf[0] = '\0';
+			else if (n > 0 && buf[n-1] == '\n') {
+				/* telnet compat \r\n */
+				buf[n-1] = '\0'; n--;
+				if (n > 0 && buf[n-1] == '\r')
+					buf[n-1] = '\0';
+			}
+			buf[n] = '\0';
+
+			if (opt_debug && opt_protocol)
+				applog(LOG_DEBUG, "API: recv command: (%d) '%s'+char(%x)", n, buf, buf[n-1]);
+
 			if (!SOCKETFAIL(n)) {
-				buf[n] = '\0';
 				params = strchr(buf, '|');
 				if (params != NULL)
 					*(params++) = '\0';
@@ -457,10 +481,10 @@ static void api()
 					if (strcmp(buf, cmds[i].name) == 0) {
 						result = (cmds[i].func)(params);
 						send_result(c, result);
-						CLOSESOCKET(c);
 						break;
 					}
 				}
+				CLOSESOCKET(c);
 			}
 		}
 	}
