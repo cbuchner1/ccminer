@@ -365,10 +365,10 @@ struct cgpu_info {
 #ifdef USE_WRAPNVML
 	bool has_monitoring;
 	float gpu_temp;
-	unsigned int gpu_fan;
-	unsigned int gpu_power;
-	unsigned int gpu_clock;
-	unsigned int gpu_memclock;
+	int gpu_fan;
+	int gpu_clock;
+	int gpu_memclock;
+	int gpu_pstate;
 	double gpu_vddc;
 #endif
 };
@@ -416,7 +416,9 @@ extern struct work_restart *work_restart;
 extern bool opt_trust_pool;
 extern uint16_t opt_vote;
 extern uint32_t opt_work_size;
+
 extern uint64_t global_hashrate;
+extern double   global_diff;
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
@@ -497,6 +499,17 @@ struct stratum_ctx {
 	int bloc_height;
 };
 
+struct stats_data {
+	uint32_t tm_stat;
+	uint32_t hashcount;
+	double difficulty;
+	double hashrate;
+	uint8_t thr_id;
+	uint8_t gpu_id;
+	uint8_t hashfound;
+	uint8_t ignored;
+};
+
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
 bool stratum_send_line(struct stratum_ctx *sctx, char *s);
 char *stratum_recv_line(struct stratum_ctx *sctx);
@@ -516,8 +529,9 @@ void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);
 void hashlog_dump_job(char* jobid);
 
-void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate);
-double stats_get_speed(int thr_id);
+void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found);
+double stats_get_speed(int thr_id, double def_speed);
+int  stats_get_history(int thr_id, struct stats_data *data, int max_records);
 void stats_purge_old(void);
 void stats_purge_all(void);
 

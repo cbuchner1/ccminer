@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
@@ -31,6 +31,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+
 
 #include "compat.h"
 #include "miner.h"
@@ -115,21 +116,19 @@ extern uint32_t rejected_count;
 
 static void gpustatus(int thr_id)
 {
-	char buf[MYBUFSIZ];
-
 	if (thr_id >= 0 && thr_id < gpu_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
+		char buf[512];
+		char pstate[4];
 
 		cgpu->thr_id = thr_id;
 
 #ifdef USE_WRAPNVML
-		// todo
-		if (1 || cgpu->has_monitoring) {
-			cgpu->gpu_temp = gpu_temp(cgpu);
-			cgpu->gpu_fan = gpu_fanpercent(cgpu);
-			cgpu->gpu_power = gpu_power(cgpu);
-			cgpu->gpu_clock = gpu_clock(cgpu);
-		}
+		cgpu->has_monitoring = true;
+		cgpu->gpu_temp = gpu_temp(cgpu);
+		cgpu->gpu_fan = gpu_fanpercent(cgpu);
+		cgpu->gpu_pstate = gpu_pstate(cgpu);
+		cgpu->gpu_clock = gpu_clock(cgpu);
 #endif
 
 		// todo: can be 0 if set by algo (auto)
@@ -147,43 +146,79 @@ static void gpustatus(int thr_id)
 		cgpu->accepted = accepted_count;
 		cgpu->rejected = rejected_count;
 
-		cgpu->khashes = stats_get_speed(thr_id) / 1000.0;
+		cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
 
-		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;FREQ=%d;POWER=%d;KHS=%.2f;"
+		sprintf(pstate, "P%u", cgpu->gpu_pstate);
+		if (cgpu->gpu_pstate == -1)
+			sprintf(pstate, "");
+
+		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;FREQ=%d;PST=%s;KHS=%.2f;"
 			"HWF=%d;I=%d|",
 			thr_id, cgpu->gpu_temp, cgpu->gpu_fan, 
-			cgpu->gpu_clock, cgpu->gpu_power, cgpu->khashes,
+			cgpu->gpu_clock, pstate, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
+		// append to buffer for multi gpus
 		strcat(buffer, buf);
 	}
 }
 
 /*****************************************************************************/
 
+/**
+* Returns miner global infos
+*/
 static char *getsummary(char *params)
 {
 	char algo[64] = "";
-	double uptime = difftime(time(NULL), startup);
+	time_t ts = time(NULL);
+	double uptime = difftime(ts, startup);
 	double accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
 
 	get_currentalgo(algo, sizeof(algo));
 
 	*buffer = '\0';
 	sprintf(buffer, "NAME=%s;VER=%s;API=%s;"
-		"ALGO=%s;KHS=%.2f;ACC=%d;REJ=%d;ACCMN=%.3f;UPTIME=%.0f|",
+		"ALGO=%s;KHS=%.2f;ACC=%d;REJ=%d;ACCMN=%.3f;DIFF=%.6f;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
 		algo, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,
-		accps, uptime);
+		accps, global_diff, uptime, (uint32_t) ts);
 	return buffer;
 }
 
+/**
+* Returns gpu/thread specific stats
+*/
 static char *getstats(char *params)
 {
 	*buffer = '\0';
 	for (int i = 0; i < gpu_threads; i++)
 		gpustatus(i);
+	return buffer;
+}
+
+/**
+ * Returns the last 20 scans stats (not the same as shares)
+ * optional param thread id (default all)
+ */
+static char *gethistory(char *params)
+{
+	struct stats_data data[20];
+	int thr = atoi(params ? params : "-1");
+	char *p = buffer;
+	if (!thr)
+		thr = -1;
+	*buffer = '\0';
+	int records = stats_get_history(thr, data, ARRAY_SIZE(data));
+	for (int i = 0; i < records; i++) {
+		char time[16];
+		time_t ts = data[i].tm_stat;
+		time2str(time, ts);
+		p += sprintf(p, "GPU=%d;KHS=%.2f;DIFF=%.6f;COUNT=%u;FOUND=%u;TS=%u;TIME=%s|",
+			data[i].gpu_id, data[i].hashrate, data[i].difficulty, data[i].hashcount,
+			data[i].hashfound, (uint32_t)ts, time);
+	}
 	return buffer;
 }
 
@@ -193,7 +228,8 @@ struct CMDS {
 	char *(*func)(char *);
 } cmds[] = {
 	{ "summary", getsummary },
-	{ "stats",   getstats },
+	{ "stats", getstats },
+	{ "histo", gethistory },
 	/* keep it the last */
 	{ "help",    gethelp },
 };

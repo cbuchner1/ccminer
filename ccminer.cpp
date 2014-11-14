@@ -233,7 +233,8 @@ uint32_t accepted_count = 0L;
 uint32_t rejected_count = 0L;
 static double *thr_hashrates;
 uint64_t global_hashrate = 0;
-int opt_statsavg = 20;
+double   global_diff = 0.0;
+int opt_statsavg = 30;
 int opt_intensity = 0;
 uint32_t opt_work_size = 0; /* default */
 
@@ -517,12 +518,11 @@ static int share_result(int result, const char *reason)
 	double hashrate = 0.;
 
 	pthread_mutex_lock(&stats_lock);
-	hashrate = stats_get_speed(-1);
-	if (hashrate < 0.001) {
-		hashrate = 0.;
-		for (int i = 0; i < opt_n_threads; i++)
-			hashrate += thr_hashrates[i];
+
+	for (int i = 0; i < opt_n_threads; i++) {
+		hashrate += stats_get_speed(i, thr_hashrates[i]);
 	}
+
 	result ? accepted_count++ : rejected_count++;
 	pthread_mutex_unlock(&stats_lock);
 
@@ -1337,7 +1337,7 @@ continue_scan:
 				if (rc > 1)
 					thr_hashrates[thr_id] = (rc * hashes_done) / (diff.tv_sec + 1e-6 * diff.tv_usec);
 				thr_hashrates[thr_id] *= rate_factor;
-				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id]);
+				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc);
 			}
 			pthread_mutex_unlock(&stats_lock);
 		}
@@ -1350,12 +1350,9 @@ continue_scan:
 				device_map[thr_id], device_name[device_map[thr_id]], s);
 		}
 		if (thr_id == opt_n_threads - 1) {
-			double hashrate = stats_get_speed(-1);
-			if (hashrate < 0.001) {
-				hashrate = 0.;
-				for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
-					hashrate += thr_hashrates[i];
-			}
+			double hashrate = 0.;
+			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
+				hashrate += stats_get_speed(i, thr_hashrates[i]);
 			if (opt_benchmark) {
 				sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate / 1000.);
 				applog(LOG_NOTICE, "Total: %s kH/s", s);
@@ -2077,7 +2074,7 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog)
-		openlog("cpuminer", LOG_PID, LOG_USER);
+		openlog(PACKAGE_NAME, LOG_PID, LOG_USER);
 #endif
 
 	work_restart = (struct work_restart *)calloc(opt_n_threads, sizeof(*work_restart));

@@ -11,21 +11,11 @@
 
 #include "miner.h"
 
-struct stats_data {
-	uint32_t tm_stat;
-	uint32_t hashcount;
-	double hashrate;
-	uint8_t thr_id;
-	uint8_t gpu_id;
-	uint8_t ignored;
-	uint8_t align; /* to keep size a multiple of 4 */
-};
-
 static std::map<uint64_t, stats_data> tlastscans;
 static uint64_t uid = 0;
 
-#define STATS_AVG_SAMPLES 20
-#define STATS_PURGE_TIMEOUT 180*60 /* 180 mn */
+#define STATS_AVG_SAMPLES 30
+#define STATS_PURGE_TIMEOUT 120*60 /* 120 mn */
 
 extern uint64_t global_hashrate;
 extern int opt_n_threads;
@@ -35,12 +25,11 @@ extern int device_map[8];
 /**
  * Store speed per thread (todo: compute vardiff ?)
  */
-extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate)
+extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found)
 {
 	uint64_t thr = (0xff & thr_id);
 	uint64_t key = (thr << 56) + (uid++ % UINT_MAX);
 	stats_data data;
-
 	// to enough hashes to give right stats
 	if (hashcount < 1000 || hashrate < 0.01)
 		return;
@@ -50,12 +39,14 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
 		return;
 
 	memset(&data, 0, sizeof(data));
-	data.thr_id = (uint8_t) thr;
+	data.gpu_id = device_map[thr_id];
+	data.thr_id = (uint8_t)thr;
 	data.tm_stat = (uint32_t) time(NULL);
 	data.hashcount = hashcount;
+	data.hashfound = found;
 	data.hashrate = hashrate;
-	data.gpu_id = device_map[thr_id];
-	if (global_hashrate && uid > 10) {
+	data.difficulty = global_diff;
+	if (opt_n_threads == 1 && global_hashrate && uid > 10) {
 		// prevent stats on too high vardiff (erroneous rates)
 		double ratio = (hashrate / (1.0 * global_hashrate));
 		if (ratio < 0.4 || ratio > 1.6)
@@ -68,7 +59,7 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
  * Get the computed average speed
  * @param thr_id int (-1 for all threads)
  */
-extern "C" double stats_get_speed(int thr_id)
+extern "C" double stats_get_speed(int thr_id, double def_speed)
 {
 	uint64_t thr = (0xff & thr_id);
 	uint64_t keypfx = (thr << 56);
@@ -83,16 +74,41 @@ extern "C" double stats_get_speed(int thr_id)
 			if (i->second.hashcount > 1000) {
 				speed += i->second.hashrate;
 				records++;
+				// applog(LOG_BLUE, "%d %x %.1f", thr_id, i->second.thr_id, i->second.hashrate);
 			}
 		}
 		++i;
 	}
+
 	if (records)
 		speed /= (double)(records);
+	else
+		speed = def_speed;
+
 	if (thr_id == -1)
 		speed *= (double)(opt_n_threads);
 
 	return speed;
+}
+
+extern "C" int stats_get_history(int thr_id, struct stats_data *data, int max_records)
+{
+	uint64_t thr = (0xff & thr_id);
+	uint64_t keypfx = (thr << 56);
+	uint64_t keymsk = (0xffULL << 56);
+	double speed = 0.0;
+	int records = 0;
+
+	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
+	while (i != tlastscans.rend() && records < max_records) {
+		if (!i->second.ignored)
+			if (thr_id == -1 || (keymsk & i->first) == keypfx) {
+				memcpy(&data[records], &(i->second), sizeof(struct stats_data));
+				records++;
+			}
+		++i;
+	}
+	return records;
 }
 
 /**

@@ -139,9 +139,9 @@ int wrap_nvapi_init();
 
 #include "miner.h"
 
-unsigned int gpu_fanpercent(struct cgpu_info *gpu);
-double gpu_temp(struct cgpu_info *gpu);
-unsigned int gpu_clock(struct cgpu_info *gpu);
+int gpu_fanpercent(struct cgpu_info *gpu);
+float gpu_temp(struct cgpu_info *gpu);
+int gpu_clock(struct cgpu_info *gpu);
 unsigned int gpu_power(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 

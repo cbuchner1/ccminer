@@ -20,6 +20,12 @@ function getdataFromPears()
 	return $data;
 }
 
+function ignoreField($key)
+{
+	$ignored = array('API','VER');
+	return in_array($key, $ignored);
+}
+
 function translateField($key)
 {
 	$intl = array();
@@ -31,11 +37,14 @@ function translateField($key)
 	$intl['ACC'] = 'Accepted shares';
 	$intl['ACCMN'] = 'Accepted / mn';
 	$intl['REJ'] = 'Rejected';
+	$intl['DIFF'] = 'Difficulty';
 	$intl['UPTIME'] = 'Miner up time';
+	$intl['TS'] = 'Last update';
 
 	$intl['TEMP'] = 'T°c';
 	$intl['FAN'] = 'Fan %';
 	$intl['FREQ'] = 'Freq.';
+	$intl['PST'] = 'P-State';
 
 	if (isset($intl[$key]))
 		return $intl[$key];
@@ -43,12 +52,20 @@ function translateField($key)
 		return $key;
 }
 
-function translateValue($key,$val)
+function translateValue($key,$val,$data=array())
 {
-	if ($key == 'UPTIME') {
-		$min = floor(intval($val) / 60);
-		$sec = intval($val) % 60;
-		$val = "${min}mn ${sec}s";
+	switch ($key) {
+		case 'UPTIME':
+			$min = floor(intval($val) / 60);
+			$sec = intval($val) % 60;
+			$val = "${min}mn ${sec}s";
+			break;
+		case 'NAME':
+			$val = $data['NAME'].'&nbsp;'.$data['VER'];
+			break;
+		case 'TS':
+			$val = strftime("%H:%M:%S", (int) $val);
+			break;
 	}
 	return $val;
 }
@@ -63,15 +80,15 @@ function displayData($data)
 		if (!empty($stats)) {
 			$summary = $stats['summary'];
 			foreach ($summary as $key=>$val) {
-				if (!empty($val))
+				if (!empty($val) && !ignoreField($key))
 					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
-						'<td class="val">'.translateValue($key, $val)."</td></tr>\n";
+						'<td class="val">'.translateValue($key, $val, $summary)."</td></tr>\n";
 			}
 			$totals[$summary['ALGO']] += floatval($summary['KHS']);
 			foreach ($stats['stats'] as $g=>$gpu) {
 				$htm .= '<tr><th class="gpu" colspan="2">'.$g."</th></tr>\n";
 				foreach ($gpu as $key=>$val) {
-					if (!empty($val))
+					if (!empty($val) && !ignoreField($key))
 					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
 						'<td class="val">'.translateValue($key, $val)."</td></tr>\n";
 				}
@@ -137,8 +154,8 @@ div#footer {
 table.stats { width: 280px; margin: 4px 16px; display: inline-block; }
 th.machine { color: darkcyan; padding: 16px 0px 0px 0px; text-align: left; border-bottom: 1px solid gray; }
 th.gpu { color: white; padding: 3px 3px; font: bolder; text-align: left; background: rgba(65, 65, 65, 0.85); }
-td.key { width: 40px; max-width: 120px; }
-td.val { width: 70px; max-width: 180px; color: white; }
+td.key { width: 99px; max-width: 180px; }
+td.val { width: 40px; max-width: 100px; color: white; }
 
 div.totals { margin: 16px; }
 div.totals h2 { color: darkcyan; font-size: 16px; margin-bottom: 4px; }

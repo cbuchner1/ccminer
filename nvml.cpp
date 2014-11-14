@@ -338,6 +338,7 @@ int wrap_nvml_destroy(wrap_nvml_handle *nvmlh)
 #ifdef WIN32
 #include "nvapi/nvapi_ccminer.h"
 
+static int nvapi_dev_map[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };
 static NvPhysicalGpuHandle phys[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 static NvU32 nvapi_dev_cnt = 0;
@@ -412,7 +413,7 @@ int nvapi_getclock(unsigned int devNum, unsigned int *freq)
 	return 0;
 }
 
-int nvapi_getpower(unsigned int devNum, unsigned int *power)
+int nvapi_getpstate(unsigned int devNum, unsigned int *power)
 {
 	NvAPI_Status ret;
 
@@ -456,6 +457,10 @@ int wrap_nvapi_init()
 		return -1;
 	}
 
+	for (int i = 0; i < 8; i++) {
+		// to fix
+		nvapi_dev_map[i] = i;
+	}
 #if 0
 	NvAPI_ShortString ver;
 	NvAPI_GetInterfaceVersionString(ver);
@@ -479,7 +484,7 @@ int wrap_nvapi_init()
 // assume 2500 rpm as default, auto-updated if more
 static unsigned int fan_speed_max = 2500;
 
-unsigned int gpu_fanpercent(struct cgpu_info *gpu)
+int gpu_fanpercent(struct cgpu_info *gpu)
 {
 	unsigned int pct = 0;
 	if (hnvml) {
@@ -488,7 +493,7 @@ unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 #ifdef WIN32
 	else {
 		unsigned int rpm = 0;
-		nvapi_fanspeed(device_map[gpu->thr_id], &rpm);
+		nvapi_fanspeed(nvapi_dev_map[gpu->thr_id], &rpm);
 		pct = (rpm * 100) / fan_speed_max;
 		if (pct > 100) {
 			pct = 100;
@@ -496,27 +501,27 @@ unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 		}
 	}
 #endif
-	return pct;
+	return (int) pct;
 }
 
-double gpu_temp(struct cgpu_info *gpu)
+float gpu_temp(struct cgpu_info *gpu)
 {
-	double tc = 0.0;
+	float tc = 0.0;
 	unsigned int tmp = 0;
 	if (hnvml) {
 		wrap_nvml_get_tempC(hnvml, device_map[gpu->thr_id], &tmp);
-		tc = (double) tmp;
+		tc = (float)tmp;
 	}
 #ifdef WIN32
 	else {
-		nvapi_temperature(device_map[gpu->thr_id], &tmp);
-		tc = (double)tmp;
+		nvapi_temperature(nvapi_dev_map[gpu->thr_id], &tmp);
+		tc = (float)tmp;
 	}
 #endif
 	return tc;
 }
 
-unsigned int gpu_clock(struct cgpu_info *gpu)
+int gpu_clock(struct cgpu_info *gpu)
 {
 	unsigned int freq = 0;
 	int support = -1;
@@ -525,10 +530,28 @@ unsigned int gpu_clock(struct cgpu_info *gpu)
 	}
 #ifdef WIN32
 	if (support == -1) {
-		nvapi_getclock(device_map[gpu->thr_id], &freq);
+		nvapi_getclock(nvapi_dev_map[gpu->thr_id], &freq);
 	}
 #endif
-	return freq;
+	return (int) freq;
+}
+
+int gpu_pstate(struct cgpu_info *gpu)
+{
+	int pstate = -1;
+	int support = -1;
+	if (hnvml) {
+		support = wrap_nvml_get_pstate(hnvml, device_map[gpu->thr_id], &pstate);
+	}
+#ifdef WIN32
+	if (support == -1) {
+		unsigned int pst = 0;
+		nvapi_getpstate(nvapi_dev_map[gpu->thr_id], &pst);
+		//todo : convert ?
+		pstate = (int) pst;
+	}
+#endif
+	return pstate;
 }
 
 unsigned int gpu_power(struct cgpu_info *gpu)
@@ -538,24 +561,7 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 	if (hnvml) {
 		support = wrap_nvml_get_power_usage(hnvml, device_map[gpu->thr_id], &mw);
 	}
-#ifdef WIN32
-	if (support == -1) {
-		unsigned int pstate = 0;
-		nvapi_getpower(device_map[gpu->thr_id], &pstate);
-		//todo : convert ?
-		mw = pstate;
-	}
-#endif
 	return mw;
-}
-
-int gpu_pstate(struct cgpu_info *gpu)
-{
-	int pstate = 0;
-	if (hnvml) {
-		wrap_nvml_get_pstate(hnvml, device_map[gpu->thr_id], &pstate);
-	}
-	return pstate;
 }
 
 #if defined(__cplusplus)
