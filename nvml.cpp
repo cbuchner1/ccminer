@@ -29,7 +29,11 @@
 #include "nvml.h"
 
 extern wrap_nvml_handle *hnvml;
+extern int num_processors; // gpus
 extern int device_map[8];
+extern char* device_name[8];
+
+static uint32_t device_bus_ids[8] = { 0 };
 
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
@@ -199,7 +203,8 @@ wrap_nvml_handle * wrap_nvml_create()
 
 		if (cudaGetDeviceProperties(&props, i) == cudaSuccess) {
 			int j;
-			for (j=0; j<nvmlh->nvml_gpucount; j++) {
+			device_bus_ids[i] = props.pciBusID;
+			for (j = 0; j<nvmlh->nvml_gpucount; j++) {
 				if ((nvmlh->nvml_pci_domain_id[j] == (uint32_t) props.pciDomainID) &&
 				    (nvmlh->nvml_pci_bus_id[j]    == (uint32_t) props.pciBusID) &&
 				    (nvmlh->nvml_pci_device_id[j] == (uint32_t) props.pciDeviceID)) {
@@ -297,8 +302,8 @@ int wrap_nvml_get_power_usage(wrap_nvml_handle *nvmlh, int cudaindex, unsigned i
 
 	wrap_nvmlReturn_t res = nvmlh->nvmlDeviceGetPowerUsage(nvmlh->devs[gpuindex], milliwatts);
 	if (res != WRAPNVML_SUCCESS) {
-		//if (opt_debug)
-		//	applog(LOG_DEBUG, "nvmlDeviceGetPowerUsage: %s", nvmlh->nvmlErrorString(res));
+		if (opt_debug)
+			applog(LOG_DEBUG, "nvmlDeviceGetPowerUsage: %s", nvmlh->nvmlErrorString(res));
 		return -1;
 	}
 
@@ -314,8 +319,8 @@ int wrap_nvml_get_pstate(wrap_nvml_handle *nvmlh, int cudaindex, int *pstate)
 
 	wrap_nvmlReturn_t res = nvmlh->nvmlDeviceGetPerformanceState(nvmlh->devs[gpuindex], pstate);
 	if (res != WRAPNVML_SUCCESS) {
-		if (opt_debug)
-			applog(LOG_DEBUG, "nvmlDeviceGetPerformanceState: %s", nvmlh->nvmlErrorString(res));
+		//if (opt_debug)
+		//	applog(LOG_DEBUG, "nvmlDeviceGetPerformanceState: %s", nvmlh->nvmlErrorString(res));
 		return -1;
 	}
 
@@ -457,22 +462,32 @@ int wrap_nvapi_init()
 		return -1;
 	}
 
-	for (int i = 0; i < 8; i++) {
-		// to fix
-		nvapi_dev_map[i] = i;
+	for (NvU8 i = 0; i < nvapi_dev_cnt; i++) {
+		NvAPI_ShortString name;
+		nvapi_dev_map[i] = i; // default mapping
+		ret = NvAPI_GPU_GetFullName(phys[i], name);
+		if (ret == NVAPI_OK) {
+			for (int g = 0; g < num_processors; g++) {
+				//todo : device_bus_ids, could be wrong on rigs
+				if (strcmp(device_name[g], name) == 0 && nvapi_dev_map[i] == i) {
+					nvapi_dev_map[i] = g;
+					break;
+				}
+			}
+			if (opt_debug)
+				applog(LOG_DEBUG, "NVAPI dev %d: %s - mapped to CUDA device %d",
+					i, name, nvapi_dev_map[i]);
+		} else {
+			NvAPI_ShortString string;
+			NvAPI_GetErrorMessage(ret, string);
+			applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetFullName: %s", string);
+		}
 	}
+
 #if 0
 	NvAPI_ShortString ver;
 	NvAPI_GetInterfaceVersionString(ver);
 	applog(LOG_DEBUG, "NVAPI Version: %s", ver);
-
-	NvAPI_ShortString name;
-	ret = NvAPI_GPU_GetFullName(phys[devNum], name);
-	if (ret != NVAPI_OK){
-		NvAPI_ShortString string;
-		NvAPI_GetErrorMessage(ret, string);
-		applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetFullName: %s", string);
-	}
 #endif
 
 	return 0;

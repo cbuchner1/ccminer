@@ -997,7 +997,7 @@ static void *miner_thread(void *userdata)
 	 * of the number of CPUs */
 	if (num_processors > 1 && opt_n_threads % num_processors == 0) {
 		if (!opt_quiet)
-			applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
+			applog(LOG_DEBUG, "Binding thread %d to gpu %d", thr_id,
 					thr_id % num_processors);
 		affine_to_cpu(thr_id, thr_id % num_processors);
 	}
@@ -2064,8 +2064,7 @@ int main(int argc, char *argv[])
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
 #endif
 
-	if (num_processors == 0)
-	{
+	if (num_processors == 0) {
 		applog(LOG_ERR, "No CUDA devices found! terminating.");
 		exit(1);
 	}

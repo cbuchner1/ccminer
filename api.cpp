@@ -118,8 +118,8 @@ static void gpustatus(int thr_id)
 {
 	if (thr_id >= 0 && thr_id < gpu_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
-		char buf[512];
-		char pstate[4];
+		char buf[512]; *buf = '\0';
+		char pstate[8]; *pstate = '\0';
 
 		cgpu->thr_id = thr_id;
 
@@ -148,13 +148,13 @@ static void gpustatus(int thr_id)
 
 		cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
 
-		sprintf(pstate, "P%u", cgpu->gpu_pstate);
+		snprintf(pstate, sizeof(pstate), "P%u", cgpu->gpu_pstate);
 		if (cgpu->gpu_pstate == -1)
-			sprintf(pstate, "");
+			*pstate= '\0';
 
-		sprintf(buf, "GPU=%d;TEMP=%.1f;FAN=%d;FREQ=%d;PST=%s;KHS=%.2f;"
-			"HWF=%d;I=%d|",
-			thr_id, cgpu->gpu_temp, cgpu->gpu_fan, 
+		snprintf(buf, sizeof(buf), "GPU=%d;TEMP=%.1f;FAN=%d;FREQ=%d;"
+			"PST=%s;KHS=%.2f;HWF=%d;I=%d|",
+			thr_id, cgpu->gpu_temp, cgpu->gpu_fan,
 			cgpu->gpu_clock, pstate, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
@@ -170,7 +170,7 @@ static void gpustatus(int thr_id)
 */
 static char *getsummary(char *params)
 {
-	char algo[64] = "";
+	char algo[64]; *algo = '\0';
 	time_t ts = time(NULL);
 	double uptime = difftime(ts, startup);
 	double accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
