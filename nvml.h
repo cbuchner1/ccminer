@@ -67,6 +67,7 @@ typedef struct {
 	wrap_nvmlReturn_t (*nvmlDeviceGetCount)(int *);
 	wrap_nvmlReturn_t (*nvmlDeviceGetHandleByIndex)(int, wrap_nvmlDevice_t *);
 	wrap_nvmlReturn_t (*nvmlDeviceGetClockInfo)(wrap_nvmlDevice_t, wrap_nvmlClockType_t, unsigned int *);
+	wrap_nvmlReturn_t (*nvmlDeviceGetApplicationsClock)(wrap_nvmlDevice_t, wrap_nvmlClockType_t, unsigned int *);
 	wrap_nvmlReturn_t (*nvmlDeviceGetPciInfo)(wrap_nvmlDevice_t, wrap_nvmlPciInfo_t *);
 	wrap_nvmlReturn_t (*nvmlDeviceGetName)(wrap_nvmlDevice_t, char *, int);
 	wrap_nvmlReturn_t (*nvmlDeviceGetTemperature)(wrap_nvmlDevice_t, int, unsigned int *);
@@ -148,4 +149,3 @@ int gpu_pstate(struct cgpu_info *gpu);
 #if defined(__cplusplus)
 }
 #endif
-
