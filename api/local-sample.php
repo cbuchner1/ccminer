@@ -5,9 +5,8 @@
 defined('API_HOST') || define('API_HOST', '127.0.0.1');
 defined('API_PORT') || define('API_PORT', 4068);
 
-// 3 seconds max.
-set_time_limit(3);
-error_reporting(0);
+// 2 seconds max.
+set_time_limit(2);
 
 function getsock($port)
 {
@@ -20,14 +19,28 @@ function getsock($port)
 		return NULL;
 	}
 
+	socket_set_nonblock($socket);
+
 	$res = socket_connect($socket, API_HOST, $port);
-	if ($res === false) {
-		$error = socket_strerror(socket_last_error());
+	$timeout = 50;
+	while ($res === false && $timeout > 0) {
+		$err = socket_last_error($socket);
+		echo ".";
+		if ($timeout > 1 && ($err == 115 || $err == 114)) {
+			$timeout--;
+			usleep(50);
+			$res = socket_connect($socket, API_HOST, $port);
+			continue;
+		}
+		$error = socket_strerror($err);
 		$msg = "socket connect($port) failed";
 		echo "ERR: $msg '$error'\n";
 		socket_close($socket);
 		return NULL;
 	}
+
+	socket_set_block($socket);
+
 	return $socket;
 }
 
@@ -110,12 +123,14 @@ function request($cmd)
 
 ob_start();
 
+error_reporting(0);
+
 $summary = request('summary');
 $threads = request('threads');
-$histo   = array();//request('histo'); /* only enable it if required... */
+$histo   = request('histo');
 
-ob_end_clean();
-//echo ob_get_clean()."\n"; /* allow to print protocol debug message */
+ob_end_clean(); /* swap to debug */
+//echo ob_get_clean()."\n";
 
 header("Content-Type: application/json");
 echo json_encode(compact('summary', 'threads', 'histo'))."\n";

@@ -7,8 +7,8 @@ $configs = array(
 	//'EPSYTOUR'=>'epsytour.php', /* copy local.php file and edit target IP:PORT */
 );
 
-// 5 seconds max.
-set_time_limit(5);
+// 3 seconds max.
+set_time_limit(3);
 error_reporting(0);
 
 function getdataFromPears()
@@ -26,7 +26,7 @@ function getdataFromPears()
 
 function ignoreField($key)
 {
-	$ignored = array('API','VER','GPU','CARD');
+	$ignored = array('API','VER','GPU','CARD','GPUS','CPU');
 	return in_array($key, $ignored);
 }
 
@@ -38,6 +38,7 @@ function translateField($key)
 
 	$intl['ALGO'] = 'Algorithm';
 	$intl['GPUS'] = 'GPUs';
+	$intl['CPUS'] = 'Threads';
 	$intl['KHS'] = 'Hash rate (kH/s)';
 	$intl['ACC'] = 'Accepted shares';
 	$intl['ACCMN'] = 'Accepted / mn';
@@ -63,10 +64,18 @@ function translateValue($key,$val,$data=array())
 		case 'UPTIME':
 			$min = floor(intval($val) / 60);
 			$sec = intval($val) % 60;
-			$val = "${min}mn ${sec}s";
+			$val = "${min}mn${sec}s";
+			if ($min > 180) {
+				$hrs = floor($min / 60);
+				$min = $min % 60;
+				$val = "${hrs}h${min}mn";
+			}
 			break;
 		case 'NAME':
 			$val = $data['NAME'].'&nbsp;'.$data['VER'];
+			break;
+		case 'FREQ':
+			$val = sprintf("%d MHz", round(floatval($val)/1000.0));
 			break;
 		case 'TS':
 			$val = strftime("%H:%M:%S", (int) $val);
@@ -83,14 +92,14 @@ function displayData($data)
 		$htm .= '<table id="tb_'.$name.'" class="stats">'."\n";
 		$htm .= '<tr><th class="machine" colspan="2">'.$name."</th></tr>\n";
 		if (!empty($stats)) {
-			$summary = $stats['summary'];
+			$summary = (array) $stats['summary'];
 			foreach ($summary as $key=>$val) {
 				if (!empty($val) && !ignoreField($key))
 					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
 						'<td class="val">'.translateValue($key, $val, $summary)."</td></tr>\n";
 			}
 			if (isset($summary['KHS']))
-				$totals[$summary['ALGO']] += floatval($summary['KHS']);
+				@ $totals[$summary['ALGO']] += floatval($summary['KHS']);
 			foreach ($stats['threads'] as $g=>$gpu) {
 				$card = isset($gpu['CARD']) ? $gpu['CARD'] : '';
 				$htm .= '<tr><th class="gpu" colspan="2">'.$g." $card</th></tr>\n";
@@ -117,6 +126,7 @@ function displayData($data)
 $data = getdataFromPears();
 
 ?>
+
 <html>
 <head>
 	<title>ccminer rig api sample</title>
@@ -164,10 +174,10 @@ th.gpu { color: white; padding: 3px 3px; font: bolder; text-align: left; backgro
 td.key { width: 99px; max-width: 180px; }
 td.val { width: 40px; max-width: 100px; color: white; }
 
-div.totals { margin: 16px; }
+div.totals { margin: 16px; padding-bottom: 16px; }
 div.totals h2 { color: darkcyan; font-size: 16px; margin-bottom: 4px; }
 div.totals li { list-style-type: none; font-size: 16px; margin-left: 4px; margin-bottom: 8px; }
-li span.algo { display: inline-block; width: 50px; max-width: 120px; }
+li span.algo { display: inline-block; width: 100px; max-width: 180px; }
 
 </style>
 </head>
