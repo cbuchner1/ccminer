@@ -109,11 +109,13 @@ function request($cmd)
 }
 
 ob_start();
+
 $summary = request('summary');
 $threads = request('threads');
-$histo   = request('histo');
+$histo   = array();//request('histo'); /* only enable it if required... */
+
 ob_end_clean();
-//echo ob_get_clean()."\n";
+//echo ob_get_clean()."\n"; /* allow to print protocol debug message */
 
 header("Content-Type: application/json");
 echo json_encode(compact('summary', 'threads', 'histo'))."\n";
