@@ -1,12 +1,12 @@
+#include <string.h>
+#include <stdint.h>
+
 #include "uint256.h"
 #include "sph/sph_fugue.h"
 
 #include "miner.h"
 
-#include <string.h>
-#include <stdint.h>
-#include <algorithm>
-#include <cuda_fugue256.h>
+#include "cuda_fugue256.h"
 
 extern "C" void my_fugue256_init(void *cc);
 extern "C" void my_fugue256(void *cc, const void *data, size_t len);
@@ -15,12 +15,6 @@ extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n,
 
 extern int device_map[8];
 extern int device_sm[8];
-
-#ifdef _MSC_VER
-#define MIN min
-#else
-#define MIN std::min
-#endif
 
 // vorbereitete Kontexte nach den ersten 80 Bytes
 sph_fugue256_context  ctx_fugue_const[8];
@@ -31,11 +25,11 @@ sph_fugue256_context  ctx_fugue_const[8];
 
 extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
-{	
+{
 	uint32_t start_nonce = pdata[19]++;
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 19;
 	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << intensity);
-	throughPut = MIN(throughPut, max_nonce - start_nonce);
+	throughPut = min(throughPut, max_nonce - start_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;
@@ -47,7 +41,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		fugue256_cpu_init(thr_id, throughPut);
 		init[thr_id] = true;
 	}
-	
+
 	// Endian Drehung ist notwendig
 	uint32_t endiandata[20];
 	for (int kk=0; kk < 20; kk++)
@@ -90,7 +84,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		pdata[19] += throughPut;
 
 	} while (!work_restart[thr_id].restart);
-	
+
 	*hashes_done = pdata[19] - start_nonce + 1;
 	return 0;
 }
@@ -98,7 +92,8 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len)
 {
 	sph_fugue256_context ctx;
+
 	sph_fugue256_init(&ctx);
-    sph_fugue256(&ctx, input, len);    
-    sph_fugue256_close(&ctx, (void *)output);
+	sph_fugue256(&ctx, input, len);
+	sph_fugue256_close(&ctx, (void *)output);
 }

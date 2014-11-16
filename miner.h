@@ -105,6 +105,13 @@ typedef unsigned char uchar;
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
+#ifndef max
+# define max(a, b)  ((a) > (b) ? (a) : (b))
+#endif
+#ifndef min
+# define min(a, b)  ((a) < (b) ? (a) : (b))
+#endif
+
 #if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
 #define WANT_BUILTIN_BSWAP
 #else

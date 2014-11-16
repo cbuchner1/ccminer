@@ -1,24 +1,16 @@
-#include "uint256.h"
-#include "sph/sph_groestl.h"
-
-#include "miner.h"
-
 #include <string.h>
 #include <stdint.h>
-#include <algorithm>
 #include <openssl/sha.h>
 
+#include "uint256.h"
+#include "sph/sph_groestl.h"
 #include "cuda_groestlcoin.h"
+
+#include "miner.h"
 
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
-
-#ifdef _MSC_VER
-#define MIN min
-#else
-#define MIN std::min
-#endif
 
 void sha256func(unsigned char *hash, const unsigned char *data, int len)
 {
@@ -73,7 +65,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
 {    
     uint32_t start_nonce = pdata[19]++;
     uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
-    throughPut = MIN(throughPut, max_nonce - start_nonce);
+    throughPut = min(throughPut, max_nonce - start_nonce);
 
     uint32_t *outputHash = (uint32_t*)malloc(throughPut * 16 * sizeof(uint32_t));
 
