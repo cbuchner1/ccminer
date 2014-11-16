@@ -554,14 +554,23 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	json_t *val, *res, *reason;
 	char s[345];
 	int i;
+	bool stale_work;
 	bool rc = false;
 
-	/* pass if the previous hash is not the current previous hash */
 	pthread_mutex_lock(&g_work_lock);
-	if (memcmp(work->data + 1, g_work.data + 1, 32)) {
+	if (strlen(work->job_id + 8)) {
+		/* stale if not the current job id */
+		stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
+	} else {
+		applog_hash((uchar*)&work->data);
+		/* fallback if not job id (compare hash) */
+		stale_work = memcmp(&work->data[1], &g_work.data[1], 32);
+	}
+
+	if (stale_work) {
 		pthread_mutex_unlock(&g_work_lock);
 		if (opt_debug)
-			applog(LOG_DEBUG, "stale work detected, discarding");
+			applog(LOG_WARNING, "stale work detected, discarding");
 		return true;
 	}
 	calc_diff(work, 0);
@@ -1465,7 +1474,7 @@ start:
 			if (work_decode(json_object_get(val, "result"), &g_work)) {
 				if (opt_debug)
 					applog(LOG_BLUE, "LONGPOLL pushed new work");
-				time(&g_work_time);
+				g_work_time = time(NULL);
 				restart_threads();
 			}
 			pthread_mutex_unlock(&g_work_lock);
@@ -1474,11 +1483,9 @@ start:
 			pthread_mutex_lock(&g_work_lock);
 			g_work_time -= LP_SCANTIME;
 			pthread_mutex_unlock(&g_work_lock);
-			if (err == CURLE_OPERATION_TIMEDOUT) {
-				restart_threads();
-			} else {
+			restart_threads();
+			if (err != CURLE_OPERATION_TIMEDOUT) {
 				have_longpoll = false;
-				restart_threads();
 				free(hdr_path);
 				free(lp_url);
 				lp_url = NULL;
@@ -1572,7 +1579,7 @@ static void *stratum_thread(void *userdata)
 		    (!g_work_time || strncmp(stratum.job.job_id, g_work.job_id + 8, 120))) {
 			pthread_mutex_lock(&g_work_lock);
 			stratum_gen_work(&stratum, &g_work);
-			time(&g_work_time);
+			g_work_time = time(NULL);
 			if (stratum.job.clean) {
 				if (!opt_quiet)
 					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
