@@ -10,10 +10,9 @@
  */
 #define APIVERSION "1.1"
 
-#ifdef _MSC_VER
+#ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
 # include <winsock2.h>
-# include <mstcpip.h>
 #endif
 
 #include <stdio.h>
@@ -40,7 +39,7 @@
 #include "nvml.h"
 #endif
 
-#ifndef _MSC_VER
+#ifndef WIN32
 # include <errno.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
