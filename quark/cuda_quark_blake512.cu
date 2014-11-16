@@ -59,18 +59,19 @@ const uint64_t c_u512[16] =
 	v[b] = ROTR( v[b] ^ v[c], 11); \
 }
 
-__device__ static
+__device__ __forceinline__
 void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t ((*sigma)[16]), const uint64_t *u512, const int T0)
 {
-    uint64_t v[16], m[16], i;
+	uint64_t v[16];
+	uint64_t m[16];
 
-	#pragma unroll 16
-	for( i = 0; i < 16; i++) {
+	#pragma unroll
+	for(int i=0; i < 16; i++) {
 		m[i] = cuda_swab64(block[i]);
 	}
 
-	#pragma unroll 8
-	for (i = 0; i < 8; i++)
+	//#pragma unroll 8
+	for(int i=0; i < 8; i++)
 		v[i] = h[i];
 
 	v[ 8] = u512[0];
@@ -83,7 +84,7 @@ void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t 
 	v[15] = u512[7];
 
 	//#pragma unroll 16
-	for( i = 0; i < 16; ++i )
+	for(int i=0; i < 16; i++)
 	{
 		/* column step */
 		G( 0, 4, 8, 12, 0 );
@@ -97,9 +98,14 @@ void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t 
 		G( 3, 4, 9, 14, 14 );
 	}
 
-	#pragma unroll 16
-	for( i = 0; i < 16; ++i )
-		h[i % 8] ^= v[i];
+	h[0] ^= v[0] ^ v[8];
+	h[1] ^= v[1] ^ v[9];
+	h[2] ^= v[2] ^ v[10];
+	h[3] ^= v[3] ^ v[11];
+	h[4] ^= v[4] ^ v[12];
+	h[5] ^= v[5] ^ v[13];
+	h[6] ^= v[6] ^ v[14];
+	h[7] ^= v[7] ^ v[15];
 }
 
 // Hash-Padding

@@ -29,7 +29,6 @@ static uint32_t *d_hash[8];
 extern void quark_blake512_cpu_init(int thr_id, int threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_bmw512_cpu_init(int thr_id, int threads);
 extern void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
