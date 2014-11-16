@@ -154,20 +154,17 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-
-	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
-
-	const uint32_t Htarg = ptarget[7];
-
+	static bool init[8] = { 0 };
 	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
 	throughput = min(throughput, max_nonce - first_nonce);
 
-	static bool init[8] = {0,0,0,0,0,0,0,0};
+	if (opt_benchmark)
+		((uint32_t*)ptarget)[7] = 0x000f;
+
 	if (!init[thr_id])
 	{
 		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 2 * 32 * throughput));
 
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
@@ -216,11 +213,12 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			x13hash(vhash64, endiandata);
 
-			if( (vhash64[7]<=Htarg) && fulltest(vhash64, ptarget) ) {
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget) ) {
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
 				return 1;
@@ -233,9 +231,13 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 			}
 		}
 
+		if ((uint64_t)pdata[19] + throughput > (uint64_t)max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

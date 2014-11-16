@@ -135,13 +135,13 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = {0,0,0,0,0,0,0,0};
+	static bool init[8] = { 0 };
 	int intensity = (device_sm[device_map[thr_id]] >= 500) ? 20 : 19;
 	int throughput = opt_work_size ? opt_work_size : (1 << intensity); // 20=256*256*16;
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000f;
+		((uint32_t*)ptarget)[7] = 0x000f;
 
 	if (!init[thr_id])
 	{

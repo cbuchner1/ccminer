@@ -816,7 +816,7 @@ static bool get_work(struct thr_info *thr, struct work *work)
 
 	if (opt_benchmark) {
 		memset(work->data, 0x55, 76);
-		work->data[17] = swab32((uint32_t)time(NULL));
+		//work->data[17] = swab32((uint32_t)time(NULL));
 		memset(work->data + 19, 0x00, 52);
 		work->data[20] = 0x80000000;
 		work->data[31] = 0x00000280;
@@ -1004,11 +1004,11 @@ static void *miner_thread(void *userdata)
 	}
 
 	while (1) {
+		struct timeval tv_start, tv_end, diff;
 		unsigned long hashes_done;
 		uint32_t start_nonce;
-		struct timeval tv_start, tv_end, diff;
-		int64_t max64;
-		uint64_t umax64;
+		uint32_t scan_time = have_longpoll ? LP_SCANTIME : opt_scantime;
+		uint64_t max64, minmax = 0x100000;
 
 		// &work.data[19]
 		int wcmplen = 76;
@@ -1035,7 +1035,7 @@ static void *miner_thread(void *userdata)
 				stratum_gen_work(&stratum, &g_work);
 			}
 		} else {
-			int min_scantime = have_longpoll ? LP_SCANTIME : opt_scantime;
+			int min_scantime = scan_time;
 			/* obtain new work from internal workio thread */
 			pthread_mutex_lock(&g_work_lock);
 			if (time(NULL) - g_work_time >= min_scantime ||
@@ -1065,7 +1065,7 @@ static void *miner_thread(void *userdata)
 			goto continue_scan;
 		}
 
-		if (memcmp(work.target, g_work.target, sizeof(work.target))) {
+		if (!opt_benchmark && memcmp(work.target, g_work.target, sizeof(work.target))) {
 			calc_diff(&g_work, 0);
 			if (opt_debug) {
 				uint64_t target64 = g_work.target[7] * 0x100000000ULL + g_work.target[6];
@@ -1080,55 +1080,58 @@ static void *miner_thread(void *userdata)
 			}
 		}
 		if (memcmp(work.data, g_work.data, wcmplen)) {
+			#if 0
 			if (opt_debug) {
-#if 0
 				for (int n=0; n <= (wcmplen-8); n+=8) {
 					if (memcmp(work.data + n, g_work.data + n, 8)) {
 						applog(LOG_DEBUG, "job %s work updated at offset %d:", g_work.job_id, n);
-						applog_hash((uint8_t*) work.data + n);
-						applog_compare_hash((uint8_t*) g_work.data + n, (uint8_t*) work.data + n);
+						applog_hash((uchar*) &work.data[n]);
+						applog_compare_hash((uchar*) &g_work.data[n], (uchar*) &work.data[n]);
 					}
 				}
-#endif
 			}
+			#endif
 			memcpy(&work, &g_work, sizeof(struct work));
 			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
 		} else
 			(*nonceptr)++; //??
-		work_restart[thr_id].restart = 0;
 
-		if (opt_debug)
-			applog(LOG_DEBUG, "job %s %08x", g_work.job_id, (*nonceptr));
+		work_restart[thr_id].restart = 0;
 		pthread_mutex_unlock(&g_work_lock);
 
 		/* adjust max_nonce to meet target scan time */
 		if (have_stratum)
 			max64 = LP_SCANTIME;
 		else
-			max64 = g_work_time + (have_longpoll ? LP_SCANTIME : opt_scantime)
-			      - time(NULL);
+			max64 = max(1, scan_time + g_work_time - time(NULL));
 
-		max64 *= (int64_t)thr_hashrates[thr_id];
+		max64 *= (uint32_t)thr_hashrates[thr_id];
 
-		if (max64 <= 0) {
-			/* should not be set too high,
-			   else you can miss multiple nounces */
+		/* on start, max64 should not be 0,
+		 *    before hashrate is computed */
+		if (max64 < minmax) {
 			switch (opt_algo) {
 			case ALGO_BLAKECOIN:
-				max64 = 0x3ffffffLL;
+				minmax = 0x4000000;
 				break;
 			case ALGO_BLAKE:
 			case ALGO_DOOM:
 			case ALGO_JACKPOT:
 			case ALGO_KECCAK:
 			case ALGO_LUFFA_DOOM:
-				max64 = 0x1ffffffLL;
+				minmax = 0x2000000;
 				break;
-			default:
-				max64 = 0xfffffLL;
+			case ALGO_S3:
+			case ALGO_X11:
+			case ALGO_X13:
+				minmax = 0x400000;
 				break;
 			}
+			max64 = max(minmax-1, max64);
 		}
+
+		if (opt_debug)
+			applog(LOG_DEBUG, "GPU #%d: start=%08x range=%llx", device_map[thr_id], *nonceptr, max64);
 
 		start_nonce = *nonceptr;
 
@@ -1140,7 +1143,7 @@ static void *miner_thread(void *userdata)
 			} range;
 
 			range.data = hashlog_get_scan_range(work.job_id);
-			if (range.data) {
+			if (range.data && !opt_benchmark) {
 				bool stall = false;
 				if (range.scanned[0] == 1 && range.scanned[1] == 0xFFFFFFFFUL) {
 					applog(LOG_WARNING, "detected a rescan of fully scanned job!");
@@ -1168,11 +1171,14 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		umax64 = (uint64_t) max64;
-		if ((umax64 + start_nonce) >= end_nonce)
+		if ((max64 + start_nonce) >= end_nonce)
 			max_nonce = end_nonce;
 		else
-			max_nonce = (uint32_t) umax64 + start_nonce;
+			max_nonce = (uint32_t) (max64 + start_nonce);
+
+		/* never let small ranges at end */
+		if (max_nonce >= UINT32_MAX - 256)
+			max_nonce = UINT32_MAX;
 
 		work.scanned_from = start_nonce;
 		(*nonceptr) = start_nonce;
@@ -1343,6 +1349,19 @@ continue_scan:
 			pthread_mutex_unlock(&stats_lock);
 		}
 
+		if (rc)
+			work.scanned_to = *nonceptr;
+		else {
+			work.scanned_to = max_nonce;
+			if (opt_debug && opt_benchmark) {
+				// to debug nonce ranges
+				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
+					*nonceptr, ((*nonceptr) - start_nonce));
+			}
+		}
+
+		hashlog_remember_scan_range(work.job_id, work.scanned_from, work.scanned_to);
+
 		/* output */
 		if (!opt_quiet && loopcnt) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
@@ -1365,18 +1384,9 @@ continue_scan:
 			global_hashrate = llround(hashrate);
 		}
 
-		if (rc) {
-			work.scanned_to = *nonceptr;
-		} else {
-			work.scanned_to = max_nonce;
-		}
-
-		// could be used to store speeds too..
-		hashlog_remember_scan_range(work.job_id, work.scanned_from, work.scanned_to);
-
 		/* if nonce found, submit work */
-		if (rc) {
-			if (!opt_benchmark && !submit_work(mythr, &work))
+		if (rc && !opt_benchmark) {
+			if (!submit_work(mythr, &work))
 				break;
 		}
 

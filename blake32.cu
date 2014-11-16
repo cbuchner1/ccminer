@@ -17,7 +17,7 @@ extern "C" {
 /* threads per block and throughput (intensity) */
 #define TPB 128
 
-extern int opt_n_threads;
+extern int num_processors;
 
 /* added in sph_blake.c */
 extern "C" int blake256_rounds = 14;
@@ -416,8 +416,10 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	}
 #endif
 
-	if (opt_benchmark)
+	if (opt_benchmark) {
 		targetHigh = 0x1ULL << 32;
+		((uint32_t*)ptarget)[6] = swab32(0xff);
+	}
 
 	if (opt_tracegpu) {
 		/* test call from util.c */
@@ -427,9 +429,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	}
 
 	if (!init[thr_id]) {
-		if (opt_n_threads > 1) {
+		if (num_processors > 1)
 			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		}
 		CUDA_SAFE_CALL(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)));
 		CUDA_SAFE_CALL(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)));
 		init[thr_id] = true;
@@ -489,8 +490,8 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 				goto exit_scan;
 			}
 			else if (opt_debug) {
-				applog_hash((uint8_t*)ptarget);
-				applog_compare_hash((uint8_t*)vhashcpu,(uint8_t*)ptarget);
+				applog_hash((uchar*)ptarget);
+				applog_compare_hash((uchar*)vhashcpu, (uchar*)ptarget);
 				applog(LOG_DEBUG, "GPU #%d: result for nonce %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}

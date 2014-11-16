@@ -27,8 +27,8 @@ extern int device_map[8];
  */
 extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found)
 {
-	uint64_t thr = (0xff & thr_id);
-	uint64_t key = (thr << 56) + (uid++ % UINT_MAX);
+	uint64_t gpu = device_map[thr_id];
+	uint64_t key = (gpu << 56) + (uid++ % UINT_MAX);
 	stats_data data;
 	// to enough hashes to give right stats
 	if (hashcount < 1000 || hashrate < 0.01)
@@ -39,8 +39,8 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
 		return;
 
 	memset(&data, 0, sizeof(data));
-	data.gpu_id = device_map[thr_id];
-	data.thr_id = (uint8_t)thr;
+	data.gpu_id = (uint8_t)gpu;
+	data.thr_id = (uint8_t)thr_id;
 	data.tm_stat = (uint32_t) time(NULL);
 	data.hashcount = hashcount;
 	data.hashfound = found;
@@ -61,8 +61,8 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
  */
 extern "C" double stats_get_speed(int thr_id, double def_speed)
 {
-	uint64_t thr = (0xff & thr_id);
-	uint64_t keypfx = (thr << 56);
+	uint64_t gpu = device_map[thr_id];
+	uint64_t keypfx = (gpu << 56);
 	uint64_t keymsk = (0xffULL << 56);
 	double speed = 0.0;
 	int records = 0;
@@ -93,8 +93,8 @@ extern "C" double stats_get_speed(int thr_id, double def_speed)
 
 extern "C" int stats_get_history(int thr_id, struct stats_data *data, int max_records)
 {
-	uint64_t thr = (0xff & thr_id);
-	uint64_t keypfx = (thr << 56);
+	uint64_t gpu = device_map[thr_id];
+	uint64_t keypfx = (gpu << 56);
 	uint64_t keymsk = (0xffULL << 56);
 	double speed = 0.0;
 	int records = 0;
