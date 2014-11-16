@@ -976,6 +976,7 @@ static void *miner_thread(void *userdata)
 	struct thr_info *mythr = (struct thr_info *)userdata;
 	int thr_id = mythr->id;
 	struct work work;
+	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
 	uint32_t end_nonce = 0xffffffffU / opt_n_threads * (thr_id + 1) - (thr_id + 1);
 	bool work_done = false;
@@ -1343,13 +1344,15 @@ continue_scan:
 		}
 
 		/* output */
-		if (!opt_quiet) {
+		if (!opt_quiet && loopcnt) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
 			applog(LOG_INFO, "GPU #%d: %s, %s kH/s",
 				device_map[thr_id], device_name[device_map[thr_id]], s);
 		}
-		if (thr_id == opt_n_threads - 1) {
+
+		/* loopcnt: ignore first loop hashrate */
+		if (loopcnt && thr_id == (opt_n_threads - 1)) {
 			double hashrate = 0.;
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
@@ -1376,6 +1379,8 @@ continue_scan:
 			if (!opt_benchmark && !submit_work(mythr, &work))
 				break;
 		}
+
+		loopcnt++;
 	}
 
 out:
