@@ -155,6 +155,9 @@ features.
 
 >>> RELEASE HISTORY <<<
 
+                  v1.5.0
+                  x11: sp echo optimisation (+10KHs)
+
   Nov. 15th 2014  v1.4.9
                   Support of nvml and nvapi(windows) to monitor gpus
                   Fix (again) displayed hashrate for multi gpus systems
