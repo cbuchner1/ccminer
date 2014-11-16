@@ -89,13 +89,6 @@ qubit/qubit_luffa512.o: qubit/qubit_luffa512.cu
 x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
-x11/cuda_x11_echo.o: x11/cuda_x11_echo.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
-
-# Shavite compiles faster with 128 regs
-x11/cuda_x11_shavite512.o: x11/cuda_x11_shavite512.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=128 -o $@ -c $<
-
 x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 

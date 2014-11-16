@@ -311,7 +311,7 @@ void aes_gpu_init(uint32_t *sharedMemory)
 }
 
 /* tried with 3 xor.b32 asm, not faster */
-#define xor4_32(a,b,c,d) (a ^ b ^ c ^ d);
+#define xor4_32(a,b,c,d) ((a ^ b) ^ (c ^ d));
 
 __device__
 static void aes_round(

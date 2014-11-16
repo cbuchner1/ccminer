@@ -1,9 +1,8 @@
 #include "cuda_helper.h"
 
-#define TPB 256
+#include <memory.h>
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+#define TPB 128
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
@@ -1294,12 +1293,30 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	state[0xF] ^= p7;
 }
 
+__device__ __forceinline__
+void shavite_gpu_init(uint32_t *sharedMemory)
+{
+	/* each thread startup will fill a uint32 */
+	if (threadIdx.x < 128) {
+		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
+		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
+		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
+		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
+
+		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+	}
+}
+
 // GPU Hash
-__global__ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__ __launch_bounds__(TPB, 8) /* 64 registers if TPB 128 (fast), 80 with 92 (medium), 32 if 256 (slow) */
+void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
-	aes_gpu_init(sharedMemory);
+	shavite_gpu_init(sharedMemory);
 
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -1344,11 +1361,12 @@ __global__ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, ui
 	}
 }
 
-__global__ void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
+__global__ __launch_bounds__(TPB, 8)
+void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
-	aes_gpu_init(sharedMemory);
+	shavite_gpu_init(sharedMemory);
 
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -1397,9 +1415,9 @@ __host__ void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t start
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
+	cudaFuncSetCacheConfig(x11_shavite512_gpu_hash_64, cudaFuncCachePreferL1);
 
-	x11_shavite512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 

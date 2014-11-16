@@ -28,7 +28,11 @@ __device__ __forceinline__ void AES_2ROUND(
 	k0++;
 }
 
-__constant__ uint32_t P[48] = {
+__device__ __forceinline__
+void cuda_echo_round(
+	const uint32_t *const __restrict__ sharedMemory, uint32_t *const __restrict__  hash)
+{
+	const uint32_t P[48] = {
 	0xe7e9f5f5, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af,
 	0xa4213d7e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af,
 	//8-12
@@ -45,14 +49,11 @@ __constant__ uint32_t P[48] = {
 	0x14b8a457, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af,
 	0x265f4382, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af
 	//58-61
-};
-
-__device__ __forceinline__
-void cuda_echo_round(const uint32_t *const __restrict__ sharedMemory, uint32_t *const __restrict__ hash)
-{
+	};
 	uint32_t k0;
 	uint32_t h[16];
-	#pragma unroll
+
+	#pragma unroll 16
 	for (int i = 0; i < 16; i++)
 	{
 		h[i] = hash[i];
@@ -170,12 +171,20 @@ void cuda_echo_round(const uint32_t *const __restrict__ sharedMemory, uint32_t *
 	{
 
 		// Big Sub Words
-		#pragma unroll 16
-		for (int i = 0; i < 16; i++)
+		#pragma unroll 4
+		for (int idx = 0; idx < 64; idx += 16)
 		{
-			int idx = i << 2; // *4
 			AES_2ROUND(sharedMemory,
 				W[idx + 0], W[idx + 1], W[idx + 2], W[idx + 3],
+				k0);
+			AES_2ROUND(sharedMemory,
+				W[idx + 4], W[idx + 5], W[idx + 6], W[idx + 7],
+				k0);
+			AES_2ROUND(sharedMemory,
+				W[idx + 8], W[idx + 9], W[idx + 10], W[idx + 11],
+				k0);
+			AES_2ROUND(sharedMemory,
+				W[idx + 12], W[idx + 13], W[idx + 14], W[idx + 15],
 				k0);
 		}
 
@@ -241,8 +250,8 @@ void cuda_echo_round(const uint32_t *const __restrict__ sharedMemory, uint32_t *
 		}
 	}
 
-	#pragma unroll 8
-	for (int i = 0; i<32; i += 4)
+	#pragma unroll
+	for (int i = 0; i<16; i += 4)
 	{
 		W[i] ^= W[32 + i] ^ 512;
 		W[i + 1] ^= W[32 + i + 1];
@@ -255,12 +264,29 @@ void cuda_echo_round(const uint32_t *const __restrict__ sharedMemory, uint32_t *
 		hash[i] ^= W[i];
 }
 
-__global__ /* __launch_bounds__(320, 3) will force 64 registers on the 750 Ti */
+__device__ __forceinline__
+void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
+{
+	/* each thread startup will fill a uint32 */
+	if (threadIdx.x < 128) {
+		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
+		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
+		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
+		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
+
+		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+	}
+}
+
+__global__ __launch_bounds__(128, 7) /* will force 72 registers */
 void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
-	aes_gpu_init(sharedMemory);
+	echo_gpu_init(sharedMemory);
 
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -283,7 +309,7 @@ void x11_echo512_cpu_init(int thr_id, int threads)
 __host__
 void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 256;
+	const int threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
