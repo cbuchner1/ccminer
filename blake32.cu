@@ -39,8 +39,6 @@ extern "C" void blake256hash(void *output, const void *input, int8_t rounds = 14
 
 #include "cuda_helper.h"
 
-#define MAXU 0xffffffffU
-
 #if PRECALC64
 __constant__ uint32_t _ALIGN(32) d_data[12];
 #else
@@ -58,7 +56,7 @@ static uint32_t *h_resNonce[8];
 
 /* max count of found nonces in one call */
 #define NBN 2
-static uint32_t extra_results[NBN] = { MAXU };
+static uint32_t extra_results[NBN] = { UINT32_MAX };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 __constant__
@@ -250,7 +248,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 	const uint32_t crcsum, const int8_t rounds)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -339,7 +337,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 	const int8_t rounds)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -404,12 +402,12 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	int rc = 0;
 
 #if NBN > 1
-	if (extra_results[0] != MAXU) {
+	if (extra_results[0] != UINT32_MAX) {
 		// possible extra result found in previous call
 		if (first_nonce <= extra_results[0] && max_nonce >= extra_results[0]) {
 			pdata[19] = extra_results[0];
 			*hashes_done = pdata[19] - first_nonce + 1;
-			extra_results[0] = MAXU;
+			extra_results[0] = UINT32_MAX;
 			rc = 1;
 			goto exit_scan;
 		}
@@ -455,7 +453,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		// GPU FULL HASH
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], targetHigh, crcsum, blakerounds);
 #endif
-		if (foundNonce != MAXU)
+		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhashcpu[8];
 			uint32_t Htarg = (uint32_t)targetHigh;
@@ -472,7 +470,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 				pdata[19] = foundNonce;
 				rc = 1;
 
-				if (extra_results[0] != MAXU) {
+				if (extra_results[0] != UINT32_MAX) {
 					// Rare but possible if the throughput is big
 					be32enc(&endiandata[19], extra_results[0]);
 
@@ -481,7 +479,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 						applog(LOG_NOTICE, "GPU found more than one result " CL_GRN "yippee!");
 						rc = 2;
 					} else {
-						extra_results[0] = MAXU;
+						extra_results[0] = UINT32_MAX;
 					}
 				}
 

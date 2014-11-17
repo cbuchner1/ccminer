@@ -1122,8 +1122,12 @@ static void *miner_thread(void *userdata)
 			max64 = max(minmax-1, max64);
 		}
 
-		if (opt_debug)
-			applog(LOG_DEBUG, "GPU #%d: start=%08x range=%llx", device_map[thr_id], *nonceptr, max64);
+		// we can't scan more than uint capacity
+		max64 = min(UINT32_MAX, max64);
+
+		//if (opt_debug)
+		//	applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x max64=%llx",
+		//		device_map[thr_id], *nonceptr, end_nonce, max64);
 
 		start_nonce = *nonceptr;
 
@@ -1137,7 +1141,7 @@ static void *miner_thread(void *userdata)
 			range.data = hashlog_get_scan_range(work.job_id);
 			if (range.data && !opt_benchmark) {
 				bool stall = false;
-				if (range.scanned[0] == 1 && range.scanned[1] == 0xFFFFFFFFUL) {
+				if (range.scanned[0] == 1 && range.scanned[1] == UINT32_MAX) {
 					applog(LOG_WARNING, "detected a rescan of fully scanned job!");
 				} else if (range.scanned[0] > 0 && range.scanned[1] > 0 && range.scanned[1] < 0xFFFFFFF0UL) {
 					/* continue scan the end */
@@ -1163,17 +1167,23 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
+		/* never let small ranges at end */
+		if (end_nonce >= UINT32_MAX - 256)
+			end_nonce = UINT32_MAX;
+
 		if ((max64 + start_nonce) >= end_nonce)
 			max_nonce = end_nonce;
 		else
 			max_nonce = (uint32_t) (max64 + start_nonce);
 
-		/* never let small ranges at end */
-		if (max_nonce >= UINT32_MAX - 256)
-			max_nonce = UINT32_MAX;
+		// todo: keep it rounded for gpu threads ?
 
 		work.scanned_from = start_nonce;
 		(*nonceptr) = start_nonce;
+
+		if (opt_debug)
+			applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x range=%08x",
+				device_map[thr_id], start_nonce, max_nonce, (max_nonce-start_nonce));
 
 		hashes_done = 0;
 continue_scan:

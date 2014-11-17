@@ -28,7 +28,7 @@ extern int device_map[8];
 void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found)
 {
 	uint64_t gpu = device_map[thr_id];
-	uint64_t key = (gpu << 56) + (uid++ % UINT_MAX);
+	uint64_t key = (gpu << 56) + (uid++ % UINT32_MAX);
 	stats_data data;
 	// to enough hashes to give right stats
 	if (hashcount < 1000 || hashrate < 0.01)
