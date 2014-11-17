@@ -479,6 +479,7 @@ struct stratum_job {
 	unsigned char ntime[4];
 	bool clean;
 	unsigned char nreward[2];
+	uint32_t height;
 	double diff;
 };
 
@@ -503,7 +504,27 @@ struct stratum_ctx {
 	pthread_mutex_t work_lock;
 
 	int srvtime_diff;
-	int bloc_height;
+};
+
+struct work {
+	uint32_t data[32];
+	uint32_t target[8];
+	uint32_t maxvote;
+
+	char job_id[128];
+	size_t xnonce2_len;
+	uchar xnonce2[32];
+
+	union {
+		uint32_t u32[2];
+		uint64_t u64[1];
+	} noncerange;
+
+	double difficulty;
+	uint32_t height;
+
+	uint32_t scanned_from;
+	uint32_t scanned_to;
 };
 
 struct stats_data {
@@ -526,8 +547,8 @@ bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
-void hashlog_remember_submit(char* jobid, uint32_t nounce, uint32_t scanned_from);
-void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to);
+void hashlog_remember_submit(struct work* work, uint32_t nonce);
+void hashlog_remember_scan_range(struct work* work);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
 uint64_t hashlog_get_scan_range(char* jobid);

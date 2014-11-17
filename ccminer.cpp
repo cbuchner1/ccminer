@@ -238,7 +238,7 @@ int opt_statsavg = 30;
 int opt_intensity = 0;
 uint32_t opt_work_size = 0; /* default */
 
-char *opt_api_allow = "127.0.0.1"; /* 0.0.0.0 for all ips */
+char *opt_api_allow = (char*) "127.0.0.1"; /* 0.0.0.0 for all ips */
 int opt_api_listen = 4068; /* 0 to disable */
 
 #ifdef HAVE_GETOPT_LONG
@@ -374,26 +374,6 @@ static struct option const options[] = {
 	{ "devices", 1, NULL, 'd' },
 	{ "diff", 1, NULL, 'f' },
 	{ 0, 0, 0, 0 }
-};
-
-struct work {
-	uint32_t data[32];
-	uint32_t target[8];
-	uint32_t maxvote;
-
-	char job_id[128];
-	size_t xnonce2_len;
-	uchar xnonce2[32];
-
-	union {
-		uint32_t u32[2];
-		uint64_t u64[1];
-	} noncerange;
-
-	double difficulty;
-
-	uint32_t scanned_from;
-	uint32_t scanned_to;
 };
 
 static struct work _ALIGN(64) g_work;
@@ -626,7 +606,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			return false;
 		}
 
-		hashlog_remember_submit(work->job_id, nonce, work->scanned_from);
+		hashlog_remember_submit(work, nonce);
 
 	} else {
 
@@ -903,6 +883,9 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		be32dec(sctx->job.ntime) & 0xfffffff, sctx->job.job_id);
 	work->xnonce2_len = sctx->xnonce2_size;
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
+
+	// also store the bloc number
+	work->height = sctx->job.height;
 
 	/* Generate merkle root */
 	switch (opt_algo) {
@@ -1369,7 +1352,7 @@ continue_scan:
 			}
 		}
 
-		hashlog_remember_scan_range(work.job_id, work.scanned_from, work.scanned_to);
+		hashlog_remember_scan_range(&work);
 
 		/* output */
 		if (!opt_quiet && loopcnt) {
@@ -1583,13 +1566,13 @@ static void *stratum_thread(void *userdata)
 			if (stratum.job.clean) {
 				if (!opt_quiet)
 					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
-						stratum.bloc_height);
+						stratum.job.height);
 				restart_threads();
 				hashlog_purge_old();
 				stats_purge_old();
 			} else if (opt_debug && !opt_quiet) {
 					applog(LOG_BLUE, "%s asks job %d for block %d", short_url,
-						strtoul(stratum.job.job_id, NULL, 16), stratum.bloc_height);
+						strtoul(stratum.job.job_id, NULL, 16), stratum.job.height);
 			}
 			pthread_mutex_unlock(&g_work_lock);
 		}
@@ -1935,7 +1918,7 @@ static void parse_config(void)
 		}
 		else if (!options[i].has_arg) {
 			if (json_is_true(val))
-				parse_arg(options[i].val, "");
+				parse_arg(options[i].val, (char*) "");
 		}
 		else
 			applog(LOG_ERR, "JSON option %s invalid",

@@ -18,6 +18,7 @@
 
 struct hashlog_data {
 	uint32_t tm_sent;
+	uint32_t height;
 	uint32_t scanned_from;
 	uint32_t scanned_to;
 	uint32_t last_from;
@@ -60,15 +61,16 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 /**
  * Store submitted nonces of a job
  */
-extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint32_t scanned_from)
+extern "C" void hashlog_remember_submit(struct work* work, uint32_t nonce)
 {
-	uint64_t njobid = hextouint(jobid);
+	uint64_t njobid = hextouint(work->job_id);
 	uint64_t key = (njobid << 32) + nonce;
 	hashlog_data data;
 
 	memset(&data, 0, sizeof(data));
-	data.scanned_from = scanned_from;
+	data.scanned_from = work->scanned_from;
 	data.scanned_to = nonce;
+	data.height = work->height;
 	data.tm_add = data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
 	tlastshares[key] = data;
 }
@@ -76,11 +78,11 @@ extern "C" void hashlog_remember_submit(char* jobid, uint32_t nonce, uint32_t sc
 /**
  * Update job scanned range
  */
-extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, uint32_t scanned_to)
+extern "C" void hashlog_remember_scan_range(struct work* work)
 {
-	uint64_t njobid = hextouint(jobid);
+	uint64_t njobid = hextouint(work->job_id);
 	uint64_t key = (njobid << 32);
-	uint64_t range = hashlog_get_scan_range(jobid);
+	uint64_t range = hashlog_get_scan_range(work->job_id);
 	hashlog_data data;
 
 	// global scan range of a job
@@ -96,15 +98,15 @@ extern "C" void hashlog_remember_scan_range(char* jobid, uint32_t scanned_from, 
 	if (data.tm_add == 0)
 		data.tm_add = (uint32_t) time(NULL);
 
-	data.last_from = scanned_from;
+	data.last_from = work->scanned_from;
 
-	if (scanned_from < scanned_to) {
-		if (data.scanned_to == 0 || scanned_from == data.scanned_to + 1)
-			data.scanned_to = scanned_to;
+	if (work->scanned_from < work->scanned_to) {
+		if (data.scanned_to == 0 || work->scanned_from == data.scanned_to + 1)
+			data.scanned_to = work->scanned_to;
 		if (data.scanned_from == 0)
-			data.scanned_from = scanned_from ? scanned_from : 1; // min 1
-		else if (scanned_from < data.scanned_from || scanned_to == (data.scanned_from - 1))
-			data.scanned_from = scanned_from;
+			data.scanned_from = work->scanned_from ? work->scanned_from : 1; // min 1
+		else if (work->scanned_from < data.scanned_from || work->scanned_to == (data.scanned_from - 1))
+			data.scanned_from = work->scanned_from;
 	}
 
 	data.tm_upd = (uint32_t) time(NULL);
@@ -228,8 +230,8 @@ extern "C" void hashlog_dump_job(char* jobid)
 				if (i->first != keypfx)
 					applog(LOG_DEBUG, CL_YLW "job %s, found %08x ", jobid, LO_DWORD(i->first));
 				else
-					applog(LOG_DEBUG, CL_YLW "job %s scanned range : %08x-%08x", jobid,
-						i->second.scanned_from, i->second.scanned_to);
+					applog(LOG_DEBUG, CL_YLW "job %s(%u) range done: %08x-%08x", jobid,
+						i->second.height, i->second.scanned_from, i->second.scanned_to);
 			}
 			i++;
 		}
