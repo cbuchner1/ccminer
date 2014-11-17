@@ -44,7 +44,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 		((uint32_t*)ptarget)[7] = 0x0005;
 
 	int throughput = opt_work_size ? opt_work_size : (1 << 21); // 256*256*8*4
-	throughput = min(throughput, max_nonce - first_nonce);
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id]) {

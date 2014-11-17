@@ -163,15 +163,13 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
+	static bool init[8] = { 0 };
+	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00000f;
 
-	const uint32_t Htarg = ptarget[7];
-	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
-	throughput = min(throughput, max_nonce - first_nonce);
-
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
@@ -260,6 +258,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
+			const uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
 			animehash(vhash64, endiandata);
 

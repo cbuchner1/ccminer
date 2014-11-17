@@ -160,10 +160,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
     const uint32_t first_nonce = pdata[19]; /* to check */
     // CUDA will process thousands of threads.
     int throughput = opt_work_size ? opt_work_size : (1 << 19); // 128*4096
-    throughput = min(throughput, max_nonce - first_nonce);
-
-    if (opt_benchmark)
-        ((uint32_t*)ptarget)[7] = 0x000000ff;
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
     int rc = 0;
     uint32_t *hash = NULL;
@@ -173,6 +170,9 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
 
     int nrmCalls[6];
     memset(nrmCalls, 0, sizeof(int) * 6);
+
+	if (opt_benchmark)
+		((uint32_t*)ptarget)[7] = 0x000000ff;
 
     // für jeden Hash ein individuelles Target erstellen basierend
     // auf dem höchsten Bit, das in ptarget gesetzt ist.
