@@ -26,7 +26,7 @@ function getdataFromPears()
 
 function ignoreField($key)
 {
-	$ignored = array('API','VER','GPU','CARD','GPUS','CPU');
+	$ignored = array('API','VER','GPU','CARD','GPUS','CPU','TS');
 	return in_array($key, $ignored);
 }
 
@@ -46,6 +46,8 @@ function translateField($key)
 	$intl['DIFF'] = 'Difficulty';
 	$intl['UPTIME'] = 'Miner up time';
 	$intl['TS'] = 'Last update';
+
+	$intl['I'] = 'Intensity';
 
 	$intl['TEMP'] = 'T°c';
 	$intl['FAN'] = 'Fan %';

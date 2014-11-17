@@ -2186,6 +2186,8 @@ int main(int argc, char *argv[])
 		thr = &thr_info[i];
 
 		thr->id = i;
+		thr->gpu.gpu_id = device_map[i];
+		thr->gpu.thr_id = i;
 		thr->q = tq_new();
 		if (!thr->q)
 			return 1;

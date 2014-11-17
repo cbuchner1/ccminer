@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.1"
+#define APIVERSION "1.2"
 
 #ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -120,11 +120,10 @@ static void gpustatus(int thr_id)
 {
 	if (thr_id >= 0 && thr_id < gpu_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
+		int gpuid = cgpu->gpu_id;
 		char buf[512]; *buf = '\0';
 		char pstate[8];
 		char* card;
-
-		cgpu->thr_id = thr_id;
 
 #ifdef USE_WRAPNVML
 		cgpu->has_monitoring = true;
@@ -149,13 +148,13 @@ static void gpustatus(int thr_id)
 		cgpu->accepted = accepted_count;
 		cgpu->rejected = rejected_count;
 
-		cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
+		cgpu->khashes = stats_get_speed(cgpu->gpu_id, 0.0) / 1000.0;
 
 		snprintf(pstate, sizeof(pstate), "P%u", cgpu->gpu_pstate);
 		if (cgpu->gpu_pstate == -1)
 			*pstate= '\0';
 
-		card = device_name[device_map[thr_id]];
+		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;CARD=%s;TEMP=%.1f;FAN=%d;"
 			"FREQ=%d;PST=%s;KHS=%.2f;HWF=%d;I=%d|",
@@ -211,15 +210,16 @@ static char *getthreads(char *params)
 static char *gethistory(char *params)
 {
 	struct stats_data data[20];
-	int thr = params ? atoi(params) : -1;
+	int thrid = params ? atoi(params) : -1;
+	int gpuid = params ? device_map[(thrid & 0x7)] : -1;
 	char *p = buffer;
 	*buffer = '\0';
-	int records = stats_get_history(thr, data, ARRAY_SIZE(data));
+	int records = stats_get_history(gpuid, data, ARRAY_SIZE(data));
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_stat;
-		p += sprintf(p, "GPU=%d;KHS=%.2f;DIFF=%.6f;"
+		p += sprintf(p, "THR=%d|GPU=%d;KHS=%.2f;DIFF=%.6f;"
 				"COUNT=%u;FOUND=%u;TS=%u|",
-			data[i].gpu_id, data[i].hashrate, data[i].difficulty,
+			data[i].thr_id, data[i].gpu_id, data[i].hashrate, data[i].difficulty,
 			data[i].hashcount, data[i].hashfound, (uint32_t)ts);
 	}
 	return buffer;
@@ -238,7 +238,7 @@ static char *getmeminfo(char *params)
 	totmem = smem + hmem;
 
 	*buffer = '\0';
-	sprintf(buffer, "STATS=%u;HASHLOG=%u;MEM=%llu|",
+	sprintf(buffer, "STATS=%u;HASHLOG=%u;MEM=%lu|",
 		srec, hrec, totmem);
 
 	return buffer;

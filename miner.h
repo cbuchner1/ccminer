@@ -112,6 +112,11 @@ typedef unsigned char uchar;
 # define min(a, b)  ((a) < (b) ? (a) : (b))
 #endif
 
+#ifndef UINT32_MAX
+/* for gcc 4.4 */
+#define UINT32_MAX UINT_MAX
+#endif
+
 #if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
 #define WANT_BUILTIN_BSWAP
 #else
@@ -363,21 +368,20 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 void *api_thread(void *userdata);
 
 struct cgpu_info {
-	int thr_id;
+	uint8_t gpu_id;
+	uint8_t thr_id;
 	int accepted;
 	int rejected;
 	int hw_errors;
 	double khashes;
-	int intensity;
-#ifdef USE_WRAPNVML
-	bool has_monitoring;
+	uint8_t intensity;
+	uint8_t has_monitoring;
 	float gpu_temp;
 	int gpu_fan;
 	int gpu_clock;
 	int gpu_memclock;
 	int gpu_pstate;
 	double gpu_vddc;
-#endif
 };
 
 struct thr_api {
