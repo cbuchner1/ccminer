@@ -43,7 +43,7 @@ static uint64_t hextouint(char* jobid)
 /**
  * @return time of a job/nonce submission (or last nonce if nonce is 0)
  */
-extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
+uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 {
 	uint32_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
@@ -61,7 +61,7 @@ extern "C" uint32_t hashlog_already_submittted(char* jobid, uint32_t nonce)
 /**
  * Store submitted nonces of a job
  */
-extern "C" void hashlog_remember_submit(struct work* work, uint32_t nonce)
+void hashlog_remember_submit(struct work* work, uint32_t nonce)
 {
 	uint64_t njobid = hextouint(work->job_id);
 	uint64_t key = (njobid << 32) + nonce;
@@ -78,7 +78,7 @@ extern "C" void hashlog_remember_submit(struct work* work, uint32_t nonce)
 /**
  * Update job scanned range
  */
-extern "C" void hashlog_remember_scan_range(struct work* work)
+void hashlog_remember_scan_range(struct work* work)
 {
 	uint64_t njobid = hextouint(work->job_id);
 	uint64_t key = (njobid << 32);
@@ -120,7 +120,7 @@ extern "C" void hashlog_remember_scan_range(struct work* work)
  * Returns the range of a job
  * @return uint64_t to|from
  */
-extern "C" uint64_t hashlog_get_scan_range(char* jobid)
+uint64_t hashlog_get_scan_range(char* jobid)
 {
 	uint64_t ret = 0;
 	uint64_t njobid = hextouint(jobid);
@@ -149,7 +149,7 @@ extern "C" uint64_t hashlog_get_scan_range(char* jobid)
  * Search last submitted nonce for a job
  * @return max nonce
  */
-extern "C" uint32_t hashlog_get_last_sent(char* jobid)
+uint32_t hashlog_get_last_sent(char* jobid)
 {
 	uint32_t nonce = 0;
 	uint64_t njobid = hextouint(jobid);
@@ -167,7 +167,7 @@ extern "C" uint32_t hashlog_get_last_sent(char* jobid)
 /**
  * Remove entries of a job...
  */
-extern "C" void hashlog_purge_job(char* jobid)
+void hashlog_purge_job(char* jobid)
 {
 	int deleted = 0;
 	uint64_t njobid = hextouint(jobid);
@@ -189,7 +189,7 @@ extern "C" void hashlog_purge_job(char* jobid)
 /**
  * Remove old entries to reduce memory usage
  */
-extern "C" void hashlog_purge_old(void)
+void hashlog_purge_old(void)
 {
 	int deleted = 0;
 	uint32_t now = (uint32_t) time(NULL);
@@ -210,15 +210,24 @@ extern "C" void hashlog_purge_old(void)
 /**
  * Reset the submitted nonces cache
  */
-extern "C" void hashlog_purge_all(void)
+void hashlog_purge_all(void)
 {
 	tlastshares.clear();
 }
 
 /**
+ * API meminfo
+ */
+void hashlog_getmeminfo(uint64_t *mem, uint32_t *records)
+{
+	(*records) = tlastshares.size();
+	(*mem) = (*records) * sizeof(hashlog_data);
+}
+
+/**
  * Used to debug ranges...
  */
-extern "C" void hashlog_dump_job(char* jobid)
+void hashlog_dump_job(char* jobid)
 {
 	if (opt_debug) {
 		uint64_t njobid = hextouint(jobid);

@@ -25,7 +25,7 @@ extern int device_map[8];
 /**
  * Store speed per thread (todo: compute vardiff ?)
  */
-extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found)
+void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found)
 {
 	uint64_t gpu = device_map[thr_id];
 	uint64_t key = (gpu << 56) + (uid++ % UINT_MAX);
@@ -59,7 +59,7 @@ extern "C" void stats_remember_speed(int thr_id, uint32_t hashcount, double hash
  * Get the computed average speed
  * @param thr_id int (-1 for all threads)
  */
-extern "C" double stats_get_speed(int thr_id, double def_speed)
+double stats_get_speed(int thr_id, double def_speed)
 {
 	uint64_t gpu = device_map[thr_id];
 	uint64_t keypfx = (gpu << 56);
@@ -91,7 +91,7 @@ extern "C" double stats_get_speed(int thr_id, double def_speed)
 	return speed;
 }
 
-extern "C" int stats_get_history(int thr_id, struct stats_data *data, int max_records)
+int stats_get_history(int thr_id, struct stats_data *data, int max_records)
 {
 	uint64_t gpu = device_map[thr_id];
 	uint64_t keypfx = (gpu << 56);
@@ -114,7 +114,7 @@ extern "C" int stats_get_history(int thr_id, struct stats_data *data, int max_re
 /**
  * Remove old entries to reduce memory usage
  */
-extern "C" void stats_purge_old(void)
+void stats_purge_old(void)
 {
 	int deleted = 0;
 	uint32_t now = (uint32_t) time(NULL);
@@ -135,8 +135,16 @@ extern "C" void stats_purge_old(void)
 /**
  * Reset the cache
  */
-extern "C" void stats_purge_all(void)
+void stats_purge_all(void)
 {
 	tlastscans.clear();
 }
 
+/**
+ * API meminfo
+ */
+void stats_getmeminfo(uint64_t *mem, uint32_t *records)
+{
+	(*records) = tlastscans.size();
+	(*mem) = (*records) * sizeof(stats_data);
+}

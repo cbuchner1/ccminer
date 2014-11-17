@@ -225,6 +225,25 @@ static char *gethistory(char *params)
 	return buffer;
 }
 
+/**
+ * Some debug infos about memory usage
+ */
+static char *getmeminfo(char *params)
+{
+	uint64_t smem, hmem, totmem;
+	uint32_t srec, hrec;
+
+	stats_getmeminfo(&smem, &srec);
+	hashlog_getmeminfo(&hmem, &hrec);
+	totmem = smem + hmem;
+
+	*buffer = '\0';
+	sprintf(buffer, "STATS=%u;HASHLOG=%u;MEM=%llu|",
+		srec, hrec, totmem);
+
+	return buffer;
+}
+
 static char *gethelp(char *params);
 struct CMDS {
 	const char *name;
@@ -232,7 +251,8 @@ struct CMDS {
 } cmds[] = {
 	{ "summary", getsummary },
 	{ "threads", getthreads },
-	{ "histo", gethistory },
+	{ "histo",   gethistory },
+	{ "meminfo", getmeminfo },
 	/* keep it the last */
 	{ "help",    gethelp },
 };

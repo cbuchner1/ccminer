@@ -556,12 +556,14 @@ void hashlog_purge_old(void);
 void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);
 void hashlog_dump_job(char* jobid);
+void hashlog_getmeminfo(uint64_t *mem, uint32_t *records);
 
 void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found);
 double stats_get_speed(int thr_id, double def_speed);
 int  stats_get_history(int thr_id, struct stats_data *data, int max_records);
 void stats_purge_old(void);
 void stats_purge_all(void);
+void stats_getmeminfo(uint64_t *mem, uint32_t *records);
 
 struct thread_q;
 
