@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define threadsperblock 512
+#define threadsperblock 256
 
 #define USE_SHARED 1
 
@@ -37,7 +37,7 @@ __constant__ static uint64_t mixTob7Tox[256];
  *
  * ==========================(LICENSE BEGIN)============================
  *
- * Copyright (c) 2014 djm34 & tpruvot
+ * Copyright (c) 2014 djm34 & tpruvot & SP
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -61,6 +61,7 @@ __constant__ static uint64_t mixTob7Tox[256];
  * ===========================(LICENSE END)=============================
  * @author djm34
  * @author tpruvot
+ * @author SP
  */
 
 static const uint64_t old1_T0[256] = {
@@ -2193,7 +2194,6 @@ static const uint64_t plain_RC[10] = {
 
 /* ====================================================================== */
 
-#define BYTE(x, n) ((unsigned)((x) >> (8 * (n))) & 0xFF)
 
 #define TRANSFER(dst, src) { \
 	dst[0] = src ## 0; \
@@ -2207,6 +2207,8 @@ static const uint64_t plain_RC[10] = {
 }
 
 #if !USE_ALL_TABLES
+#define BYTE(x, n) ((unsigned)((x) >> (8 * (n))) & 0xFF)
+
 /* method disabled to reduce code size */
 __device__ __forceinline__
 static uint64_t table_skew(uint64_t val, int num) {
@@ -2243,22 +2245,14 @@ static uint64_t ROUND_ELT(const uint64_t* sharedMemory, uint64_t* __restrict__ i
 
 __device__ __forceinline__
 static uint64_t ROUND_ELT(const uint64_t* sharedMemory, uint64_t* __restrict__ in,
-	int i0,int i1,int i2,int i3,int i4,int i5,int i6,int i7) 
+const int i0, const int i1, const int i2, const int i3, const int i4, const int i5, const int i6, const int i7)
 {
-	uint32_t idx0, idx1, idx2, idx3, idx4, idx5, idx6, idx7;
-	idx0 = BYTE(in[i0], 0);
-	idx1 = BYTE(in[i1], 1) + 256;
-	idx2 = BYTE(in[i2], 2) + 512;
-	idx3 = BYTE(in[i3], 3) + 768;
-	idx4 = BYTE(in[i4], 4) + 1024; 
-	idx5 = BYTE(in[i5], 5) + 1280;
-	idx6 = BYTE(in[i6], 6) + 1536; 
-	idx7 = BYTE(in[i7], 7) + 1792;
-
-	return xor8(sharedMemory[idx0],sharedMemory[idx1],sharedMemory[idx2],sharedMemory[idx3],
-			    sharedMemory[idx4],sharedMemory[idx5],sharedMemory[idx6],sharedMemory[idx7]);
+	uint32_t* in32 = (uint32_t*)in;
+	return (sharedMemory[__byte_perm(in32[(i0 << 1)], 0, 0x4440)]        ^ sharedMemory[__byte_perm(in32[(i1 << 1)], 0, 0x4441) + 256] ^
+		sharedMemory[__byte_perm(in32[(i2 << 1)], 0, 0x4442) + 512]      ^ sharedMemory[__byte_perm(in32[(i3 << 1)], 0, 0x4443) + 768] ^
+		sharedMemory[__byte_perm(in32[(i4 << 1) + 1], 0, 0x4440) + 1024] ^ sharedMemory[__byte_perm(in32[(i5 << 1) + 1], 0, 0x4441) + 1280] ^
+		sharedMemory[__byte_perm(in32[(i6 << 1) + 1], 0, 0x4442) + 1536] ^ sharedMemory[__byte_perm(in32[(i7 << 1) + 1], 0, 0x4443) + 1792]);
 }
-
 #endif /* USE_ALL_TABLES */
 
 #define ROUND(table, in, out, c0, c1, c2, c3, c4, c5, c6, c7) { \
@@ -2270,10 +2264,21 @@ static uint64_t ROUND_ELT(const uint64_t* sharedMemory, uint64_t* __restrict__ i
 	out ## 5 = xor1(ROUND_ELT(table, in, 5, 4, 3, 2, 1, 0, 7, 6), c5); \
 	out ## 6 = xor1(ROUND_ELT(table, in, 6, 5, 4, 3, 2, 1, 0, 7), c6); \
 	out ## 7 = xor1(ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0), c7); \
-} 
+}
+
+#define ROUND1(table, in, out, c) { \
+	out ## 0 = xor1(ROUND_ELT(table, in, 0, 7, 6, 5, 4, 3, 2, 1), c); \
+	out ## 1 = ROUND_ELT(table, in, 1, 0, 7, 6, 5, 4, 3, 2); \
+	out ## 2 = ROUND_ELT(table, in, 2, 1, 0, 7, 6, 5, 4, 3); \
+	out ## 3 = ROUND_ELT(table, in, 3, 2, 1, 0, 7, 6, 5, 4); \
+	out ## 4 = ROUND_ELT(table, in, 4, 3, 2, 1, 0, 7, 6, 5); \
+	out ## 5 = ROUND_ELT(table, in, 5, 4, 3, 2, 1, 0, 7, 6); \
+	out ## 6 = ROUND_ELT(table, in, 6, 5, 4, 3, 2, 1, 0, 7); \
+	out ## 7 = ROUND_ELT(table, in, 7, 6, 5, 4, 3, 2, 1, 0); \
+}
 
 #define ROUND_KSCHED(table, in, out, c) \
-	ROUND(table, in, out, c, 0, 0, 0, 0, 0, 0, 0) \
+	ROUND1(table, in, out, c) \
 	TRANSFER(in, out)
 
 #define ROUND_WENC(table, in, key, out) \

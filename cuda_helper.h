@@ -61,7 +61,7 @@ __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 
 // das Hi Word in einem 64 Bit Typen ersetzen
 __device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) {
-	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32ULL);
+	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32U);
 }
 
 // das Lo Word in einem 64 Bit Typen ersetzen
