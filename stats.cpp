@@ -25,7 +25,7 @@ extern int device_map[8];
 /**
  * Store speed per thread (todo: compute vardiff ?)
  */
-void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found)
+void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found, uint32_t height)
 {
 	uint64_t gpu = device_map[thr_id];
 	uint64_t key = (gpu << 56) + (uid++ % UINT32_MAX);
@@ -42,6 +42,7 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 	data.gpu_id = (uint8_t)gpu;
 	data.thr_id = (uint8_t)thr_id;
 	data.tm_stat = (uint32_t) time(NULL);
+	data.height = height;
 	data.hashcount = hashcount;
 	data.hashfound = found;
 	data.hashrate = hashrate;

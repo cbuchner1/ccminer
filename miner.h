@@ -376,6 +376,7 @@ struct cgpu_info {
 	double khashes;
 	uint8_t intensity;
 	uint8_t has_monitoring;
+	int gpu_bus;
 	float gpu_temp;
 	int gpu_fan;
 	int gpu_clock;
@@ -534,6 +535,7 @@ struct work {
 struct stats_data {
 	uint32_t tm_stat;
 	uint32_t hashcount;
+	uint32_t height;
 	double difficulty;
 	double hashrate;
 	uint8_t thr_id;
@@ -562,7 +564,7 @@ void hashlog_purge_all(void);
 void hashlog_dump_job(char* jobid);
 void hashlog_getmeminfo(uint64_t *mem, uint32_t *records);
 
-void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found);
+void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found, uint32_t height);
 double stats_get_speed(int thr_id, double def_speed);
 int  stats_get_history(int thr_id, struct stats_data *data, int max_records);
 void stats_purge_old(void);

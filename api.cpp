@@ -125,6 +125,7 @@ static void gpustatus(int thr_id)
 
 #ifdef USE_WRAPNVML
 		cgpu->has_monitoring = true;
+		cgpu->gpu_bus = gpu_busid(cgpu);
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = gpu_fanpercent(cgpu);
 		cgpu->gpu_pstate = gpu_pstate(cgpu);
@@ -154,9 +155,9 @@ static void gpustatus(int thr_id)
 
 		card = device_name[gpuid];
 
-		snprintf(buf, sizeof(buf), "THR=%d;GPU=%d;CARD=%s;TEMP=%.1f;FAN=%d;"
+		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%d;CARD=%s;TEMP=%.1f;FAN=%d;"
 			"FREQ=%d;PST=%s;KHS=%.2f;HWF=%d;I=%d|",
-			thr_id, gpuid, card, cgpu->gpu_temp, cgpu->gpu_fan,
+			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
 			cgpu->gpu_clock, pstate, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
@@ -207,16 +208,16 @@ static char *getthreads(char *params)
  */
 static char *gethistory(char *params)
 {
-	struct stats_data data[20];
+	struct stats_data data[50];
 	int thrid = params ? atoi(params) : -1;
 	char *p = buffer;
 	*buffer = '\0';
 	int records = stats_get_history(thrid, data, ARRAY_SIZE(data));
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_stat;
-		p += sprintf(p, "THR=%d|GPU=%d;KHS=%.2f;DIFF=%.6f;"
+		p += sprintf(p, "GPU=%d;H=%u;KHS=%.2f;DIFF=%.6f;"
 				"COUNT=%u;FOUND=%u;TS=%u|",
-			data[i].thr_id, data[i].gpu_id, data[i].hashrate, data[i].difficulty,
+			data[i].gpu_id, data[i].height, data[i].hashrate, data[i].difficulty,
 			data[i].hashcount, data[i].hashfound, (uint32_t)ts);
 	}
 	return buffer;

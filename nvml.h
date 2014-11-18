@@ -145,6 +145,7 @@ float gpu_temp(struct cgpu_info *gpu);
 int gpu_clock(struct cgpu_info *gpu);
 unsigned int gpu_power(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
+int gpu_busid(struct cgpu_info *gpu);
 
 #if defined(__cplusplus)
 }

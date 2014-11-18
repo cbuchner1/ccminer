@@ -330,6 +330,16 @@ int wrap_nvml_get_pstate(wrap_nvml_handle *nvmlh, int cudaindex, int *pstate)
 	return 0;
 }
 
+int wrap_nvml_get_busid(wrap_nvml_handle *nvmlh, int cudaindex, int *busid)
+{
+	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
+	if (gpuindex < 0 || gpuindex >= nvmlh->nvml_gpucount)
+		return -1;
+
+	(*busid) = nvmlh->nvml_pci_bus_id[gpuindex];
+	return 0;
+}
+
 int wrap_nvml_destroy(wrap_nvml_handle *nvmlh)
 {
 	nvmlh->nvmlShutdown();
@@ -443,6 +453,15 @@ int nvapi_getpstate(unsigned int devNum, unsigned int *power)
 	}
 
 	return 0;
+}
+
+int nvapi_getbusid(unsigned int devNum, int *busid)
+{
+	if (devNum >= 0 && devNum <= 8) {
+		(*busid) = device_bus_ids[devNum];
+		return 0;
+	}
+	return -1;
 }
 
 int wrap_nvapi_init()
@@ -577,6 +596,22 @@ int gpu_pstate(struct cgpu_info *gpu)
 #endif
 	return pstate;
 }
+
+int gpu_busid(struct cgpu_info *gpu)
+{
+	int busid = -1;
+	int support = -1;
+	if (hnvml) {
+		support = wrap_nvml_get_busid(hnvml, device_map[gpu->thr_id], &busid);
+	}
+#ifdef WIN32
+	if (support == -1) {
+		nvapi_getbusid(nvapi_dev_map[gpu->gpu_id], &busid);
+	}
+#endif
+	return busid;
+}
+
 
 unsigned int gpu_power(struct cgpu_info *gpu)
 {

@@ -1346,7 +1346,7 @@ continue_scan:
 				if (rc > 1)
 					thr_hashrates[thr_id] = (rc * hashes_done) / (diff.tv_sec + 1e-6 * diff.tv_usec);
 				thr_hashrates[thr_id] *= rate_factor;
-				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc);
+				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
 			}
 			pthread_mutex_unlock(&stats_lock);
 		}
