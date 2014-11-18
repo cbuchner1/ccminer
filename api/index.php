@@ -26,7 +26,10 @@ function getdataFromPears()
 
 function ignoreField($key)
 {
-	$ignored = array('API','VER','GPU','CARD','GPUS','CPU','TS');
+	$ignored = array(
+		'API','VER','THR','GPU',
+		'CARD','GPUS','CPU','TS',
+	);
 	return in_array($key, $ignored);
 }
 

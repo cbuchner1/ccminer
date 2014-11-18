@@ -112,13 +112,11 @@ extern uint32_t rejected_count;
 extern int device_map[8];
 extern char *device_name[8];
 
-#define gpu_threads opt_n_threads
-
 /***************************************************************/
 
 static void gpustatus(int thr_id)
 {
-	if (thr_id >= 0 && thr_id < gpu_threads) {
+	if (thr_id >= 0 && thr_id < opt_n_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 		int gpuid = cgpu->gpu_id;
 		char buf[512]; *buf = '\0';
@@ -156,9 +154,9 @@ static void gpustatus(int thr_id)
 
 		card = device_name[gpuid];
 
-		snprintf(buf, sizeof(buf), "GPU=%d;CARD=%s;TEMP=%.1f;FAN=%d;"
+		snprintf(buf, sizeof(buf), "THR=%d;GPU=%d;CARD=%s;TEMP=%.1f;FAN=%d;"
 			"FREQ=%d;PST=%s;KHS=%.2f;HWF=%d;I=%d|",
-			thr_id, card, cgpu->gpu_temp, cgpu->gpu_fan,
+			thr_id, gpuid, card, cgpu->gpu_temp, cgpu->gpu_fan,
 			cgpu->gpu_clock, pstate, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
@@ -186,7 +184,7 @@ static char *getsummary(char *params)
 		"ALGO=%s;GPUS=%d;KHS=%.2f;ACC=%d;REJ=%d;"
 		"ACCMN=%.3f;DIFF=%.6f;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
-		algo, gpu_threads, (double)global_hashrate / 1000.0,
+		algo, opt_n_threads, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,
 		accps, global_diff, uptime, (uint32_t) ts);
 	return buffer;
@@ -198,7 +196,7 @@ static char *getsummary(char *params)
 static char *getthreads(char *params)
 {
 	*buffer = '\0';
-	for (int i = 0; i < gpu_threads; i++)
+	for (int i = 0; i < opt_n_threads; i++)
 		gpustatus(i);
 	return buffer;
 }
@@ -211,10 +209,9 @@ static char *gethistory(char *params)
 {
 	struct stats_data data[20];
 	int thrid = params ? atoi(params) : -1;
-	int gpuid = params ? device_map[(thrid & 0x7)] : -1;
 	char *p = buffer;
 	*buffer = '\0';
-	int records = stats_get_history(gpuid, data, ARRAY_SIZE(data));
+	int records = stats_get_history(thrid, data, ARRAY_SIZE(data));
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_stat;
 		p += sprintf(p, "THR=%d|GPU=%d;KHS=%.2f;DIFF=%.6f;"

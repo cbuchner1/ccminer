@@ -346,7 +346,7 @@ int wrap_nvml_destroy(wrap_nvml_handle *nvmlh)
 #ifdef WIN32
 #include "nvapi/nvapi_ccminer.h"
 
-static int nvapi_dev_map[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
+static int nvapi_dev_map[8] = { 0 };
 static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };
 static NvPhysicalGpuHandle phys[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 static NvU32 nvapi_dev_cnt = 0;
@@ -469,24 +469,24 @@ int wrap_nvapi_init()
 		cudaDeviceProp props;
 		if (cudaGetDeviceProperties(&props, g) == cudaSuccess)
 			device_bus_ids[g] = props.pciBusID;
+		nvapi_dev_map[g] = g;// default mapping
 	}
 
 	for (NvU8 i = 0; i < nvapi_dev_cnt; i++) {
 		NvAPI_ShortString name;
-		nvapi_dev_map[i] = i; // default mapping
 		ret = NvAPI_GPU_GetFullName(phys[i], name);
 		if (ret == NVAPI_OK) {
 			for (int g = 0; g < num_processors; g++) {
 				NvU32 busId;
 				ret = NvAPI_GPU_GetBusId(phys[i], &busId);
 				if (ret == NVAPI_OK && busId == device_bus_ids[g]) {
-					nvapi_dev_map[i] = g;
+					nvapi_dev_map[g] = i;
+					if (opt_debug)
+						applog(LOG_DEBUG, "CUDA GPU[%d] matches NVAPI GPU[%d]",
+							g, i);
 					break;
 				}
 			}
-			if (opt_debug)
-				applog(LOG_DEBUG, "CUDA GPU[%d] matches NVAPI GPU[%d]",
-					nvapi_dev_map[i], i);
 		} else {
 			NvAPI_ShortString string;
 			NvAPI_GetErrorMessage(ret, string);
@@ -518,7 +518,7 @@ int gpu_fanpercent(struct cgpu_info *gpu)
 #ifdef WIN32
 	else {
 		unsigned int rpm = 0;
-		nvapi_fanspeed(nvapi_dev_map[gpu->thr_id], &rpm);
+		nvapi_fanspeed(nvapi_dev_map[gpu->gpu_id], &rpm);
 		pct = (rpm * 100) / fan_speed_max;
 		if (pct > 100) {
 			pct = 100;
@@ -539,7 +539,7 @@ float gpu_temp(struct cgpu_info *gpu)
 	}
 #ifdef WIN32
 	else {
-		nvapi_temperature(nvapi_dev_map[gpu->thr_id], &tmp);
+		nvapi_temperature(nvapi_dev_map[gpu->gpu_id], &tmp);
 		tc = (float)tmp;
 	}
 #endif
@@ -555,7 +555,7 @@ int gpu_clock(struct cgpu_info *gpu)
 	}
 #ifdef WIN32
 	if (support == -1) {
-		nvapi_getclock(nvapi_dev_map[gpu->thr_id], &freq);
+		nvapi_getclock(nvapi_dev_map[gpu->gpu_id], &freq);
 	}
 #endif
 	return (int) freq;
@@ -571,7 +571,7 @@ int gpu_pstate(struct cgpu_info *gpu)
 #ifdef WIN32
 	if (support == -1) {
 		unsigned int pst = 0;
-		nvapi_getpstate(nvapi_dev_map[gpu->thr_id], &pst);
+		nvapi_getpstate(nvapi_dev_map[gpu->gpu_id], &pst);
 		pstate = (int) pst;
 	}
 #endif
