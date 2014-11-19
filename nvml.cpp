@@ -30,7 +30,6 @@
 
 extern wrap_nvml_handle *hnvml;
 extern int num_processors; // gpus
-extern int device_map[8];
 
 static uint32_t device_bus_ids[8] = { 0 };
 
@@ -175,7 +174,8 @@ wrap_nvml_handle * wrap_nvml_create()
 	nvmlh->devs = (wrap_nvmlDevice_t *) calloc(nvmlh->nvml_gpucount, sizeof(wrap_nvmlDevice_t));
 	nvmlh->nvml_pci_domain_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_pci_bus_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
-	nvmlh->nvml_pci_device_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
+	nvmlh->nvml_pci_device_id = (unsigned int*)calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
+	nvmlh->nvml_pci_subsys_id = (unsigned int*)calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_cuda_device_id = (int*) calloc(nvmlh->nvml_gpucount, sizeof(int));
 	nvmlh->cuda_nvml_device_id = (int*) calloc(nvmlh->cuda_gpucount, sizeof(int));
 
@@ -192,6 +192,7 @@ wrap_nvml_handle * wrap_nvml_create()
 		nvmlh->nvml_pci_domain_id[i] = pciinfo.domain;
 		nvmlh->nvml_pci_bus_id[i]    = pciinfo.bus;
 		nvmlh->nvml_pci_device_id[i] = pciinfo.device;
+		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_subsystem_id;
 	}
 
 	/* build mapping of NVML device IDs to CUDA IDs */
@@ -340,11 +341,33 @@ int wrap_nvml_get_busid(wrap_nvml_handle *nvmlh, int cudaindex, int *busid)
 	return 0;
 }
 
+int wrap_nvml_get_info(wrap_nvml_handle *nvmlh, int cudaindex, uint16_t *vid, uint16_t *pid)
+{
+	uint32_t subids = 0;
+	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
+	if (gpuindex < 0 || gpuindex >= nvmlh->nvml_gpucount)
+		return -1;
+
+	subids = nvmlh->nvml_pci_subsys_id[gpuindex];
+	(*vid) = subids >> 16;
+	(*pid) = subids & 0xFFFF;
+	return 0;
+}
+
 int wrap_nvml_destroy(wrap_nvml_handle *nvmlh)
 {
 	nvmlh->nvmlShutdown();
 
 	wrap_dlclose(nvmlh->nvml_dll);
+
+	free(nvmlh->nvml_pci_bus_id);
+	free(nvmlh->nvml_pci_device_id);
+	free(nvmlh->nvml_pci_domain_id);
+	free(nvmlh->nvml_pci_subsys_id);
+	free(nvmlh->nvml_cuda_device_id);
+	free(nvmlh->cuda_nvml_device_id);
+	free(nvmlh->devs);
+
 	free(nvmlh);
 	return 0;
 }
@@ -455,6 +478,51 @@ int nvapi_getpstate(unsigned int devNum, unsigned int *power)
 	return 0;
 }
 
+#define UTIL_DOMAIN_GPU 0
+int nvapi_getusage(unsigned int devNum, unsigned int *pct)
+{
+	NvAPI_Status ret;
+
+	if (devNum >= nvapi_dev_cnt)
+		return -1;
+
+	NV_GPU_DYNAMIC_PSTATES_INFO_EX info;
+	info.version = NV_GPU_DYNAMIC_PSTATES_INFO_EX_VER;
+	ret = NvAPI_GPU_GetDynamicPstatesInfoEx(phys[devNum], &info);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI GetDynamicPstatesInfoEx: %s", string);
+		return -1;
+	}
+	else {
+		if (info.utilization[UTIL_DOMAIN_GPU].bIsPresent)
+			(*pct) = info.utilization[UTIL_DOMAIN_GPU].percentage;
+	}
+
+	return 0;
+}
+
+int nvapi_getinfo(unsigned int devNum, char *desc)
+{
+	NvAPI_Status ret;
+
+	if (devNum >= nvapi_dev_cnt)
+		return -1;
+
+	// bios rev
+	ret = NvAPI_GPU_GetVbiosVersionString(phys[devNum], desc);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI GetVbiosVersionString: %s", string);
+		return -1;
+	}
+	return 0;
+}
+
 int nvapi_getbusid(unsigned int devNum, int *busid)
 {
 	if (devNum >= 0 && devNum <= 8) {
@@ -486,9 +554,10 @@ int wrap_nvapi_init()
 
 	for (int g = 0; g < num_processors; g++) {
 		cudaDeviceProp props;
-		if (cudaGetDeviceProperties(&props, g) == cudaSuccess)
+		if (cudaGetDeviceProperties(&props, g) == cudaSuccess) {
 			device_bus_ids[g] = props.pciBusID;
-		nvapi_dev_map[g] = g;// default mapping
+		}
+		nvapi_dev_map[g] = g; // default mapping
 	}
 
 	for (NvU8 i = 0; i < nvapi_dev_cnt; i++) {
@@ -532,7 +601,7 @@ int gpu_fanpercent(struct cgpu_info *gpu)
 {
 	unsigned int pct = 0;
 	if (hnvml) {
-		wrap_nvml_get_fanpcnt(hnvml, device_map[gpu->thr_id], &pct);
+		wrap_nvml_get_fanpcnt(hnvml, gpu->gpu_id, &pct);
 	}
 #ifdef WIN32
 	else {
@@ -553,7 +622,7 @@ float gpu_temp(struct cgpu_info *gpu)
 	float tc = 0.0;
 	unsigned int tmp = 0;
 	if (hnvml) {
-		wrap_nvml_get_tempC(hnvml, device_map[gpu->thr_id], &tmp);
+		wrap_nvml_get_tempC(hnvml, gpu->gpu_id, &tmp);
 		tc = (float)tmp;
 	}
 #ifdef WIN32
@@ -570,13 +639,18 @@ int gpu_clock(struct cgpu_info *gpu)
 	unsigned int freq = 0;
 	int support = -1;
 	if (hnvml) {
-		support = wrap_nvml_get_clock(hnvml, device_map[gpu->thr_id], NVML_CLOCK_GRAPHICS, &freq);
+		support = wrap_nvml_get_clock(hnvml, gpu->gpu_id, NVML_CLOCK_GRAPHICS, &freq);
 	}
-#ifdef WIN32
 	if (support == -1) {
+#ifdef WIN32
 		nvapi_getclock(nvapi_dev_map[gpu->gpu_id], &freq);
-	}
+#else
+		cudaDeviceProp props;
+		if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
+			freq = props.clockRate;
+		}
 #endif
+	}
 	return (int) freq;
 }
 
@@ -585,7 +659,7 @@ int gpu_pstate(struct cgpu_info *gpu)
 	int pstate = -1;
 	int support = -1;
 	if (hnvml) {
-		support = wrap_nvml_get_pstate(hnvml, device_map[gpu->thr_id], &pstate);
+		support = wrap_nvml_get_pstate(hnvml, gpu->gpu_id, &pstate);
 	}
 #ifdef WIN32
 	if (support == -1) {
@@ -602,7 +676,7 @@ int gpu_busid(struct cgpu_info *gpu)
 	int busid = -1;
 	int support = -1;
 	if (hnvml) {
-		support = wrap_nvml_get_busid(hnvml, device_map[gpu->thr_id], &busid);
+		support = wrap_nvml_get_busid(hnvml, gpu->gpu_id, &busid);
 	}
 #ifdef WIN32
 	if (support == -1) {
@@ -612,20 +686,38 @@ int gpu_busid(struct cgpu_info *gpu)
 	return busid;
 }
 
-
+/* not used in api (too much variable) */
 unsigned int gpu_power(struct cgpu_info *gpu)
 {
 	unsigned int mw = 0;
 	int support = -1;
 	if (hnvml) {
-		support = wrap_nvml_get_power_usage(hnvml, device_map[gpu->thr_id], &mw);
+		support = wrap_nvml_get_power_usage(hnvml, gpu->gpu_id, &mw);
 	}
+#ifdef WIN32
+	if (support == -1) {
+		unsigned int pct = 0;
+		nvapi_getusage(nvapi_dev_map[gpu->gpu_id], &pct);
+	}
+#endif
 	return mw;
+}
+
+int gpu_info(struct cgpu_info *gpu)
+{
+	if (hnvml) {
+		wrap_nvml_get_info(hnvml, gpu->gpu_id, &gpu->gpu_vid, &gpu->gpu_pid);
+	}
+#ifdef WIN32
+	nvapi_getinfo(nvapi_dev_map[gpu->gpu_id], &gpu->gpu_desc[0]);
+#endif
+	return 0;
 }
 
 #if defined(__cplusplus)
 }
 #endif
+
 
 #endif /* USE_WRAPNVML */
 

@@ -60,6 +60,7 @@ typedef struct {
 	unsigned int *nvml_pci_domain_id;
 	unsigned int *nvml_pci_bus_id;
 	unsigned int *nvml_pci_device_id;
+	unsigned int *nvml_pci_subsys_id;
 	int *nvml_cuda_device_id;          /* map NVML dev to CUDA dev */
 	int *cuda_nvml_device_id;          /* map CUDA dev to NVML dev */
 	wrap_nvmlDevice_t *devs;
@@ -144,8 +145,11 @@ int gpu_fanpercent(struct cgpu_info *gpu);
 float gpu_temp(struct cgpu_info *gpu);
 int gpu_clock(struct cgpu_info *gpu);
 unsigned int gpu_power(struct cgpu_info *gpu);
+unsigned int gpu_usage(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
+
+int gpu_info(struct cgpu_info *gpu);
 
 #if defined(__cplusplus)
 }

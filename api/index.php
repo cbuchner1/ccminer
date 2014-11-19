@@ -11,7 +11,7 @@ $configs = array(
 set_time_limit(3);
 error_reporting(0);
 
-function getdataFromPears()
+function getdataFromPeers()
 {
 	global $host, $configs;
 	$data = array();
@@ -129,7 +129,7 @@ function displayData($data)
 	return $htm;
 }
 
-$data = getdataFromPears();
+$data = getdataFromPeers();
 
 ?>
 

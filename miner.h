@@ -376,13 +376,18 @@ struct cgpu_info {
 	double khashes;
 	uint8_t intensity;
 	uint8_t has_monitoring;
-	int gpu_bus;
 	float gpu_temp;
 	int gpu_fan;
 	int gpu_clock;
 	int gpu_memclock;
-	int gpu_pstate;
+	uint32_t gpu_usage;
 	double gpu_vddc;
+	int16_t gpu_pstate;
+	int16_t gpu_bus;
+
+	uint16_t gpu_vid;
+	uint16_t gpu_pid;
+	char gpu_desc[64];
 };
 
 struct thr_api {

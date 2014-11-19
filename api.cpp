@@ -108,7 +108,7 @@ extern int opt_api_listen; /* port */
 extern uint64_t global_hashrate;
 extern uint32_t accepted_count;
 extern uint32_t rejected_count;
-
+extern int num_processors;
 extern int device_map[8];
 extern char *device_name[8];
 
@@ -128,8 +128,8 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_bus = gpu_busid(cgpu);
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = gpu_fanpercent(cgpu);
-		cgpu->gpu_pstate = gpu_pstate(cgpu);
 		cgpu->gpu_clock = gpu_clock(cgpu);
+		cgpu->gpu_pstate = gpu_pstate(cgpu);
 #endif
 
 		// todo: can be 0 if set by algo (auto)
@@ -149,14 +149,14 @@ static void gpustatus(int thr_id)
 
 		cgpu->khashes = stats_get_speed(cgpu->gpu_id, 0.0) / 1000.0;
 
-		snprintf(pstate, sizeof(pstate), "P%u", cgpu->gpu_pstate);
+		snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
 		if (cgpu->gpu_pstate == -1)
-			*pstate= '\0';
+			(*pstate) = '\0';
 
 		card = device_name[gpuid];
 
-		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%d;CARD=%s;TEMP=%.1f;FAN=%d;"
-			"FREQ=%d;PST=%s;KHS=%.2f;HWF=%d;I=%d|",
+		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
+			"TEMP=%.1f;FAN=%d;FREQ=%d;PST=%s;KHS=%.2f;HWF=%d;I=%d|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
 			cgpu->gpu_clock, pstate, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
@@ -164,6 +164,17 @@ static void gpustatus(int thr_id)
 		// append to buffer for multi gpus
 		strcat(buffer, buf);
 	}
+}
+
+/**
+* Returns gpu/thread specific stats
+*/
+static char *getthreads(char *params)
+{
+	*buffer = '\0';
+	for (int i = 0; i < opt_n_threads; i++)
+		gpustatus(i);
+	return buffer;
 }
 
 /*****************************************************************************/
@@ -191,14 +202,71 @@ static char *getsummary(char *params)
 	return buffer;
 }
 
+/*****************************************************************************/
+
+static void gpuhwinfos(int gpu_id)
+{
+	char buf[256];
+	char pstate[8];
+	char* card;
+	struct cgpu_info *cgpu = NULL;
+
+	for (int g = 0; g < opt_n_threads; g++) {
+		if (device_map[g] == gpu_id) {
+			cgpu = &thr_info[g].gpu;
+			break;
+		}
+	}
+
+	if (cgpu == NULL)
+		return;
+
+#ifdef USE_WRAPNVML
+	cgpu->has_monitoring = true;
+	cgpu->gpu_bus = gpu_busid(cgpu);
+	cgpu->gpu_temp = gpu_temp(cgpu);
+	cgpu->gpu_fan = gpu_fanpercent(cgpu);
+	cgpu->gpu_pstate = gpu_pstate(cgpu);
+	cgpu->gpu_clock = gpu_clock(cgpu);
+	gpu_info(cgpu);
+#endif
+
+	snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
+	if (cgpu->gpu_pstate == -1)
+		(*pstate) = '\0';
+
+	card = device_name[gpu_id];
+
+	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
+		"TEMP=%.1f;FAN=%d;FREQ=%d;PST=%s;"
+		"VID=%hx;PID=%hx;BIOS=%s|",
+		gpu_id, cgpu->gpu_bus, card,
+		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, pstate,
+		cgpu->gpu_vid, cgpu->gpu_pid, cgpu->gpu_desc);
+
+	strcat(buffer, buf);
+}
+
 /**
-* Returns gpu/thread specific stats
-*/
-static char *getthreads(char *params)
+ * To finish
+ */
+static void cpuhwinfos()
+{
+	char buf[256];
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "CPU=|");
+	strcat(buffer, buf);
+}
+
+/**
+ * Returns gpu and system (todo) informations
+ */
+static char *gethwinfos(char *params)
 {
 	*buffer = '\0';
-	for (int i = 0; i < opt_n_threads; i++)
-		gpustatus(i);
+	for (int i = 0; i < num_processors; i++)
+		gpuhwinfos(i);
+	cpuhwinfos();
 	return buffer;
 }
 
@@ -251,6 +319,7 @@ struct CMDS {
 	{ "threads", getthreads },
 	{ "histo",   gethistory },
 	{ "meminfo", getmeminfo },
+	{ "hwinfo",  gethwinfos },
 	/* keep it the last */
 	{ "help",    gethelp },
 };
