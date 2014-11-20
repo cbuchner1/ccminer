@@ -128,9 +128,9 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_bus = gpu_busid(cgpu);
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = gpu_fanpercent(cgpu);
-		cgpu->gpu_clock = gpu_clock(cgpu);
 		cgpu->gpu_pstate = gpu_pstate(cgpu);
 #endif
+		gpu_clocks(cgpu);
 
 		// todo: can be 0 if set by algo (auto)
 		if (opt_intensity == 0 && opt_work_size) {
@@ -149,9 +149,9 @@ static void gpustatus(int thr_id)
 
 		cgpu->khashes = stats_get_speed(cgpu->gpu_id, 0.0) / 1000.0;
 
-		snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
-		if (cgpu->gpu_pstate == -1)
-			(*pstate) = '\0';
+		memset(pstate, 0, sizeof(pstate));
+		if (cgpu->gpu_pstate != -1)
+			snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
 
 		card = device_name[gpuid];
 
@@ -196,7 +196,7 @@ static char *getsummary(char *params)
 		"ALGO=%s;GPUS=%d;KHS=%.2f;ACC=%d;REJ=%d;"
 		"ACCMN=%.3f;DIFF=%.6f;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
-		algo, opt_n_threads, (double)global_hashrate / 1000.0,
+		algo, num_processors, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,
 		accps, global_diff, uptime, (uint32_t) ts);
 	return buffer;
@@ -227,22 +227,23 @@ static void gpuhwinfos(int gpu_id)
 	cgpu->gpu_temp = gpu_temp(cgpu);
 	cgpu->gpu_fan = gpu_fanpercent(cgpu);
 	cgpu->gpu_pstate = gpu_pstate(cgpu);
-	cgpu->gpu_clock = gpu_clock(cgpu);
 	gpu_info(cgpu);
 #endif
 
-	snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
-	if (cgpu->gpu_pstate == -1)
-		(*pstate) = '\0';
+	gpu_clocks(cgpu);
+
+	memset(pstate, 0, sizeof(pstate));
+	if (cgpu->gpu_pstate != -1)
+		snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
 
 	card = device_name[gpu_id];
 
-	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-		"TEMP=%.1f;FAN=%d;FREQ=%d;PST=%s;"
+	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;MEM=%lu;"
+		"TEMP=%.1f;FAN=%d;FREQ=%d;MEMFREQ=%d;PST=%s;"
 		"VID=%hx;PID=%hx;BIOS=%s|",
-		gpu_id, cgpu->gpu_bus, card,
-		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, pstate,
-		cgpu->gpu_vid, cgpu->gpu_pid, cgpu->gpu_desc);
+		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_mem,
+		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, cgpu->gpu_memclock,
+		pstate,	cgpu->gpu_vid, cgpu->gpu_pid, cgpu->gpu_desc);
 
 	strcat(buffer, buf);
 }

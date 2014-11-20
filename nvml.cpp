@@ -15,8 +15,6 @@
  *
  */
 
-#ifdef USE_WRAPNVML
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +24,9 @@
 
 #include "miner.h"
 #include "cuda_runtime.h"
+
+#ifdef USE_WRAPNVML
+
 #include "nvml.h"
 
 extern wrap_nvml_handle *hnvml;
@@ -72,10 +73,6 @@ static uint32_t device_bus_ids[8] = { 0 };
 	static int wrap_dlclose(void *h) {
 		return dlclose(h);
 	}
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 wrap_nvml_handle * wrap_nvml_create()
@@ -634,26 +631,6 @@ float gpu_temp(struct cgpu_info *gpu)
 	return tc;
 }
 
-int gpu_clock(struct cgpu_info *gpu)
-{
-	unsigned int freq = 0;
-	int support = -1;
-	if (hnvml) {
-		support = wrap_nvml_get_clock(hnvml, gpu->gpu_id, NVML_CLOCK_GRAPHICS, &freq);
-	}
-	if (support == -1) {
-#ifdef WIN32
-		nvapi_getclock(nvapi_dev_map[gpu->gpu_id], &freq);
-#else
-		cudaDeviceProp props;
-		if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
-			freq = props.clockRate;
-		}
-#endif
-	}
-	return (int) freq;
-}
-
 int gpu_pstate(struct cgpu_info *gpu)
 {
 	int pstate = -1;
@@ -714,12 +691,19 @@ int gpu_info(struct cgpu_info *gpu)
 	return 0;
 }
 
-#if defined(__cplusplus)
-}
-#endif
-
-
 #endif /* USE_WRAPNVML */
+
+int gpu_clocks(struct cgpu_info *gpu)
+{
+	cudaDeviceProp props;
+	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
+		gpu->gpu_clock = props.clockRate;
+		gpu->gpu_memclock = props.memoryClockRate;
+		gpu->gpu_mem = props.totalGlobalMem;
+		return 0;
+	}
+	return -1;
+}
 
 /* strings /usr/lib/nvidia-340/libnvidia-ml.so | grep nvmlDeviceGet | grep -v : | sort | uniq
 

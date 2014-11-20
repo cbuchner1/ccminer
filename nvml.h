@@ -14,10 +14,6 @@
  *
  */
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /*
  * Ugly hacks to avoid dependencies on the real nvml.h until it starts
  * getting included with the CUDA toolkit or a GDK that's got a known
@@ -141,9 +137,10 @@ int wrap_nvapi_init();
 
 #include "miner.h"
 
+#ifdef USE_WRAPNVML
+
 int gpu_fanpercent(struct cgpu_info *gpu);
 float gpu_temp(struct cgpu_info *gpu);
-int gpu_clock(struct cgpu_info *gpu);
 unsigned int gpu_power(struct cgpu_info *gpu);
 unsigned int gpu_usage(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
@@ -151,6 +148,7 @@ int gpu_busid(struct cgpu_info *gpu);
 
 int gpu_info(struct cgpu_info *gpu);
 
-#if defined(__cplusplus)
-}
 #endif
+
+// cuda api based
+int gpu_clocks(struct cgpu_info *gpu);
