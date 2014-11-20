@@ -8,16 +8,16 @@
 #define TPB 64
 
 #include "cuda_helper.h"
-#include <stdio.h>
+//#include <stdio.h>
 
-int *d_state[8];
+uint32_t *d_state[8];
 uint4 *d_temp4[8];
 
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
 
-__constant__ uint32_t c_perm[8][8];
-const uint32_t h_perm[8][8] = {
+__constant__ uint8_t c_perm[8][8];
+const uint8_t h_perm[8][8] = {
 	{ 2, 3, 6, 7, 0, 1, 4, 5 },
 	{ 6, 7, 2, 3, 4, 5, 0, 1 },
 	{ 7, 6, 5, 4, 3, 2, 1, 0 },
@@ -36,8 +36,8 @@ const uint32_t h_IV_512[32] = {
 	0x09254899, 0xd699c7bc, 0x9019b6dc, 0x2b9022e4, 0x8fa14956, 0x21bf9bd3, 0xb94d0943, 0x6ffddc22
 };
 
-__constant__ int c_FFT128_8_16_Twiddle[128];
-static const int h_FFT128_8_16_Twiddle[128] = {
+__constant__ short c_FFT128_8_16_Twiddle[128];
+static const short h_FFT128_8_16_Twiddle[128] = {
 	1,   1,   1,   1,   1,    1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
 	1,  60,   2, 120,   4,  -17,   8, -34,  16, -68,  32, 121,  64, -15, 128, -30,
 	1,  46,  60, -67,   2,   92, 120, 123,   4, -73, -17, -11,   8, 111, -34, -22,
@@ -48,8 +48,8 @@ static const int h_FFT128_8_16_Twiddle[128] = {
 	1, -61, 123, -50, -34,   18, -70, -99, 128, -98,  67,  25,  17,  -9,  35, -79
 };
 
-__constant__ int c_FFT256_2_128_Twiddle[128];
-static const int h_FFT256_2_128_Twiddle[128] = {
+__constant__ short c_FFT256_2_128_Twiddle[128];
+static const short h_FFT256_2_128_Twiddle[128] = {
 	  1,  41,-118,  45,  46,  87, -31,  14,
 	 60,-110, 116,-127, -67,  80, -61,  69,
 	  2,  82,  21,  90,  92, -83, -62,  28,
@@ -71,9 +71,10 @@ static const int h_FFT256_2_128_Twiddle[128] = {
 
 /************* the round function ****************/
 
-#define IF(x, y, z) ((((y) ^ (z)) & (x)) ^ (z))
 
-#define MAJ(x, y, z) (((z) & (y)) | (((z) | (y)) & (x)))
+#define IF(x, y, z) (((y ^ z) & x) ^ z)
+#define MAJ(x, y, z) ((z &y) | ((z|y) & x))
+
 
 #include "x11/simd_functions.cu"
 
@@ -549,8 +550,7 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 }
 
 /***************************************************/
-
-__global__ void __launch_bounds__(TPB,4)
+__global__ void __launch_bounds__(TPB, 8)
 x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_temp4)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x)/8;
@@ -576,8 +576,9 @@ x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, u
 	}
 }
 
-__global__ void __launch_bounds__(TPB,4)
-x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, int *g_state)
+/*
+__global__ void __launch_bounds__(TPB, 4)
+x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -590,9 +591,8 @@ x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash
 		Compression1(Hash, hashPosition, g_fft4, g_state);
 	}
 }
-
-__global__ void __launch_bounds__(TPB,4)
-x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, int *g_state)
+__global__ void __launch_bounds__(TPB, 4)
+x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -604,9 +604,27 @@ x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash
 		Compression2(hashPosition, g_fft4, g_state);
 	}
 }
+*/
 
-__global__ void __launch_bounds__(TPB,4)
-x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, int *g_state)
+__global__ void __launch_bounds__(TPB, 4)
+x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+{
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+
+		int hashPosition = nounce - startNounce;
+		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
+
+		Compression1(Hash, hashPosition, g_fft4, g_state);
+		Compression2(hashPosition, g_fft4, g_state);
+	}
+}
+
+
+__global__ void  __launch_bounds__(TPB, 4)
+x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -658,9 +676,7 @@ void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 
-	x11_simd512_gpu_compress1_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
-	x11_simd512_gpu_compress2_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
-
+	x11_simd512_gpu_compress_64_maxwell << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 	x11_simd512_gpu_final_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);
