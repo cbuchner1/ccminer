@@ -43,11 +43,11 @@ void cuda_check_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonce
 __host__
 void cuda_check_cpu_init(int thr_id, int threads)
 {
-    cudaMallocHost(&h_resNounce[thr_id], 1*sizeof(uint32_t));
-    cudaMalloc(&d_resNounce[thr_id], 1*sizeof(uint32_t));
+    CUDA_CALL_OR_RET(cudaMallocHost(&h_resNounce[thr_id], 1*sizeof(uint32_t)));
+    CUDA_CALL_OR_RET(cudaMalloc(&d_resNounce[thr_id], 1*sizeof(uint32_t)));
 }
 
-// Target Difficulty setzen
+// Target Difficulty
 __host__
 void cuda_check_cpu_setTarget(const void *ptarget)
 {

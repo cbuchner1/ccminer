@@ -17,8 +17,6 @@ extern "C" {
 /* threads per block and throughput (intensity) */
 #define TPB 128
 
-extern int num_processors;
-
 /* added in sph_blake.c */
 extern "C" int blake256_rounds = 14;
 
@@ -428,9 +426,9 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	if (!init[thr_id]) {
 		if (num_processors > 1)
-			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		CUDA_SAFE_CALL(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)));
-		CUDA_SAFE_CALL(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)));
+			cudaSetDevice(device_map[thr_id]);
+		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), 0);
 		init[thr_id] = true;
 	}
 

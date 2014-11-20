@@ -1,7 +1,6 @@
 ﻿#include <stdio.h>
 #include <memory.h>
 #include <string.h>
-
 #include <map>
 
 #ifndef _WIN32
@@ -21,6 +20,10 @@
 #include "miner.h"
 
 #include "cuda_runtime.h"
+
+#ifdef WIN32
+#include "compat.h" // sleep
+#endif
 
 extern char *device_name[8];
 extern int device_map[8];
@@ -144,4 +147,12 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 	else
 		result = cudaStreamSynchronize(stream);
 	return result;
+}
+
+void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)
+{
+	struct cgpu_info *gpu = &thr_info[thr_id].gpu;
+	gpu->hw_errors++;
+	applog(LOG_ERR, "GPU #%d: %s %s", device_map[thr_id], func, cudaGetErrorString(err));
+	sleep(1);
 }

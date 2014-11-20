@@ -356,11 +356,12 @@ __global__ void x11_luffa512_gpu_hash_64(int threads, uint32_t startNounce, uint
 }
 
 
-// Setup-Funktionen
-__host__ void x11_luffa512_cpu_init(int thr_id, int threads)
+// Setup Function
+__host__
+void x11_luffa512_cpu_init(int thr_id, int threads)
 {
-    cudaMemcpyToSymbol(c_IV, h_IV, sizeof(h_IV), 0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol(c_CNS, h_CNS, sizeof(h_CNS), 0, cudaMemcpyHostToDevice);
+    CUDA_CALL_OR_RET(cudaMemcpyToSymbol(c_IV, h_IV, sizeof(h_IV), 0, cudaMemcpyHostToDevice));
+    CUDA_CALL_OR_RET(cudaMemcpyToSymbol(c_CNS, h_CNS, sizeof(h_CNS), 0, cudaMemcpyHostToDevice));
 }
 
 __host__ void x11_luffa512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)

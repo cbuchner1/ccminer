@@ -239,10 +239,10 @@ __global__ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, vo
 __host__ void quark_blake512_cpu_init(int thr_id, int threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
-	cudaMemcpyToSymbol( c_sigma,
+	CUDA_CALL_OR_RET( cudaMemcpyToSymbol(c_sigma,
 						host_sigma,
 						sizeof(host_sigma),
-						0, cudaMemcpyHostToDevice);
+						0, cudaMemcpyHostToDevice));
 }
 
 // Blake512 für 80 Byte grosse Eingangsdaten

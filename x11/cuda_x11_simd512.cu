@@ -10,9 +10,6 @@
 #include "cuda_helper.h"
 #include <stdio.h>
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 int *d_state[8];
 uint4 *d_temp4[8];
 
@@ -624,10 +621,10 @@ x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, ui
 }
 
 __host__
-void x11_simd512_cpu_init(int thr_id, int threads)
+int x11_simd512_cpu_init(int thr_id, int threads)
 {
-	CUDA_SAFE_CALL(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads));
-	CUDA_SAFE_CALL(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads));
+	CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads), (int) err); /* todo: prevent -i 21 */
+	CUDA_CALL_OR_RET_X(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads), (int) err);
 
 	cudaMemcpyToSymbol(c_perm, h_perm, sizeof(h_perm), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
@@ -644,7 +641,9 @@ void x11_simd512_cpu_init(int thr_id, int threads)
 	texRef1D_128.normalized = 0;
 	texRef1D_128.filterMode = cudaFilterModePoint;
 	texRef1D_128.addressMode[0] = cudaAddressModeClamp;
-	CUDA_SAFE_CALL(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads));
+	CUDA_CALL_OR_RET_X(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads), (int) err);
+
+	return 0;
 }
 
 __host__

@@ -275,27 +275,27 @@ static __constant__ uint32_t d_AES1[256];
 static __constant__ uint32_t d_AES2[256];
 static __constant__ uint32_t d_AES3[256];
 
-static void aes_cpu_init()
+static void aes_cpu_init(int thr_id)
 {
-	cudaMemcpyToSymbol( d_AES0,
+	CUDA_CALL_OR_RET(cudaMemcpyToSymbol( d_AES0,
                         h_AES0,
                         sizeof(h_AES0),
-                        0, cudaMemcpyHostToDevice);
+                        0, cudaMemcpyHostToDevice));
 
-	cudaMemcpyToSymbol( d_AES1,
+	CUDA_CALL_OR_RET(cudaMemcpyToSymbol( d_AES1,
                         h_AES1,
                         sizeof(h_AES1),
-                        0, cudaMemcpyHostToDevice);
+                        0, cudaMemcpyHostToDevice));
 
-	cudaMemcpyToSymbol( d_AES2,
+	CUDA_CALL_OR_RET(cudaMemcpyToSymbol( d_AES2,
                         h_AES2,
                         sizeof(h_AES2),
-                        0, cudaMemcpyHostToDevice);
+                        0, cudaMemcpyHostToDevice));
 
-	cudaMemcpyToSymbol( d_AES3,
+	CUDA_CALL_OR_RET(cudaMemcpyToSymbol( d_AES3,
                         h_AES3,
                         sizeof(h_AES3),
-                        0, cudaMemcpyHostToDevice);
+                        0, cudaMemcpyHostToDevice));
 }
 
 __device__ __forceinline__

@@ -101,14 +101,11 @@ static char *buffer = NULL;
 static time_t startup = 0;
 static int bye = 0;
 
-extern int opt_intensity;
-extern int opt_n_threads;
 extern char *opt_api_allow;
 extern int opt_api_listen; /* port */
 extern uint64_t global_hashrate;
 extern uint32_t accepted_count;
 extern uint32_t rejected_count;
-extern int num_processors;
 extern int device_map[8];
 extern char *device_name[8];
 

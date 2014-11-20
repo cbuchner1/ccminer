@@ -45,9 +45,6 @@ extern "C" void pentablakehash(void *output, const void *input)
 
 #define MAXU 0xffffffffU
 
-// in cpu-miner.c
-extern int opt_n_threads;
-
 __constant__
 static uint32_t __align__(32) c_Target[8];
 
@@ -514,8 +511,8 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 		((uint32_t*)ptarget)[7] = 0x000F;
 
 	if (!init[thr_id]) {
-		if (opt_n_threads > 1) {
-			CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
+		if (num_processors > 1) {
+			cudaSetDevice(device_map[thr_id]);
 		}
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));
 		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], 2*sizeof(uint32_t)));

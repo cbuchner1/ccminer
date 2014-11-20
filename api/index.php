@@ -52,6 +52,7 @@ function translateField($key)
 
 	$intl['H'] = 'Bloc height';
 	$intl['I'] = 'Intensity';
+	$intl['HWF'] = 'Failures';
 
 	$intl['TEMP'] = 'T°c';
 	$intl['FAN'] = 'Fan %';

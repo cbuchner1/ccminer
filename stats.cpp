@@ -18,7 +18,6 @@ static uint64_t uid = 0;
 #define STATS_PURGE_TIMEOUT 120*60 /* 120 mn */
 
 extern uint64_t global_hashrate;
-extern int opt_n_threads;
 extern int opt_statsavg;
 extern int device_map[8];
 

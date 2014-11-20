@@ -303,7 +303,7 @@ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash
 __host__
 void x11_echo512_cpu_init(int thr_id, int threads)
 {
-	aes_cpu_init();
+	aes_cpu_init(thr_id);
 }
 
 __host__

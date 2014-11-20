@@ -57,7 +57,7 @@ extern void x11_cubehash512_cpu_hash_64(int thr_id, int threads, uint32_t startN
 extern void x11_shavite512_cpu_init(int thr_id, int threads);
 extern void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void x11_simd512_cpu_init(int thr_id, int threads);
+extern int  x11_simd512_cpu_init(int thr_id, int threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void x11_echo512_cpu_init(int thr_id, int threads);
@@ -174,8 +174,7 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
-		CUDA_SAFE_CALL(cudaSetDevice(device_map[thr_id]));
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
+		cudaSetDevice(device_map[thr_id]);
 
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
@@ -191,6 +190,8 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
 		x14_shabal512_cpu_init(thr_id, throughput);
+
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;

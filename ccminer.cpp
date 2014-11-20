@@ -1104,9 +1104,9 @@ static void *miner_thread(void *userdata)
 		if (max64 < minmax) {
 			switch (opt_algo) {
 			case ALGO_BLAKECOIN:
-				minmax = 0x4000000;
-				break;
 			case ALGO_BLAKE:
+				minmax = 0x80000000U;
+				break;
 			case ALGO_DOOM:
 			case ALGO_JACKPOT:
 			case ALGO_KECCAK:
@@ -1158,6 +1158,7 @@ static void *miner_thread(void *userdata)
 						applog(LOG_DEBUG, "job done, wait for a new one...");
 					work_restart[thr_id].restart = 1;
 					hashlog_purge_old();
+					stats_purge_old();
 					// wait a bit for a new job...
 					usleep(500*1000);
 					(*nonceptr) = end_nonce + 1;
