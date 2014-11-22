@@ -1913,7 +1913,7 @@ static void parse_config(void)
 		if (options[i].has_arg && json_is_string(val)) {
 			char *s = strdup(json_string_value(val));
 			if (!s)
-				break;
+				continue;
 			parse_arg(options[i].val, s);
 			free(s);
 		}

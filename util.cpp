@@ -894,7 +894,6 @@ static const char *get_stratum_session_id(json_t *val)
 	for (i = 0; i < n; i++) {
 		const char *notify;
 		json_t *arr = json_array_get(arr_val, i);
-
 		if (!arr || !json_is_array(arr))
 			break;
 		notify = json_string_value(json_array_get(arr, 0));
@@ -985,6 +984,10 @@ start:
 		goto out;
 	}
 
+	if (json_integer_value(json_object_get(val, "id")) != 1) {
+		applog(LOG_WARNING, "Stratum subscribe answer id is not correct!");
+	}
+
 	res_val = json_object_get(val, "result");
 	err_val = json_object_get(val, "error");
 
@@ -1001,7 +1004,14 @@ start:
 		goto out;
 	}
 
-	// session id
+	// sid is param 1, extranonce params are 2 and 3
+	if (!stratum_parse_extranonce(sctx, res_val, 1)) {
+		goto out;
+	}
+
+	ret = true;
+
+	// session id (optional)
 	sid = get_stratum_session_id(res_val);
 	if (opt_debug && sid)
 		applog(LOG_DEBUG, "Stratum session id: %s", sid);
@@ -1012,13 +1022,6 @@ start:
 	sctx->session_id = sid ? strdup(sid) : NULL;
 	sctx->next_diff = 1.0;
 	pthread_mutex_unlock(&sctx->work_lock);
-
-	// sid is param 1, extranonce params are 2 and 3
-	if (!stratum_parse_extranonce(sctx, res_val, 1)) {
-		goto out;
-	}
-
-	ret = true;
 
 out:
 	free(s);
@@ -1066,7 +1069,7 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	}
 
 	if (json_integer_value(json_object_get(val, "id")) != 2) {
-		applog(LOG_WARNING, "Stratum answer id is not correct!");
+		applog(LOG_WARNING, "Stratum authorize answer id is not correct!");
 	}
 	res_val = json_object_get(val, "result");
 	err_val = json_object_get(val, "error");
@@ -1085,7 +1088,8 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	if (!stratum_send_line(sctx, s))
 		goto out;
 
-	if (!socket_full(sctx->sock, 3)) {
+	// reduced timeout to handle pools ignoring this method without answer (like xpool.ca)
+	if (!socket_full(sctx->sock, 1)) {
 		if (opt_debug)
 			applog(LOG_DEBUG, "stratum extranonce subscribe timed out");
 		goto out;
@@ -1099,11 +1103,12 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 			applog(LOG_WARNING, "JSON decode failed(%d): %s", err.line, err.text);
 		} else {
 			if (json_integer_value(json_object_get(extra, "id")) != 3) {
-				applog(LOG_WARNING, "Stratum answer id is not correct!");
+				applog(LOG_WARNING, "Stratum extranonce answer id is not correct!");
+			} else {
+				res_val = json_object_get(extra, "result");
+				if (opt_debug && (!res_val || json_is_false(res_val)))
+					applog(LOG_DEBUG, "extranonce subscribe not supported");
 			}
-			res_val = json_object_get(extra, "result");
-			if (opt_debug && (!res_val || json_is_false(res_val)))
-				applog(LOG_DEBUG, "extranonce subscribe not supported");
 			json_decref(extra);
 		}
 	}
