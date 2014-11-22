@@ -171,11 +171,12 @@
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
-      <Keep>false</Keep>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <Keep>true</Keep>
+      <CodeGeneration>compute_30,sm_30;compute_50,sm_50</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
+      <Optimization>O3</Optimization>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>false</GPUDebugInfo>
@@ -421,11 +422,11 @@
     <CudaCompile Include="x11\cuda_x11_aes.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </CudaCompile>
-    <CudaCompile Include="x11\cuda_x11_cubehash512.cu">
-    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_cubehash512.cu" />
     <CudaCompile Include="x11\cuda_x11_echo.cu">
     </CudaCompile>
-    <CudaCompile Include="x11\cuda_x11_luffa512.cu">
+    <CudaCompile Include="x11\cuda_x11_luffa512.cu" />
+    <CudaCompile Include="x11\cuda_x11_luffa512_Cubehash.cu">
       <MaxRegCount>80</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_shavite512.cu">
