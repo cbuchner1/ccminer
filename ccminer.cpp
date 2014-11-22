@@ -2018,7 +2018,7 @@ int main(int argc, char *argv[])
 #endif
 	printf("  Based on pooler cpuminer 2.3.2\n");
 	printf("  CUDA support by Christian Buchner and Christian H.\n");
-	printf("  Include some of djm34 additions\n\n");
+	printf("  Include some of djm34 additions and sp optimisations\n\n");
 
 	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
 

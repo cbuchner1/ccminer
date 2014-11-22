@@ -915,7 +915,7 @@ static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, i
 		applog(LOG_ERR, "Failed to get extranonce1");
 		goto out;
 	}
-	xn2_size = json_integer_value(json_array_get(params, pndx+1));
+	xn2_size = (int) json_integer_value(json_array_get(params, pndx+1));
 	if (!xn2_size) {
 		applog(LOG_ERR, "Failed to get extranonce2_size");
 		goto out;
@@ -1284,7 +1284,7 @@ static bool stratum_reconnect(struct stratum_ctx *sctx, json_t *params)
 	if (json_is_string(port_val))
 		port = atoi(json_string_value(port_val));
 	else
-		port = json_integer_value(port_val);
+		port = (int) json_integer_value(port_val);
 	if (!host || !port)
 		return false;
 	
