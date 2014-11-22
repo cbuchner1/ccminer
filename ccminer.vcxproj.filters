@@ -201,6 +201,18 @@
     <ClCompile Include="nvml.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="compat\jansson\memory.c">
+      <Filter>Source Files\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="compat\jansson\pack_unpack.c">
+      <Filter>Source Files\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="compat\jansson\strconv.c">
+      <Filter>Source Files\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="compat\jansson\error.c">
+      <Filter>Source Files\jansson</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -346,6 +358,9 @@
     </ClInclude>
     <ClInclude Include="compat\nvapi\nvapi_lite_salstart.h">
       <Filter>Header Files\compat\nvapi</Filter>
+    </ClInclude>
+    <ClInclude Include="compat\jansson\jansson_config.h">
+      <Filter>Header Files\compat</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
