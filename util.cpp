@@ -1258,7 +1258,7 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 	double diff;
 
 	diff = json_number_value(json_array_get(params, 0));
-	if (diff == 0)
+	if (diff <= 0.0)
 		return false;
 
 	pthread_mutex_lock(&sctx->work_lock);
