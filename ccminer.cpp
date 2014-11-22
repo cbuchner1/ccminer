@@ -206,6 +206,7 @@ int opt_n_threads = 0;
 static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
+int num_cpus;
 int num_processors;
 int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
 char *device_name[8]; // CB
@@ -986,13 +987,12 @@ static void *miner_thread(void *userdata)
 		drop_policy();
 	}
 
-	/* Cpu affinity only makes sense if the number of threads is a multiple
-	 * of the number of CPUs */
-	if (num_processors > 1 && opt_n_threads % num_processors == 0) {
+	/* Cpu thread affinity */
+	if (num_cpus > 1) {
 		if (!opt_quiet)
-			applog(LOG_DEBUG, "Binding thread %d to gpu %d", thr_id,
-					thr_id % num_processors);
-		affine_to_cpu(thr_id, thr_id % num_processors);
+			applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
+					thr_id % num_cpus);
+		affine_to_cpu(thr_id, thr_id % num_cpus);
 	}
 
 	while (1) {
@@ -1846,12 +1846,13 @@ static void parse_arg(int key, char *arg)
 		break;
 	case 'd': // CB
 		{
+			int ngpus = cuda_num_devices();
 			char * pch = strtok (arg,",");
 			opt_n_threads = 0;
 			while (pch != NULL) {
 				if (pch[0] >= '0' && pch[0] <= '9' && pch[1] == '\0')
 				{
-					if (atoi(pch) < num_processors)
+					if (atoi(pch) < ngpus)
 						device_map[opt_n_threads++] = atoi(pch);
 					else {
 						applog(LOG_ERR, "Non-existant CUDA device #%d specified in -d option", atoi(pch));
@@ -1859,13 +1860,15 @@ static void parse_arg(int key, char *arg)
 					}
 				} else {
 					int device = cuda_finddevice(pch);
-					if (device >= 0 && device < num_processors)
+					if (device >= 0 && device < ngpus)
 						device_map[opt_n_threads++] = device;
 					else {
 						applog(LOG_ERR, "Non-existant CUDA device '%s' specified in -d option", pch);
 						proper_exit(1);
 					}
 				}
+				// set number of active gpus
+				num_processors = opt_n_threads;
 				pch = strtok (NULL, ",");
 			}
 		}
@@ -2026,6 +2029,25 @@ int main(int argc, char *argv[])
 	rpc_pass = strdup("");
 
 	pthread_mutex_init(&applog_lock, NULL);
+
+	// number of cpus for thread affinity
+#if defined(WIN32)
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	num_cpus = sysinfo.dwNumberOfProcessors;
+#elif defined(_SC_NPROCESSORS_CONF)
+	num_cpus = sysconf(_SC_NPROCESSORS_CONF);
+#elif defined(CTL_HW) && defined(HW_NCPU)
+	int req[] = { CTL_HW, HW_NCPU };
+	size_t len = sizeof(num_cpus);
+	sysctl(req, 2, &num_cpus, &len, NULL, 0);
+#else
+	num_cpus = 1;
+#endif
+	if (num_cpus < 1)
+		num_cpus = 1;
+
+	// number of gpus
 	num_processors = cuda_num_devices();
 	cuda_devicenames();
 

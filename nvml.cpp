@@ -30,7 +30,6 @@
 #include "nvml.h"
 
 extern wrap_nvml_handle *hnvml;
-extern int num_processors; // gpus
 
 static uint32_t device_bus_ids[8] = { 0 };
 
@@ -531,6 +530,7 @@ int nvapi_getbusid(unsigned int devNum, int *busid)
 
 int wrap_nvapi_init()
 {
+	int num_gpus = cuda_num_devices();
 	NvAPI_Status ret = NvAPI_Initialize();
 	if (!ret == NVAPI_OK){
 		NvAPI_ShortString string;
@@ -549,7 +549,7 @@ int wrap_nvapi_init()
 		return -1;
 	}
 
-	for (int g = 0; g < num_processors; g++) {
+	for (int g = 0; g < num_gpus; g++) {
 		cudaDeviceProp props;
 		if (cudaGetDeviceProperties(&props, g) == cudaSuccess) {
 			device_bus_ids[g] = props.pciBusID;
@@ -561,7 +561,7 @@ int wrap_nvapi_init()
 		NvAPI_ShortString name;
 		ret = NvAPI_GPU_GetFullName(phys[i], name);
 		if (ret == NVAPI_OK) {
-			for (int g = 0; g < num_processors; g++) {
+			for (int g = 0; g < num_gpus; g++) {
 				NvU32 busId;
 				ret = NvAPI_GPU_GetBusId(phys[i], &busId);
 				if (ret == NVAPI_OK && busId == device_bus_ids[g]) {
