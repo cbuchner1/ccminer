@@ -1014,7 +1014,9 @@ start:
 	pthread_mutex_unlock(&sctx->work_lock);
 
 	// sid is param 1, extranonce params are 2 and 3
-	stratum_parse_extranonce(sctx, res_val, 1);
+	if (!stratum_parse_extranonce(sctx, res_val, 1)) {
+		goto out;
+	}
 
 	ret = true;
 
@@ -1084,7 +1086,8 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 		goto out;
 
 	if (!socket_full(sctx->sock, 3)) {
-		applog(LOG_ERR, "stratum extranonce subscribe timed out");
+		if (opt_debug)
+			applog(LOG_DEBUG, "stratum extranonce subscribe timed out");
 		goto out;
 	}
 
