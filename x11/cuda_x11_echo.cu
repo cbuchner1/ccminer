@@ -61,8 +61,8 @@ void cuda_echo_round(
 
 	k0 = 512 + 8;
 
-	#pragma unroll
-	for (int idx = 0; idx < 16; idx+= 4)
+	#pragma unroll 4
+	for (int idx = 0; idx < 16; idx += 4)
 	{
 		AES_2ROUND(sharedMemory,
 			h[idx + 0], h[idx + 1], h[idx + 2], h[idx + 3], k0);
@@ -125,7 +125,7 @@ void cuda_echo_round(
 		c = P[24 + i + 4];
 		d = P[24 + i + 8];
 
-		 ab = a ^ b;
+		ab = a ^ b;
 		bc = b ^ c;
 		cd = c ^ d;
 
@@ -144,7 +144,7 @@ void cuda_echo_round(
 		W[32 + i + 12] = abx ^ bcx ^ cdx ^ ab ^ c;
 
 		a = P[36 + i ];
-		b = P[36 + i +4 ];
+		b = P[36 + i + 4];
 		c = P[36 + i + 8];
 		d = h[i + 12];
 
@@ -221,7 +221,7 @@ void cuda_echo_round(
 		#pragma unroll 4
 		for (int i = 0; i < 4; i++) // Schleife über je 2*uint32_t
 		{
-			#pragma unroll 64
+			#pragma unroll 4
 			for (int idx = 0; idx < 64; idx += 16) // Schleife über die elemnte
 			{
 				uint32_t a = W[idx + i];
@@ -251,7 +251,7 @@ void cuda_echo_round(
 	}
 
 	#pragma unroll
-	for (int i = 0; i<16; i += 4)
+	for (int i = 0; i < 16; i += 4)
 	{
 		W[i] ^= W[32 + i] ^ 512;
 		W[i + 1] ^= W[32 + i + 1];
@@ -260,7 +260,7 @@ void cuda_echo_round(
 	}
 
 	#pragma unroll
-	for (int i = 0; i<16; i++)
+	for (int i = 0; i < 16; i++)
 		hash[i] ^= W[i];
 }
 
