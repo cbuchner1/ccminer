@@ -139,6 +139,8 @@ wrap_nvml_handle * wrap_nvml_create()
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPowerUsage");
 	nvmlh->nvmlDeviceGetPowerUsage = (wrap_nvmlReturn_t (*)(wrap_nvmlDevice_t, unsigned int *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPowerUsage");
+	nvmlh->nvmlSystemGetDriverVersion = (wrap_nvmlReturn_t (*)(char *, unsigned int))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlSystemGetDriverVersion");
 	nvmlh->nvmlErrorString = (char* (*)(wrap_nvmlReturn_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlErrorString");
 	nvmlh->nvmlShutdown = (wrap_nvmlReturn_t (*)())
@@ -146,6 +148,8 @@ wrap_nvml_handle * wrap_nvml_create()
 
 	if (nvmlh->nvmlInit == NULL ||
 			nvmlh->nvmlShutdown == NULL ||
+			nvmlh->nvmlErrorString == NULL ||
+			nvmlh->nvmlSystemGetDriverVersion == NULL ||
 			nvmlh->nvmlDeviceGetCount == NULL ||
 			nvmlh->nvmlDeviceGetHandleByIndex == NULL ||
 			nvmlh->nvmlDeviceGetPciInfo == NULL ||
@@ -161,6 +165,7 @@ wrap_nvml_handle * wrap_nvml_create()
 	}
 
 	nvmlh->nvmlInit();
+	nvmlh->nvmlSystemGetDriverVersion(driver_version, sizeof(driver_version));
 	nvmlh->nvmlDeviceGetCount(&nvmlh->nvml_gpucount);
 
 	/* Query CUDA device count, in case it doesn't agree with NVML, since  */

@@ -71,6 +71,7 @@ typedef struct {
 	wrap_nvmlReturn_t (*nvmlDeviceGetFanSpeed)(wrap_nvmlDevice_t, unsigned int *);
 	wrap_nvmlReturn_t (*nvmlDeviceGetPerformanceState)(wrap_nvmlDevice_t, int *); /* enum */
 	wrap_nvmlReturn_t (*nvmlDeviceGetPowerUsage)(wrap_nvmlDevice_t, unsigned int *);
+	wrap_nvmlReturn_t (*nvmlSystemGetDriverVersion)(char *version, unsigned int len);
 	char* (*nvmlErrorString)(wrap_nvmlReturn_t);
 	wrap_nvmlReturn_t (*nvmlShutdown)(void);
 } wrap_nvml_handle;
