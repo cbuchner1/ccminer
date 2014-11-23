@@ -330,8 +330,8 @@ int wrap_nvml_get_info(wrap_nvml_handle *nvmlh, int cudaindex, uint16_t *vid, ui
 		return -1;
 
 	subids = nvmlh->nvml_pci_subsys_id[gpuindex];
-	(*vid) = subids >> 16;
-	(*pid) = subids & 0xFFFF;
+	(*pid) = subids >> 16;
+	(*vid) = subids & 0xFFFF;
 	return 0;
 }
 
