@@ -200,14 +200,14 @@ wrap_nvml_handle * wrap_nvml_create()
 		nvmlh->cuda_nvml_device_id[i] = -1;
 
 		if (cudaGetDeviceProperties(&props, i) == cudaSuccess) {
-			int j;
 			device_bus_ids[i] = props.pciBusID;
-			for (j = 0; j<nvmlh->nvml_gpucount; j++) {
+			for (int j = 0; j < nvmlh->nvml_gpucount; j++) {
 				if ((nvmlh->nvml_pci_domain_id[j] == (uint32_t) props.pciDomainID) &&
 				    (nvmlh->nvml_pci_bus_id[j]    == (uint32_t) props.pciBusID) &&
 				    (nvmlh->nvml_pci_device_id[j] == (uint32_t) props.pciDeviceID)) {
 					if (opt_debug)
-						applog(LOG_DEBUG, "CUDA GPU[%d] matches NVML GPU[%d]", i, j);
+						applog(LOG_DEBUG, "CUDA GPU#%d matches NVML GPU %d by busId %u",
+							i, j, (uint32_t) props.pciBusID);
 					nvmlh->nvml_cuda_device_id[j] = i;
 					nvmlh->cuda_nvml_device_id[i] = j;
 				}
@@ -269,24 +269,6 @@ int wrap_nvml_get_fanpcnt(wrap_nvml_handle *nvmlh, int cudaindex, unsigned int *
 
 	rc = nvmlh->nvmlDeviceGetFanSpeed(nvmlh->devs[gpuindex], fanpcnt);
 	if (rc != WRAPNVML_SUCCESS) {
-		return -1;
-	}
-
-	return 0;
-}
-
-/* Not Supported on 750Ti 340.23, 346.16 neither */
-int wrap_nvml_get_clock(wrap_nvml_handle *nvmlh, int cudaindex, int type, unsigned int *freq)
-{
-	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
-	if (gpuindex < 0 || gpuindex >= nvmlh->nvml_gpucount)
-		return -1;
-
-	// wrap_nvmlReturn_t rc = nvmlh->nvmlDeviceGetApplicationsClock(nvmlh->devs[gpuindex], (wrap_nvmlClockType_t)type, freq);
-	wrap_nvmlReturn_t rc = nvmlh->nvmlDeviceGetClockInfo(nvmlh->devs[gpuindex], (wrap_nvmlClockType_t) type, freq);
-	if (rc != WRAPNVML_SUCCESS) {
-		//if (opt_debug)
-		//	applog(LOG_DEBUG, "nvmlDeviceGetClockInfo: %s", nvmlh->nvmlErrorString(rc));
 		return -1;
 	}
 
@@ -425,31 +407,6 @@ int nvapi_fanspeed(unsigned int devNum, unsigned int *speed)
 	return 0;
 }
 
-int nvapi_getclock(unsigned int devNum, unsigned int *freq)
-{
-	NvAPI_Status ret;
-
-	if (devNum >= nvapi_dev_cnt)
-		return -1;
-
-	NV_GPU_CLOCK_FREQUENCIES_V2 clocks;
-	clocks.version = NV_GPU_CLOCK_FREQUENCIES_VER_2;
-	clocks.ClockType = NV_GPU_CLOCK_FREQUENCIES_CURRENT_FREQ; // CURRENT/BASE/BOOST
-	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &clocks);
-	if (ret != NVAPI_OK) {
-		NvAPI_ShortString string;
-		NvAPI_GetErrorMessage(ret, string);
-		if (opt_debug)
-			applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetAllClockFrequencies: %s", string);
-		return -1;
-	} else {
-		// GRAPHICS/MEMORY
-		(*freq) = (unsigned int)clocks.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency;
-	}
-
-	return 0;
-}
-
 int nvapi_getpstate(unsigned int devNum, unsigned int *power)
 {
 	NvAPI_Status ret;
@@ -519,15 +476,6 @@ int nvapi_getinfo(unsigned int devNum, char *desc)
 	return 0;
 }
 
-int nvapi_getbusid(unsigned int devNum, int *busid)
-{
-	if (devNum >= 0 && devNum <= 8) {
-		(*busid) = device_bus_ids[devNum];
-		return 0;
-	}
-	return -1;
-}
-
 int wrap_nvapi_init()
 {
 	int num_gpus = cuda_num_devices();
@@ -567,8 +515,8 @@ int wrap_nvapi_init()
 				if (ret == NVAPI_OK && busId == device_bus_ids[g]) {
 					nvapi_dev_map[g] = i;
 					if (opt_debug)
-						applog(LOG_DEBUG, "CUDA GPU[%d] matches NVAPI GPU[%d]",
-							g, i);
+						applog(LOG_DEBUG, "CUDA GPU#%d matches NVAPI GPU %d by busId %u",
+							g, i, busId);
 					break;
 				}
 			}
@@ -657,7 +605,7 @@ int gpu_busid(struct cgpu_info *gpu)
 	}
 #ifdef WIN32
 	if (support == -1) {
-		nvapi_getbusid(nvapi_dev_map[gpu->gpu_id], &busid);
+		busid = device_bus_ids[gpu->gpu_id];
 	}
 #endif
 	return busid;
@@ -675,6 +623,7 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 	if (support == -1) {
 		unsigned int pct = 0;
 		nvapi_getusage(nvapi_dev_map[gpu->gpu_id], &pct);
+		mw = pct; // to fix
 	}
 #endif
 	return mw;
@@ -704,82 +653,3 @@ int gpu_clocks(struct cgpu_info *gpu)
 	}
 	return -1;
 }
-
-/* strings /usr/lib/nvidia-340/libnvidia-ml.so | grep nvmlDeviceGet | grep -v : | sort | uniq
-
-	nvmlDeviceGetAccountingBufferSize
-	nvmlDeviceGetAccountingMode
-	nvmlDeviceGetAccountingPids
-	nvmlDeviceGetAccountingStats
-	nvmlDeviceGetAPIRestriction
-	nvmlDeviceGetApplicationsClock
-	nvmlDeviceGetAutoBoostedClocksEnabled
-	nvmlDeviceGetBAR1MemoryInfo
-	nvmlDeviceGetBoardId
-	nvmlDeviceGetBrand
-	nvmlDeviceGetBridgeChipInfo
-*	nvmlDeviceGetClockInfo
-	nvmlDeviceGetComputeMode
-	nvmlDeviceGetComputeRunningProcesses
-	nvmlDeviceGetCount
-	nvmlDeviceGetCount_v2
-	nvmlDeviceGetCpuAffinity
-	nvmlDeviceGetCurrentClocksThrottleReasons
-	nvmlDeviceGetCurrPcieLinkGeneration
-	nvmlDeviceGetCurrPcieLinkWidth
-	nvmlDeviceGetDecoderUtilization
-	nvmlDeviceGetDefaultApplicationsClock
-	nvmlDeviceGetDetailedEccErrors
-	nvmlDeviceGetDisplayActive
-	nvmlDeviceGetDisplayMode
-	nvmlDeviceGetDriverModel
-	nvmlDeviceGetEccMode
-	nvmlDeviceGetEncoderUtilization
-	nvmlDeviceGetEnforcedPowerLimit
-*	nvmlDeviceGetFanSpeed
-	nvmlDeviceGetGpuOperationMode
-	nvmlDeviceGetHandleByIndex
-*	nvmlDeviceGetHandleByIndex_v2
-	nvmlDeviceGetHandleByPciBusId
-	nvmlDeviceGetHandleByPciBusId_v2
-	nvmlDeviceGetHandleBySerial
-	nvmlDeviceGetHandleByUUID
-	nvmlDeviceGetIndex
-	nvmlDeviceGetInforomConfigurationChecksum
-	nvmlDeviceGetInforomImageVersion
-	nvmlDeviceGetInforomVersion
-	nvmlDeviceGetMaxClockInfo
-	nvmlDeviceGetMaxPcieLinkGeneration
-	nvmlDeviceGetMaxPcieLinkWidth
-	nvmlDeviceGetMemoryErrorCounter
-	nvmlDeviceGetMemoryInfo
-	nvmlDeviceGetMinorNumber
-	nvmlDeviceGetMultiGpuBoard
-*	nvmlDeviceGetName
-*	nvmlDeviceGetPciInfo
-	nvmlDeviceGetPciInfo_v2
-*	nvmlDeviceGetPerformanceState
-	nvmlDeviceGetPersistenceMode
-	nvmlDeviceGetPowerManagementDefaultLimit
-	nvmlDeviceGetPowerManagementLimit
-	nvmlDeviceGetPowerManagementLimitConstraints
-	nvmlDeviceGetPowerManagementMode
-	nvmlDeviceGetPowerState (deprecated)
-*	nvmlDeviceGetPowerUsage
-	nvmlDeviceGetRetiredPages
-	nvmlDeviceGetRetiredPagesPendingStatus
-	nvmlDeviceGetSamples
-	nvmlDeviceGetSerial
-	nvmlDeviceGetSupportedClocksThrottleReasons
-	nvmlDeviceGetSupportedEventTypes
-	nvmlDeviceGetSupportedGraphicsClocks
-	nvmlDeviceGetSupportedMemoryClocks
-	nvmlDeviceGetTemperature
-	nvmlDeviceGetTemperatureThreshold
-	nvmlDeviceGetTotalEccErrors
-	nvmlDeviceGetUtilizationRates
-	nvmlDeviceGetUUID
-	nvmlDeviceGetVbiosVersion
-	nvmlDeviceGetViolationStatus
-
-*/

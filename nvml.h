@@ -112,12 +112,6 @@ int wrap_nvml_get_fanpcnt(wrap_nvml_handle *nvmlh,
                           int gpuindex, unsigned int *fanpcnt);
 
 /*
- * Query the current GPU speed from the CUDA device ID
- */
-int wrap_nvml_get_clock(wrap_nvml_handle *nvmlh,
-                          int gpuindex, int clktype, unsigned int *freq);
-
-/*
  * Query the current GPU power usage in millwatts from the CUDA device ID
  *
  * This feature is only available on recent GPU generations and may be
