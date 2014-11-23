@@ -28,6 +28,9 @@
 // cuda.cpp
 int cuda_num_devices();
 
+// geforce driver version
+char driver_version[32] = { 0 };
+
 #ifdef USE_WRAPNVML
 
 #include "nvml.h"
@@ -460,22 +463,26 @@ int nvapi_getusage(unsigned int devNum, unsigned int *pct)
 	return 0;
 }
 
-int nvapi_getinfo(unsigned int devNum, char *desc)
+int nvapi_getinfo(unsigned int devNum, uint16_t *vid, uint16_t *pid)
 {
 	NvAPI_Status ret;
+	NvU32 pDeviceId, pSubSystemId, pRevisionId, pExtDeviceId;
 
 	if (devNum >= nvapi_dev_cnt)
 		return -1;
 
-	// bios rev
-	ret = NvAPI_GPU_GetVbiosVersionString(phys[devNum], desc);
+	ret = NvAPI_GPU_GetPCIIdentifiers(phys[devNum], &pDeviceId, &pSubSystemId, &pRevisionId, &pExtDeviceId);
 	if (ret != NVAPI_OK) {
 		NvAPI_ShortString string;
 		NvAPI_GetErrorMessage(ret, string);
 		if (opt_debug)
-			applog(LOG_DEBUG, "NVAPI GetVbiosVersionString: %s", string);
+			applog(LOG_DEBUG, "NVAPI GetPCIIdentifiers: %s", string);
 		return -1;
 	}
+
+	(*pid) = pDeviceId >> 16;
+	(*vid) = pDeviceId & 0xFFFF;
+
 	return 0;
 }
 
@@ -535,6 +542,13 @@ int wrap_nvapi_init()
 	NvAPI_GetInterfaceVersionString(ver);
 	applog(LOG_DEBUG, "NVAPI Version: %s", ver);
 #endif
+
+	NvU32 udv;
+	NvAPI_ShortString str;
+	ret = NvAPI_SYS_GetDriverAndBranchVersion(&udv, str);
+	if (ret == NVAPI_OK) {
+		sprintf(driver_version,"%d.%d", udv/100, udv % 100);
+	}
 
 	return 0;
 }
@@ -638,7 +652,7 @@ int gpu_info(struct cgpu_info *gpu)
 		wrap_nvml_get_info(hnvml, gpu->gpu_id, &gpu->gpu_vid, &gpu->gpu_pid);
 	}
 #ifdef WIN32
-	nvapi_getinfo(nvapi_dev_map[gpu->gpu_id], &gpu->gpu_desc[0]);
+	nvapi_getinfo(nvapi_dev_map[gpu->gpu_id], &gpu->gpu_vid, &gpu->gpu_pid);
 #endif
 	return 0;
 }

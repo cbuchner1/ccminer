@@ -109,6 +109,7 @@ extern uint32_t rejected_count;
 extern int device_map[8];
 extern char *device_name[8];
 extern int num_cpus;
+extern char driver_version[32];
 
 // sysinfos.cpp
 extern float cpu_temp(int);
@@ -245,10 +246,10 @@ static void gpuhwinfos(int gpu_id)
 
 	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;MEM=%lu;"
 		"TEMP=%.1f;FAN=%d;FREQ=%d;MEMFREQ=%d;PST=%s;"
-		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;BIOS=%s|",
+		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;DRIVER=%s|",
 		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_mem,
 		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, cgpu->gpu_memclock,
-		pstate,	cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id, cgpu->gpu_desc);
+		pstate, cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id, driver_version);
 
 	strcat(buffer, buf);
 }
