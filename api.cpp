@@ -110,8 +110,11 @@ extern int device_map[8];
 extern char *device_name[8];
 extern int num_cpus;
 
+// sysinfos.cpp
 extern float cpu_temp(int);
 extern uint32_t cpu_clock(int);
+// cuda.cpp
+int cuda_num_devices();
 
 /***************************************************************/
 
@@ -271,7 +274,7 @@ static void cpuhwinfos()
 static char *gethwinfos(char *params)
 {
 	*buffer = '\0';
-	for (int i = 0; i < num_processors; i++)
+	for (int i = 0; i < cuda_num_devices(); i++)
 		gpuhwinfos(i);
 	cpuhwinfos();
 	return buffer;
