@@ -232,6 +232,7 @@ static void gpuhwinfos(int gpu_id)
 	cgpu->gpu_fan = gpu_fanpercent(cgpu);
 	cgpu->gpu_pstate = gpu_pstate(cgpu);
 	gpu_info(cgpu);
+	gpu_nvids(cgpu);
 #endif
 
 	gpu_clocks(cgpu);
@@ -244,10 +245,10 @@ static void gpuhwinfos(int gpu_id)
 
 	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;MEM=%lu;"
 		"TEMP=%.1f;FAN=%d;FREQ=%d;MEMFREQ=%d;PST=%s;"
-		"VID=%hx;PID=%hx;BIOS=%s|",
+		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;BIOS=%s|",
 		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_mem,
 		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, cgpu->gpu_memclock,
-		pstate,	cgpu->gpu_vid, cgpu->gpu_pid, cgpu->gpu_desc);
+		pstate,	cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id, cgpu->gpu_desc);
 
 	strcat(buffer, buf);
 }

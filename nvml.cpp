@@ -643,6 +643,24 @@ int gpu_info(struct cgpu_info *gpu)
 	return 0;
 }
 
+int gpu_nvids(struct cgpu_info *gpu)
+{
+	int id = gpu->gpu_id;
+
+	gpu->nvml_id = -1;
+	gpu->nvapi_id = -1;
+
+	if (id < 0)
+		return -1;
+
+	if (hnvml && id < hnvml->nvml_gpucount)
+		gpu->nvml_id = (int8_t) hnvml->cuda_nvml_device_id[id];
+#ifdef WIN32
+	gpu->nvapi_id = (int8_t) nvapi_dev_map[id];
+#endif
+	return 0;
+}
+
 #endif /* USE_WRAPNVML */
 
 int gpu_clocks(struct cgpu_info *gpu)

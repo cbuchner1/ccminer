@@ -140,6 +140,7 @@ unsigned int gpu_usage(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
 
+int gpu_nvids(struct cgpu_info *gpu);
 int gpu_info(struct cgpu_info *gpu);
 
 #endif

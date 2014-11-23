@@ -385,9 +385,12 @@ struct cgpu_info {
 	double gpu_vddc;
 	int16_t gpu_pstate;
 	int16_t gpu_bus;
-
 	uint16_t gpu_vid;
 	uint16_t gpu_pid;
+
+	int8_t nvml_id;
+	int8_t nvapi_id;
+
 	char gpu_desc[64];
 };
 
