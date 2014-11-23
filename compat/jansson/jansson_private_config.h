@@ -1,5 +1,5 @@
-/* config.h.  Generated from config.h.in by configure.  */
-/* config.h.in.  Generated from configure.ac by autoheader.  */
+/* jansson_private_config.h.  Generated from jansson_private_config.h.in by configure.  */
+/* jansson_private_config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if gcc's __atomic builtins are available */
 /* #undef HAVE_ATOMIC_BUILTINS */

@@ -1,4 +1,3 @@
-*.h.in
 *.h.in~
 libtool
 libjansson.a
