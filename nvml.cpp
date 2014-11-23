@@ -191,7 +191,7 @@ wrap_nvml_handle * wrap_nvml_create()
 		nvmlh->nvml_pci_domain_id[i] = pciinfo.domain;
 		nvmlh->nvml_pci_bus_id[i]    = pciinfo.bus;
 		nvmlh->nvml_pci_device_id[i] = pciinfo.device;
-		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_subsystem_id;
+		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_device_id;
 	}
 
 	/* build mapping of NVML device IDs to CUDA IDs */
