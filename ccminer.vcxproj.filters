@@ -201,6 +201,9 @@
     <ClCompile Include="nvml.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sysinfos.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="compat\jansson\memory.c">
       <Filter>Source Files\jansson</Filter>
     </ClCompile>

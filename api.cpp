@@ -108,6 +108,10 @@ extern uint32_t accepted_count;
 extern uint32_t rejected_count;
 extern int device_map[8];
 extern char *device_name[8];
+extern int num_cpus;
+
+extern float cpu_temp(int);
+extern uint32_t cpu_clock(int);
 
 /***************************************************************/
 
@@ -246,13 +250,18 @@ static void gpuhwinfos(int gpu_id)
 }
 
 /**
- * To finish
+ * CPU Infos
  */
 static void cpuhwinfos()
 {
 	char buf[256];
+
+	float temp = cpu_temp(0);
+	uint32_t clock = cpu_clock(0);
+
 	memset(buf, 0, sizeof(buf));
-	snprintf(buf, sizeof(buf), "CPU=|");
+	snprintf(buf, sizeof(buf), "CPUS=%d;TEMP=%.1f;FREQ=%d|",
+		num_cpus, temp, clock);
 	strcat(buffer, buf);
 }
 
@@ -277,8 +286,8 @@ static char *gethistory(char *params)
 	struct stats_data data[50];
 	int thrid = params ? atoi(params) : -1;
 	char *p = buffer;
-	*buffer = '\0';
 	int records = stats_get_history(thrid, data, ARRAY_SIZE(data));
+	*buffer = '\0';
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_stat;
 		p += sprintf(p, "GPU=%d;H=%u;KHS=%.2f;DIFF=%.6f;"

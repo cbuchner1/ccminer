@@ -247,6 +247,7 @@
     <ClCompile Include="stats.cpp" />
     <ClCompile Include="nvml.cpp" />
     <ClCompile Include="api.cpp" />
+    <ClCompile Include="sysinfos.cpp" />
     <ClCompile Include="crc32.c" />
     <ClCompile Include="hefty1.c" />
     <ClCompile Include="myriadgroestl.cpp" />
