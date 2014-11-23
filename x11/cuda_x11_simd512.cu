@@ -576,7 +576,7 @@ x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, u
 	}
 }
 
-/*
+
 __global__ void __launch_bounds__(TPB, 4)
 x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
@@ -604,7 +604,7 @@ x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash
 		Compression2(hashPosition, g_fft4, g_state);
 	}
 }
-*/
+
 
 __global__ void __launch_bounds__(TPB, 4)
 x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
@@ -670,13 +670,18 @@ void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint
 	const int threadsperblock = TPB;
 
 	dim3 block(threadsperblock);
-	dim3 grid8(((threads + threadsperblock-1)/threadsperblock)*8);
+	dim3 grid((threads + threadsperblock-1) / threadsperblock);
+
+	dim3 grid8(((threads + threadsperblock - 1) / threadsperblock) * 8);
 
 	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id]);
+	if (device_sm[device_map[thr_id]] >= 500) {
+		x11_simd512_gpu_compress_64_maxwell <<< grid8, block >>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+	} else {
+		x11_simd512_gpu_compress1_64 <<< grid, block >>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+		x11_simd512_gpu_compress2_64 <<< grid, block >>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+	}
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-
-	x11_simd512_gpu_compress_64_maxwell << <grid, block >> > (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 	x11_simd512_gpu_final_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);

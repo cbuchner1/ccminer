@@ -3,9 +3,6 @@
 
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 #include "cuda_x11_aes.cu"
 
 __device__ __forceinline__ void AES_2ROUND(
