@@ -137,6 +137,8 @@ wrap_nvml_handle * wrap_nvml_create()
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetFanSpeed");
 	nvmlh->nvmlDeviceGetPerformanceState = (wrap_nvmlReturn_t (*)(wrap_nvmlDevice_t, int *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPowerUsage");
+	nvmlh->nvmlDeviceGetSerial = (wrap_nvmlReturn_t (*)(wrap_nvmlDevice_t, char *, unsigned int))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetSerial");
 	nvmlh->nvmlDeviceGetUUID = (wrap_nvmlReturn_t (*)(wrap_nvmlDevice_t, char *, unsigned int))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetUUID");
 	nvmlh->nvmlDeviceGetVbiosVersion = (wrap_nvmlReturn_t (*)(wrap_nvmlDevice_t, char *, unsigned int))
@@ -332,24 +334,41 @@ int wrap_nvml_get_busid(wrap_nvml_handle *nvmlh, int cudaindex, int *busid)
 	return 0;
 }
 
-int wrap_nvml_get_desc(wrap_nvml_handle *nvmlh, int cudaindex, char *desc, int maxlen)
+int wrap_nvml_get_serial(wrap_nvml_handle *nvmlh, int cudaindex, char *sn, int maxlen)
+{
+	uint32_t subids = 0;
+	char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
+	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
+	wrap_nvmlReturn_t res;
+	if (gpuindex < 0 || gpuindex >= nvmlh->nvml_gpucount)
+		return -1;
+
+	res = nvmlh->nvmlDeviceGetSerial(nvmlh->devs[gpuindex], sn, maxlen);
+	if (res == WRAPNVML_SUCCESS) {
+		return 0;
+	}
+
+	// nvmlDeviceGetUUID: GPU-f2bd642c-369f-5a14-e0b4-0d22dfe9a1fc
+	// use a part of uuid to generate an unique serial
+	// todo: check if there is vendor id is inside
+	memset(uuid, 0, sizeof(uuid));
+	res = nvmlh->nvmlDeviceGetUUID(nvmlh->devs[gpuindex], uuid, sizeof(uuid)-1);
+	if (res != WRAPNVML_SUCCESS) {
+		if (opt_debug)
+			applog(LOG_DEBUG, "nvmlDeviceGetUUID: %s", nvmlh->nvmlErrorString(res));
+		return -1;
+	}
+	strncpy(sn, &uuid[4], min((int) strlen(uuid), maxlen));
+	sn[maxlen-1] = '\0';
+	return 0;
+}
+
+int wrap_nvml_get_bios(wrap_nvml_handle *nvmlh, int cudaindex, char *desc, int maxlen)
 {
 	uint32_t subids = 0;
 	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
 	if (gpuindex < 0 || gpuindex >= nvmlh->nvml_gpucount)
 		return -1;
-
-#if 0
-	// todo: check if there is vendor id is inside
-	// nvmlDeviceGetUUID: GPU-f2bd642c-369f-5a14-e0b4-0d22dfe9a1fc
-	wrap_nvmlReturn_t res = nvmlh->nvmlDeviceGetUUID(nvmlh->devs[gpuindex], desc, maxlen);
-	if (res != WRAPNVML_SUCCESS) {
-		if (opt_debug)
-			applog(LOG_DEBUG, "nvmlDeviceGetUUID: %s", nvmlh->nvmlErrorString(res));
-	} else {
-		applog(LOG_DEBUG, "nvml Device UUID: %s", desc);
-	}
-#endif
 
 	wrap_nvmlReturn_t res = nvmlh->nvmlDeviceGetVbiosVersion(nvmlh->devs[gpuindex], desc, maxlen);
 	if (res != WRAPNVML_SUCCESS) {
@@ -357,8 +376,6 @@ int wrap_nvml_get_desc(wrap_nvml_handle *nvmlh, int cudaindex, char *desc, int m
 			applog(LOG_DEBUG, "nvmlDeviceGetVbiosVersion: %s", nvmlh->nvmlErrorString(res));
 		return -1;
 	}
-		applog(LOG_DEBUG, "nvmlDeviceGetVbiosVersion: %s", desc);
-
 	return 0;
 }
 
@@ -523,7 +540,31 @@ int nvapi_getinfo(unsigned int devNum, uint16_t *vid, uint16_t *pid)
 	return 0;
 }
 
-int nvapi_getdesc(unsigned int devNum, char *desc, unsigned int maxlen)
+int nvapi_getserial(unsigned int devNum, char *serial, unsigned int maxlen)
+{
+//	NvAPI_Status ret;
+	if (devNum >= nvapi_dev_cnt)
+		return -1;
+
+	sprintf(serial, "");
+
+	if (maxlen < 64) // Short String
+		return -1;
+
+#if 0
+	ret = NvAPI_GPU_Get..(phys[devNum], serial);
+	if (ret != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI ...: %s", string);
+		return -1;
+	}
+#endif
+	return 0;
+}
+
+int nvapi_getbios(unsigned int devNum, char *desc, unsigned int maxlen)
 {
 	NvAPI_Status ret;
 	if (devNum >= nvapi_dev_cnt)
@@ -705,19 +746,6 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 
 int gpu_info(struct cgpu_info *gpu)
 {
-	if (hnvml) {
-		wrap_nvml_get_info(hnvml, gpu->gpu_id, &gpu->gpu_vid, &gpu->gpu_pid);
-		wrap_nvml_get_desc(hnvml, gpu->gpu_id, gpu->gpu_desc, sizeof(gpu->gpu_desc));
-	}
-#ifdef WIN32
-	nvapi_getinfo(nvapi_dev_map[gpu->gpu_id], &gpu->gpu_vid, &gpu->gpu_pid);
-	nvapi_getdesc(nvapi_dev_map[gpu->gpu_id], gpu->gpu_desc, sizeof(gpu->gpu_desc));
-#endif
-	return 0;
-}
-
-int gpu_nvids(struct cgpu_info *gpu)
-{
 	int id = gpu->gpu_id;
 
 	gpu->nvml_id = -1;
@@ -726,10 +754,17 @@ int gpu_nvids(struct cgpu_info *gpu)
 	if (id < 0)
 		return -1;
 
-	if (hnvml && id < hnvml->nvml_gpucount)
+	if (hnvml) {
 		gpu->nvml_id = (int8_t) hnvml->cuda_nvml_device_id[id];
+		wrap_nvml_get_info(hnvml, id, &gpu->gpu_vid, &gpu->gpu_pid);
+		wrap_nvml_get_serial(hnvml, id, gpu->gpu_sn, sizeof(gpu->gpu_sn));
+		wrap_nvml_get_bios(hnvml, id, gpu->gpu_desc, sizeof(gpu->gpu_desc));
+	}
 #ifdef WIN32
 	gpu->nvapi_id = (int8_t) nvapi_dev_map[id];
+	nvapi_getinfo(nvapi_dev_map[id], &gpu->gpu_vid, &gpu->gpu_pid);
+	nvapi_getserial(nvapi_dev_map[id], gpu->gpu_sn, sizeof(gpu->gpu_sn));
+	nvapi_getbios(nvapi_dev_map[id], gpu->gpu_desc, sizeof(gpu->gpu_desc));
 #endif
 	return 0;
 }

@@ -391,6 +391,7 @@ struct cgpu_info {
 	int8_t nvml_id;
 	int8_t nvapi_id;
 
+	char gpu_sn[64];
 	char gpu_desc[64];
 };
 

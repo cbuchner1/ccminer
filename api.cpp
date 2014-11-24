@@ -207,6 +207,16 @@ static char *getsummary(char *params)
 	return buffer;
 }
 
+/**
+ * Returns current pool infos
+ */
+static char *getpoolnfo(char *params)
+{
+	char *p = buffer;
+	*p = '\0';
+	return p;
+}
+
 /*****************************************************************************/
 
 static void gpuhwinfos(int gpu_id)
@@ -233,7 +243,6 @@ static void gpuhwinfos(int gpu_id)
 	cgpu->gpu_fan = gpu_fanpercent(cgpu);
 	cgpu->gpu_pstate = gpu_pstate(cgpu);
 	gpu_info(cgpu);
-	gpu_nvids(cgpu);
 #endif
 
 	gpu_clocks(cgpu);
@@ -246,19 +255,28 @@ static void gpuhwinfos(int gpu_id)
 
 	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;MEM=%lu;"
 		"TEMP=%.1f;FAN=%d;FREQ=%d;MEMFREQ=%d;PST=%s;"
-		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;DRIVER=%s;BIOS=%s|",
+		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;SN=%s;BIOS=%s|",
 		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_mem,
 		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, cgpu->gpu_memclock,
 		pstate, cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id,
-		driver_version, cgpu->gpu_desc);
+		cgpu->gpu_sn, cgpu->gpu_desc);
 
 	strcat(buffer, buf);
 }
 
+static const char* os_name()
+{
+#ifdef WIN32
+	return "windows";
+#else
+	return "linux";
+#endif
+}
+
 /**
- * CPU Infos
+ * System and CPU Infos
  */
-static void cpuhwinfos()
+static void syshwinfos()
 {
 	char buf[256];
 
@@ -266,8 +284,8 @@ static void cpuhwinfos()
 	uint32_t clock = cpu_clock(0);
 
 	memset(buf, 0, sizeof(buf));
-	snprintf(buf, sizeof(buf), "CPUS=%d;TEMP=%.1f;FREQ=%d|",
-		num_cpus, temp, clock);
+	snprintf(buf, sizeof(buf), "OS=%s;NVDRIVER=%s;CPUS=%d;CPUTEMP=%.1f;CPUFREQ=%d|",
+		os_name(), driver_version, num_cpus, temp, clock);
 	strcat(buffer, buf);
 }
 
@@ -279,9 +297,11 @@ static char *gethwinfos(char *params)
 	*buffer = '\0';
 	for (int i = 0; i < cuda_num_devices(); i++)
 		gpuhwinfos(i);
-	cpuhwinfos();
+	syshwinfos();
 	return buffer;
 }
+
+/*****************************************************************************/
 
 /**
  * Returns the last 50 scans stats
@@ -342,6 +362,8 @@ static char *getmeminfo(char *params)
 	return buffer;
 }
 
+/*****************************************************************************/
+
 static char *gethelp(char *params);
 struct CMDS {
 	const char *name;
@@ -349,10 +371,11 @@ struct CMDS {
 } cmds[] = {
 	{ "summary", getsummary },
 	{ "threads", getthreads },
+	{ "pool",    getpoolnfo },
 	{ "histo",   gethistory },
-	{ "scanlog", getscanlog },
-	{ "meminfo", getmeminfo },
 	{ "hwinfo",  gethwinfos },
+	{ "meminfo", getmeminfo },
+	{ "scanlog", getscanlog },
 	/* keep it the last */
 	{ "help",    gethelp },
 };

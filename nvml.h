@@ -45,6 +45,10 @@ NVML_CLOCK_SM = 1,
 NVML_CLOCK_MEM = 2
 } wrap_nvmlClockType_t;
 
+#define NVML_DEVICE_SERIAL_BUFFER_SIZE 30
+#define NVML_DEVICE_UUID_BUFFER_SIZE 80
+#define NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE 32
+
 /*
  * Handle to hold the function pointers for the entry points we need,
  * and the shared library itself.
@@ -71,6 +75,7 @@ typedef struct {
 	wrap_nvmlReturn_t (*nvmlDeviceGetFanSpeed)(wrap_nvmlDevice_t, unsigned int *);
 	wrap_nvmlReturn_t (*nvmlDeviceGetPerformanceState)(wrap_nvmlDevice_t, int *); /* enum */
 	wrap_nvmlReturn_t (*nvmlDeviceGetPowerUsage)(wrap_nvmlDevice_t, unsigned int *);
+	wrap_nvmlReturn_t (*nvmlDeviceGetSerial)(wrap_nvmlDevice_t, char *serial, unsigned int len);
 	wrap_nvmlReturn_t (*nvmlDeviceGetUUID)(wrap_nvmlDevice_t, char *uuid, unsigned int len);
 	wrap_nvmlReturn_t (*nvmlDeviceGetVbiosVersion)(wrap_nvmlDevice_t, char *version, unsigned int len);
 	wrap_nvmlReturn_t (*nvmlSystemGetDriverVersion)(char *version, unsigned int len);
@@ -143,7 +148,7 @@ unsigned int gpu_usage(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
 
-int gpu_nvids(struct cgpu_info *gpu);
+/* pid/vid, sn and bios rev */
 int gpu_info(struct cgpu_info *gpu);
 
 #endif
