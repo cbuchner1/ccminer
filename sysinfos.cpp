@@ -20,9 +20,9 @@
 #define HWMON_ALT \
  "/sys/class/hwmon/hwmon0/temp1_input"
 
-static float linux_cputemp(int core)
+static double linux_cputemp(int core)
 {
-	float tc = 0.0;
+	double tc = 0.0;
 	FILE *fd = fopen(HWMON_PATH, "r");
 	uint32_t val = 0;
 
@@ -33,7 +33,7 @@ static float linux_cputemp(int core)
 		return tc;
 
 	if (fscanf(fd, "%d", &val))
-		tc = val / 1000.0;
+		tc = (double)val / 1000.0;
 
 	fclose(fd);
 	return tc;
@@ -74,7 +74,7 @@ float cpu_temp(int core)
 #ifdef WIN32
 	return win32_cputemp(core);
 #else
-	return linux_cputemp(core);
+	return (float) linux_cputemp(core);
 #endif
 }
 

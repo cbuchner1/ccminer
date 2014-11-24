@@ -1,8 +1,8 @@
 /**
  * Hash log of submitted job nonces
- * Prevent duplicate shares and could be used for RPC stats later
+ * Prevent duplicate shares
  *
- * Note: this source is C++ (requires std::map)
+ * (to be merged later with stats)
  *
  * tpruvot@github 2014
  */
@@ -16,6 +16,7 @@
 #define LO_DWORD(u64) ((uint32_t) u64)
 #define MK_HI64(u32) (0x100000000ULL * u32)
 
+/* from miner.h
 struct hashlog_data {
 	uint32_t tm_sent;
 	uint32_t height;
@@ -25,6 +26,7 @@ struct hashlog_data {
 	uint32_t tm_add;
 	uint32_t tm_upd;
 };
+*/
 
 static std::map<uint64_t, hashlog_data> tlastshares;
 
@@ -71,6 +73,7 @@ void hashlog_remember_submit(struct work* work, uint32_t nonce)
 	data.scanned_from = work->scanned_from;
 	data.scanned_to = nonce;
 	data.height = work->height;
+	data.njobid = (uint32_t) njobid;
 	data.tm_add = data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
 	tlastshares[key] = data;
 }
@@ -89,6 +92,7 @@ void hashlog_remember_scan_range(struct work* work)
 	data = tlastshares[key];
 	if (range == 0) {
 		memset(&data, 0, sizeof(data));
+		data.njobid = njobid;
 	} else {
 		// get min and max from all sent records
 		data.scanned_from = LO_DWORD(range);
@@ -162,6 +166,24 @@ uint32_t hashlog_get_last_sent(char* jobid)
 		i++;
 	}
 	return nonce;
+}
+
+/**
+ * Export data for api calls
+ */
+int hashlog_get_history(struct hashlog_data *data, int max_records)
+{
+	int records = 0;
+
+	std::map<uint64_t, hashlog_data>::reverse_iterator it = tlastshares.rbegin();
+	while (it != tlastshares.rend() && records < max_records) {
+		memcpy(&data[records], &(it->second), sizeof(struct hashlog_data));
+		data[records].nonce = LO_DWORD(it->first);
+		data[records].njobid = (uint32_t) HI_DWORD(it->first);
+		records++;
+		++it;
+	}
+	return records;
 }
 
 /**

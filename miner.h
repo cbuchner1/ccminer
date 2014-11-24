@@ -399,6 +399,31 @@ struct thr_api {
 	pthread_t pth;
 	struct thread_q	*q;
 };
+
+struct stats_data {
+	uint32_t tm_stat;
+	uint32_t hashcount;
+	uint32_t height;
+	double difficulty;
+	double hashrate;
+	uint8_t thr_id;
+	uint8_t gpu_id;
+	uint8_t hashfound;
+	uint8_t ignored;
+};
+
+struct hashlog_data {
+	uint32_t tm_sent;
+	uint32_t height;
+	uint32_t njobid;
+	uint32_t nonce;
+	uint32_t scanned_from;
+	uint32_t scanned_to;
+	uint32_t last_from;
+	uint32_t tm_add;
+	uint32_t tm_upd;
+};
+
 /* end of api */
 
 struct thr_info {
@@ -544,18 +569,6 @@ struct work {
 	uint32_t scanned_to;
 };
 
-struct stats_data {
-	uint32_t tm_stat;
-	uint32_t hashcount;
-	uint32_t height;
-	double difficulty;
-	double hashrate;
-	uint8_t thr_id;
-	uint8_t gpu_id;
-	uint8_t hashfound;
-	uint8_t ignored;
-};
-
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
 bool stratum_send_line(struct stratum_ctx *sctx, char *s);
 char *stratum_recv_line(struct stratum_ctx *sctx);
@@ -570,6 +583,7 @@ void hashlog_remember_scan_range(struct work* work);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
 uint64_t hashlog_get_scan_range(char* jobid);
+int  hashlog_get_history(struct hashlog_data *data, int max_records);
 void hashlog_purge_old(void);
 void hashlog_purge_job(char* jobid);
 void hashlog_purge_all(void);

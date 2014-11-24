@@ -284,7 +284,7 @@ static char *gethwinfos(char *params)
 }
 
 /**
- * Returns the last 20 scans stats (not the same as shares)
+ * Returns the last 50 scans stats
  * optional param thread id (default all)
  */
 static char *gethistory(char *params)
@@ -300,6 +300,25 @@ static char *gethistory(char *params)
 				"COUNT=%u;FOUND=%u;TS=%u|",
 			data[i].gpu_id, data[i].height, data[i].hashrate, data[i].difficulty,
 			data[i].hashcount, data[i].hashfound, (uint32_t)ts);
+	}
+	return buffer;
+}
+
+/**
+ * Returns the job scans ranges (debug purpose)
+ */
+static char *getscanlog(char *params)
+{
+	struct hashlog_data data[50];
+	char *p = buffer;
+	int records = hashlog_get_history(data, ARRAY_SIZE(data));
+	*buffer = '\0';
+	for (int i = 0; i < records; i++) {
+		time_t ts = data[i].tm_upd;
+		p += sprintf(p, "H=%u;JOB=%u;N=%u;FROM=0x%x;SCANTO=0x%x;"
+				"COUNT=0x%x;FOUND=%u;TS=%u|",
+			data[i].height, data[i].njobid, data[i].nonce, data[i].scanned_from, data[i].scanned_to,
+			(data[i].scanned_to - data[i].scanned_from), data[i].tm_sent ? 1 : 0, (uint32_t)ts);
 	}
 	return buffer;
 }
@@ -331,6 +350,7 @@ struct CMDS {
 	{ "summary", getsummary },
 	{ "threads", getthreads },
 	{ "histo",   gethistory },
+	{ "scanlog", getscanlog },
 	{ "meminfo", getmeminfo },
 	{ "hwinfo",  gethwinfos },
 	/* keep it the last */
@@ -344,9 +364,11 @@ static char *gethelp(char *params)
 	char * p = buffer;
 	for (int i = 0; i < CMDMAX-1; i++)
 		p += sprintf(p, "%s\n", cmds[i].name);
+	sprintf(p, "|");
 	return buffer;
 }
 
+/*****************************************************************************/
 
 static int send_result(SOCKETTYPE c, char *result)
 {
@@ -620,10 +642,10 @@ static void api()
 					*(params++) = '\0';
 
 				if (opt_debug && opt_protocol && n > 0)
-					applog(LOG_DEBUG, "API: exec command %s(%s)", buf, params);
+					applog(LOG_DEBUG, "API: exec command %s(%s)", buf, params ? params : "");
 
 				for (i = 0; i < CMDMAX; i++) {
-					if (strcmp(buf, cmds[i].name) == 0) {
+					if (strcmp(buf, cmds[i].name) == 0 && strlen(buf)) {
 						result = (cmds[i].func)(params);
 						send_result(c, result);
 						break;
