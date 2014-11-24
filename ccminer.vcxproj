@@ -447,7 +447,7 @@
     <CudaCompile Include="x11\x11.cu">
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_hamsi512.cu">
-      <MaxRegCount>80</MaxRegCount>
+      <MaxRegCount>72</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_fugue512.cu">
     </CudaCompile>

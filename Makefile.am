@@ -93,6 +93,9 @@ x11/cuda_x11_luffa512.o: x11/cuda_x11_luffa512.cu
 x11/cuda_x11_luffa512_Cubehash.o: x11/cuda_x11_luffa512_Cubehash.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
+x13/cuda_x13_hamsi512.o: x13/cuda_x13_hamsi512.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=72 -o $@ -c $<
+
 x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
