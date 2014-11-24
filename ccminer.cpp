@@ -1518,6 +1518,10 @@ static bool stratum_handle_response(char *buf)
 	if (!id_val || json_is_null(id_val) || !res_val)
 		goto out;
 
+	// ignore subscribe late answer (yaamp)
+	if (json_integer_value(id_val) < 4)
+		goto out;
+
 	share_result(json_is_true(res_val),
 		err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
 
