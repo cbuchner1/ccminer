@@ -192,6 +192,7 @@ bool want_stratum = true;
 bool have_stratum = false;
 static bool submit_old = false;
 bool use_syslog = false;
+static char* opt_syslog_pfx = (char*) PACKAGE_NAME;
 bool use_colors = true;
 static bool opt_background = false;
 bool opt_quiet = false;
@@ -317,7 +318,8 @@ Options:\n\
 
 #ifdef HAVE_SYSLOG_H
 "\
-  -S, --syslog          use system log for output messages\n"
+  -S, --syslog          use system log for output messages\n\
+      --syslog-prefix=... allow to change syslog tool name\n"
 #endif
 #ifndef WIN32
 "\
@@ -366,6 +368,7 @@ static struct option const options[] = {
 	{ "statsavg", 1, NULL, 'N' },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
+	{ "syslog-prefix", 1, NULL, 1008 },
 #endif
 	{ "threads", 1, NULL, 't' },
 	{ "vote", 1, NULL, 'v' },
@@ -992,7 +995,7 @@ static void *miner_thread(void *userdata)
 	}
 
 	/* Cpu thread affinity */
-	if (num_cpus > 1) {
+	if (num_cpus > 1 && opt_n_threads > 1) {
 		if (!opt_quiet)
 			applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
 					thr_id % num_cpus);
@@ -1866,7 +1869,11 @@ static void parse_arg(int key, char *arg)
 		want_stratum = false;
 		break;
 	case 'S':
+	case 1008:
+		applog(LOG_INFO, "Now logging to syslog...");
 		use_syslog = true;
+		if (arg && strlen(arg))
+			opt_syslog_pfx = strdup(arg);
 		break;
 	case 'd': // CB
 		{
@@ -2135,7 +2142,7 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog)
-		openlog(PACKAGE_NAME, LOG_PID, LOG_USER);
+		openlog(opt_syslog_pfx, LOG_PID, LOG_USER);
 #endif
 
 	work_restart = (struct work_restart *)calloc(opt_n_threads, sizeof(*work_restart));
