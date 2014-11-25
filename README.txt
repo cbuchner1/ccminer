@@ -86,7 +86,8 @@ its command line interface and options.
                         Alternatively give string names of your card like
                         gtx780ti or gt640#2 (matching 2nd gt640 in the PC).
 
-  -i, --intensity       GPU threads per call 0-31 (default: 0=auto)
+  -i, --intensity       GPU threads per call 8-31 (default: 0=auto)
+                        Decimals are allowed for fine tuning
   -f, --diff            Divide difficulty by this factor (std is 1)
   -v, --vote            Heavycoin block vote (default: 512)
   -o, --url=URL         URL of mining server
@@ -171,6 +172,7 @@ features.
                   v1.5.0
                   Upgrade compat jansson to 2.6 (for windows)
                   Add pool mining.set_extranonce support
+                  Allow intermediate intensity with decimals
                   Allow increased scan ranges (wip)
                   Some internal changes to use the C++ compiler
                   New API 1.2 with some new commands (read only)

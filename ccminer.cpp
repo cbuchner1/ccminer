@@ -239,6 +239,7 @@ double   global_diff = 0.0;
 int opt_statsavg = 30;
 int opt_intensity = 0;
 uint32_t opt_work_size = 0; /* default */
+uint32_t opt_work_adds = 0;
 
 char *opt_api_allow = (char*) "127.0.0.1"; /* 0.0.0.0 for all ips */
 int opt_api_listen = 4068; /* 0 to disable */
@@ -287,7 +288,8 @@ Options:\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
                         (matching 2nd gt640 in the PC)\n\
-  -i  --intensity=N     GPU intensity 0-31 (default: auto) \n\
+  -i  --intensity=N     GPU intensity 8-31 (default: auto) \n\
+                        Decimals are allowed for fine tuning \n\
   -f, --diff            Divide difficulty by this factor (std is 1) \n\
   -v, --vote=VOTE       block reward vote (for HeavyCoin)\n\
   -m, --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
@@ -901,7 +903,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_KECCAK:
 		case ALGO_BLAKECOIN:
 		case ALGO_WHC:
-			SHA256((uint8_t*)sctx->job.coinbase, sctx->job.coinbase_size, (uint8_t*)merkle_root);
+			SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
 			break;
 		default:
 			sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -1693,12 +1695,22 @@ static void parse_arg(int key, char *arg)
 		break;
 	}
 	case 'i':
-		v = atoi(arg);
+		d = atof(arg);
+		v = (uint32_t) d;
 		if (v < 0 || v > 31)
 			show_usage_and_exit(1);
 		opt_intensity = v;
-		if (v > 0) /* 0 = default */
+		if (v > 7) { /* 0 = default */
 			opt_work_size = (1 << v);
+			if ((d - v) > 0.0) {
+				opt_work_adds = (uint32_t) floor((d - v) * (1 << (v-8))) * 256;
+				opt_work_size += opt_work_adds;
+				applog(LOG_INFO, "Adding %u threads to intensity %u, %u cuda threads",
+					opt_work_adds, v, opt_work_size);
+			} else {
+				applog(LOG_INFO, "Intensity set to %u, %u cuda threads", v, opt_work_size);
+			}
+		}
 		break;
 	case 'D':
 		opt_debug = true;

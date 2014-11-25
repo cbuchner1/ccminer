@@ -129,16 +129,6 @@ extern "C" void x11hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-/* reduce by one default intensity on windows */
-static int is_windows(void)
-{
-#ifdef WIN32
-	return 1;
-#else
-	return 0;
-#endif
-}
-
 extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)

@@ -117,6 +117,14 @@ typedef unsigned char uchar;
 #define UINT32_MAX UINT_MAX
 #endif
 
+static inline bool is_windows(void) {
+#ifdef WIN32
+        return 1;
+#else
+        return 0;
+#endif
+}
+
 #if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
 #define WANT_BUILTIN_BSWAP
 #else
