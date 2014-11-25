@@ -232,10 +232,10 @@ static char *getpoolnfo(char *params)
 		cbin2hex(nonce, (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
 	}
 
-	sprintf(p, "URL=%s;USER=%s;H=%u;JOB=%s;DIFF=%.6f;N2SZ=%zd;N2=0x%s;PING=%u;DISCO=%u;UPTIME=%u|",
+	snprintf(p, MYBUFSIZ, "URL=%s;USER=%s;H=%u;JOB=%s;DIFF=%.6f;N2SZ=%d;N2=0x%s;PING=%u;DISCO=%u;UPTIME=%u|",
 		stratum.url, rpc_user ? rpc_user : "",
 		stratum.job.height, jobid, stratum.job.diff,
-		stratum.xnonce2_size, nonce, stratum.answer_msec,
+		(int) stratum.xnonce2_size, nonce, stratum.answer_msec,
 		stratum.disconnects, (uint32_t) (time(NULL) - stratum.tm_connected));
 
 	return p;

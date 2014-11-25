@@ -1528,7 +1528,7 @@ static bool stratum_handle_response(char *buf)
 	gettimeofday(&tv_answer, NULL);
 	timeval_subtract(&diff, &tv_answer, &stratum.tv_submit);
 	// store time required to the pool to answer to a submit
-	stratum.answer_msec = (1000.0 * diff.tv_sec) + (uint32_t) (0.001 * diff.tv_usec);
+	stratum.answer_msec = (1000 * diff.tv_sec) + (uint32_t) (0.001 * diff.tv_usec);
 
 	share_result(json_is_true(res_val),
 		err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
