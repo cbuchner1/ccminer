@@ -875,6 +875,7 @@ void stratum_disconnect(struct stratum_ctx *sctx)
 {
 	pthread_mutex_lock(&sctx->sock_lock);
 	if (sctx->curl) {
+		sctx->disconnects++;
 		curl_easy_cleanup(sctx->curl);
 		sctx->curl = NULL;
 		sctx->sockbuf[0] = '\0';
@@ -1080,6 +1081,7 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 		goto out;
 	}
 
+	sctx->tm_connected = time(NULL);
 	ret = true;
 
 	// subscribe to extranonce (optional)

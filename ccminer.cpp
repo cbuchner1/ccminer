@@ -211,9 +211,10 @@ int num_processors;
 int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
 char *device_name[8]; // CB
 int device_sm[8];
+char *rpc_user = NULL;
 static char *rpc_url;
 static char *rpc_userpass;
-static char *rpc_user, *rpc_pass;
+static char *rpc_pass;
 static char *short_url = NULL;
 char *opt_cert;
 char *opt_proxy;
@@ -226,7 +227,7 @@ int stratum_thr_id = -1;
 int api_thr_id = -1;
 bool stratum_need_reset = false;
 struct work_restart *work_restart = NULL;
-static struct stratum_ctx stratum;
+struct stratum_ctx stratum = { 0 };
 
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
@@ -602,6 +603,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		free(ntimestr);
 		free(noncestr);
 
+		gettimeofday(&stratum.tv_submit, NULL);
 		if (unlikely(!stratum_send_line(&stratum, s))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
@@ -1503,6 +1505,7 @@ static bool stratum_handle_response(char *buf)
 {
 	json_t *val, *err_val, *res_val, *id_val;
 	json_error_t err;
+	struct timeval tv_answer, diff;
 	bool ret = false;
 
 	val = JSON_LOADS(buf, &err);
@@ -1521,6 +1524,11 @@ static bool stratum_handle_response(char *buf)
 	// ignore subscribe late answer (yaamp)
 	if (json_integer_value(id_val) < 4)
 		goto out;
+
+	gettimeofday(&tv_answer, NULL);
+	timeval_subtract(&diff, &tv_answer, &stratum.tv_submit);
+	// store time required to the pool to answer to a submit
+	stratum.answer_msec = (1000.0 * diff.tv_sec) + (uint32_t) (0.001 * diff.tv_usec);
 
 	share_result(json_is_true(res_val),
 		err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);

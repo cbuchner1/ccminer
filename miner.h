@@ -546,6 +546,11 @@ struct stratum_ctx {
 	struct stratum_job job;
 	pthread_mutex_t work_lock;
 
+	struct timeval tv_submit;
+	uint32_t answer_msec;
+	uint32_t disconnects;
+	time_t tm_connected;
+
 	int srvtime_diff;
 };
 

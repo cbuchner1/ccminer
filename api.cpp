@@ -110,6 +110,8 @@ extern int device_map[8];
 extern char *device_name[8];
 extern int num_cpus;
 extern char driver_version[32];
+extern struct stratum_ctx stratum;
+extern char* rpc_user;
 
 // sysinfos.cpp
 extern float cpu_temp(int);
@@ -208,12 +210,34 @@ static char *getsummary(char *params)
 }
 
 /**
- * Returns current pool infos
+ * Returns some infos about current pool
  */
 static char *getpoolnfo(char *params)
 {
 	char *p = buffer;
+	char jobid[128] = { 0 };
+	char nonce[128] = { 0 };
 	*p = '\0';
+
+	if (!stratum.url) {
+		sprintf(p, "|");
+		return p;
+	}
+
+	if (stratum.job.job_id)
+		strncpy(jobid, stratum.job.job_id, sizeof(stratum.job.job_id));
+
+	if (stratum.job.xnonce2) {
+		/* used temporary to be sure all is ok */
+		cbin2hex(nonce, (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
+	}
+
+	sprintf(p, "URL=%s;USER=%s;H=%u;JOB=%s;DIFF=%.6f;N2SZ=%zd;N2=0x%s;PING=%u;DISCO=%u;UPTIME=%u|",
+		stratum.url, rpc_user ? rpc_user : "",
+		stratum.job.height, jobid, stratum.job.diff,
+		stratum.xnonce2_size, nonce, stratum.answer_msec,
+		stratum.disconnects, (uint32_t) (time(NULL) - stratum.tm_connected));
+
 	return p;
 }
 

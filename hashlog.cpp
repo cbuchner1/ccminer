@@ -92,7 +92,7 @@ void hashlog_remember_scan_range(struct work* work)
 	data = tlastshares[key];
 	if (range == 0) {
 		memset(&data, 0, sizeof(data));
-		data.njobid = njobid;
+		data.njobid = (uint32_t) njobid;
 	} else {
 		// get min and max from all sent records
 		data.scanned_from = LO_DWORD(range);
