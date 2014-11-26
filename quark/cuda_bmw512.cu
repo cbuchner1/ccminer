@@ -3,9 +3,6 @@
 
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 // die Message it Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 

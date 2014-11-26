@@ -1,9 +1,7 @@
 /*
- * Shabal-512 for X14/X15 (STUB)
+ * Shabal-512 for X14/X15
  */
 #include "cuda_helper.h"
-
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 
 /* $Id: shabal.c 175 2010-05-07 16:03:20Z tp $ */
 /*

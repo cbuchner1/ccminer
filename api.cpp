@@ -103,11 +103,8 @@ static int bye = 0;
 
 extern char *opt_api_allow;
 extern int opt_api_listen; /* port */
-extern uint64_t global_hashrate;
 extern uint32_t accepted_count;
 extern uint32_t rejected_count;
-extern int device_map[8];
-extern char *device_name[8];
 extern int num_cpus;
 extern char driver_version[32];
 extern struct stratum_ctx stratum;
@@ -203,7 +200,7 @@ static char *getsummary(char *params)
 		"ALGO=%s;GPUS=%d;KHS=%.2f;ACC=%d;REJ=%d;"
 		"ACCMN=%.3f;DIFF=%.6f;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
-		algo, num_processors, (double)global_hashrate / 1000.0,
+		algo, active_gpus, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,
 		accps, global_diff, uptime, (uint32_t) ts);
 	return buffer;
@@ -277,10 +274,10 @@ static void gpuhwinfos(int gpu_id)
 
 	card = device_name[gpu_id];
 
-	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;MEM=%lu;"
+	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%u;MEM=%lu;"
 		"TEMP=%.1f;FAN=%d;FREQ=%d;MEMFREQ=%d;PST=%s;"
 		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;SN=%s;BIOS=%s|",
-		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_mem,
+		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_arch, cgpu->gpu_mem,
 		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, cgpu->gpu_memclock,
 		pstate, cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id,
 		cgpu->gpu_sn, cgpu->gpu_desc);
@@ -304,12 +301,12 @@ static void syshwinfos()
 {
 	char buf[256];
 
-	float temp = cpu_temp(0);
-	uint32_t clock = cpu_clock(0);
+	int cputc = (int) cpu_temp(0);
+	uint32_t cpuclk = cpu_clock(0);
 
 	memset(buf, 0, sizeof(buf));
-	snprintf(buf, sizeof(buf), "OS=%s;NVDRIVER=%s;CPUS=%d;CPUTEMP=%.1f;CPUFREQ=%d|",
-		os_name(), driver_version, num_cpus, temp, clock);
+	snprintf(buf, sizeof(buf), "OS=%s;NVDRIVER=%s;CPUS=%d;CPUTEMP=%d;CPUFREQ=%d|",
+		os_name(), driver_version, num_cpus, cputc, cpuclk);
 	strcat(buffer, buf);
 }
 
@@ -341,9 +338,9 @@ static char *gethistory(char *params)
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_stat;
 		p += sprintf(p, "GPU=%d;H=%u;KHS=%.2f;DIFF=%.6f;"
-				"COUNT=%u;FOUND=%u;TS=%u|",
+				"COUNT=%u;FOUND=%u;ID=%u;TS=%u|",
 			data[i].gpu_id, data[i].height, data[i].hashrate, data[i].difficulty,
-			data[i].hashcount, data[i].hashfound, (uint32_t)ts);
+			data[i].hashcount, data[i].hashfound, data[i].uid, (uint32_t)ts);
 	}
 	return buffer;
 }

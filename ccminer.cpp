@@ -192,7 +192,6 @@ bool want_stratum = true;
 bool have_stratum = false;
 static bool submit_old = false;
 bool use_syslog = false;
-static char* opt_syslog_pfx = (char*) PACKAGE_NAME;
 bool use_colors = true;
 static bool opt_background = false;
 bool opt_quiet = false;
@@ -208,10 +207,10 @@ static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;
-int num_processors;
-int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
-char *device_name[8]; // CB
-int device_sm[8];
+int active_gpus;
+char * device_name[8];
+short device_map[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+long  device_sm[8] = { 0 };
 char *rpc_user = NULL;
 static char *rpc_url;
 static char *rpc_userpass;
@@ -241,8 +240,9 @@ int opt_statsavg = 30;
 int opt_intensity = 0;
 uint32_t opt_work_size = 0; /* default */
 uint32_t opt_work_adds = 0;
-
-char *opt_api_allow = (char*) "127.0.0.1"; /* 0.0.0.0 for all ips */
+// strdup on char* to allow a common free() if used
+static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
+char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
 int opt_api_listen = 4068; /* 0 to disable */
 
 #ifdef HAVE_GETOPT_LONG
@@ -409,6 +409,8 @@ void proper_exit(int reason)
 	if (hnvml)
 		wrap_nvml_destroy(hnvml);
 #endif
+	free(opt_syslog_pfx);
+	free(opt_api_allow);
 	exit(reason);
 }
 
@@ -1671,6 +1673,7 @@ static void parse_arg(int key, char *arg)
 		if (p) {
 			/* ip:port */
 			if (p - arg > 0) {
+				free(opt_api_allow);
 				opt_api_allow = strdup(arg);
 				opt_api_allow[p - arg] = '\0';
 			}
@@ -1872,8 +1875,10 @@ static void parse_arg(int key, char *arg)
 	case 1008:
 		applog(LOG_INFO, "Now logging to syslog...");
 		use_syslog = true;
-		if (arg && strlen(arg))
+		if (arg && strlen(arg)) {
+			free(opt_syslog_pfx);
 			opt_syslog_pfx = strdup(arg);
+		}
 		break;
 	case 'd': // CB
 		{
@@ -1899,7 +1904,7 @@ static void parse_arg(int key, char *arg)
 					}
 				}
 				// set number of active gpus
-				num_processors = opt_n_threads;
+				active_gpus = opt_n_threads;
 				pch = strtok (NULL, ",");
 			}
 		}
@@ -2079,7 +2084,7 @@ int main(int argc, char *argv[])
 		num_cpus = 1;
 
 	// number of gpus
-	num_processors = cuda_num_devices();
+	active_gpus = cuda_num_devices();
 	cuda_devicenames();
 
 	/* parse command line */
@@ -2133,12 +2138,12 @@ int main(int argc, char *argv[])
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
 #endif
 
-	if (num_processors == 0) {
+	if (active_gpus == 0) {
 		applog(LOG_ERR, "No CUDA devices found! terminating.");
 		exit(1);
 	}
 	if (!opt_n_threads)
-		opt_n_threads = num_processors;
+		opt_n_threads = active_gpus;
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog)
@@ -2208,7 +2213,7 @@ int main(int argc, char *argv[])
 
 #ifdef USE_WRAPNVML
 #ifndef WIN32
-	/* nvml is currently not usable on Windows (even for x64) */
+	/* nvml is currently not the best choice on Windows (only in x64) */
 	hnvml = wrap_nvml_create();
 	if (hnvml)
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
@@ -2241,8 +2246,9 @@ int main(int argc, char *argv[])
 		thr = &thr_info[i];
 
 		thr->id = i;
-		thr->gpu.gpu_id = device_map[i];
 		thr->gpu.thr_id = i;
+		thr->gpu.gpu_id = (uint8_t) device_map[i];
+		thr->gpu.gpu_arch = (uint16_t) device_sm[device_map[i]];
 		thr->q = tq_new();
 		if (!thr->q)
 			return 1;
@@ -2253,9 +2259,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	applog(LOG_INFO, "%d miner threads started, "
+	applog(LOG_INFO, "%d miner thread%s started, "
 		"using '%s' algorithm.",
-		opt_n_threads,
+		opt_n_threads, opt_n_threads > 1 ? "s":"",
 		algo_names[opt_algo]);
 
 #ifdef WIN32

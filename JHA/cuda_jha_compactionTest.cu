@@ -10,9 +10,6 @@ static uint32_t *h_numValid[8];
 
 static uint32_t *d_partSum[2][8]; // für bis zu vier partielle Summen
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 // True/False tester
 typedef uint32_t(*cuda_compactTestFunction_t)(uint32_t *inpHash);
 

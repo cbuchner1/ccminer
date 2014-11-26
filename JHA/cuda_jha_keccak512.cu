@@ -3,9 +3,6 @@
 
 #include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 __constant__ uint64_t c_State[25];
 __constant__ uint32_t c_PaddedMessage[18];
 

@@ -172,7 +172,7 @@
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
-      <Keep>true</Keep>
+      <Keep>false</Keep>
       <CodeGeneration>compute_30,sm_30;compute_50,sm_50</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
@@ -215,7 +215,7 @@
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
-      <Keep>true</Keep>
+      <Keep>false</Keep>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
       <Include>
       </Include>
@@ -366,7 +366,7 @@
     <CudaCompile Include="heavy\heavy.cu">
     </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_compactionTest.cu">
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes -O2" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
@@ -375,7 +375,7 @@
     </CudaCompile>
     <CudaCompile Include="blake32.cu">
       <MaxRegCount>64</MaxRegCount>
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-O2 -dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
     <CudaCompile Include="keccak\cuda_keccak256.cu">
@@ -384,7 +384,7 @@
     <CudaCompile Include="keccak\keccak256.cu" />
     <CudaCompile Include="pentablake.cu">
       <MaxRegCount>80</MaxRegCount>
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-O2 -dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
     <CudaCompile Include="quark\animecoin.cu">
@@ -402,7 +402,7 @@
       <CInterleavedPTX>false</CInterleavedPTX>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_compactionTest.cu">
-      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes -O2" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_groestl512.cu">

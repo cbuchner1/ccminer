@@ -511,7 +511,7 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 		((uint32_t*)ptarget)[7] = 0x000F;
 
 	if (!init[thr_id]) {
-		if (num_processors > 1) {
+		if (active_gpus > 1) {
 			cudaSetDevice(device_map[thr_id]);
 		}
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));

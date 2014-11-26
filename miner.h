@@ -386,6 +386,7 @@ struct cgpu_info {
 	uint8_t has_monitoring;
 	float gpu_temp;
 	int gpu_fan;
+	uint16_t gpu_arch;
 	int gpu_clock;
 	int gpu_memclock;
 	size_t gpu_mem;
@@ -410,6 +411,7 @@ struct thr_api {
 };
 
 struct stats_data {
+	uint32_t uid;
 	uint32_t tm_stat;
 	uint32_t hashcount;
 	uint32_t height;
@@ -454,7 +456,7 @@ extern bool opt_protocol;
 extern bool opt_tracegpu;
 extern int opt_intensity;
 extern int opt_n_threads;
-extern int num_processors;
+extern int active_gpus;
 extern int opt_timeout;
 extern bool want_longpoll;
 extern bool have_longpoll;
@@ -477,6 +479,10 @@ extern uint32_t opt_work_size;
 
 extern uint64_t global_hashrate;
 extern double   global_diff;
+
+extern char* device_name[8];
+extern short device_map[8];
+extern long  device_sm[8];
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"

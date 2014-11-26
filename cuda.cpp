@@ -25,10 +25,6 @@
 #include "compat.h" // sleep
 #endif
 
-extern char *device_name[8];
-extern int device_map[8];
-extern int device_sm[8];
-
 // CUDA Devices on the System
 int cuda_num_devices()
 {
@@ -74,7 +70,7 @@ void cuda_devicenames()
 		cudaGetDeviceProperties(&props, device_map[i]);
 
 		device_name[i] = strdup(props.name);
-		device_sm[i] = props.major * 100 + props.minor * 10;
+		device_sm[i] = (props.major * 100 + props.minor * 10);
 	}
 }
 

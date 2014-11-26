@@ -13,8 +13,8 @@
 
 #include <stdint.h>
 
-extern int device_map[8];
-extern int device_sm[8];
+extern "C" short device_map[8];
+extern "C"  long device_sm[8];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, int threads);

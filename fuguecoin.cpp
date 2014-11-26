@@ -13,9 +13,6 @@ extern "C" void my_fugue256(void *cc, const void *data, size_t len);
 extern "C" void my_fugue256_close(void *cc, void *dst);
 extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst);
 
-extern int device_map[8];
-extern int device_sm[8];
-
 // vorbereitete Kontexte nach den ersten 80 Bytes
 sph_fugue256_context  ctx_fugue_const[8];
 

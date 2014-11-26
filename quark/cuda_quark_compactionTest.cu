@@ -8,10 +8,7 @@ static uint32_t *d_tempBranch1Nonces[8];
 static uint32_t *d_numValid[8];
 static uint32_t *h_numValid[8];
 
-static uint32_t *d_partSum[2][8]; // für bis zu vier partielle Summen
-
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+static uint32_t *d_partSum[2][8]; // fÃ¼r bis zu vier partielle Summen
 
 // True/False tester
 typedef uint32_t(*cuda_compactTestFunction_t)(uint32_t *inpHash);
@@ -83,7 +80,7 @@ __global__ void quark_compactTest_gpu_SCAN(uint32_t *data, int width, uint32_t *
 				inpHash = &inpHashes[id<<4];
 			}else
 			{
-				// Nonce-Liste verfügbar
+				// Nonce-Liste verfÃ¼gbar
 				int nonce = d_validNonceTable[id] - startNounce;
 				inpHash = &inpHashes[nonce<<4];
 			}			
@@ -200,7 +197,7 @@ __global__ void quark_compactTest_gpu_SCATTER(uint32_t *sum, uint32_t *outp, cud
 			inpHash = &inpHashes[id<<4];
 		}else
 		{
-			// Nonce-Liste verfügbar
+			// Nonce-Liste verfÃ¼gbar
 			int nonce = d_validNonceTable[id] - startNounce;
 			actNounce = nonce;
 			inpHash = &inpHashes[nonce<<4];
@@ -335,7 +332,7 @@ __host__ void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t st
 											int order)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
-	// "threads" ist in diesem Fall auf die Länge dieses Array's zu setzen!
+	// "threads" ist in diesem Fall auf die LÃ¤nge dieses Array's zu setzen!
 	
 	quark_compactTest_cpu_dualCompaction(thr_id, threads,
 		h_numValid[thr_id], d_nonces1, d_nonces2,
@@ -351,7 +348,7 @@ __host__ void quark_compactTest_single_false_cpu_hash_64(int thr_id, int threads
 											int order)
 {
 	// Wenn validNonceTable genutzt wird, dann werden auch nur die Nonces betrachtet, die dort enthalten sind
-	// "threads" ist in diesem Fall auf die Länge dieses Array's zu setzen!
+	// "threads" ist in diesem Fall auf die LÃ¤nge dieses Array's zu setzen!
 
 	quark_compactTest_cpu_singleCompaction(thr_id, threads, h_numValid[thr_id], d_nonces1, h_QuarkFalseFunction[thr_id], startNounce, inpHashes, d_validNonceTable);
 

@@ -3,9 +3,6 @@
 
 #include "cuda_helper.h"
 
-// heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 #define U32TO64_LE(p) \
     (((uint64_t)(*p)) | (((uint64_t)(*(p + 1))) << 32))
 

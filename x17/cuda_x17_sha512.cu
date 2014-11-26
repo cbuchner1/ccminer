@@ -47,9 +47,6 @@
 #define SPH_T32(x)  ((x) & SPH_C32(0xFFFFFFFF))
 #define SPH_T64(x)  ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 
-// in heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
 static __constant__ uint64_t H_512[8];
 
 static const uint64_t H512[8] = {
