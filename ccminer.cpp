@@ -2207,12 +2207,13 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef USE_WRAPNVML
-	// todo: link threads info gpu
+#ifndef WIN32
+	/* nvml is currently not usable on Windows (even for x64) */
 	hnvml = wrap_nvml_create();
 	if (hnvml)
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
-#ifdef WIN32 /* _WIN32 = x86 only, WIN32 for both _WIN32 & _WIN64 */
-	else if (wrap_nvapi_init() == 0)
+#else
+	if (wrap_nvapi_init() == 0)
 		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
 #endif
 	else
