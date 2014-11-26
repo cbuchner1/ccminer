@@ -42,7 +42,7 @@ function translateField($key)
 	$intl['ALGO'] = 'Algorithm';
 	$intl['GPUS'] = 'GPUs';
 	$intl['CPUS'] = 'Threads';
-	$intl['KHS'] = 'Hash rate (kH/s)';
+	$intl['KHS'] = 'Hash rate';
 	$intl['ACC'] = 'Accepted shares';
 	$intl['ACCMN'] = 'Accepted / mn';
 	$intl['REJ'] = 'Rejected';
@@ -58,6 +58,12 @@ function translateField($key)
 	$intl['FAN'] = 'Fan %';
 	$intl['FREQ'] = 'Freq.';
 	$intl['PST'] = 'P-State';
+
+	// pool infos
+	$intl['POOL'] = 'Pool';
+	$intl['PING'] = 'Ping (ms)';
+	$intl['DISCO'] = 'Disconnects';
+	$intl['USER'] = 'User';
 
 	if (isset($intl[$key]))
 		return $intl[$key];
@@ -87,8 +93,35 @@ function translateValue($key,$val,$data=array())
 		case 'TS':
 			$val = strftime("%H:%M:%S", (int) $val);
 			break;
+		case 'KHS':
+			$val = '<span class="bold">'.$val.'</span> kH/s';
+			break;
+		case 'NAME':
+		case 'POOL';
+		case 'USER':
+			// long fields
+			$val = '<span class="elipsis">'.$val.'</span>';
+			break;
 	}
 	return $val;
+}
+
+function filterPoolInfos($stats)
+{
+	$keys = array('USER','H','PING','DISCO');
+	$data = array();
+	$pool = array_pop($stats);
+	// simplify URL to host only
+	$data['POOL'] = $pool['URL'];
+	if (strstr($pool['URL'],'://')) {
+		$parts = explode(':', $pool['URL']);
+		$data['POOL'] = substr($parts[1],2);
+	}
+	foreach ($pool as $key=>$val) {
+		if (in_array($key, $keys))
+			$data[$key] = $val;
+	}
+	return $data;
 }
 
 function displayData($data)
@@ -96,6 +129,8 @@ function displayData($data)
 	$htm = '';
 	$totals = array();
 	foreach ($data as $name => $stats) {
+		if (!isset($stats['summary']))
+			continue;
 		$htm .= '<table id="tb_'.$name.'" class="stats">'."\n";
 		$htm .= '<tr><th class="machine" colspan="2">'.$name."</th></tr>\n";
 		if (!empty($stats)) {
@@ -107,6 +142,17 @@ function displayData($data)
 			}
 			if (isset($summary['KHS']))
 				@ $totals[$summary['ALGO']] += floatval($summary['KHS']);
+
+			if (isset($stats['pool']) && !empty($stats['pool']) ) {
+				$pool = filterPoolInfos($stats['pool']);
+				$htm .= '<tr><th class="gpu" colspan="2">POOL</th></tr>'."\n";
+				foreach ($pool as $key=>$val) {
+					if (!empty($val) && !ignoreField($key))
+					$htm .= '<tr><td class="key">'.translateField($key).'</td>'.
+						'<td class="val">'.translateValue($key, $val)."</td></tr>\n";
+				}
+			}
+
 			foreach ($stats['threads'] as $g=>$gpu) {
 				$card = isset($gpu['CARD']) ? $gpu['CARD'] : '';
 				$htm .= '<tr><th class="gpu" colspan="2">'.$g." $card</th></tr>\n";
@@ -133,7 +179,6 @@ function displayData($data)
 $data = getdataFromPeers();
 
 ?>
-
 <html>
 <head>
 	<title>ccminer rig api sample</title>
@@ -186,6 +231,8 @@ div.totals h2 { color: darkcyan; font-size: 16px; margin-bottom: 4px; }
 div.totals li { list-style-type: none; font-size: 16px; margin-left: 4px; margin-bottom: 8px; }
 li span.algo { display: inline-block; width: 100px; max-width: 180px; }
 
+span.bold { color: #bb99aa; }
+span.elipsis { display: inline-block; max-width: 130px; overflow: hidden; }
 </style>
 </head>
 <body>

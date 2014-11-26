@@ -124,7 +124,6 @@ static void gpustatus(int thr_id)
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 		int gpuid = cgpu->gpu_id;
 		char buf[512]; *buf = '\0';
-		char pstate[8];
 		char* card;
 
 #ifdef USE_WRAPNVML
@@ -132,7 +131,6 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_bus = gpu_busid(cgpu);
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = gpu_fanpercent(cgpu);
-		cgpu->gpu_pstate = gpu_pstate(cgpu);
 #endif
 		gpu_clocks(cgpu);
 
@@ -153,16 +151,12 @@ static void gpustatus(int thr_id)
 
 		cgpu->khashes = stats_get_speed(cgpu->gpu_id, 0.0) / 1000.0;
 
-		memset(pstate, 0, sizeof(pstate));
-		if (cgpu->gpu_pstate != -1)
-			snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
-
 		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-			"TEMP=%.1f;FAN=%d;FREQ=%d;PST=%s;KHS=%.2f;HWF=%d;I=%d|",
+			"TEMP=%.1f;FAN=%d;FREQ=%d;KHS=%.2f;HWF=%d;I=%d|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
-			cgpu->gpu_clock, pstate, cgpu->khashes,
+			cgpu->gpu_clock, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
 		// append to buffer for multi gpus
