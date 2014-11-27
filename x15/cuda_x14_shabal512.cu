@@ -126,10 +126,10 @@
 
 #define PERM_ELT(xa0, xa1, xb0, xb1, xb2, xb3, xc, xm)   do { \
 		xa0 = T32((xa0 \
-			^ (((xa1 << 15) | (xa1 >> 17)) * 5U) \
+			^ (ROTL32(xa1, 15) * 5U) \
 			^ xc) * 3U) \
 			^ xb1 ^ (xb2 & ~xb3) ^ xm; \
-		xb0 = T32(~(((xb0 << 1) | (xb0 >> 31)) ^ xa0)); \
+		xb0 = T32(~(ROTL32(xb0, 1) ^ xa0)); \
 	} while (0)
 
 #define PERM_STEP_0   do { \
