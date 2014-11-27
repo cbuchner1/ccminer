@@ -102,10 +102,8 @@ void applog(int prio, const char *fmt, ...)
 		const char* color = "";
 		char *f;
 		int len;
-		time_t now;
 		struct tm tm, *tm_p;
-
-		time(&now);
+		time_t now = time(NULL);
 
 		pthread_mutex_lock(&applog_lock);
 		tm_p = localtime(&now);
@@ -735,9 +733,7 @@ char *stratum_recv_line(struct stratum_ctx *sctx)
 
 	if (!strstr(sctx->sockbuf, "\n")) {
 		bool ret = true;
-		time_t rstart;
-
-		time(&rstart);
+		time_t rstart = time(NULL);
 		if (!socket_full(sctx->sock, 60)) {
 			applog(LOG_ERR, "stratum_recv_line timed out");
 			goto out;
@@ -1578,15 +1574,17 @@ void do_gpu_tests(void)
 	uchar buf[128];
 	uint32_t tgt[8] = { 0 };
 
-	memset(buf, 0, sizeof buf);
-	buf[0] = 1; buf[64] = 2;
-
 	opt_tracegpu = true;
 	work_restart = (struct work_restart*) malloc(sizeof(struct work_restart));
 	work_restart[0].restart = 1;
-	tgt[6] = 0xffff;
+	tgt[7] = 0xffff;
 
+	memset(buf, 0, sizeof buf);
+	// buf[0] = 1; buf[64] = 2; // for endian tests
 	scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
+
+	memset(buf, 0, sizeof buf);
+	scanhash_heavy(0, (uint32_t*)buf, tgt, 1, &done, 1, 84); // HEAVYCOIN_BLKHDR_SZ=84
 
 	free(work_restart);
 	work_restart = NULL;

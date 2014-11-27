@@ -3,11 +3,11 @@
 
 #include "cuda_helper.h"
 
-// globaler Speicher für alle HeftyHashes aller Threads
-extern uint32_t *d_heftyHashes[8];
-extern uint32_t *d_nonceVector[8];
+// globaler Speicher fÃ¼r alle HeftyHashes aller Threads
+extern uint32_t *heavy_heftyHashes[8];
+extern uint32_t *heavy_nonceVector[8];
 
-// globaler Speicher für unsere Ergebnisse
+// globaler Speicher fÃ¼r unsere Ergebnisse
 uint32_t *d_hash4output[8];
 
 __constant__ uint32_t groestl_gpu_state[32];
@@ -603,22 +603,22 @@ __device__ void groestl512_perm_P(uint32_t *a)
 #pragma unroll 16
 		for(int k=0;k<32;k+=2)
 		{
-			t[k + 0] =	T0up( B32_0(a[k & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 2) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 4) & 0x1f]) ) ^ 
-						T3up( B32_3(a[(k + 6) & 0x1f]) ) ^ 
-						T0dn( B32_0(a[(k + 9) & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 11) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 13) & 0x1f]) ) ^ 
+			t[k + 0] =	T0up( B32_0(a[k & 0x1f]) ) ^
+						T1up( B32_1(a[(k + 2) & 0x1f]) ) ^
+						T2up( B32_2(a[(k + 4) & 0x1f]) ) ^
+						T3up( B32_3(a[(k + 6) & 0x1f]) ) ^
+						T0dn( B32_0(a[(k + 9) & 0x1f]) ) ^
+						T1dn( B32_1(a[(k + 11) & 0x1f]) ) ^
+						T2dn( B32_2(a[(k + 13) & 0x1f]) ) ^
 						T3dn( B32_3(a[(k + 23) & 0x1f]) );
 
-			t[k + 1] =	T0dn( B32_0(a[k & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 2) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 4) & 0x1f]) ) ^ 
-						T3dn( B32_3(a[(k + 6) & 0x1f]) ) ^ 
-						T0up( B32_0(a[(k + 9) & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 11) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 13) & 0x1f]) ) ^ 
+			t[k + 1] =	T0dn( B32_0(a[k & 0x1f]) ) ^
+						T1dn( B32_1(a[(k + 2) & 0x1f]) ) ^
+						T2dn( B32_2(a[(k + 4) & 0x1f]) ) ^
+						T3dn( B32_3(a[(k + 6) & 0x1f]) ) ^
+						T0up( B32_0(a[(k + 9) & 0x1f]) ) ^
+						T1up( B32_1(a[(k + 11) & 0x1f]) ) ^
+						T2up( B32_2(a[(k + 13) & 0x1f]) ) ^
 						T3up( B32_3(a[(k + 23) & 0x1f]) );
 		}
 #pragma unroll 32
@@ -645,22 +645,22 @@ __device__ void groestl512_perm_Q(uint32_t *a)
 #pragma unroll 16
 		for(int k=0;k<32;k+=2)
 		{
-			t[k + 0] =	T0up( B32_0(a[(k + 2) & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 6) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 10) & 0x1f]) ) ^ 
-						T3up( B32_3(a[(k + 22) & 0x1f]) ) ^ 
-						T0dn( B32_0(a[(k + 1) & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 5) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 9) & 0x1f]) ) ^ 
+			t[k + 0] =	T0up( B32_0(a[(k + 2) & 0x1f]) ) ^
+						T1up( B32_1(a[(k + 6) & 0x1f]) ) ^
+						T2up( B32_2(a[(k + 10) & 0x1f]) ) ^
+						T3up( B32_3(a[(k + 22) & 0x1f]) ) ^
+						T0dn( B32_0(a[(k + 1) & 0x1f]) ) ^
+						T1dn( B32_1(a[(k + 5) & 0x1f]) ) ^
+						T2dn( B32_2(a[(k + 9) & 0x1f]) ) ^
 						T3dn( B32_3(a[(k + 13) & 0x1f]) );
 
-			t[k + 1] =	T0dn( B32_0(a[(k + 2) & 0x1f]) ) ^ 
-						T1dn( B32_1(a[(k + 6) & 0x1f]) ) ^ 
-						T2dn( B32_2(a[(k + 10) & 0x1f]) ) ^ 
-						T3dn( B32_3(a[(k + 22) & 0x1f]) ) ^ 
-						T0up( B32_0(a[(k + 1) & 0x1f]) ) ^ 
-						T1up( B32_1(a[(k + 5) & 0x1f]) ) ^ 
-						T2up( B32_2(a[(k + 9) & 0x1f]) ) ^ 
+			t[k + 1] =	T0dn( B32_0(a[(k + 2) & 0x1f]) ) ^
+						T1dn( B32_1(a[(k + 6) & 0x1f]) ) ^
+						T2dn( B32_2(a[(k + 10) & 0x1f]) ) ^
+						T3dn( B32_3(a[(k + 22) & 0x1f]) ) ^
+						T0up( B32_0(a[(k + 1) & 0x1f]) ) ^
+						T1up( B32_1(a[(k + 5) & 0x1f]) ) ^
+						T2up( B32_2(a[(k + 9) & 0x1f]) ) ^
 						T3up( B32_3(a[(k + 13) & 0x1f]) );
 		}
 #pragma unroll 32
@@ -677,7 +677,7 @@ template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(int threads, uint32
 		uint32_t message[32];
 		uint32_t state[32];
 
-		// lese message ein & verknüpfe diese mit dem hash1 von hefty1
+		// lese message ein & verknÃ¼pfe diese mit dem hash1 von hefty1
 		// lese den state ein
 
 #pragma unroll 32
@@ -700,7 +700,7 @@ template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(int threads, uint32
 #pragma unroll 8
 		for (int k=0; k<8; ++k)
 			message[BLOCKSIZE/4+k] = heftyHash[k];
-		
+
 		uint32_t g[32];
 #pragma unroll 32
 		for(int u=0;u<32;u++)
@@ -709,7 +709,7 @@ template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(int threads, uint32
 		// Perm
 		groestl512_perm_P(g);
 		groestl512_perm_Q(message);
-		
+
 #pragma unroll 32
 		for(int u=0;u<32;u++)
 		{
@@ -753,7 +753,7 @@ __host__ void groestl512_cpu_init(int thr_id, int threads)
 	texDef(t3up, d_T3up, T3up_cpu, sizeof(uint32_t)*256);
 	texDef(t3dn, d_T3dn, T3dn_cpu, sizeof(uint32_t)*256);
 
-	// Speicher für alle Ergebnisse belegen
+	// Speicher fÃ¼r alle Ergebnisse belegen
 	cudaMalloc(&d_hash4output[thr_id], 16 * sizeof(uint32_t) * threads);
 }
 
@@ -778,31 +778,27 @@ __host__ void groestl512_cpu_setBlock(void *data, int len)
 		msgBlock[28] = 0x80;
 		msgBlock[31] = 0x01000000;
 	}
-	// groestl512 braucht hierfür keinen CPU-Code (die einzige Runde wird
-	// auf der GPU ausgeführt)
+	// groestl512 braucht hierfÃ¼r keinen CPU-Code (die einzige Runde wird
+	// auf der GPU ausgefÃ¼hrt)
 
-	// setze register 
+	// setze register
 	uint32_t groestl_state_init[32];
 	memset(groestl_state_init, 0, sizeof(uint32_t) * 32);
 	groestl_state_init[31] = 0x20000;
 
 	// state speichern
-	cudaMemcpyToSymbol(	groestl_gpu_state,
-						groestl_state_init,
-						128);
+	cudaMemcpyToSymbol(groestl_gpu_state, groestl_state_init, 128);
 
 	// Blockheader setzen (korrekte Nonce und Hefty Hash fehlen da drin noch)
-	cudaMemcpyToSymbol(	groestl_gpu_msg,
-						msgBlock,
-						128);
+	cudaMemcpyToSymbol(groestl_gpu_msg, msgBlock, 128);
 	BLOCKSIZE = len;
 }
 
 __host__ void groestl512_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
 {
 	// Hefty1 Hashes kopieren (eigentlich nur zum debuggen)
-	if (copy)	
-		cudaMemcpy( d_heftyHashes[thr_id], heftyHashes, 8 * sizeof(uint32_t) * threads, cudaMemcpyHostToDevice );		
+	if (copy)
+		CUDA_SAFE_CALL(cudaMemcpy(heavy_heftyHashes[thr_id], heftyHashes, 8 * sizeof(uint32_t) * threads, cudaMemcpyHostToDevice));
 }
 
 __host__ void groestl512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
@@ -813,11 +809,11 @@ __host__ void groestl512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
+	// GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
 	if (BLOCKSIZE == 84)
-		groestl512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);	
+		groestl512_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 	else if (BLOCKSIZE == 80)
-		groestl512_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);	
+		groestl512_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash4output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 }

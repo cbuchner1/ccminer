@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <memory.h>
 
+#include "miner.h"
+
 #include "cuda_helper.h"
 
 #define USE_SHARED 1
 
-// globaler Speicher für alle HeftyHashes aller Threads
-uint32_t *d_heftyHashes[8];
+// globaler Speicher fÃ¼r alle HeftyHashes aller Threads
+uint32_t *heavy_heftyHashes[8];
 
 /* Hash-Tabellen */
 __constant__ uint32_t hefty_gpu_constantTable[64];
@@ -30,7 +32,7 @@ uint32_t hefty_cpu_hashTable[] = {
     0x9b05688cUL,
     0x1f83d9abUL,
     0x5be0cd19UL };
-    
+
 uint32_t hefty_cpu_constantTable[] = {
     0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL,
     0x3956c25bUL, 0x59f111f1UL, 0x923f82a4UL, 0xab1c5ed5UL,
@@ -50,11 +52,16 @@ uint32_t hefty_cpu_constantTable[] = {
     0x90befffaUL, 0xa4506cebUL, 0xbef9a3f7UL, 0xc67178f2UL
 };
 
-//#define S(x, n)          (((x) >> (n)) | ((x) << (32 - (n))))
-static __host__ __device__ uint32_t S(uint32_t x, int n)
+#if 0
+#define S(x, n)          (((x) >> (n)) | ((x) << (32 - (n))))
+#else
+__host__ __device__
+static uint32_t S(uint32_t x, int n)
 {
     return (((x) >> (n)) | ((x) << (32 - (n))));
 }
+#endif
+
 #define R(x, n)          ((x) >> (n))
 #define Ch(x, y, z)      ((x & (y ^ z)) ^ z)
 #define Maj(x, y, z)     ((x & (y | z)) | (y & z))
@@ -67,7 +74,9 @@ static __host__ __device__ uint32_t S(uint32_t x, int n)
 
 // uint8_t
 #define smoosh4(x)       ( ((x)>>4) ^ ((x) & 0x0F) )
-__host__ __forceinline__ __device__ uint8_t smoosh2(uint32_t x)
+
+__host__ __forceinline__ __device__
+uint8_t smoosh2(uint32_t x)
 {
     uint16_t w = (x >> 16) ^ (x & 0xffff);
     uint8_t n = smoosh4( (uint8_t)( (w >> 8) ^ (w & 0xFF) ) );
@@ -77,13 +86,14 @@ __host__ __forceinline__ __device__ uint8_t smoosh2(uint32_t x)
 #define smoosh4Quad(x)   ( (((x)>>4) ^ (x)) & 0x0F0F0F0F )
 #define getByte(x,y)     ( ((x) >> (y)) & 0xFF )
 
-__host__ __forceinline__ __device__ void Mangle(uint32_t *inp)
+__host__ __forceinline__ __device__
+void Mangle(uint32_t *inp)
 {
     uint32_t r = smoosh4Quad(inp[0]);
     uint32_t inp0org;
     uint32_t tmp0Mask, tmp1Mask;
     uint32_t in1, in2, isAddition;
-    uint32_t tmp;
+    int32_t tmp;
     uint8_t b;
 
     inp[1] = inp[1] ^ S(inp[0], getByte(r, 24));
@@ -92,24 +102,24 @@ __host__ __forceinline__ __device__ void Mangle(uint32_t *inp)
     tmp = smoosh2(inp[1]);
     b = getByte(r,tmp);
     inp0org = S(inp[0], b);
-    tmp0Mask = -((tmp >> 3)&1); // Bit 3 an Position 0
-    tmp1Mask = -((tmp >> 4)&1); // Bit 4 an Position 0
-    
-    in1 =    (inp[2] & ~inp0org) | 
+    tmp0Mask = (uint32_t) -((tmp >> 3) & 1); // Bit 3 an Position 0
+    tmp1Mask = (uint32_t) -((tmp >> 4) & 1); // Bit 4 an Position 0
+
+    in1 =    (inp[2] & ~inp0org) |
             (tmp1Mask & ~inp[2] & inp0org) |
             (~tmp0Mask & ~inp[2] & inp0org);
     in2 = inp[2] += ~inp0org;
     isAddition = ~tmp0Mask & tmp1Mask;
     inp[2] = isAddition ? in2 : in1;
-    
+
     r += 0x01010101;
     tmp = smoosh2(inp[1] ^ inp[2]);
     b = getByte(r,tmp);
     inp0org = S(inp[0], b);
-    tmp0Mask = -((tmp >> 3)&1); // Bit 3 an Position 0
-    tmp1Mask = -((tmp >> 4)&1); // Bit 4 an Position 0
+    tmp0Mask = (uint32_t) -((tmp >> 3) & 1); // Bit 3 an Position 0
+    tmp1Mask = (uint32_t) -((tmp >> 4) & 1); // Bit 4 an Position 0
 
-    in1 =    (inp[3] & ~inp0org) | 
+    in1 =    (inp[3] & ~inp0org) |
             (tmp1Mask & ~inp[3] & inp0org) |
             (~tmp0Mask & ~inp[3] & inp0org);
     in2 = inp[3] += ~inp0org;
@@ -119,20 +129,23 @@ __host__ __forceinline__ __device__ void Mangle(uint32_t *inp)
     inp[0] ^= (inp[1] ^ inp[2]) + inp[3];
 }
 
-__host__ __forceinline__ __device__ void Absorb(uint32_t *inp, uint32_t x)
+__host__ __forceinline__ __device__
+void Absorb(uint32_t *inp, uint32_t x)
 {
     inp[0] ^= x;
     Mangle(inp);
 }
 
-__host__ __forceinline__ __device__ uint32_t Squeeze(uint32_t *inp)
+__host__ __forceinline__ __device__
+uint32_t Squeeze(uint32_t *inp)
 {
     uint32_t y = inp[0];
     Mangle(inp);
     return y;
 }
 
-__host__ __forceinline__ __device__ uint32_t Br(uint32_t *sponge, uint32_t x)
+__host__ __forceinline__ __device__
+uint32_t Br(uint32_t *sponge, uint32_t x)
 {
     uint32_t r = Squeeze(sponge);
     uint32_t t = ((r >> 8) & 0x1F);
@@ -146,11 +159,12 @@ __host__ __forceinline__ __device__ uint32_t Br(uint32_t *sponge, uint32_t x)
     return retVal;
 }
 
-__forceinline__ __device__ void hefty_gpu_round(uint32_t *regs, uint32_t W, uint32_t K, uint32_t *sponge)
+__device__ __forceinline__
+void hefty_gpu_round(uint32_t *regs, uint32_t W, uint32_t K, uint32_t *sponge)
 {
     uint32_t tmpBr;
 
-    uint32_t brG = Br(sponge, regs[6]);    
+    uint32_t brG = Br(sponge, regs[6]);
     uint32_t brF = Br(sponge, regs[5]);
     uint32_t tmp1 = Ch(regs[4], brF, brG) + regs[7] + W + K;
     uint32_t brE = Br(sponge, regs[4]);
@@ -169,11 +183,12 @@ __forceinline__ __device__ void hefty_gpu_round(uint32_t *regs, uint32_t W, uint
     regs[4] += tmpBr;
 }
 
-__host__ void hefty_cpu_round(uint32_t *regs, uint32_t W, uint32_t K, uint32_t *sponge)
+__host__
+void hefty_cpu_round(uint32_t *regs, uint32_t W, uint32_t K, uint32_t *sponge)
 {
     uint32_t tmpBr;
 
-    uint32_t brG = Br(sponge, regs[6]);    
+    uint32_t brG = Br(sponge, regs[6]);
     uint32_t brF = Br(sponge, regs[5]);
     uint32_t tmp1 = Ch(regs[4], brF, brG) + regs[7] + W + K;
     uint32_t brE = Br(sponge, regs[4]);
@@ -191,11 +206,11 @@ __host__ void hefty_cpu_round(uint32_t *regs, uint32_t W, uint32_t K, uint32_t *
     regs[4] += tmpBr;
 }
 
-// Die Hash-Funktion
-__global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHash)
+__global__
+void hefty_gpu_hash(int threads, uint32_t startNounce, uint32_t *outputHash)
 {
-    #if USE_SHARED
-    extern __shared__ char heftytab[];
+#if USE_SHARED
+    extern __shared__ unsigned char heftytab[];
     if(threadIdx.x < 64)
     {
         *((uint32_t*)heftytab + threadIdx.x) = hefty_gpu_constantTable[threadIdx.x];
@@ -207,9 +222,9 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
     int thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
-        // bestimme den aktuellen Zähler
+        // bestimme den aktuellen ZÃ¤hler
         uint32_t nounce = startNounce + thread;
-    
+
         // jeder thread in diesem  Block bekommt sein eigenes W Array im Shared memory
         // reduktion von 256 byte auf 128 byte
         uint32_t W1[16];
@@ -219,7 +234,7 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
         uint32_t regs[8];
         uint32_t hash[8];
         uint32_t sponge[4];
-    
+
 #pragma unroll 4
         for(int k=0; k < 4; k++)
             sponge[k] = hefty_gpu_sponge[k];
@@ -231,7 +246,7 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
             regs[k] = hefty_gpu_register[k];
             hash[k] = regs[k];
         }
-    
+
         //memcpy(W, &hefty_gpu_blockHeader[0], sizeof(uint32_t) * 16); // verbleibende 20 bytes aus Block 2 plus padding
 #pragma unroll 16
         for(int k=0;k<16;k++)
@@ -252,7 +267,7 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
         }
 
 // Progress W2 (Bytes 64...127) then W3 (Bytes 128...191) ...
-        
+
 #pragma unroll 3
         for(int k=0;k<3;k++)
         {
@@ -279,7 +294,7 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
             for(int j=0;j<16;j++)
                 W1[j] = W2[j];
         }
-        
+
 #pragma unroll 8
         for(int k=0;k<8;k++)
             hash[k] += regs[k];
@@ -290,27 +305,28 @@ __global__ void hefty_gpu_hash(int threads, uint32_t startNounce, void *outputHa
     }
 }
 
-// Setup-Funktionen
-__host__ void hefty_cpu_init(int thr_id, int threads)
+__host__
+void hefty_cpu_init(int thr_id, int threads)
 {
     cudaSetDevice(device_map[thr_id]);
 
     // Kopiere die Hash-Tabellen in den GPU-Speicher
-    cudaMemcpyToSymbol(    hefty_gpu_constantTable,
+    cudaMemcpyToSymbol( hefty_gpu_constantTable,
                         hefty_cpu_constantTable,
                         sizeof(uint32_t) * 64 );
 
-    // Speicher für alle Hefty1 hashes belegen
-    cudaMalloc(&d_heftyHashes[thr_id], 8 * sizeof(uint32_t) * threads);
+    // Speicher fÃ¼r alle Hefty1 hashes belegen
+    CUDA_SAFE_CALL(cudaMalloc(&heavy_heftyHashes[thr_id], 8 * sizeof(uint32_t) * threads));
 }
 
-__host__ void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
+__host__
+void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
 // data muss 80/84-Byte haben!
 {
     // Nachricht expandieren und setzen
     uint32_t msgBlock[32];
 
-    memset(msgBlock, 0, sizeof(uint32_t) * 32);
+    memset(msgBlock, 0, sizeof(msgBlock));
     memcpy(&msgBlock[0], data, len);
     if (len == 84) {
         msgBlock[21] |= 0x80;
@@ -319,17 +335,17 @@ __host__ void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
         msgBlock[20] |= 0x80;
         msgBlock[31] = 640; // bitlen
     }
-    
+
     for(int i=0;i<31;i++) // Byteorder drehen
         msgBlock[i] = SWAB32(msgBlock[i]);
 
-    // die erste Runde wird auf der CPU durchgeführt, da diese für
+    // die erste Runde wird auf der CPU durchgefÃ¼hrt, da diese fÃ¼r
     // alle Threads gleich ist. Der Hash wird dann an die Threads
-    // übergeben
+    // Ã¼bergeben
 
     // Erstelle expandierten Block W
-    uint32_t W[64];    
-    memcpy(W, &msgBlock[0], sizeof(uint32_t) * 16);    
+    uint32_t W[64];
+    memcpy(W, &msgBlock[0], sizeof(uint32_t) * 16);
     for(int j=16;j<64;j++)
         W[j] = s1(W[j-2]) + W[j-7] + s0(W[j-15]) + W[j-16];
 
@@ -344,7 +360,7 @@ __host__ void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
     {
         regs[k] = hefty_cpu_hashTable[k];
         hash[k] = regs[k];
-    }    
+    }
 
     // 1. Runde
     for(int j=0;j<16;j++)
@@ -366,39 +382,30 @@ __host__ void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
         hash[k] += regs[k];
 
     // sponge speichern
-
-    cudaMemcpyToSymbol( hefty_gpu_sponge,
-                        sponge,
-                        sizeof(uint32_t) * 4 );
+    cudaMemcpyToSymbol(hefty_gpu_sponge, sponge, 16);
     // hash speichern
-    cudaMemcpyToSymbol( hefty_gpu_register,
-                        hash,
-                        sizeof(uint32_t) * 8 );
-
+    cudaMemcpyToSymbol(hefty_gpu_register, hash, 32);
     // Blockheader setzen (korrekte Nonce fehlt da drin noch)
-    cudaMemcpyToSymbol( hefty_gpu_blockHeader,
-                        &msgBlock[16],
-                        64);
+    CUDA_SAFE_CALL(cudaMemcpyToSymbol(hefty_gpu_blockHeader, &msgBlock[16], 64));
 }
 
-__host__ void hefty_cpu_hash(int thr_id, int threads, int startNounce)
+__host__
+void hefty_cpu_hash(int thr_id, int threads, int startNounce)
 {
-    // Compute 3.x und 5.x Geräte am besten mit 768 Threads ansteuern,
-    // alle anderen mit 512 Threads.
-    int threadsperblock = (device_sm[device_map[thr_id]] >= 300) ? 768 : 512;
+    int threadsperblock = 256;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    #if USE_SHARED
-    size_t shared_size = 8 * 64 * sizeof(uint32_t);
+    // GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
+#if USE_SHARED
+    int shared_size = 8 * 64 * sizeof(uint32_t);
 #else
-    size_t shared_size = 0;
+    int shared_size = 0;
 #endif
 
-    hefty_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, (void*)d_heftyHashes[thr_id]);
+    hefty_gpu_hash <<< grid, block, shared_size >>> (threads, startNounce, heavy_heftyHashes[thr_id]);
 
     // Strategisches Sleep Kommando zur Senkung der CPU Last
     MyStreamSynchronize(NULL, 0, thr_id);

@@ -80,6 +80,9 @@ nvcc_FLAGS += $(JANSSON_INCLUDES) --ptxas-options="-v"
 blake32.o: blake32.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
 
+heavy/cuda_hefty1.o: heavy/cuda_hefty1.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
+
 keccak/cuda_keccak256.o: keccak/cuda_keccak256.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=92 -o $@ -c $<
 

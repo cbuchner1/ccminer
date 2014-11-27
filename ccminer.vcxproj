@@ -173,7 +173,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>false</Keep>
-      <CodeGeneration>compute_30,sm_30;compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_50,sm_50</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
@@ -306,12 +306,7 @@
     <ClInclude Include="cuda_groestlcoin.h" />
     <ClInclude Include="cuda_helper.h" />
     <ClInclude Include="elist.h" />
-    <ClInclude Include="heavy\cuda_blake512.h" />
-    <ClInclude Include="heavy\cuda_combine.h" />
-    <ClInclude Include="heavy\cuda_groestl512.h" />
-    <ClInclude Include="heavy\cuda_hefty1.h" />
-    <ClInclude Include="heavy\cuda_keccak512.h" />
-    <ClInclude Include="heavy\cuda_sha256.h" />
+    <ClInclude Include="heavy\heavy.h" />
     <ClInclude Include="hefty1.h" />
     <ClInclude Include="miner.h" />
     <ClInclude Include="nvml.h" />
@@ -358,6 +353,7 @@
     <CudaCompile Include="heavy\cuda_groestl512.cu">
     </CudaCompile>
     <CudaCompile Include="heavy\cuda_hefty1.cu">
+      <MaxRegCount>80</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="heavy\cuda_keccak512.cu">
     </CudaCompile>

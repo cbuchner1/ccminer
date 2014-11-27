@@ -1,35 +1,19 @@
 #include <stdio.h>
-#include <memory.h>
-#include <string.h>
-
-#include <map>
-
 #include <openssl/sha.h>
-
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
+#include <map>
 // include thrust
-#include <thrust/version.h>
 #include <thrust/remove.h>
 #include <thrust/device_vector.h>
-#include <thrust/iterator/constant_iterator.h>
 
 #include "miner.h"
 
-#include "hefty1.h"
+extern "C" {
 #include "sph/sph_keccak.h"
 #include "sph/sph_blake.h"
 #include "sph/sph_groestl.h"
-
-#include "heavy/cuda_hefty1.h"
-#include "heavy/cuda_sha256.h"
-#include "heavy/cuda_keccak512.h"
-#include "heavy/cuda_groestl512.h"
-#include "heavy/cuda_blake512.h"
-#include "heavy/cuda_combine.h"
-
+}
+#include "hefty1.h"
+#include "heavy/heavy.h"
 #include "cuda_helper.h"
 
 extern uint32_t *d_hash2output[8];
@@ -37,11 +21,13 @@ extern uint32_t *d_hash3output[8];
 extern uint32_t *d_hash4output[8];
 extern uint32_t *d_hash5output[8];
 
-#define HEAVYCOIN_BLKHDR_SZ        84
-#define MNR_BLKHDR_SZ		       80
+#define HEAVYCOIN_BLKHDR_SZ 84
+#define MNR_BLKHDR_SZ       80
 
-// nonce-array für die threads
-uint32_t *d_nonceVector[8];
+// nonce-array fÃ¼r die threads
+uint32_t *heavy_nonceVector[8];
+
+extern uint32_t *heavy_heftyHashes[8];
 
 /* Combines top 64-bits from each hash into a single hash */
 static void combine_hashes(uint32_t *out, const uint32_t *hash1, const uint32_t *hash2, const uint32_t *hash3, const uint32_t *hash4)
@@ -71,9 +57,9 @@ static void combine_hashes(uint32_t *out, const uint32_t *hash1, const uint32_t 
 #include <intrin.h>
 static uint32_t __inline bitsset( uint32_t x )
 {
-   DWORD r = 0;
-   _BitScanReverse(&r, x);
-   return r;
+    DWORD r = 0;
+    _BitScanReverse(&r, x);
+    return r;
 }
 #else
 static uint32_t bitsset( uint32_t x )
@@ -91,21 +77,21 @@ static int findhighbit(const uint32_t *ptarget, int words)
     {
         if (ptarget[i] != 0) {
             highbit = i*32 + bitsset(ptarget[i])+1;
-                break;
+            break;
         }
     }
     return highbit;
 }
 
 // Generiere ein Multiword-Integer das die Zahl
-// (2 << highbit) - 1 repräsentiert.
+// (2 << highbit) - 1 reprÃ¤sentiert.
 static void genmask(uint32_t *ptarget, int words, int highbit)
 {
     int i;
     for (i=words-1; i >= 0; --i)
     {
         if ((i+1)*32 <= highbit)
-            ptarget[i] = 0xffffffff;
+            ptarget[i] = UINT32_MAX;
         else if (i*32 > highbit)
             ptarget[i] = 0x00000000;
         else
@@ -114,12 +100,17 @@ static void genmask(uint32_t *ptarget, int words, int highbit)
 }
 
 struct check_nonce_for_remove
-{    
+{
     check_nonce_for_remove(uint64_t target, uint32_t *hashes, uint32_t hashlen, uint32_t startNonce) :
         m_target(target),
         m_hashes(hashes),
         m_hashlen(hashlen),
         m_startNonce(startNonce) { }
+
+    uint64_t  m_target;
+    uint32_t *m_hashes;
+    uint32_t  m_hashlen;
+    uint32_t  m_startNonce;
 
     __device__
     bool operator()(const uint32_t x)
@@ -129,53 +120,39 @@ struct check_nonce_for_remove
         // Wert des Hashes (als uint64_t) auslesen.
         // Steht im 6. und 7. Wort des Hashes (jeder dieser Hashes hat 512 Bits)
         uint64_t hashValue = *((uint64_t*)(&m_hashes[m_hashlen*hashIndex + 6]));
-        // gegen das Target prüfen. Es dürfen nur Bits aus dem Target gesetzt sein.
-        return (hashValue & m_target) != hashValue;
+        bool res = (hashValue & m_target) != hashValue;
+        //printf("ndx=%x val=%08x target=%lx\n", hashIndex, hashValue, m_target);
+        // gegen das Target prÃ¼fen. Es dÃ¼rfen nur Bits aus dem Target gesetzt sein.
+        return res;
     }
-
-    uint64_t  m_target;
-    uint32_t *m_hashes;
-    uint32_t  m_hashlen;
-    uint32_t  m_startNonce;
 };
 
-int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
-    unsigned long *hashes_done, uint32_t maxvote, int blocklen);
+static bool init[8] = {0,0,0,0,0,0,0,0};
 
-extern "C"
+__host__
 int scanhash_heavy(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
-    unsigned long *hashes_done, uint32_t maxvote, int blocklen)
-{
-    return scanhash_heavy_cpp(thr_id, pdata,
-    ptarget, max_nonce, hashes_done, maxvote, blocklen);
-}
-
-
-int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done, uint32_t maxvote, int blocklen)
 {
     const uint32_t first_nonce = pdata[19]; /* to check */
     // CUDA will process thousands of threads.
-    int throughput = opt_work_size ? opt_work_size : (1 << 19); // 128*4096
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+    int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
+    throughput = min(throughput, (int)(max_nonce - first_nonce));
 
     int rc = 0;
     uint32_t *hash = NULL;
-    cudaMallocHost(&hash, throughput*8*sizeof(uint32_t));
     uint32_t *cpu_nonceVector = NULL;
-    cudaMallocHost(&cpu_nonceVector, throughput*sizeof(uint32_t));
+    CUDA_SAFE_CALL(cudaMallocHost(&hash, throughput*8*sizeof(uint32_t)));
+    CUDA_SAFE_CALL(cudaMallocHost(&cpu_nonceVector, throughput*sizeof(uint32_t)));
 
     int nrmCalls[6];
     memset(nrmCalls, 0, sizeof(int) * 6);
 
-	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000000ff;
+    if (opt_benchmark)
+        ((uint32_t*)ptarget)[7] = 0x00ff;
 
-    // für jeden Hash ein individuelles Target erstellen basierend
-    // auf dem höchsten Bit, das in ptarget gesetzt ist.
+    // fÃ¼r jeden Hash ein individuelles Target erstellen basierend
+    // auf dem hÃ¶chsten Bit, das in ptarget gesetzt ist.
     int highbit = findhighbit(ptarget, 8);
     uint32_t target2[2], target3[2], target4[2], target5[2];
     genmask(target2, 2, highbit/4+(((highbit%4)>3)?1:0) ); // SHA256
@@ -183,7 +160,6 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
     genmask(target4, 2, highbit/4+(((highbit%4)>1)?1:0) ); // groestl512
     genmask(target5, 2, highbit/4+(((highbit%4)>0)?1:0) ); // blake512
 
-    static bool init[8] = {0,0,0,0,0,0,0,0};
     if (!init[thr_id])
     {
         hefty_cpu_init(thr_id, throughput);
@@ -192,8 +168,10 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         groestl512_cpu_init(thr_id, throughput);
         blake512_cpu_init(thr_id, throughput);
         combine_cpu_init(thr_id, throughput);
+
+        CUDA_SAFE_CALL(cudaMalloc(&heavy_nonceVector[thr_id], sizeof(uint32_t) * throughput));
+
         init[thr_id] = true;
-        cudaMalloc(&d_nonceVector[thr_id], sizeof(uint32_t) * throughput);
     }
 
     if (blocklen == HEAVYCOIN_BLKHDR_SZ)
@@ -201,13 +179,13 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         uint16_t *ext = (uint16_t *)&pdata[20];
 
         if (opt_vote > maxvote) {
-            printf("Warning: Your block reward vote (%hu) exceeds "
-                    "the maxvote reported by the pool (%hu).\n",
+            applog(LOG_WARNING, "Your block reward vote (%hu) exceeds "
+                    "the maxvote reported by the pool (%hu).",
                     opt_vote, maxvote);
         }
 
         if (opt_trust_pool && opt_vote > maxvote) {
-            printf("Warning: Capping block reward vote to maxvote reported by pool.\n");
+            applog(LOG_WARNING, "Capping block reward vote to maxvote reported by pool.");
             ext[0] = maxvote;
         }
         else
@@ -222,32 +200,34 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
     blake512_cpu_setBlock(pdata, blocklen);
 
     do {
-        uint32_t i;
 
         ////// Compaction init
-        thrust::device_ptr<uint32_t> devNoncePtr(d_nonceVector[thr_id]);
-        thrust::device_ptr<uint32_t> devNoncePtrEnd((d_nonceVector[thr_id]) + throughput);
+        thrust::device_ptr<uint32_t> devNoncePtr(heavy_nonceVector[thr_id]);
+        thrust::device_ptr<uint32_t> devNoncePtrEnd((heavy_nonceVector[thr_id]) + throughput);
         uint32_t actualNumberOfValuesInNonceVectorGPU = throughput;
+        uint64_t *t;
 
         hefty_cpu_hash(thr_id, throughput, pdata[19]);
         //cudaThreadSynchronize();
         sha256_cpu_hash(thr_id, throughput, pdata[19]);
         //cudaThreadSynchronize();
 
-        // Hier ist die längste CPU Wartephase. Deshalb ein strategisches MyStreamSynchronize() hier.
+        // Hier ist die lÃ¤ngste CPU Wartephase. Deshalb ein strategisches MyStreamSynchronize() hier.
         MyStreamSynchronize(NULL, 1, thr_id);
 
         ////// Compaction
-        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*((uint64_t*)target2), d_hash2output[thr_id], 8, pdata[19]));
+        t = (uint64_t*) target2;
+        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*t, d_hash2output[thr_id], 8, pdata[19]));
         actualNumberOfValuesInNonceVectorGPU = (uint32_t)(devNoncePtrEnd - devNoncePtr);
         if(actualNumberOfValuesInNonceVectorGPU == 0)
             goto emptyNonceVector;
-        
+
         keccak512_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19]);
         //cudaThreadSynchronize();
 
         ////// Compaction
-        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*((uint64_t*)target3), d_hash3output[thr_id], 16, pdata[19]));
+        t = (uint64_t*) target3;
+        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*t, d_hash3output[thr_id], 16, pdata[19]));
         actualNumberOfValuesInNonceVectorGPU = (uint32_t)(devNoncePtrEnd - devNoncePtr);
         if(actualNumberOfValuesInNonceVectorGPU == 0)
             goto emptyNonceVector;
@@ -256,7 +236,8 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         //cudaThreadSynchronize();
 
         ////// Compaction
-        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*((uint64_t*)target5), d_hash5output[thr_id], 16, pdata[19]));
+        t = (uint64_t*) target5;
+        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*t, d_hash5output[thr_id], 16, pdata[19]));
         actualNumberOfValuesInNonceVectorGPU = (uint32_t)(devNoncePtrEnd - devNoncePtr);
         if(actualNumberOfValuesInNonceVectorGPU == 0)
             goto emptyNonceVector;
@@ -265,25 +246,31 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
         //cudaThreadSynchronize();
 
         ////// Compaction
-        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*((uint64_t*)target4), d_hash4output[thr_id], 16, pdata[19]));
+        t = (uint64_t*) target4;
+        devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*t, d_hash4output[thr_id], 16, pdata[19]));
         actualNumberOfValuesInNonceVectorGPU = (uint32_t)(devNoncePtrEnd - devNoncePtr);
         if(actualNumberOfValuesInNonceVectorGPU == 0)
             goto emptyNonceVector;
-        
+
         // combine
         combine_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19], hash);
+
+        if (opt_tracegpu) {
+            applog(LOG_BLUE, "heavy GPU hash:");
+            applog_hash((uchar*)hash);
+        }
 
         // Ergebnisse kopieren
         if(actualNumberOfValuesInNonceVectorGPU > 0)
         {
-            cudaMemcpy(cpu_nonceVector, d_nonceVector[thr_id], sizeof(uint32_t) * actualNumberOfValuesInNonceVectorGPU, cudaMemcpyDeviceToHost);
+            size_t size = sizeof(uint32_t) * actualNumberOfValuesInNonceVectorGPU;
+            CUDA_SAFE_CALL(cudaMemcpy(cpu_nonceVector, heavy_nonceVector[thr_id], size, cudaMemcpyDeviceToHost));
+            cudaDeviceSynchronize();
 
-            for (i=0; i<actualNumberOfValuesInNonceVectorGPU;++i)
+            for (uint32_t i=0; i < actualNumberOfValuesInNonceVectorGPU; i++)
             {
                 uint32_t nonce = cpu_nonceVector[i];
-                //uint32_t index = nonce - pdata[19];
-                uint32_t index = i;
-                uint32_t *foundhash = &hash[8*index];
+                uint32_t *foundhash = &hash[8*i];
                 if (foundhash[7] <= ptarget[7]) {
                     if (fulltest(foundhash, ptarget)) {
                         uint32_t verification[8];
@@ -291,9 +278,7 @@ int scanhash_heavy_cpp(int thr_id, uint32_t *pdata,
                         heavycoin_hash((uchar*)verification, (uchar*)pdata, blocklen);
                         if (memcmp(verification, foundhash, 8*sizeof(uint32_t))) {
                             applog(LOG_ERR, "hash for nonce=$%08X does not validate on CPU!\n", nonce);
-                        }
-                        else
-                        {
+                        } else {
                             *hashes_done = pdata[19] - first_nonce;
                             rc = 1;
                             goto exit;
@@ -316,6 +301,7 @@ exit:
     return rc;
 }
 
+__host__
 void heavycoin_hash(uchar* output, const uchar* input, int len)
 {
     unsigned char hash1[32];

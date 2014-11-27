@@ -303,7 +303,11 @@ void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uin
 		ending[3] = nonce; /* our tested value */
 
 		blake256_compress(h, ending, 640, rounds);
-
+#if 0
+		if (trace) {
+			printf("blake hash[6][7]: %08x %08x\n", h[6], h[7]);
+		}
+#endif
 		//if (h[7] == 0 && high64 <= highTarget) {
 		if (h[7] == 0) {
 #if NBN == 2
@@ -318,14 +322,14 @@ void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uin
 #else
 			resNonce[0] = nonce;
 #endif
-			if (trace) {
 #ifdef _DEBUG
+			if (trace) {
 				uint64_t high64 = ((uint64_t*)h)[3];
 				printf("gpu:  %16llx\n", high64);
 				printf("gpu: %08x.%08x\n", h[7], h[6]);
 				printf("tgt:  %16llx\n", highTarget);
-#endif
 			}
+#endif
 		}
 	}
 }
