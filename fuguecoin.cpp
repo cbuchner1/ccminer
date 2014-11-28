@@ -20,6 +20,8 @@ sph_fugue256_context  ctx_fugue_const[8];
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -32,7 +34,6 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		((uint32_t*)ptarget)[7] = 0xf;
 
 	// init
-	static bool init[8] = { false, false, false, false, false, false, false, false };
 	if(!init[thr_id])
 	{
 		fugue256_cpu_init(thr_id, throughPut);

@@ -61,8 +61,8 @@ void cuda_devicenames();
 void cuda_devicereset();
 int cuda_finddevice(char *name);
 
-#ifdef USE_WRAPNVML
 #include "nvml.h"
+#ifdef USE_WRAPNVML
 wrap_nvml_handle *hnvml = NULL;
 #endif
 

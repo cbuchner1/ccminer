@@ -31,13 +31,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-
 #include "compat.h"
 #include "miner.h"
-
-#ifdef USE_WRAPNVML
 #include "nvml.h"
-#endif
 
 #ifndef WIN32
 # include <errno.h>
@@ -83,18 +79,11 @@ struct IP4ACCESS {
 static int ips = 1;
 static struct IP4ACCESS *ipaccess = NULL;
 
-// Big enough for largest API request
-//  though a PC with 100s of CPUs may exceed the size ...
-// Current code assumes it can socket send this size also
-#define MYBUFSIZ	16384
+#define MYBUFSIZ       16384
+#define SOCK_REC_BUFSZ 256
+#define QUEUE          10
 
-#define SOCK_REC_BUFSZ  256
-
-// Socket is on 127.0.0.1
-#define QUEUE	10
-
-#define ALLIP4 "0.0.0.0"
-
+#define ALLIP4         "0.0.0.0"
 static const char *localaddr = "127.0.0.1";
 static const char *UNAVAILABLE = " - API will not be available";
 static char *buffer = NULL;
@@ -106,7 +95,6 @@ extern int opt_api_listen; /* port */
 extern uint32_t accepted_count;
 extern uint32_t rejected_count;
 extern int num_cpus;
-extern char driver_version[32];
 extern struct stratum_ctx stratum;
 extern char* rpc_user;
 
@@ -115,6 +103,9 @@ extern float cpu_temp(int);
 extern uint32_t cpu_clock(int);
 // cuda.cpp
 int cuda_num_devices();
+int cuda_gpu_clocks(struct cgpu_info *gpu);
+
+char driver_version[32] = { 0 };
 
 /***************************************************************/
 
@@ -132,7 +123,7 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = gpu_fanpercent(cgpu);
 #endif
-		gpu_clocks(cgpu);
+		cuda_gpu_clocks(cgpu);
 
 		// todo: can be 0 if set by algo (auto)
 		if (opt_intensity == 0 && opt_work_size) {
@@ -260,7 +251,7 @@ static void gpuhwinfos(int gpu_id)
 	gpu_info(cgpu);
 #endif
 
-	gpu_clocks(cgpu);
+	cuda_gpu_clocks(cgpu);
 
 	memset(pstate, 0, sizeof(pstate));
 	if (cgpu->gpu_pstate != -1)

@@ -83,6 +83,8 @@ extern "C" unsigned int jackpothash(void *state, const void *input)
     return round;
 }
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
@@ -95,7 +97,6 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 	int throughput = opt_work_size ? opt_work_size : (1 << 20); // 256*4096
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);

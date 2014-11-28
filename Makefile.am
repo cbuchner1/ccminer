@@ -19,7 +19,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
 			  crc32.c hefty1.c scrypt.c \
 			  ccminer.cpp util.cpp \
-			  api.cpp hashlog.cpp stats.cpp sysinfos.cpp cuda.cpp \
+			  api.cpp hashlog.cpp nvml.cpp stats.cpp sysinfos.cpp cuda.cpp \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
 			  heavy/cuda_combine.cu heavy/cuda_combine.h \
@@ -53,7 +53,6 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  x11/s3.cu
 
 if HAVE_NVML
-ccminer_SOURCES += nvml.cpp
 nvml_defs = -DUSE_WRAPNVML
 nvml_libs = -ldl
 endif

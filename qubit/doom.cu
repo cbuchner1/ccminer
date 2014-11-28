@@ -32,13 +32,13 @@ extern void doomhash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
+static bool init[8] = { 0 };
 
 extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = {0,0,0,0,0,0,0,0};
 	uint32_t endiandata[20];
 	int throughput = opt_work_size ? opt_work_size : (1 << 22); // 256*256*8*8
 	throughput = min(throughput, (int)(max_nonce - first_nonce));

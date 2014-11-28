@@ -129,12 +129,13 @@ extern "C" void x11hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
     unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = { 0 };
 	int intensity = (device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 20 : 19;
 	int throughput = opt_work_size ? opt_work_size : (1 << intensity); // 20=256*256*16;
 	throughput = min(throughput, (int)(max_nonce - first_nonce));

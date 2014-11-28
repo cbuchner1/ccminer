@@ -486,11 +486,12 @@ void pentablake_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
 
+static bool init[8] = { 0 };
+
 extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint32_t endiandata[20];
 	int rc = 0;
 	int throughput = opt_work_size ? opt_work_size : (128 * 2560); // 18.5

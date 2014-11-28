@@ -145,6 +145,18 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 	return result;
 }
 
+int cuda_gpu_clocks(struct cgpu_info *gpu)
+{
+	cudaDeviceProp props;
+	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
+		gpu->gpu_clock = props.clockRate;
+		gpu->gpu_memclock = props.memoryClockRate;
+		gpu->gpu_mem = props.totalGlobalMem;
+		return 0;
+	}
+	return -1;
+}
+
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)
 {
 	struct cgpu_info *gpu = &thr_info[thr_id].gpu;

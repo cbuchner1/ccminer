@@ -49,13 +49,14 @@ extern "C" void s3hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+static bool init[8] = { 0 };
+
 /* Main S3 entry point */
 extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	static bool init[8] = { 0 };
 	int intensity = 20; // 256*256*8*2;
 #ifdef WIN32
 	// reduce by one the intensity on windows

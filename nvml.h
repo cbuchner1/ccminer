@@ -13,6 +13,9 @@
  * John E. Stone - john.stone@gmail.com
  *
  */
+#ifdef USE_WRAPNVML
+
+#include "miner.h"
 
 /*
  * Ugly hacks to avoid dependencies on the real nvml.h until it starts
@@ -130,16 +133,7 @@ int wrap_nvml_get_power_usage(wrap_nvml_handle *nvmlh,
                               int gpuindex,
                               unsigned int *milliwatts);
 
-/* nvapi functions */
-#ifdef WIN32
-int wrap_nvapi_init();
-#endif
-
 /* api functions */
-
-#include "miner.h"
-
-#ifdef USE_WRAPNVML
 
 int gpu_fanpercent(struct cgpu_info *gpu);
 float gpu_temp(struct cgpu_info *gpu);
@@ -151,7 +145,9 @@ int gpu_busid(struct cgpu_info *gpu);
 /* pid/vid, sn and bios rev */
 int gpu_info(struct cgpu_info *gpu);
 
+/* nvapi functions */
+#ifdef WIN32
+int wrap_nvapi_init();
 #endif
 
-// cuda api based
-int gpu_clocks(struct cgpu_info *gpu);
+#endif /* USE_WRAPNVML */

@@ -23,19 +23,16 @@
 #endif
 
 #include "miner.h"
+#include "nvml.h"
 #include "cuda_runtime.h"
 
 // cuda.cpp
 int cuda_num_devices();
 
-// geforce driver version
-char driver_version[32] = { 0 };
-
 #ifdef USE_WRAPNVML
 
-#include "nvml.h"
-
 extern wrap_nvml_handle *hnvml;
+extern char driver_version[32];
 
 static uint32_t device_bus_ids[8] = { 0 };
 
@@ -770,15 +767,3 @@ int gpu_info(struct cgpu_info *gpu)
 }
 
 #endif /* USE_WRAPNVML */
-
-int gpu_clocks(struct cgpu_info *gpu)
-{
-	cudaDeviceProp props;
-	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
-		gpu->gpu_clock = props.clockRate;
-		gpu->gpu_memclock = props.memoryClockRate;
-		gpu->gpu_mem = props.totalGlobalMem;
-		return 0;
-	}
-	return -1;
-}
