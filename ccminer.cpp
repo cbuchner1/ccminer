@@ -63,7 +63,7 @@ int cuda_finddevice(char *name);
 
 #include "nvml.h"
 #ifdef USE_WRAPNVML
-wrap_nvml_handle *hnvml = NULL;
+nvml_handle *hnvml = NULL;
 #endif
 
 #ifdef __linux /* Linux specific policy and affinity management */
@@ -407,7 +407,7 @@ void proper_exit(int reason)
 #endif
 #ifdef USE_WRAPNVML
 	if (hnvml)
-		wrap_nvml_destroy(hnvml);
+		nvml_destroy(hnvml);
 #endif
 	free(opt_syslog_pfx);
 	free(opt_api_allow);
@@ -2214,11 +2214,11 @@ int main(int argc, char *argv[])
 #ifdef USE_WRAPNVML
 #ifndef WIN32
 	/* nvml is currently not the best choice on Windows (only in x64) */
-	hnvml = wrap_nvml_create();
+	hnvml = nvml_create();
 	if (hnvml)
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
 #else
-	if (wrap_nvapi_init() == 0)
+	if (nvapi_init() == 0)
 		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
 #endif
 	else
