@@ -11,7 +11,6 @@ extern "C"
 
 #include "cuda_helper.h"
 
-// Speicher für Input/Output der verketteten Hashfunktionen
 static uint32_t *d_hash[8];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);
@@ -113,8 +112,7 @@ extern "C" int scanhash_nist5(int thr_id, uint32_t *pdata,
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];

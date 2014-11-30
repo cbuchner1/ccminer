@@ -58,10 +58,6 @@ extern void quark_compactTest_cpu_init(int thr_id, int threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes,
                                           uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse, int order);
 
-// to check... new sp method
-//extern void x11_echo512_cpu_setTarget(const void *ptarget);
-//extern uint32_t x11_echo512_cpu_hash_64_final(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
 // X11 CPU Hash
 extern "C" void x11hash(void *output, const void *input)
 {
@@ -172,7 +168,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 
-	//x11_echo512_cpu_setTarget(ptarget);
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
@@ -193,11 +188,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
-		// todo...
-		//foundNonce = x11_echo512_cpu_hash_64_final(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		//foundNonce = cuda_check_hash_fast(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];

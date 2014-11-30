@@ -48,7 +48,9 @@ extern void quark_compactTest_single_false_cpu_hash_64(int thr_id, int threads, 
 											uint32_t *d_nonces1, size_t *nrm1,
 											int order);
 
-// Original Quarkhash Funktion aus einem miner Quelltext
+extern uint32_t cuda_check_hash_branch(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+
+/* CPU Hash */
 extern "C" void animehash(void *state, const void *input)
 {
     sph_blake512_context ctx_blake;
@@ -255,7 +257,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 
 		// Scan nach Gewinner Hashes auf der GPU
-		uint32_t foundNonce = cuda_check_cpu_hash_64(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];

@@ -123,7 +123,7 @@ extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 		print_hash((unsigned char*)buf); printf("\n");
 #endif
 
-		foundNonce = cuda_check_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
