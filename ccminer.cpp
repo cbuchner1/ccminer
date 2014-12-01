@@ -541,18 +541,15 @@ static int share_result(int result, const char *reason)
 static bool submit_upstream_work(CURL *curl, struct work *work)
 {
 	json_t *val, *res, *reason;
-	char s[345];
-	int i;
+	char s[384];
 	bool stale_work;
-	bool rc = false;
 
 	pthread_mutex_lock(&g_work_lock);
 	if (strlen(work->job_id + 8)) {
 		/* stale if not the current job id */
 		stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
 	} else {
-		applog_hash((uchar*)&work->data);
-		/* fallback if not job id (compare hash) */
+		/* fallback when no job id (compare hash) */
 		stale_work = memcmp(&work->data[1], &g_work.data[1], 32);
 	}
 
@@ -624,7 +621,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		char *str = NULL;
 
 		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
-			for (i = 0; i < ARRAY_SIZE(work->data); i++)
+			for (int i = 0; i < ARRAY_SIZE(work->data); i++)
 				le32enc(work->data + i, work->data[i]);
 		}
 		str = bin2hex((uchar*)work->data, sizeof(work->data));
