@@ -48,7 +48,7 @@ __device__ static uint32_t prevsum = 0;
 extern "C" uint32_t crc32_u32t(const uint32_t *buf, size_t size);
 #endif
 
-/* 8 adapters max (-t threads) */
+/* 8 adapters max */
 static uint32_t *d_resNonce[8];
 static uint32_t *h_resNonce[8];
 
@@ -303,17 +303,11 @@ void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uin
 		ending[3] = nonce; /* our tested value */
 
 		blake256_compress(h, ending, 640, rounds);
-#if 0
-		if (trace) {
-			printf("blake hash[6][7]: %08x %08x\n", h[6], h[7]);
-		}
-#endif
-		//if (h[7] == 0 && high64 <= highTarget) {
-		if (h[7] == 0) {
+
+		if (h[7] == 0 && cuda_swab32(h[6]) <= highTarget) {
 #if NBN == 2
 			/* keep the smallest nonce, + extra one if found */
 			if (resNonce[0] > nonce) {
-				// printf("%llx %llx \n", high64, highTarget);
 				resNonce[1] = resNonce[0];
 				resNonce[0] = nonce;
 			}
@@ -468,7 +462,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			blake256hash(vhashcpu, endiandata, blakerounds);
 
 			//applog(LOG_BLUE, "%08x %16llx", vhashcpu[6], targetHigh);
-			if (vhashcpu[6] <= Htarg /*&& fulltest(vhashcpu, ptarget)*/)
+			if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget))
 			{
 				pdata[19] = foundNonce;
 				rc = 1;

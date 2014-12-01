@@ -1134,13 +1134,9 @@ static void *miner_thread(void *userdata)
 		// we can't scan more than uint capacity
 		max64 = min(UINT32_MAX, max64);
 
-		//if (opt_debug)
-		//	applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x max64=%llx",
-		//		device_map[thr_id], *nonceptr, end_nonce, max64);
-
 		start_nonce = *nonceptr;
-
-		/* do not recompute something already scanned */
+#if 0
+		/* do not recompute something already scanned (hashharder workaround) */
 		if (opt_algo == ALGO_BLAKE && opt_n_threads == 1) {
 			union {
 				uint64_t data;
@@ -1176,7 +1172,7 @@ static void *miner_thread(void *userdata)
 				}
 			}
 		}
-
+#endif
 		/* never let small ranges at end */
 		if (end_nonce >= UINT32_MAX - 256)
 			end_nonce = UINT32_MAX;
