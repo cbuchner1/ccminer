@@ -10,26 +10,23 @@
 <script type="text/javascript">
 
 var hashrates = [];
-var timestamps = [];
-var timeline = [];
 
 function drawChart(ip) {
 
 	$('#container').highcharts({
+		chart: {
+			type: 'spline'
+		},
 		title: {
-			text: 'CCMiner WebSocket Sample - ' + ip,
+			text: 'ccMiner WebSocket Sample - ' + ip,
 			x: -20 //center
 		},
 		subtitle: {
-			text: 'By tpruvot@gibhub 2014',
+			text: 'By <a href="http://github.com/tpruvot/ccminer">tpruvot@github</a> 2014',
 			x: -20
 		},
 		xAxis: {
-			title: {
-				text: 'Age'
-			},
-			valueSuffix: ' s',
-			categories: timestamps[0]
+			type: 'datetime',
 		},
 		yAxis: {
 			title: {
@@ -39,7 +36,8 @@ function drawChart(ip) {
 				value: 0,
 				width: 1,
 				color: '#808080'
-			}]
+			}],
+			min: 0
 		},
 		tooltip: {
 			valueSuffix: ' KH'
@@ -54,11 +52,11 @@ function drawChart(ip) {
 			{
 				name: 'GPU0',
 				data: hashrates[0]
-			}/*,
+			},
 			{
 				name: 'GPU1',
 				data: hashrates[1]
-			}*/
+			}
 		]
 	});
 }
@@ -66,9 +64,10 @@ function drawChart(ip) {
 function getData(ip, port) {
 	if ("WebSocket" in window) {
 		var ws = new WebSocket('ws://'+ip+':'+port+'/histo','text');
+		var rates = [];
 		for (var gpu=0; gpu<8; gpu++) {
-			timestamps[gpu] = [];
 			hashrates[gpu] = [];
+			rates[gpu] = [];
 		}
 		ws.onmessage = function (evt) {
 			var now = new Date();
@@ -77,6 +76,7 @@ function getData(ip, port) {
 			for (n in data) {
 				var map = data[n].split(';');
 				var gpu = 0;
+				var uid = 0;
 				var plot = {};
 				for (k in map) {
 					var kv = map[k].split('=');
@@ -84,16 +84,25 @@ function getData(ip, port) {
 						continue;
 					if (kv[0] === 'GPU')
 						gpu = parseInt(kv[1], 10);
+					else if (kv[0] === 'ID')
+						uid = parseInt(kv[1], 10);
 					else if (kv[0] === 'TS')
-						plot.timestamp = ts - parseInt(kv[1], 10);
+						plot.timestamp = parseInt(kv[1], 10);
 					else if (kv[0] === 'KHS')
 						plot.hashrate = parseInt(kv[1], 10) / 1000.0;
-					//console.log('Data received: #GPU'+gpu+': '+kv[0]+' = '+kv[1]);
+					console.log('Data received: #GPU'+gpu+': '+kv[0]+' = '+kv[1]);
 				}
-				timeline[n] = plot.timestamp;
-				timestamps[gpu][n] = plot.timestamp;
-				hashrates[gpu][n] = plot.hashrate;
+				if (uid == 0)
+					continue;
+				rates[gpu][uid] = [+new Date(plot.timestamp*1000), plot.hashrate];
 			}
+
+			// sort values with id
+			for (gpu in rates) {
+				for (uid in rates[gpu])
+					hashrates[gpu].push(rates[gpu][uid]);
+			}
+
 			drawChart(ip);
 		};
 		ws.onerror = function (evt) {
