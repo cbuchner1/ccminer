@@ -171,8 +171,6 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
-		const uint32_t Htarg = ptarget[7];
-
 		int order = 0;
 		uint32_t foundNonce;
 
@@ -189,19 +187,24 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != 0xffffffff)
+		if (foundNonce != UINT32_MAX)
 		{
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			x11hash(vhash64, endiandata);
 
-			/* uint32_t secNonce = */ cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				// just check if there was some other ones...
+				int res = 1;
+				// check if there was some other ones...
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) {
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				return 1;
+				return res;
 			}
 			else if (vhash64[7] > Htarg) {
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);

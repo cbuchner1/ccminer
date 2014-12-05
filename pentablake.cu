@@ -43,8 +43,6 @@ extern "C" void pentablakehash(void *output, const void *input)
 
 #include "cuda_helper.h"
 
-#define MAXU 0xffffffffU
-
 __constant__
 static uint32_t __align__(32) c_Target[8];
 
@@ -54,7 +52,7 @@ static uint64_t __align__(32) c_data[32];
 static uint32_t *d_hash[8];
 static uint32_t *d_resNounce[8];
 static uint32_t *h_resNounce[8];
-static uint32_t extra_results[2] = { MAXU, MAXU };
+static uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 __constant__
@@ -387,7 +385,7 @@ __host__
 uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -446,7 +444,7 @@ __host__ static
 uint32_t pentablake_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, int order)
 {
 	const int threadsperblock = TPB;
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -497,17 +495,6 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 	int throughput = opt_work_size ? opt_work_size : (128 * 2560); // 18.5
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
-	if (extra_results[0] != MAXU) {
-		// possible extra result found in previous call
-		if (first_nonce <= extra_results[0] && max_nonce >= extra_results[0]) {
-			pdata[19] = extra_results[0];
-			*hashes_done = pdata[19] - first_nonce + 1;
-			extra_results[0] = MAXU;
-			rc = 1;
-			goto exit_scan;
-		}
-	}
-
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x000F;
 
@@ -539,38 +526,29 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 		pentablake_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
 		uint32_t foundNonce = pentablake_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-
-		if (foundNonce != MAXU)
+		if (foundNonce != UINT32_MAX)
 		{
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhashcpu[8];
-			uint32_t Htarg = ptarget[7];
 
 			be32enc(&endiandata[19], foundNonce);
-
 			pentablakehash(vhashcpu, endiandata);
 
-			if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget))
-			{
-				pdata[19] = foundNonce;
+			if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
 				rc = 1;
-
-				// Rare but possible if the throughput is big
-				be32enc(&endiandata[19], extra_results[0]);
-				pentablakehash(vhashcpu, endiandata);
-				if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (extra_results[0] != UINT32_MAX) {
+					// Rare but possible if the throughput is big
 					applog(LOG_NOTICE, "GPU found more than one result yippee!");
-					rc = 2;
-				} else {
-					extra_results[0] = MAXU;
+					pdata[21] = extra_results[0];
+					extra_results[0] = UINT32_MAX;
+					rc++;
 				}
-
-				goto exit_scan;
+				pdata[19] = foundNonce;
+				return rc;
 			}
 			else if (vhashcpu[7] > Htarg) {
 				applog(LOG_WARNING, "GPU #%d: result for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[7], Htarg);
-			}
-			else if (vhashcpu[6] > ptarget[6]) {
-				applog(LOG_WARNING, "GPU #%d: hash[6] for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[6], ptarget[6]);
 			}
 			else {
 				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
@@ -581,17 +559,7 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1;
-#if 0
-	/* reset the device to allow multiple instances
-	 * could be made in cpu-miner... check later if required */
-	if (opt_n_threads == 1) {
-		CUDA_SAFE_CALL(cudaDeviceReset());
-		init[thr_id] = false;
-	}
-#endif
-
 	cudaDeviceSynchronize();
 	return rc;
 }

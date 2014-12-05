@@ -258,18 +258,23 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 
 		// Scan nach Gewinner Hashes auf der GPU
 		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
-		if  (foundNonce != 0xffffffff)
+		if (foundNonce != UINT32_MAX)
 		{
-			uint32_t vhash64[8];
 			const uint32_t Htarg = ptarget[7];
+			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			animehash(vhash64, endiandata);
 
-			if ((vhash64[7]<=Htarg) && fulltest(vhash64, ptarget)) {
-
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+				int res = 1;
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) {
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
-				return 1;
+				return res;
 			} else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}

@@ -63,22 +63,23 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	qubit_luffa512_cpufinal_setBlock_80((void*)endiandata,ptarget);
 
 	do {
-		const uint32_t Htarg = ptarget[7];
 		int order = 0;
 
 		uint32_t foundNonce = qubit_luffa512_cpu_finalhash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		if (foundNonce != 0xffffffff)
+		if (foundNonce != UINT32_MAX)
 		{
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			doomhash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget) )
-			{
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+				int res = 1;
+				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
-				return 1;
-			} else {
+				return res;
+			}
+			else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}

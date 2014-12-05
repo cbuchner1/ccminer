@@ -23,7 +23,9 @@
 
 #include "cuda_helper.h"
 
-#define MAXU 0xffffffffU
+#ifndef UINT32_MAX
+#define UINT32_MAX UINT_MAX
+#endif
 
 typedef unsigned char BitSequence;
 
@@ -35,7 +37,7 @@ static uint32_t *d_resNounce[8];
 
 #define NBN 1 /* max results, could be 2, see blake32.cu */
 #if NBN > 1
-static uint32_t extra_results[2] = { MAXU, MAXU };
+static uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
 #endif
 
 typedef struct {
@@ -454,7 +456,7 @@ void qubit_luffa512_cpu_init(int thr_id, int threads)
 __host__
 uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash,int order)
 {
-	uint32_t result = MAXU;
+	uint32_t result = UINT32_MAX;
 	cudaMemset(d_resNounce[thr_id], 0xff, NBN * sizeof(uint32_t));
 	const int threadsperblock = 256;
 

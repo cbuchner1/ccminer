@@ -216,17 +216,24 @@ extern "C" int scanhash_x14(int thr_id, uint32_t *pdata,
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != 0xffffffff)
+		if (foundNonce != UINT32_MAX)
 		{
-			/* check now with the CPU to confirm */
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
+			/* check now with the CPU to confirm */
 			be32enc(&endiandata[19], foundNonce);
 			x14hash(vhash64, endiandata);
-			uint32_t Htarg = ptarget[7];
+
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+				int res = 1;
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				if (secNonce != 0) {
+					pdata[21] = secNonce;
+					res++;
+				}
 				pdata[19] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
-				return 1;
+				return res;
 			}
 			else if (vhash64[7] > Htarg) {
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);

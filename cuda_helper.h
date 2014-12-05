@@ -23,8 +23,8 @@ extern uint32_t cuda_check_hash(int thr_id, int threads, uint32_t startNounce, u
 extern uint32_t cuda_check_hash_suppl(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce);
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
 extern void cudaReportHardwareFailure(int thr_id, cudaError_t error, const char* func);
-
 extern __device__ __device_builtin__ void __syncthreads(void);
+extern __device__ __device_builtin__ void __threadfence(void);
 
 #ifndef __CUDA_ARCH__
 // define blockDim and threadIdx for host

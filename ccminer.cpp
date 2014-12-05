@@ -570,7 +570,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		le32enc(&ntime, work->data[17]);
 		le32enc(&nonce, work->data[19]);
-		be16enc(&nvote, *((uint16_t*)&work->data[20]));
 
 		noncestr = bin2hex((const uchar*)(&nonce), 4);
 
@@ -593,6 +592,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
 
 		if (opt_algo == ALGO_HEAVY) {
+			be16enc(&nvote, *((uint16_t*)&work->data[20]));
 			nvotestr = bin2hex((const uchar*)(&nvote), 2);
 			sprintf(s,
 				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
@@ -1027,7 +1027,7 @@ static void *miner_thread(void *userdata)
 			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 			pthread_mutex_lock(&g_work_lock);
 			extrajob |= work_done;
-			if ((*nonceptr) >= end_nonce || extrajob) {
+			if (nonceptr[0] >= end_nonce || extrajob) {
 				work_done = false;
 				extrajob = false;
 				stratum_gen_work(&stratum, &g_work);
@@ -1036,8 +1036,7 @@ static void *miner_thread(void *userdata)
 			int min_scantime = scan_time;
 			/* obtain new work from internal workio thread */
 			pthread_mutex_lock(&g_work_lock);
-			if (time(NULL) - g_work_time >= min_scantime ||
-			     (*nonceptr) >= end_nonce) {
+			if (time(NULL) - g_work_time >= min_scantime || nonceptr[0] >= end_nonce) {
 				if (unlikely(!get_work(mythr, &g_work))) {
 					applog(LOG_ERR, "work retrieval failed, exiting "
 						"mining thread %d", mythr->id);
@@ -1046,21 +1045,6 @@ static void *miner_thread(void *userdata)
 				}
 				g_work_time = time(NULL);
 			}
-		}
-#if 0
-		if (!opt_benchmark && g_work.job_id[0] == '\0') {
-			applog(LOG_ERR, "work data not read yet");
-			extrajob = true;
-			work_done = true;
-			sleep(1);
-			//continue;
-		}
-#endif
-		if (rc > 1) {
-			/* if we found more than one on last loop */
-			/* todo: handle an array to get them directly */
-			pthread_mutex_unlock(&g_work_lock);
-			goto continue_scan;
 		}
 
 		if (!opt_benchmark && memcmp(work.target, g_work.target, sizeof(work.target))) {
@@ -1071,7 +1055,7 @@ static void *miner_thread(void *userdata)
 			}
 			memcpy(work.target, g_work.target, sizeof(work.target));
 			work.difficulty = g_work.difficulty;
-			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
+			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 			/* on new target, ignoring nonce, clear sent data (hashlog) */
 			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
 				hashlog_purge_job(work.job_id);
@@ -1090,9 +1074,9 @@ static void *miner_thread(void *userdata)
 			}
 			#endif
 			memcpy(&work, &g_work, sizeof(struct work));
-			(*nonceptr) = (0xffffffffUL / opt_n_threads) * thr_id; // 0 if single thr
+			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 		} else
-			(*nonceptr)++; //??
+			nonceptr[0]++; //??
 
 		work_restart[thr_id].restart = 0;
 		pthread_mutex_unlock(&g_work_lock);
@@ -1131,7 +1115,7 @@ static void *miner_thread(void *userdata)
 		// we can't scan more than uint capacity
 		max64 = min(UINT32_MAX, max64);
 
-		start_nonce = *nonceptr;
+		start_nonce = nonceptr[0];
 #if 0
 		/* do not recompute something already scanned (hashharder workaround) */
 		if (opt_algo == ALGO_BLAKE && opt_n_threads == 1) {
@@ -1163,7 +1147,7 @@ static void *miner_thread(void *userdata)
 					stats_purge_old();
 					// wait a bit for a new job...
 					usleep(500*1000);
-					(*nonceptr) = end_nonce + 1;
+					nonceptr[0] = end_nonce + 1;
 					work_done = true;
 					continue;
 				}
@@ -1182,14 +1166,13 @@ static void *miner_thread(void *userdata)
 		// todo: keep it rounded for gpu threads ?
 
 		work.scanned_from = start_nonce;
-		(*nonceptr) = start_nonce;
+		nonceptr[0] = start_nonce;
 
 		if (opt_debug)
 			applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x range=%08x",
 				device_map[thr_id], start_nonce, max_nonce, (max_nonce-start_nonce));
 
 		hashes_done = 0;
-continue_scan:
 		gettimeofday(&tv_start, NULL);
 
 		/* scan nonces for a proof-of-work hash */
@@ -1326,7 +1309,9 @@ continue_scan:
 		gettimeofday(&tv_end, NULL);
 
 		if (rc && opt_debug)
-			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", *nonceptr, swab32(*nonceptr));
+			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[0], swab32(nonceptr[0])); // data[19]
+		if (rc > 1 && opt_debug)
+			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[2], swab32(nonceptr[2])); // data[21]
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
@@ -1346,22 +1331,22 @@ continue_scan:
 			pthread_mutex_lock(&stats_lock);
 			if (diff.tv_sec + 1e-6 * diff.tv_usec > 0.0) {
 				thr_hashrates[thr_id] = hashes_done / (diff.tv_sec + 1e-6 * diff.tv_usec);
-				if (rc > 1)
-					thr_hashrates[thr_id] = (rc * hashes_done) / (diff.tv_sec + 1e-6 * diff.tv_usec);
 				thr_hashrates[thr_id] *= rate_factor;
 				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
 			}
 			pthread_mutex_unlock(&stats_lock);
 		}
 
-		if (rc)
-			work.scanned_to = *nonceptr;
+		if (rc > 1)
+			work.scanned_to = nonceptr[2];
+		else if (rc)
+			work.scanned_to = nonceptr[0];
 		else {
 			work.scanned_to = max_nonce;
 			if (opt_debug && opt_benchmark) {
 				// to debug nonce ranges
 				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
-					*nonceptr, ((*nonceptr) - start_nonce));
+					nonceptr[0], (nonceptr[0] - start_nonce));
 			}
 		}
 
@@ -1393,6 +1378,13 @@ continue_scan:
 		if (rc && !opt_benchmark) {
 			if (!submit_work(mythr, &work))
 				break;
+			// second nonce found, submit too
+			if (rc > 1 && work.data[21]) {
+				work.data[19] = work.data[21];
+				work.data[21] = 0;
+				if (!submit_work(mythr, &work))
+					break;
+			}
 		}
 
 		loopcnt++;

@@ -398,19 +398,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	int rc = 0;
 
-#if NBN > 1
-	if (extra_results[0] != UINT32_MAX) {
-		// possible extra result found in previous call
-		if (first_nonce <= extra_results[0] && max_nonce >= extra_results[0]) {
-			pdata[19] = extra_results[0];
-			*hashes_done = pdata[19] - first_nonce + 1;
-			extra_results[0] = UINT32_MAX;
-			rc = 1;
-			goto exit_scan;
-		}
-	}
-#endif
-
 	if (opt_benchmark) {
 		targetHigh = 0x1ULL << 32;
 		((uint32_t*)ptarget)[6] = swab32(0xff);
@@ -464,25 +451,23 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			//applog(LOG_BLUE, "%08x %16llx", vhashcpu[6], targetHigh);
 			if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget))
 			{
-				pdata[19] = foundNonce;
 				rc = 1;
-
+				*hashes_done = pdata[19] - first_nonce + throughput;
+				pdata[19] = foundNonce;
+#if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
-					// Rare but possible if the throughput is big
 					be32enc(&endiandata[19], extra_results[0]);
-
 					blake256hash(vhashcpu, endiandata, blakerounds);
 					if (vhashcpu[6] <= Htarg /* && fulltest(vhashcpu, ptarget) */) {
-						applog(LOG_NOTICE, "GPU found more than one result " CL_GRN "yippee!");
+						pdata[21] = extra_results[0];
 						rc = 2;
-					} else {
-						extra_results[0] = UINT32_MAX;
 					}
+					extra_results[0] = UINT32_MAX;
 				}
-
+#endif
 				//applog_hash((uint8_t*)ptarget);
 				//applog_compare_hash((uint8_t*)vhashcpu,(uint8_t*)ptarget);
-				goto exit_scan;
+				return rc;
 			}
 			else if (opt_debug) {
 				applog_hash((uchar*)ptarget);
@@ -500,7 +485,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	} while (!work_restart[thr_id].restart);
 
-exit_scan:
 	*hashes_done = pdata[19] - first_nonce + 1; // (+1 to prevent locks)
 	return rc;
 }
