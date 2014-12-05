@@ -155,7 +155,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		if (x11_simd512_cpu_init(thr_id, throughput) != 0) {
 			return 0;
 		}
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 64 * throughput), 0); // why 64 ?
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -195,9 +195,12 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 			be32enc(&endiandata[19], foundNonce);
 			x11hash(vhash64, endiandata);
 
-			if ((vhash64[7] <= Htarg) && fulltest(vhash64, ptarget)) {
+			/* uint32_t secNonce = */ cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+				// just check if there was some other ones...
+				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
-				*hashes_done = foundNonce - first_nonce + 1;
 				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
