@@ -1,18 +1,10 @@
-#include "cuda_helper.h"
+#include <memory.h> // memcpy()
 
-#include <memory.h>
+#include "cuda_helper.h"
 
 #define TPB 128
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
-
-__device__ __constant__
-static const uint32_t d_ShaviteInitVector[16] = {
-	SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
-	SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
-	SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
-	SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
-};
 
 #include "cuda_x11_aes.cu"
 
@@ -48,8 +40,8 @@ static void KEY_EXPAND_ELT(
 	k3 = y0;
 }
 
-__device__
-static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, uint32_t count)
+__device__ __forceinline__
+static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, const uint32_t count)
 {
 	uint32_t p0, p1, p2, p3, p4, p5, p6, p7;
 	uint32_t p8, p9, pA, pB, pC, pD, pE, pF;
@@ -76,82 +68,114 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	pD = state[0xD];
 	pE = state[0xE];
 	pF = state[0xF];
+
 	/* round 0 */
 	rk00 = msg[0];
-	x0 = p4 ^ rk00;
+	x0 = p4 ^ msg[0];
 	rk01 = msg[1];
-	x1 = p5 ^ rk01;
+	x1 = p5 ^ msg[1];
 	rk02 = msg[2];
-	x2 = p6 ^ rk02;
+	x2 = p6 ^ msg[2];
 	rk03 = msg[3];
-	x3 = p7 ^ rk03;
+	x3 = p7 ^ msg[3];
 	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 	rk04 = msg[4];
-	x0 ^= rk04;
+	x0 ^= msg[4];
 	rk05 = msg[5];
-	x1 ^= rk05;
+	x1 ^= msg[5];
 	rk06 = msg[6];
-	x2 ^= rk06;
+	x2 ^= msg[6];
 	rk07 = msg[7];
-	x3 ^= rk07;
+	x3 ^= msg[7];
 	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 	rk08 = msg[8];
-	x0 ^= rk08;
+	x0 ^= msg[8];
 	rk09 = msg[9];
-	x1 ^= rk09;
+	x1 ^= msg[9];
 	rk0A = msg[10];
-	x2 ^= rk0A;
+	x2 ^= msg[10];
 	rk0B = msg[11];
-	x3 ^= rk0B;
+	x3 ^= msg[11];
 	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 	rk0C = msg[12];
-	x0 ^= rk0C;
+	x0 ^= msg[12];
 	rk0D = msg[13];
-	x1 ^= rk0D;
+	x1 ^= msg[13];
 	rk0E = msg[14];
-	x2 ^= rk0E;
+	x2 ^= msg[14];
 	rk0F = msg[15];
-	x3 ^= rk0F;
+	x3 ^= msg[15];
 	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 	p0 ^= x0;
 	p1 ^= x1;
 	p2 ^= x2;
 	p3 ^= x3;
-	rk10 = msg[16];
-	x0 = pC ^ rk10;
-	rk11 = msg[17];
-	x1 = pD ^ rk11;
-	rk12 = msg[18];
-	x2 = pE ^ rk12;
-	rk13 = msg[19];
-	x3 = pF ^ rk13;
-	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-	rk14 = msg[20];
-	x0 ^= rk14;
-	rk15 = msg[21];
-	x1 ^= rk15;
-	rk16 = msg[22];
-	x2 ^= rk16;
-	rk17 = msg[23];
-	x3 ^= rk17;
-	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-	rk18 = msg[24];
-	x0 ^= rk18;
-	rk19 = msg[25];
-	x1 ^= rk19;
-	rk1A = msg[26];
-	x2 ^= rk1A;
-	rk1B = msg[27];
-	x3 ^= rk1B;
-	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
-	rk1C = msg[28];
-	x0 ^= rk1C;
-	rk1D = msg[29];
-	x1 ^= rk1D;
-	rk1E = msg[30];
-	x2 ^= rk1E;
-	rk1F = msg[31];
-	x3 ^= rk1F;
+	if (count == 512)
+	{
+		rk10 = 0x80U;
+		x0 = pC ^ 0x80U;
+		rk11 = 0;
+		x1 = pD;
+		rk12 = 0;
+		x2 = pE;
+		rk13 = 0;
+		x3 = pF;
+		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+		rk14 = 0;
+		rk15 = 0;
+		rk16 = 0;
+		rk17 = 0;
+		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+		rk18 = 0;
+		rk19 = 0;
+		rk1A = 0;
+		rk1B = 0x02000000U;
+		x3 ^= 0x02000000U;
+		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+		rk1C = 0;
+		rk1D = 0;
+		rk1E = 0;
+		rk1F = 0x02000000;
+		x3 ^= 0x02000000;
+	}
+	else
+	{
+		rk10 = msg[16];
+		x0 = pC ^ msg[16];
+		rk11 = msg[17];
+		x1 = pD ^ msg[17];
+		rk12 = msg[18];
+		x2 = pE ^ msg[18];
+		rk13 = msg[19];
+		x3 = pF ^ msg[19];
+		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+		rk14 = msg[20];
+		x0 ^= msg[20];
+		rk15 = msg[21];
+		x1 ^= msg[21];
+		rk16 = msg[22];
+		x2 ^= msg[22];
+		rk17 = msg[23];
+		x3 ^= msg[23];
+		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+		rk18 = msg[24];
+		x0 ^= msg[24];
+		rk19 = msg[25];
+		x1 ^= msg[25];
+		rk1A = msg[26];
+		x2 ^= msg[26];
+		rk1B = msg[27];
+		x3 ^= msg[27];
+		AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
+		rk1C = msg[28];
+		x0 ^= msg[28];
+		rk1D = msg[29];
+		x1 ^= msg[29];
+		rk1E = msg[30];
+		x2 ^= msg[30];
+		rk1F = msg[31];
+		x3 ^= msg[31];
+	}
 	AES_ROUND_NOKEY(sharedMemory, x0, x1, x2, x3);
 	p8 ^= x0;
 	p9 ^= x1;
@@ -249,7 +273,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	p5 ^= x1;
 	p6 ^= x2;
 	p7 ^= x3;
-	
+
 	rk00 ^= rk19;
 	x0 = pC ^ rk00;
 	rk01 ^= rk1A;
@@ -330,6 +354,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	p1 ^= x1;
 	p2 ^= x2;
 	p3 ^= x3;
+
 	/* round 3, 7, 11 */
 	KEY_EXPAND_ELT(sharedMemory, rk00, rk01, rk02, rk03);
 	rk00 ^= rk1C;
@@ -419,6 +444,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	pD ^= x1;
 	pE ^= x2;
 	pF ^= x3;
+
 	/* round 4, 8, 12 */
 	rk00 ^= rk19;
 	x0 = p4 ^ rk00;
@@ -516,7 +542,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	rk04 ^= rk00;
 	rk05 ^= rk01;
 	rk06 ^= rk02;
-	rk07 ^= rk03;	
+	rk07 ^= rk03;
 	rk07 ^= SPH_T32(~counter);
 	x0 ^= rk04;
 	x1 ^= rk05;
@@ -591,7 +617,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	p5 ^= x1;
 	p6 ^= x2;
 	p7 ^= x3;
-	
+
 	rk00 ^= rk19;
 	x0 = pC ^ rk00;
 	rk01 ^= rk1A;
@@ -672,6 +698,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	p1 ^= x1;
 	p2 ^= x2;
 	p3 ^= x3;
+
 	/* round 3, 7, 11 */
 	KEY_EXPAND_ELT(sharedMemory, rk00, rk01, rk02, rk03);
 	rk00 ^= rk1C;
@@ -761,6 +788,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	pD ^= x1;
 	pE ^= x2;
 	pF ^= x3;
+
 	/* round 4, 8, 12 */
 	rk00 ^= rk19;
 	x0 = p4 ^ rk00;
@@ -934,7 +962,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	p5 ^= x1;
 	p6 ^= x2;
 	p7 ^= x3;
-	
+
 	rk00 ^= rk19;
 	x0 = pC ^ rk00;
 	rk01 ^= rk1A;
@@ -1015,6 +1043,7 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, u
 	p1 ^= x1;
 	p2 ^= x2;
 	p3 ^= x3;
+
 	/* round 3, 7, 11 */
 	KEY_EXPAND_ELT(sharedMemory, rk00, rk01, rk02, rk03);
 	rk00 ^= rk1C;
@@ -1311,7 +1340,7 @@ void shavite_gpu_init(uint32_t *sharedMemory)
 }
 
 // GPU Hash
-__global__ __launch_bounds__(TPB, 8) /* 64 registers if TPB 128 (fast), 80 with 92 (medium), 32 if 256 (slow) */
+__global__ __launch_bounds__(TPB, 7) /* 64 registers with 128,8 - 72 regs with 128,7 */
 void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -1327,11 +1356,12 @@ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_h
 		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
 
 		// kopiere init-state
-		uint32_t state[16];
-
-		#pragma unroll 16
-		for(int i=0;i<16;i++)
-			state[i] = d_ShaviteInitVector[i];
+		uint32_t state[16] = {
+			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
+			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
+			SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
+			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
+		};
 
 		// nachricht laden
 		uint32_t msg[32];
@@ -1361,7 +1391,7 @@ void x11_shavite512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_h
 	}
 }
 
-__global__ __launch_bounds__(TPB, 8)
+__global__ __launch_bounds__(TPB, 7)
 void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
 {
 	__shared__ uint32_t sharedMemory[1024];
@@ -1374,11 +1404,12 @@ void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputH
 		const uint32_t nounce = startNounce + thread;
 
 		// kopiere init-state
-		uint32_t state[16];
-
-		#pragma unroll 16
-		for(int i=0;i<16;i++) {
-			state[i] = d_ShaviteInitVector[i];}
+		uint32_t state[16] = {
+			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
+			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
+			SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
+			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
+		};
 
 		uint32_t msg[32];
 
@@ -1402,40 +1433,38 @@ void x11_shavite512_gpu_hash_80(int threads, uint32_t startNounce, void *outputH
 	} //thread < threads
 }
 
-__host__ void x11_shavite512_cpu_init(int thr_id, int threads)
-{
-	aes_cpu_init(thr_id);
-}
-
-__host__ void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__
+void x11_shavite512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const int threadsperblock = TPB;
 
-	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
-
-	cudaFuncSetCacheConfig(x11_shavite512_gpu_hash_64, cudaFuncCachePreferL1);
 
 	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void x11_shavite512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+__host__
+void x11_shavite512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
 	const int threadsperblock = TPB;
 
-	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
-
-	x11_shavite512_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+	x11_shavite512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void x11_shavite512_setBlock_80(void *pdata)
+__host__
+void x11_shavite512_cpu_init(int thr_id, int threads)
+{
+	aes_cpu_init(thr_id);
+}
+
+__host__
+void x11_shavite512_setBlock_80(void *pdata)
 {
 	// Message mit Padding bereitstellen
 	// lediglich die korrekte Nonce ist noch ab Byte 76 einzusetzen.
@@ -1445,4 +1474,3 @@ __host__ void x11_shavite512_setBlock_80(void *pdata)
 
 	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 32*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 }
-

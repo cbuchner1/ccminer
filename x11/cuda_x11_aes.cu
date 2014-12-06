@@ -1,8 +1,14 @@
 
 /* AES Helper for inline-usage from SPH */
-#define AESx(x) SPH_C32(x)
+#define AESx(x) (x ##UL) /* SPH_C32(x) */
 
+//#define DEVICE_DIRECT_CONSTANTS
+
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ __align__(64) uint32_t d_AES0[256] = {
+#else
 static const uint32_t h_AES0[256] = {
+#endif
 	AESx(0xA56363C6), AESx(0x847C7CF8), AESx(0x997777EE), AESx(0x8D7B7BF6),
 	AESx(0x0DF2F2FF), AESx(0xBD6B6BD6), AESx(0xB16F6FDE), AESx(0x54C5C591),
 	AESx(0x50303060), AESx(0x03010102), AESx(0xA96767CE), AESx(0x7D2B2B56),
@@ -69,7 +75,11 @@ static const uint32_t h_AES0[256] = {
 	AESx(0xCBB0B07B), AESx(0xFC5454A8), AESx(0xD6BBBB6D), AESx(0x3A16162C)
 };
 
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ __align__(64) uint32_t d_AES1[256] = {
+#else
 static const uint32_t h_AES1[256] = {
+#endif
 	AESx(0x6363C6A5), AESx(0x7C7CF884), AESx(0x7777EE99), AESx(0x7B7BF68D),
 	AESx(0xF2F2FF0D), AESx(0x6B6BD6BD), AESx(0x6F6FDEB1), AESx(0xC5C59154),
 	AESx(0x30306050), AESx(0x01010203), AESx(0x6767CEA9), AESx(0x2B2B567D),
@@ -136,7 +146,11 @@ static const uint32_t h_AES1[256] = {
 	AESx(0xB0B07BCB), AESx(0x5454A8FC), AESx(0xBBBB6DD6), AESx(0x16162C3A)
 };
 
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ __align__(64) uint32_t d_AES2[256] = {
+#else
 static const uint32_t h_AES2[256] = {
+#endif
 	AESx(0x63C6A563), AESx(0x7CF8847C), AESx(0x77EE9977), AESx(0x7BF68D7B),
 	AESx(0xF2FF0DF2), AESx(0x6BD6BD6B), AESx(0x6FDEB16F), AESx(0xC59154C5),
 	AESx(0x30605030), AESx(0x01020301), AESx(0x67CEA967), AESx(0x2B567D2B),
@@ -203,7 +217,11 @@ static const uint32_t h_AES2[256] = {
 	AESx(0xB07BCBB0), AESx(0x54A8FC54), AESx(0xBB6DD6BB), AESx(0x162C3A16)
 };
 
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ __align__(64) uint32_t d_AES3[256] = {
+#else
 static const uint32_t h_AES3[256] = {
+#endif
 	AESx(0xC6A56363), AESx(0xF8847C7C), AESx(0xEE997777), AESx(0xF68D7B7B),
 	AESx(0xFF0DF2F2), AESx(0xD6BD6B6B), AESx(0xDEB16F6F), AESx(0x9154C5C5),
 	AESx(0x60503030), AESx(0x02030101), AESx(0xCEA96767), AESx(0x567D2B2B),
@@ -270,10 +288,11 @@ static const uint32_t h_AES3[256] = {
 	AESx(0x7BCBB0B0), AESx(0xA8FC5454), AESx(0x6DD6BBBB), AESx(0x2C3A1616)
 };
 
-static __constant__ uint32_t d_AES0[256];
-static __constant__ uint32_t d_AES1[256];
-static __constant__ uint32_t d_AES2[256];
-static __constant__ uint32_t d_AES3[256];
+#ifndef DEVICE_DIRECT_CONSTANTS
+static __constant__ __align__(64) uint32_t d_AES0[256];
+static __constant__ __align__(64) uint32_t d_AES1[256];
+static __constant__ __align__(64) uint32_t d_AES2[256];
+static __constant__ __align__(64) uint32_t d_AES3[256];
 
 static void aes_cpu_init(int thr_id)
 {
@@ -297,6 +316,9 @@ static void aes_cpu_init(int thr_id)
                         sizeof(h_AES3),
                         0, cudaMemcpyHostToDevice));
 }
+#else
+static void aes_cpu_init(int thr_id) {}
+#endif
 
 __device__ __forceinline__
 void aes_gpu_init(uint32_t *sharedMemory)
@@ -319,7 +341,6 @@ static void aes_round(
 	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, uint32_t k0,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
-
 	y0 = xor4_32(
 		sharedMemory[__byte_perm(x0, 0, 0x4440)],
 		sharedMemory[__byte_perm(x1, 0, 0x4441) + 256],
@@ -350,7 +371,7 @@ static void aes_round(
 __device__
 static void aes_round(
 	const uint32_t *sharedMemory,
-	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3, 
+	uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
 	uint32_t &y0, uint32_t &y1, uint32_t &y2, uint32_t &y3)
 {
 	y0 = xor4_32(
