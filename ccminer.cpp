@@ -1100,9 +1100,11 @@ static void *miner_thread(void *userdata)
 			case ALGO_BLAKE:
 				minmax = 0x80000000U;
 				break;
+			case ALGO_KECCAK:
+				minmax = 0x40000000U;
+				break;
 			case ALGO_DOOM:
 			case ALGO_JACKPOT:
-			case ALGO_KECCAK:
 			case ALGO_LUFFA_DOOM:
 				minmax = 0x2000000;
 				break;
@@ -1157,6 +1159,9 @@ static void *miner_thread(void *userdata)
 			}
 		}
 #endif
+		if (opt_algo == ALGO_KECCAK && max64 == UINT32_MAX) {
+			max64 = 0x7FFFFFFFUL;
+		}
 		/* never let small ranges at end */
 		if (end_nonce >= UINT32_MAX - 256)
 			end_nonce = UINT32_MAX;
@@ -1406,9 +1411,10 @@ out:
 
 static void restart_threads(void)
 {
-	int i;
+	if (opt_debug)
+		applog(LOG_DEBUG,"%s", __FUNCTION__);
 
-	for (i = 0; i < opt_n_threads; i++)
+	for (int i = 0; i < opt_n_threads; i++)
 		work_restart[i].restart = 1;
 }
 

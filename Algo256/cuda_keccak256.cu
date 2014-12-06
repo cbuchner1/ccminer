@@ -7,6 +7,12 @@ extern "C" {
 
 #include "cuda_helper.h"
 
+#ifdef _MSC_VER
+#define UINT2(x,y) { x, y }
+#else
+#define UINT2(x,y) (uint2) { x, y }
+#endif
+
 static const uint64_t host_keccak_round_constants[24] = {
 	0x0000000000000001ull, 0x0000000000008082ull,
 	0x800000000000808aull, 0x8000000080008000ull,
@@ -97,7 +103,7 @@ static void keccak_blockv35(uint2 *s, const uint64_t *keccak_round_constants)
 		s[0] ^= vectorize(keccak_round_constants[i]);
 	}
 }
-#endif
+#else
 
 __device__ __forceinline__
 static void keccak_blockv30(uint64_t *s, const uint64_t *keccak_round_constants)
@@ -167,43 +173,52 @@ static void keccak_blockv30(uint64_t *s, const uint64_t *keccak_round_constants)
 		s[0] ^= keccak_round_constants[i];
 	}
 }
+#endif
 
-__global__
+__global__ __launch_bounds__(128,5)
 void keccak256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = startNounce + thread;
-		uint64_t keccak_gpu_state[25];
 
-		//#pragma unroll 25
+#if __CUDA_ARCH__ >= 350
+		uint2 keccak_gpu_state[25];
+		#pragma unroll 25
 		for (int i=0; i<25; i++) {
-			if (i < 9)
-				keccak_gpu_state[i] = c_PaddedMessage80[i];
-			else
-				keccak_gpu_state[i] = 0;
+			if (i<9) keccak_gpu_state[i] = vectorize(c_PaddedMessage80[i]);
+			else     keccak_gpu_state[i] = UINT2(0, 0);
+		}
+
+		keccak_gpu_state[9]= vectorize(c_PaddedMessage80[9]);
+		keccak_gpu_state[9].y = cuda_swab32(nounce);
+		keccak_gpu_state[10] = UINT2(1, 0);
+		keccak_gpu_state[16] = UINT2(0, 0x80000000);
+
+		keccak_blockv35(keccak_gpu_state,keccak_round_constants);
+		if (devectorize(keccak_gpu_state[3]) <= ((uint64_t*)pTarget)[3]) {resNounce[0] = nounce;}
+#else
+		uint64_t keccak_gpu_state[25];
+		#pragma unroll 25
+		for (int i=0; i<25; i++) {
+			if (i<9) keccak_gpu_state[i] = c_PaddedMessage80[i];
+			else     keccak_gpu_state[i] = 0;
 		}
 		keccak_gpu_state[9]  = REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce));
 		keccak_gpu_state[10] = 0x0000000000000001;
 		keccak_gpu_state[16] = 0x8000000000000000;
 
 		keccak_blockv30(keccak_gpu_state, keccak_round_constants);
-
-		bool rc = false;
-		if (keccak_gpu_state[3] <= ((uint64_t*)pTarget)[3]) {rc = true;}
-
-		if (rc == true) {
-			if(resNounce[0] > nounce)
-				resNounce[0] = nounce;
-		}
+		if (keccak_gpu_state[3] <= ((uint64_t*)pTarget)[3]) { resNounce[0] = nounce; }
+#endif
 	}
 }
 
 __host__
 uint32_t keccak256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	uint32_t result = 0xffffffff;
+	uint32_t result = UINT32_MAX;
 	cudaMemset(d_KNonce[thr_id], 0xff, sizeof(uint32_t));
 	const int threadsperblock = 128;
 
@@ -222,12 +237,6 @@ uint32_t keccak256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, ui
 	return result;
 }
 
-#ifdef _MSC_VER
-#define UINT2(a, b) { a, b }
-#else
-#define UINT2(a, b) (uint2) { a, b }
-#endif
-
 __global__ __launch_bounds__(256,3)
 void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
@@ -238,18 +247,16 @@ void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHa
 		uint2 keccak_gpu_state[25];
 		#pragma unroll 25
 		for (int i = 0; i<25; i++) {
-			if (i < 4)
-				keccak_gpu_state[i] = vectorize(outputHash[i*threads+thread]);
-			else
-				keccak_gpu_state[i] = UINT2(0, 0);
+			if (i<4) keccak_gpu_state[i] = vectorize(outputHash[i*threads+thread]);
+			else     keccak_gpu_state[i] = UINT2(0, 0);
 		}
 		keccak_gpu_state[4]  = UINT2(1, 0);
 		keccak_gpu_state[16] = UINT2(0, 0x80000000);
 		keccak_blockv35(keccak_gpu_state, keccak_round_constants);
 
 		#pragma unroll 4
-		for (int i=0; i<4;i++)
-			outputHash[i*threads+thread]=devectorize(keccak_gpu_state[i]);
+		for (int i=0; i<4; i++)
+			outputHash[i*threads+thread] = devectorize(keccak_gpu_state[i]);
 #else
 		uint64_t keccak_gpu_state[25];
 		#pragma unroll 25
@@ -259,7 +266,7 @@ void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHa
 			else
 				keccak_gpu_state[i] = 0;
 		}
-		keccak_gpu_state[4] = 0x0000000000000001;
+		keccak_gpu_state[4]  = 0x0000000000000001;
 		keccak_gpu_state[16] = 0x8000000000000000;
 
 		keccak_blockv30(keccak_gpu_state, keccak_round_constants);

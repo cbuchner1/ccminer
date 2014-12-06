@@ -41,12 +41,11 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
+	int throughput = opt_work_size ? opt_work_size : (1 << 21); // 256*256*8*4
+	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0005;
-
-	int throughput = opt_work_size ? opt_work_size : (1 << 21); // 256*256*8*4
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
@@ -75,15 +74,9 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 			keccak256_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0) {
-					pdata[21] = secNonce;
-					res++;
-				}
+				*hashes_done = foundNonce - first_nonce + 1;
 				pdata[19] = foundNonce;
-				return res;
+				return 1;
 			}
 			else {
 				applog(LOG_DEBUG, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);

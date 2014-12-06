@@ -79,14 +79,11 @@ nvcc_FLAGS += $(JANSSON_INCLUDES) --ptxas-options="-v"
 .cu.o:
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=128 -o $@ -c $<
 
-blake32.o: blake32.cu
+Algo256/blake256.o: Algo256/blake256.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
 
 heavy/cuda_hefty1.o: heavy/cuda_hefty1.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
-
-keccak/cuda_keccak256.o: keccak/cuda_keccak256.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=92 -o $@ -c $<
 
 qubit/qubit_luffa512.o: qubit/qubit_luffa512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
