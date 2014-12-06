@@ -744,7 +744,7 @@ inline void reducedDuplexRowd(uint64_t *state, uint64_t *rowIn, uint64_t *rowInO
  Prints an array of unsigned chars
  */
 void printArray(unsigned char *array, unsigned int size, char *name) {
-	int i;
+	unsigned int i;
 	printf("%s: ", name);
 	for (i = 0; i < size; i++) {
 		printf("%2x|", array[i]);

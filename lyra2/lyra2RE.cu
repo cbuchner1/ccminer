@@ -11,11 +11,6 @@ extern "C" {
 
 static _ALIGN(64) uint64_t *d_hash[8];
 
-extern void quark_check_cpu_init(int thr_id, int threads);
-extern void quark_check_cpu_setTarget(const void *ptarget);
-extern uint32_t quark_check_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
-extern uint32_t quark_check_cpu_hash_64_2(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint64_t *d_inputHash, int order);
-
 extern void blake256_cpu_init(int thr_id, int threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
@@ -68,7 +63,7 @@ extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	int intensity = (device_sm[device_map[thr_id]] >= 500) ? 19 : 18;
+	int intensity = (device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 19 : 18;
 	int throughput = opt_work_size ? opt_work_size : (1 << intensity); // 18=256*256*4;
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
