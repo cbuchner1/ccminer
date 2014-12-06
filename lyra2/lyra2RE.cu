@@ -38,7 +38,7 @@ extern "C" void lyra_hash(void *state, const void *input)
 	sph_skein256_context     ctx_skein;
 	sph_groestl256_context   ctx_groestl;
 
-	uint32_t hashA[8], hashB[8], hash[8];
+	uint32_t hashA[8], hashB[8];
 
 	sph_blake256_init(&ctx_blake);
 	sph_blake256(&ctx_blake, input, 80);
@@ -56,10 +56,9 @@ extern "C" void lyra_hash(void *state, const void *input)
 
 	sph_groestl256_init(&ctx_groestl);
 	sph_groestl256(&ctx_groestl, hashB, 32);
-	sph_groestl256_close(&ctx_groestl, hash);
+	sph_groestl256_close(&ctx_groestl, hashA);
 
-	// seems wrong : hash or hashB ?
-	memcpy(state, hashB, 32);
+	memcpy(state, hashA, 32);
 }
 
 static bool init[8] = { 0 };
@@ -108,20 +107,20 @@ extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
 		foundNonce = groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		if  (foundNonce != 0xffffffff)
+		if (foundNonce != UINT32_MAX)
 		{
-			// const uint32_t Htarg = ptarget[6];
+			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			lyra_hash(vhash64, endiandata);
 
-//			if (vhash64[7]<=Htarg) { // && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
 				return 1;
-//			} else {
-//				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
-//			}
+			} else {
+				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+			}
 		}
 
 		pdata[19] += throughput;
