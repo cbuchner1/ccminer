@@ -355,7 +355,7 @@ uint64_t ROTL64(const uint64_t x, const int offset)
 		"setp.lt.u32 p, %2, 32;\n\t"
 		"@!p mov.b64 %0, {vl,vh};\n\t"
 		"@p  mov.b64 %0, {vh,vl};\n\t"
-		"}"
+	"}"
 		: "=l"(res) : "l"(x) , "r"(offset)
 	);
 	return res;
@@ -377,5 +377,100 @@ uint64_t SWAPDWORDS(uint64_t value)
 	return ROTL64(value, 32);
 #endif
 }
+
+/* lyra2 - int2 operators */
+
+__device__ __forceinline__
+void LOHI(uint32_t &lo, uint32_t &hi, uint64_t x) {
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(lo), "=r"(hi) : "l"(x));
+}
+
+static __device__ __forceinline__ uint64_t devectorize(uint2 v) { return MAKE_ULONGLONG(v.x, v.y); }
+static __device__ __forceinline__ uint2 vectorize(uint64_t v) {
+	uint2 result;
+	LOHI(result.x, result.y, v);
+	return result;
+}
+
+static __device__ __forceinline__ uint2 operator^ (uint2 a, uint2 b) { return make_uint2(a.x ^ b.x, a.y ^ b.y); }
+static __device__ __forceinline__ uint2 operator& (uint2 a, uint2 b) { return make_uint2(a.x & b.x, a.y & b.y); }
+static __device__ __forceinline__ uint2 operator| (uint2 a, uint2 b) { return make_uint2(a.x | b.x, a.y | b.y); }
+static __device__ __forceinline__ uint2 operator~ (uint2 a) { return make_uint2(~a.x, ~a.y); }
+static __device__ __forceinline__ void operator^= (uint2 &a, uint2 b) { a = a ^ b; }
+static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b)
+{
+	uint2 result;
+	asm("{\n\t"
+		"add.cc.u32 %0,%2,%4; \n\t"
+		"addc.u32 %1,%3,%5;   \n\t"
+	"}\n\t"
+		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
+	return result;
+}
+static __device__ __forceinline__ void operator+= (uint2 &a, uint2 b) { a = a + b; }
+
+/**
+ * basic multiplication between 64bit no carry outside that range (ie mul.lo.b64(a*b))
+ * (what does uint64 "*" operator)
+ */
+static __device__ __forceinline__ uint2 operator* (uint2 a, uint2 b)
+{
+	uint2 result;
+	asm("{\n\t"
+		"mul.lo.u32        %0,%2,%4;  \n\t"
+		"mul.hi.u32        %1,%2,%4;  \n\t"
+		"mad.lo.cc.u32    %1,%3,%4,%1; \n\t"
+		"madc.lo.u32      %1,%3,%5,%1; \n\t"
+	"}\n\t"
+		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
+	return result;
+}
+
+// uint2 method
+#if  __CUDA_ARCH__ >= 350
+__device__ __inline__ uint2 ROR2(const uint2 a, const int offset) {
+	uint2 result;
+	if (offset < 32) {
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	else {
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	}
+	return result;
+}
+#else
+__device__ __inline__ uint2 ROR2(const uint2 v, const int n) {
+	uint2 result;
+	result.x = (((v.x) >> (n)) | ((v.x) << (64 - (n))));
+	result.y = (((v.y) >> (n)) | ((v.y) << (64 - (n))));
+	return result;
+}
+#endif
+
+#if  __CUDA_ARCH__ >= 350
+__inline__ __device__ uint2 ROL2(const uint2 a, const int offset) {
+	uint2 result;
+	if (offset >= 32) {
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	else {
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	}
+	return result;
+}
+#else
+__inline__ __device__ uint2 ROL2(const uint2 v, const int n) {
+	uint2 result;
+	result.x = (((v.x) << (n)) | ((v.x) >> (64 - (n))));
+	result.y = (((v.y) << (n)) | ((v.y) >> (64 - (n))));
+	return result;
+}
+#endif
+
 
 #endif // #ifndef CUDA_HELPER_H

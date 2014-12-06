@@ -138,6 +138,7 @@ enum sha_algos {
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
 	ALGO_LUFFA_DOOM,
+	ALGO_LYRA,
 	ALGO_MJOLLNIR,		/* Hefty hash */
 	ALGO_MYR_GR,
 	ALGO_NIST5,
@@ -167,6 +168,7 @@ static const char *algo_names[] = {
 	"keccak",
 	"jackpot",
 	"luffa",
+	"lyra2",
 	"mjollnir",
 	"myr-gr",
 	"nist5",
@@ -272,6 +274,7 @@ Options:\n\
 			jackpot     Jackpot\n\
 			keccak      Keccak-256 (Maxcoin)\n\
 			luffa       Doomcoin\n\
+			lyra2       VertCoin\n\
 			mjollnir    Mjollnircoin\n\
 			myr-gr      Myriad-Groestl\n\
 			nist5       NIST5 (TalkCoin)\n\
@@ -1252,6 +1255,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_FRESH:
 			rc = scanhash_fresh(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_LYRA:
+			rc = scanhash_lyra(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

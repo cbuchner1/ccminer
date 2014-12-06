@@ -10,11 +10,11 @@ EXTRA_DIST		= autogen.sh README.txt LICENSE.txt \
 			  cudaminer.sln cudaminer.vcxproj cudaminer.vcxproj.filters \
 			  compat/gettimeofday.c compat/getopt/getopt_long.c cpuminer-config.h.in
 
-SUBDIRS		= compat
+SUBDIRS = compat
 
-bin_PROGRAMS	= ccminer
+bin_PROGRAMS = ccminer
 
-ccminer_SOURCES		= elist.h miner.h compat.h \
+ccminer_SOURCES	= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
 			  crc32.c hefty1.c scrypt.c \
@@ -27,17 +27,20 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  heavy/cuda_hefty1.cu heavy/cuda_hefty1.h \
 			  heavy/cuda_keccak512.cu heavy/cuda_keccak512.h \
 			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
-			  keccak/cuda_keccak256.cu keccak/keccak256.cu \
-			  fuguecoin.cpp cuda_fugue256.cu sph/fugue.c sph/sph_fugue.h uint256.h \
+			  fuguecoin.cpp Algo256/cuda_fugue256.cu sph/fugue.c uint256.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
 			  myriadgroestl.cpp cuda_myriadgroestl.cu \
+			  lyra2/Lyra2.c lyra2/Sponge.c \
+			  lyra2/lyra2RE.cu lyra2/cuda_lyra2.cu \
+			  Algo256/cuda_blake256.cu Algo256/cuda_groestl256.cu Algo256/cuda_keccak256.cu Algo256/cuda_skein256.cu \
+			  Algo256/blake256.cu Algo256/keccak256.cu \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
 			  JHA/cuda_jha_compactionTest.cu cuda_checkhash.cu \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
 			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu \
 			  quark/quarkcoin.cu quark/animecoin.cu \
 			  quark/cuda_quark_compactionTest.cu  \
-			  cuda_nist5.cu blake32.cu pentablake.cu \
+			  cuda_nist5.cu pentablake.cu \
 			  sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/sha2.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \

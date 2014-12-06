@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.0-tpruvot (27 Nov 2014) - "Extra nonce"
+ccMiner release 1.5.1-tpruvot (16 Dec 2014) - "Vertcoin Lyra2"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -38,6 +38,7 @@ Keccak (Maxcoin)
 Deep, Doom and Qubit
 Pentablake (Blake 512 x5)
 S3 (OneCoin)
+Lyra2RE (new VertCoin algo)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL Only) implementations.
@@ -68,6 +69,7 @@ its command line interface and options.
                           jackpot     use to mine Jackpotcoin
                           keccak      use to mine Maxcoin
                           luffa       use to mine Doomcoin
+                          lyra2       use to mine Vertcoin
                           mjollnir    use to mine Mjollnircoin
                           myr-gr      use to mine Myriad-Groest
                           nist5       use to mine TalkCoin
@@ -168,6 +170,12 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Dec. 2014       v1.5.1 (not released yet!)
+                  Add lyra2 algo for Vertcoin (Release is 16 Dec 2014)
+                  Multiple shares support (2 for the moment)
+                  X11 optimisations (From klaust and sp-hash)
+                  HTML5 WebSocket api compatibility (see api/websocket.htm)
 
   Nov. 27th 2014  v1.5.0
                   Upgrade compat jansson to 2.6 (for windows)

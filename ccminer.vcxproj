@@ -105,7 +105,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>false</Keep>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_30,sm_30;compute_50,sm_50</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -173,7 +173,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>false</Keep>
-      <CodeGeneration>compute_30,sm_30;compute_50,sm_50;</CodeGeneration>
+      <CodeGeneration>compute_50,sm_50;</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
@@ -257,6 +257,8 @@
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
       <AdditionalOptions>/Tp %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <ClCompile Include="lyra2\Lyra2.c" />
+    <ClCompile Include="lyra2\Sponge.c" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />
     <ClCompile Include="sph\bmw.c" />
@@ -331,11 +333,13 @@
     <ClInclude Include="uint256.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="lyra2\Lyra2.h" />
+    <ClInclude Include="lyra2\Sponge.h" />
+  </ItemGroup>
+  <ItemGroup>
     <CudaCompile Include="cuda.cpp" />
     <CudaCompile Include="bitslice_transformations_quad.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
-    </CudaCompile>
-    <CudaCompile Include="cuda_fugue256.cu">
     </CudaCompile>
     <CudaCompile Include="cuda_groestlcoin.cu">
     </CudaCompile>
@@ -369,15 +373,19 @@
     </CudaCompile>
     <CudaCompile Include="JHA\jackpotcoin.cu">
     </CudaCompile>
-    <CudaCompile Include="blake32.cu">
+    <CudaCompile Include="Algo256\blake256.cu">
       <MaxRegCount>64</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
-    <CudaCompile Include="keccak\cuda_keccak256.cu">
+    <CudaCompile Include="Algo256\keccak256.cu" />
+    <CudaCompile Include="Algo256\cuda_blake256.cu" />
+    <CudaCompile Include="Algo256\cuda_fugue256.cu" />
+    <CudaCompile Include="Algo256\cuda_groestl256.cu" />
+    <CudaCompile Include="Algo256\cuda_keccak256.cu">
       <MaxRegCount>92</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="keccak\keccak256.cu" />
+    <CudaCompile Include="Algo256\cuda_skein256.cu" />
     <CudaCompile Include="pentablake.cu">
       <MaxRegCount>80</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
@@ -418,6 +426,8 @@
     </CudaCompile>
     <CudaCompile Include="qubit\qubit_luffa512.cu">
     </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2RE.cu" />
+    <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="x11\cuda_x11_aes.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </CudaCompile>

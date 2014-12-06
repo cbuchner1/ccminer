@@ -1634,17 +1634,21 @@ void print_hash_tests(void)
 	printpfx("heavy", hash);
 
 	memset(hash, 0, sizeof hash);
-	keccak256_hash(&hash[0], &buf[0]);
-	printpfx("keccak", hash);
-
-	memset(hash, 0, sizeof hash);
 	jackpothash(&hash[0], &buf[0]);
 	printpfx("jackpot", hash);
 
 	memset(hash, 0, sizeof hash);
+	keccak256_hash(&hash[0], &buf[0]);
+	printpfx("keccak", hash);
+
+	memset(hash, 0, sizeof hash);
 	doomhash(&hash[0], &buf[0]);
 	printpfx("luffa", hash);
-
+/* to double check with a lyra2 cpu miner
+	memset(hash, 0, sizeof hash);
+	lyra_hash(&hash[0], &buf[0]);
+	printpfx("lyra2", hash);
+*/
 	memset(hash, 0, sizeof hash);
 	myriadhash(&hash[0], &buf[0]);
 	printpfx("myriad", hash);

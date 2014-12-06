@@ -571,7 +571,7 @@ fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHas
 		for(int i=0;i<30;i++)
 			sc[i] = GPUstate[i];
 
-		uint32_t nounce = startNounce + thread; // muss noch ermittelt werden	
+		uint32_t nounce = startNounce + thread; // muss noch ermittelt werden
 		uint32_t q;
 
 
@@ -687,7 +687,7 @@ fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHas
 
 		int i;
 		bool rc = true;
-	
+
 		for (i = 7; i >= 0; i--) {
 			if (hash[i] > pTarget[i]) {
 				rc = false;
@@ -730,7 +730,7 @@ void fugue256_cpu_init(int thr_id, int threads)
 
 	// Speicher für alle Ergebnisse belegen
 	cudaMalloc(&d_fugue256_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads);
-	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)); 
+	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t));
 }
 
 __host__ void fugue256_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
