@@ -1646,7 +1646,7 @@ void print_hash_tests(void)
 	printpfx("luffa", hash);
 
 	memset(hash, 0, sizeof hash);
-	lyra_hash(&hash[0], &buf[0]);
+	lyra2_hash(&hash[0], &buf[0]);
 	printpfx("lyra2", hash);
 
 	memset(hash, 0, sizeof hash);

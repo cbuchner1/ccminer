@@ -26,7 +26,7 @@ extern void groestl256_setTarget(const void *ptarget);
 extern uint32_t groestl256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
 extern void groestl256_cpu_init(int thr_id, int threads);
 
-extern "C" void lyra_hash(void *state, const void *input)
+extern "C" void lyra2_hash(void *state, const void *input)
 {
 	sph_blake256_context     ctx_blake;
 	sph_keccak256_context    ctx_keccak;
@@ -58,7 +58,7 @@ extern "C" void lyra_hash(void *state, const void *input)
 
 static bool init[8] = { 0 };
 
-extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
+extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done)
 {
@@ -107,7 +107,7 @@ extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
-			lyra_hash(vhash64, endiandata);
+			lyra2_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				*hashes_done = pdata[19] - first_nonce + throughput;

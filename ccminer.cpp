@@ -138,7 +138,7 @@ enum sha_algos {
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
 	ALGO_LUFFA_DOOM,
-	ALGO_LYRA,
+	ALGO_LYRA2,
 	ALGO_MJOLLNIR,		/* Hefty hash */
 	ALGO_MYR_GR,
 	ALGO_NIST5,
@@ -441,25 +441,28 @@ static bool jobj_binary(const json_t *obj, const char *key,
 
 static bool work_decode(const json_t *val, struct work *work)
 {
+	int data_size = sizeof(work->data), target_size = sizeof(work->target);
+	int adata_sz = ARRAY_SIZE(work->data), atarget_sz = ARRAY_SIZE(work->target);
 	int i;
-	
-	if (unlikely(!jobj_binary(val, "data", work->data, sizeof(work->data)))) {
+
+	if (unlikely(!jobj_binary(val, "data", work->data, data_size))) {
 		applog(LOG_ERR, "JSON inval data");
 		return false;
 	}
-	if (unlikely(!jobj_binary(val, "target", work->target, sizeof(work->target)))) {
+	if (unlikely(!jobj_binary(val, "target", work->target, target_size))) {
 		applog(LOG_ERR, "JSON inval target");
 		return false;
 	}
+
 	if (opt_algo == ALGO_HEAVY) {
 		if (unlikely(!jobj_binary(val, "maxvote", &work->maxvote, sizeof(work->maxvote)))) {
 			work->maxvote = 2048;
 		}
 	} else work->maxvote = 0;
 
-	for (i = 0; i < ARRAY_SIZE(work->data); i++)
+	for (i = 0; i < adata_sz; i++)
 		work->data[i] = le32dec(work->data + i);
-	for (i = 0; i < ARRAY_SIZE(work->target); i++)
+	for (i = 0; i < atarget_sz; i++)
 		work->target[i] = le32dec(work->target + i);
 
 	json_t *jr = json_object_get(val, "noncerange");
@@ -468,7 +471,8 @@ static bool work_decode(const json_t *val, struct work *work)
 		if (likely(hexstr)) {
 			// never seen yet...
 			hex2bin((uchar*)work->noncerange.u64, hexstr, 8);
-			applog(LOG_DEBUG, "received noncerange: %08x-%08x", work->noncerange.u32[0], work->noncerange.u32[1]);
+			applog(LOG_DEBUG, "received noncerange: %08x-%08x",
+				work->noncerange.u32[0], work->noncerange.u32[1]);
 		}
 	}
 
@@ -635,7 +639,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		/* build JSON-RPC request */
 		sprintf(s,
-			"{\"method\": \"getwork\", \"params\": [ \"%s\" ], \"id\":1}\r\n",
+			"{\"method\": \"getwork\", \"params\": [\"%s\"], \"id\":4}\r\n",
 			str);
 
 		/* issue JSON-RPC request */
@@ -963,14 +967,23 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
-	if (opt_algo == ALGO_JACKPOT)
-		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
-	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
-		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
-	else if (opt_algo == ALGO_KECCAK)
-		diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));
-	else
-		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
+	switch (opt_algo) {
+		case ALGO_JACKPOT:
+			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
+			break;
+		case ALGO_DMD_GR:
+		case ALGO_FRESH:
+		case ALGO_FUGUE256:
+		case ALGO_GROESTL:
+		//case ALGO_QUBIT:
+			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+			break;
+		case ALGO_KECCAK:
+			diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));
+			break;
+		default:
+			diff_to_target(work->target, sctx->job.diff / opt_difficulty);
+	}
 }
 
 static void *miner_thread(void *userdata)
@@ -1112,6 +1125,9 @@ static void *miner_thread(void *userdata)
 			case ALGO_X11:
 			case ALGO_X13:
 				minmax = 0x400000;
+				break;
+			case ALGO_LYRA2:
+				minmax = 0x100000;
 				break;
 			}
 			max64 = max(minmax-1, max64);
@@ -1263,8 +1279,8 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
-		case ALGO_LYRA:
-			rc = scanhash_lyra(thr_id, work.data, work.target,
+		case ALGO_LYRA2:
+			rc = scanhash_lyra2(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

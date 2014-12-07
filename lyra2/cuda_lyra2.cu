@@ -2,6 +2,8 @@
 
 #include "cuda_helper.h"
 
+#define TPB 256
+
 static __constant__ uint2 blake2b_IV[8] = {
 	{ 0xf3bcc908, 0x6a09e667 },
 	{ 0x84caa73b, 0xbb67ae85 },
@@ -282,10 +284,9 @@ static __device__ __forceinline__ void round_lyra_v30(uint64_t *s)
 	Gfunc_v30(s[3], s[4], s[9], s[14]);
 }
 
-__global__ __launch_bounds__(256, 1)
+__global__ __launch_bounds__(TPB, 1)
 void lyra2_gpu_hash_32_v30(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
-
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -359,10 +360,9 @@ void lyra2_gpu_hash_32_v30(int threads, uint32_t startNounce, uint64_t *outputHa
 	} //thread
 }
 
-__global__ __launch_bounds__(256, 1)
+__global__ __launch_bounds__(TPB, 1)
 void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
-
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -375,7 +375,7 @@ void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 		for (int i = 0; i<8; i++) { state[i + 8] = blake2b_IV[i]; }
 
 		// blake2blyra x2
-		#pragma unroll 24
+		//#pragma unroll 24
 		for (int i = 0; i<24; i++) { round_lyra_v35(state); } //because 12 is not enough
 
 		uint2 Matrix[96][8]; // not cool
@@ -434,9 +434,9 @@ void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 
 	} //thread
 }
-
-__global__
-void __launch_bounds__(256, 1) lyra2_gpu_hash_32_test(int threads, uint32_t startNounce, uint64_t *outputHash)
+#if 0
+__global__ __launch_bounds__(TPB, 1)
+void lyra2_gpu_hash_32_test(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -508,6 +508,7 @@ void __launch_bounds__(256, 1) lyra2_gpu_hash_32_test(int threads, uint32_t star
 
 	} //thread
 }
+#endif
 
 __host__
 void lyra2_cpu_init(int thr_id, int threads)
@@ -518,7 +519,7 @@ void lyra2_cpu_init(int thr_id, int threads)
 __host__
 void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
-	const int threadsperblock = 256;
+	const int threadsperblock = TPB;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
