@@ -484,6 +484,7 @@ static bool work_decode(const json_t *val, struct work *work)
 
 /**
  * Calculate the work difficulty as double
+ * Not sure it works with pools
  */
 static void calc_diff(struct work *work, int known)
 {
@@ -548,26 +549,24 @@ static int share_result(int result, const char *reason)
 static bool submit_upstream_work(CURL *curl, struct work *work)
 {
 	json_t *val, *res, *reason;
+	bool stale_work = false;
 	char s[384];
-	bool stale_work;
 
-	pthread_mutex_lock(&g_work_lock);
-	if (strlen(work->job_id + 8)) {
-		/* stale if not the current job id */
-		stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
-	} else {
-		/* fallback when no job id (compare hash) */
-		stale_work = memcmp(&work->data[1], &g_work.data[1], 32);
+	/* discard if a new bloc was sent */
+	stale_work = work->height != g_work.height;
+	if (have_stratum && !stale_work) {
+		pthread_mutex_lock(&g_work_lock);
+		if (strlen(work->job_id + 8))
+			stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
+		pthread_mutex_unlock(&g_work_lock);
 	}
 
 	if (stale_work) {
-		pthread_mutex_unlock(&g_work_lock);
 		if (opt_debug)
 			applog(LOG_WARNING, "stale work detected, discarding");
 		return true;
 	}
 	calc_diff(work, 0);
-	pthread_mutex_unlock(&g_work_lock);
 
 	if (have_stratum) {
 		uint32_t sent;
@@ -1049,14 +1048,15 @@ static void *miner_thread(void *userdata)
 				stratum_gen_work(&stratum, &g_work);
 			}
 		} else {
-			int min_scantime = scan_time;
-			/* obtain new work from internal workio thread */
 			pthread_mutex_lock(&g_work_lock);
-			if (time(NULL) - g_work_time >= min_scantime || nonceptr[0] >= end_nonce) {
+			if ((time(NULL) - g_work_time) >= scan_time || nonceptr[0] >= (end_nonce - 0x100)) {
+				if (opt_debug && g_work_time && !opt_quiet)
+					applog(LOG_DEBUG, "work time %u/%us nonce %x/%x", time(NULL) - g_work_time,
+						scan_time, nonceptr[0], end_nonce);
+				/* obtain new work from internal workio thread */
 				if (unlikely(!get_work(mythr, &g_work))) {
-					applog(LOG_ERR, "work retrieval failed, exiting "
-						"mining thread %d", mythr->id);
 					pthread_mutex_unlock(&g_work_lock);
+					applog(LOG_ERR, "work retrieval failed, exiting mining thread %d", mythr->id);
 					goto out;
 				}
 				g_work_time = time(NULL);
@@ -1065,6 +1065,8 @@ static void *miner_thread(void *userdata)
 
 		if (!opt_benchmark && memcmp(work.target, g_work.target, sizeof(work.target))) {
 			calc_diff(&g_work, 0);
+			if (!have_stratum)
+				global_diff = g_work.difficulty;
 			if (opt_debug) {
 				uint64_t target64 = g_work.target[7] * 0x100000000ULL + g_work.target[6];
 				applog(LOG_DEBUG, "job %s target change: %llx (%.1f)", g_work.job_id, target64, g_work.difficulty);
@@ -1175,9 +1177,6 @@ static void *miner_thread(void *userdata)
 			}
 		}
 #endif
-		if (opt_algo == ALGO_KECCAK && max64 == UINT32_MAX) {
-			max64 = 0x7FFFFFFFUL;
-		}
 		/* never let small ranges at end */
 		if (end_nonce >= UINT32_MAX - 256)
 			end_nonce = UINT32_MAX;
@@ -1345,6 +1344,7 @@ static void *miner_thread(void *userdata)
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
 		if (diff.tv_usec || diff.tv_sec) {
+			double dtime = (double) diff.tv_sec + 1e-6 * diff.tv_usec;
 
 			/* hashrate factors for some algos */
 			double rate_factor = 1.0;
@@ -1357,13 +1357,13 @@ static void *miner_thread(void *userdata)
 			}
 
 			/* store thread hashrate */
-			pthread_mutex_lock(&stats_lock);
-			if (diff.tv_sec + 1e-6 * diff.tv_usec > 0.0) {
-				thr_hashrates[thr_id] = hashes_done / (diff.tv_sec + 1e-6 * diff.tv_usec);
+			if (dtime > 0.0) {
+				pthread_mutex_lock(&stats_lock);
+				thr_hashrates[thr_id] = hashes_done / dtime;
 				thr_hashrates[thr_id] *= rate_factor;
 				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
+				pthread_mutex_unlock(&stats_lock);
 			}
-			pthread_mutex_unlock(&stats_lock);
 		}
 
 		if (rc > 1)
@@ -1392,8 +1392,10 @@ static void *miner_thread(void *userdata)
 		/* loopcnt: ignore first loop hashrate */
 		if (loopcnt && thr_id == (opt_n_threads - 1)) {
 			double hashrate = 0.;
+			pthread_mutex_lock(&stats_lock);
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
+			pthread_mutex_unlock(&stats_lock);
 			if (opt_benchmark) {
 				sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", hashrate / 1000.);
 				applog(LOG_NOTICE, "Total: %s kH/s", s);

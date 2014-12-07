@@ -41,8 +41,8 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	int throughput = opt_work_size ? opt_work_size : (1 << 21); // 256*256*8*4
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 21); // 256*256*8*4
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0005;
@@ -51,7 +51,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
-		keccak256_cpu_init(thr_id, throughput);
+		keccak256_cpu_init(thr_id, (int) throughput);
 
 		init[thr_id] = true;
 	}
@@ -65,7 +65,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	do {
 		int order = 0;
 
-		uint32_t foundNonce = keccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		uint32_t foundNonce = keccak256_cpu_hash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], order++);
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t Htarg = ptarget[7];
@@ -83,8 +83,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
-			pdata[19] = max_nonce;
+		if ((uint64_t) pdata[19] + throughput > max_nonce) {
 			break;
 		}
 
@@ -92,6 +91,6 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }

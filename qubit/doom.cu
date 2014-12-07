@@ -40,8 +40,8 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	int throughput = opt_work_size ? opt_work_size : (1 << 22); // 256*256*8*8
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 22); // 256*256*8*8
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000f;
@@ -52,7 +52,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
-		qubit_luffa512_cpu_init(thr_id, throughput);
+		qubit_luffa512_cpu_init(thr_id, (int) throughput);
 
 		init[thr_id] = true;
 	}
@@ -65,7 +65,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	do {
 		int order = 0;
 
-		uint32_t foundNonce = qubit_luffa512_cpu_finalhash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		uint32_t foundNonce = qubit_luffa512_cpu_finalhash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], order++);
 		if (foundNonce != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -74,22 +74,21 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 			doomhash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				*hashes_done = pdata[19] - first_nonce + throughput;
+				*hashes_done = min(max_nonce - first_nonce, (uint64_t) pdata[19] - first_nonce + throughput);
 				pdata[19] = foundNonce;
-				return res;
+				return 1;
 			}
 			else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
 
-		pdata[19] += throughput;
-
 		if ((uint64_t) pdata[19] + throughput > max_nonce) {
-			pdata[19] = max_nonce;
+			// pdata[19] = max_nonce;
 			break;
 		}
+
+		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);
 

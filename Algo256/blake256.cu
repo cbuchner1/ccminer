@@ -452,14 +452,16 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget))
 			{
 				rc = 1;
-				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
+				*hashes_done = pdata[19] - first_nonce + 1;
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
 					be32enc(&endiandata[19], extra_results[0]);
 					blake256hash(vhashcpu, endiandata, blakerounds);
 					if (vhashcpu[6] <= Htarg /* && fulltest(vhashcpu, ptarget) */) {
 						pdata[21] = extra_results[0];
+						applog(LOG_BLUE, "1:%x 2:%x", foundNonce, extra_results[0]);
+						*hashes_done = max(*hashes_done, extra_results[0] - first_nonce + 1);
 						rc = 2;
 					}
 					extra_results[0] = UINT32_MAX;
@@ -477,7 +479,6 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 		}
 
 		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
-			pdata[19] = max_nonce;
 			break;
 		}
 
@@ -485,6 +486,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1; // (+1 to prevent locks)
+	*hashes_done = pdata[19] - first_nonce;
+
 	return rc;
 }
