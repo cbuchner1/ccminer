@@ -192,6 +192,7 @@ bool want_longpoll = true;
 bool have_longpoll = false;
 bool want_stratum = true;
 bool have_stratum = false;
+bool allow_gbt = true;
 static bool submit_old = false;
 bool use_syslog = false;
 bool use_colors = true;
@@ -661,6 +662,55 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	return true;
 }
 
+/* simplified method to only get some extra infos in solo mode */
+static bool gbt_work_decode(const json_t *val, struct work *work)
+{
+	json_t *err = json_object_get(val, "error");
+	if (err && !json_is_null(err)) {
+		allow_gbt = false;
+		applog(LOG_INFO, "GBT not supported, bloc height unavailable");
+		return false;
+	}
+
+	if (!work->height) {
+		// complete missing data from getwork
+		json_t *key = json_object_get(val, "height");
+		if (key && json_is_integer(key)) {
+			work->height = (uint32_t) json_integer_value(key);
+			if (!opt_quiet && work->height != g_work.height) {
+				applog(LOG_BLUE, "%s %s block %d", short_url,
+					algo_names[opt_algo], work->height);
+			}
+		}
+	}
+
+	return true;
+}
+
+#define GBT_CAPABILITIES "[\"coinbasetxn\", \"coinbasevalue\", \"longpoll\", \"workid\"]"
+static const char *gbt_req =
+	"{\"method\": \"getblocktemplate\", \"params\": ["
+	//	"{\"capabilities\": " GBT_CAPABILITIES "}"
+	"], \"id\":0}\r\n";
+
+static bool get_blocktemplate(CURL *curl, struct work *work)
+{
+	if (!allow_gbt)
+		return false;
+
+	json_t *val = json_rpc_call(curl, rpc_url, rpc_userpass, gbt_req,
+			    want_longpoll, false, NULL);
+
+	if (!val)
+		return false;
+
+	bool rc = gbt_work_decode(json_object_get(val, "result"), work);
+
+	json_decref(val);
+
+	return rc;
+}
+
 static const char *rpc_req =
 	"{\"method\": \"getwork\", \"params\": [], \"id\":0}\r\n";
 
@@ -694,6 +744,8 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 	}
 
 	json_decref(val);
+
+	get_blocktemplate(curl, work);
 
 	return rc;
 }
@@ -985,6 +1037,15 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	}
 }
 
+static void restart_threads(void)
+{
+	if (opt_debug && !opt_quiet)
+		applog(LOG_DEBUG,"%s", __FUNCTION__);
+
+	for (int i = 0; i < opt_n_threads; i++)
+		work_restart[i].restart = 1;
+}
+
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -1063,7 +1124,8 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		if (!opt_benchmark && memcmp(work.target, g_work.target, sizeof(work.target))) {
+		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
+		{
 			calc_diff(&g_work, 0);
 			if (!have_stratum)
 				global_diff = g_work.difficulty;
@@ -1073,6 +1135,7 @@ static void *miner_thread(void *userdata)
 			}
 			memcpy(work.target, g_work.target, sizeof(work.target));
 			work.difficulty = g_work.difficulty;
+			work.height = g_work.height;
 			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 			/* on new target, ignoring nonce, clear sent data (hashlog) */
 			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
@@ -1409,7 +1472,18 @@ static void *miner_thread(void *userdata)
 		if (rc && !opt_benchmark) {
 			if (!submit_work(mythr, &work))
 				break;
-			// second nonce found, submit too
+
+			// prevent stale work in solo
+			// we can't submit twice a block!
+			if (!have_stratum) {
+				pthread_mutex_lock(&g_work_lock);
+				// will force getwork
+				g_work_time = 0;
+				pthread_mutex_unlock(&g_work_lock);
+				continue;
+			}
+
+			// second nonce found, submit too (on pool only!)
 			if (rc > 1 && work.data[21]) {
 				work.data[19] = work.data[21];
 				work.data[21] = 0;
@@ -1425,15 +1499,6 @@ out:
 	tq_freeze(mythr->q);
 
 	return NULL;
-}
-
-static void restart_threads(void)
-{
-	if (opt_debug)
-		applog(LOG_DEBUG,"%s", __FUNCTION__);
-
-	for (int i = 0; i < opt_n_threads; i++)
-		work_restart[i].restart = 1;
 }
 
 static void *longpoll_thread(void *userdata)

@@ -333,14 +333,15 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 {
 	json_t *val, *err_val, *res_val;
 	int rc;
-	struct data_buffer all_data = {0};
+	struct data_buffer all_data = { 0 };
 	struct upload_buffer upload_data;
 	json_error_t err;
 	struct curl_slist *headers = NULL;
+	char* httpdata;
 	char len_hdr[64], hashrate_hdr[64];
-	char curl_err_str[CURL_ERROR_SIZE];
+	char curl_err_str[CURL_ERROR_SIZE] = { 0 };
 	long timeout = longpoll ? opt_timeout : 30;
-	struct header_info hi = {0};
+	struct header_info hi = { 0 };
 	bool lp_scanning = longpoll_scan && !have_longpoll;
 
 	/* it is assumed that 'curl' is freshly [re]initialized at this pt */
@@ -351,7 +352,7 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	if (opt_cert)
 		curl_easy_setopt(curl, CURLOPT_CAINFO, opt_cert);
 	curl_easy_setopt(curl, CURLOPT_ENCODING, "");
-	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, all_data_cb);
@@ -404,9 +405,10 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	if (curl_err != NULL)
 		*curl_err = rc;
 	if (rc) {
-		if (!(longpoll && rc == CURLE_OPERATION_TIMEDOUT))
+		if (!(longpoll && rc == CURLE_OPERATION_TIMEDOUT)) {
 			applog(LOG_ERR, "HTTP request failed: %s", curl_err_str);
-		goto err_out;
+			goto err_out;
+		}
 	}
 
 	/* If X-Stratum was found, activate Stratum */
@@ -425,14 +427,27 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 		hi.lp_path = NULL;
 	}
 
-	if (!all_data.buf) {
+	if (!all_data.buf || !all_data.len) {
 		applog(LOG_ERR, "Empty data received in json_rpc_call.");
 		goto err_out;
 	}
 
-	val = JSON_LOADS((const char*)all_data.buf, &err);
+	httpdata = (char*) all_data.buf;
+
+	if (*httpdata != '{' && *httpdata != '[') {
+		long errcode = 0;
+		CURLcode c = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &errcode);
+		if (c == CURLE_OK && errcode == 401) {
+			applog(LOG_ERR, "You are not authorized, check your login and password.");
+			goto err_out;
+		}
+	}
+
+	val = JSON_LOADS(httpdata, &err);
 	if (!val) {
 		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+		if (opt_protocol)
+			applog(LOG_DEBUG, "%s", httpdata);
 		goto err_out;
 	}
 
@@ -451,8 +466,14 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 	    (err_val && !json_is_null(err_val))) {
 		char *s;
 
-		if (err_val)
+		if (err_val) {
+			json_t *msg = json_object_get(err_val, "message");
 			s = json_dumps(err_val, JSON_INDENT(3));
+			if (json_is_string(msg)) {
+				free(s);
+				s = strdup(json_string_value(msg));
+			}
+		}
 		else
 			s = strdup("(unknown reason)");
 
