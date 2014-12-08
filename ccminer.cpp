@@ -311,7 +311,8 @@ Options:\n\
   -T, --timeout=N       network timeout, in seconds (default: 270)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
                           long polling is unavailable, in seconds (default: 5)\n\
-  -N, --statsavg        number of samples used to display hashrate (default: 20)\n\
+  -N, --statsavg        number of samples used to display hashrate (default: 30)\n\
+      --no-gbt          disable getblocktemplate support (height check in solo)\n\
       --no-longpoll     disable X-Long-Polling support\n\
       --no-stratum      disable X-Stratum support\n\
   -q, --quiet           disable per-thread hashmeter output\n\
@@ -360,6 +361,7 @@ static struct option const options[] = {
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
 	{ "no-color", 0, NULL, 1002 },
+	{ "no-gbt", 0, NULL, 1011 },
 	{ "no-longpoll", 0, NULL, 1003 },
 	{ "no-stratum", 0, NULL, 1007 },
 	{ "pass", 1, NULL, 'p' },
@@ -390,6 +392,8 @@ static struct option const options[] = {
 static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
+
+static bool get_blocktemplate(CURL *curl, struct work *work);
 
 void get_currentalgo(char* buf, int sz)
 {
@@ -553,13 +557,24 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool stale_work = false;
 	char s[384];
 
-	/* discard if a new bloc was sent */
-	stale_work = work->height != g_work.height;
+	/* discard if a newer bloc was received */
+	stale_work = work->height && work->height < g_work.height;
 	if (have_stratum && !stale_work) {
 		pthread_mutex_lock(&g_work_lock);
 		if (strlen(work->job_id + 8))
 			stale_work = strcmp(work->job_id + 8, g_work.job_id + 8);
 		pthread_mutex_unlock(&g_work_lock);
+	}
+
+	if (!have_stratum && !stale_work && allow_gbt) {
+		struct work wheight = { 0 };
+		if (get_blocktemplate(curl, &wheight)) {
+			if (work->height && work->height < wheight.height) {
+				if (opt_debug)
+					applog(LOG_WARNING, "bloc %u was already solved", work->height, wheight.height);
+				return true;
+			}
+		}
 	}
 
 	if (stale_work) {
@@ -677,9 +692,10 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		json_t *key = json_object_get(val, "height");
 		if (key && json_is_integer(key)) {
 			work->height = (uint32_t) json_integer_value(key);
-			if (!opt_quiet && work->height != g_work.height) {
+			if (!opt_quiet && work->height > g_work.height) {
 				applog(LOG_BLUE, "%s %s block %d", short_url,
 					algo_names[opt_algo], work->height);
+				g_work.height = work->height;
 			}
 		}
 	}
@@ -1959,6 +1975,9 @@ static void parse_arg(int key, char *arg)
 		break;
 	case 1007:
 		want_stratum = false;
+		break;
+	case 1011:
+		allow_gbt = false;
 		break;
 	case 'S':
 	case 1008:

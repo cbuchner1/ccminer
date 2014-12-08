@@ -105,6 +105,8 @@ its command line interface and options.
   -T, --timeout=N       network timeout, in seconds (default: 270)
   -s, --scantime=N      upper bound on time spent scanning current work when
                         long polling is unavailable, in seconds (default: 5)
+  -N, --statsavg        number of samples used to display hashrate (default: 30)
+      --no-gbt          disable getblocktemplate support (height check in solo)
       --no-longpoll     disable X-Long-Polling support
       --no-stratum      disable X-Stratum support
   -q, --quiet           disable per-thread hashmeter output
@@ -176,6 +178,7 @@ features.
                   Multiple shares support (2 for the moment)
                   X11 optimisations (From klaust and sp-hash)
                   HTML5 WebSocket api compatibility (see api/websocket.htm)
+                  Solo mode height checks with getblocktemplate rpc calls
 
   Nov. 27th 2014  v1.5.0
                   Upgrade compat jansson to 2.6 (for windows)
