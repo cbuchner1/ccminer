@@ -1734,7 +1734,7 @@ static void show_usage_and_exit(int status)
 
 static void parse_arg(int key, char *arg)
 {
-	char *p;
+	char *p = arg;
 	int v, i;
 	double d;
 
@@ -1761,8 +1761,15 @@ static void parse_arg(int key, char *arg)
 			}
 			opt_api_listen = atoi(p + 1);
 		}
-		else if (arg)
+		else if (arg && strstr(arg, ".")) {
+			/* ip only */
+			free(opt_api_allow);
+			opt_api_allow = strdup(arg);
+		}
+		else if (arg) {
+			/* port or 0 to disable */
 			opt_api_listen = atoi(arg);
+		}
 		break;
 	case 'B':
 		opt_background = true;

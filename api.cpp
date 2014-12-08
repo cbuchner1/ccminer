@@ -750,8 +750,8 @@ static void api()
 				break;
 			else {
 				if (!opt_quiet || opt_debug)
-					applog(LOG_WARNING, "API bind to port %d failed - trying again in 15sec", port);
-				sleep(15);
+					applog(LOG_WARNING, "API bind to port %d failed - trying again in 20sec", port);
+				sleep(20);
 			}
 		}
 		else
