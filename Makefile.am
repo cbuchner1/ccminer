@@ -46,7 +46,7 @@ ccminer_SOURCES		= elist.h miner.h compat.h \
 			  x13/whirlpool.cu \
 			  Algo256/cuda_keccak256.cu Algo256/keccak256.cu Algo256/cuda_blake256.cu Algo256/cuda_fugue256.cu \
 			  Algo256/cuda_groestl256.cu Algo256/cuda_skein256.cu \
-			  lyra2\cuda_lyra2 lyra2\lyra2RE.cu \
+			  lyra2/cuda_lyra2.cu lyra2/lyra2RE.cu \
 			  x11/x11.cu x11/cuda_x11_luffa512.cu x11/cuda_x11_cubehash512.cu \
 			  x11/cuda_x11_shavite512.cu x11/cuda_x11_simd512.cu x11/cuda_x11_echo.cu \
 			  x13/cuda_m7_sha256.cu x13/cuda_mul.cu x13/cuda_mul2.cu x13/cuda_ripemd160.cu x13/cuda_tiger192.cu \
