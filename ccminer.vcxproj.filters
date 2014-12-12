@@ -64,6 +64,12 @@
     <Filter Include="Source Files\CUDA\Algo256">
       <UniqueIdentifier>{a448ec8d-f346-4944-9786-aa0b55519306}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\lyra2">
+      <UniqueIdentifier>{406a090e-0e68-42b7-ab18-6dd75ed2c2dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CUDA\neoscrypt">
+      <UniqueIdentifier>{1987d993-c0f1-4ef1-aea8-074897489364}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -180,6 +186,15 @@
     <ClCompile Include="sph\sph_sha2.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="sph\neoscrypt.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\Lyra2.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\Sponge.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -292,6 +307,15 @@
       <Filter>Header Files\sph</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_tiger.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\neoscrypt.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\Lyra2.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\Sponge.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
@@ -469,6 +493,27 @@
     </CudaCompile>
     <CudaCompile Include="qubit\doom.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
+    </CudaCompile>
+    <CudaCompile Include="neoscrypt\neoscrypt.cu">
+      <Filter>Source Files\CUDA\neoscrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
+      <Filter>Source Files\CUDA\neoscrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2RE.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_blake256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_groestl256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_skein256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

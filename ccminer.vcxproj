@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -27,23 +27,27 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -168,7 +172,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <CudaCompile>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_50,sm_50;compute_35,sm_35;compute_30,sm_30</CodeGeneration>
+      <CodeGeneration>compute_52,sm_52;compute_50,sm_50;compute_35,sm_35;compute_30,sm_30</CodeGeneration>
       <Include>
       </Include>
     </CudaCompile>
@@ -246,6 +250,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="sph\jh.c" />
     <ClCompile Include="sph\keccak.c" />
     <ClCompile Include="sph\luffa.c" />
+    <ClCompile Include="sph\Lyra2.c" />
+    <ClCompile Include="sph\neoscrypt.c" />
     <ClCompile Include="sph\ripemd.c" />
     <ClCompile Include="sph\sph_sha2.c" />
     <ClCompile Include="sph\sha2big.c" />
@@ -255,6 +261,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClCompile Include="sph\skein.c" />
     <ClCompile Include="sph\hamsi.c" />
     <ClCompile Include="sph\hamsi_helper.c" />
+    <ClCompile Include="sph\Sponge.c" />
     <ClCompile Include="sph\tiger.c" />
     <ClCompile Include="sph\whirlpool.c" />
     <ClCompile Include="util.c">
@@ -284,6 +291,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="hefty1.h" />
     <ClInclude Include="miner.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="sph\Lyra2.h" />
+    <ClInclude Include="sph\neoscrypt.h" />
     <ClInclude Include="sph\sph_blake.h" />
     <ClInclude Include="sph\sph_bmw.h" />
     <ClInclude Include="sph\sph_cubehash.h" />
@@ -302,9 +311,12 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="sph\sph_tiger.h" />
     <ClInclude Include="sph\sph_types.h" />
     <ClInclude Include="sph\sph_whirlpool.h" />
+    <ClInclude Include="sph\Sponge.h" />
     <ClInclude Include="uint256.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="Algo256\cuda_blake256.cu" />
+    <CudaCompile Include="Algo256\cuda_groestl256.cu" />
     <CudaCompile Include="Algo256\cuda_keccak256.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "" %(AdditionalOptions)</AdditionalOptions>
@@ -313,6 +325,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">80</MaxRegCount>
       <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">80</MaxRegCount>
     </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_skein256.cu" />
     <CudaCompile Include="Algo256\keccak256.cu" />
     <CudaCompile Include="cuda_fugue256.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -398,6 +411,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2.cu" />
+    <CudaCompile Include="lyra2\lyra2RE.cu" />
+    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
+    <CudaCompile Include="neoscrypt\neoscrypt.cu" />
     <CudaCompile Include="quark\animecoin.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -405,7 +422,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_bmw512.cu">
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -435,7 +452,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=yes -v" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_groestl512.cu">
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-Xptxas "" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
@@ -566,7 +583,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>
       <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">74</MaxRegCount>
-      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">74</MaxRegCount>      
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">74</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x13\cuda_shabal512.cu">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-Xptxas "-abi=no -v" %(AdditionalOptions)</AdditionalOptions>

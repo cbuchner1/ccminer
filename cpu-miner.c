@@ -7,7 +7,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-
+ 
 #include "cpuminer-config.h"
 #define _GNU_SOURCE
 
@@ -143,6 +143,7 @@ typedef enum {
 	ALGO_WH,
 	ALGO_KECCAK,
 	ALGO_M7,
+	ALGO_LYRA,
 	ALGO_DEEP,
 	ALGO_DOOM,
 	ALGO_DMD_GR,
@@ -169,6 +170,7 @@ static const char *algo_names[] = {
 	"whirlcoin",
 	"keccak",
 	"m7",
+	"lyra2",
 	"deep",
 	"doom",
 	"dmd-gr",
@@ -263,6 +265,7 @@ Options:\n\
 			whirlcoin  whirlcoin (whirlcoin) hash\n\
 			keccak     keccak256 (maxcoin) hash\n\
 			m7         m7  (crytonite) hash\n\
+			lyra2      lyra2RE  (VertCoin) hash\n\
 			deep       deep  (deepcoin) hash\n\
 			doom       doomcoin  hash\n\
                         dmd-gr    Diamond-Groestl hash\n\
@@ -508,6 +511,7 @@ static void share_result(int result, const char *reason)
 
 	if (opt_debug && reason)
 		applog(LOG_DEBUG, "DEBUG: reject reason: %s", reason);
+	
 }
 
 static bool submit_upstream_work(CURL *curl, struct work *work)
@@ -868,7 +872,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WH || opt_algo == ALGO_KECCAK)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_WH || opt_algo == ALGO_KECCAK )
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	else
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -924,11 +928,11 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
-	if (opt_algo == ALGO_JACKPOT)
+	if (opt_algo == ALGO_JACKPOT )
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
-    else if (opt_algo == ALGO_KECCAK)
+    else if (opt_algo == ALGO_KECCAK ) // || opt_algo == ALGO_LYRA)
 		diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));  // seems to work best, minimize rejected share
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
@@ -1014,10 +1018,16 @@ static void *miner_thread(void *userdata)
 
 		if (have_stratum) {
 			
-			while (time(NULL) >= g_work_time + 60)
+			while (time(NULL) >= g_work_time + 120)
 				sleep(1);
 			pthread_mutex_lock(&g_work_lock);
-
+       bool nonce_over;
+			if (opt_algo == ALGO_M7) {
+				nonce_over = work.data[29] >= end_nonce;
+			} else {
+				nonce_over = work.data[19] >= end_nonce;
+			}
+		//	printf("nonce over %d\n",nonce_over);
        if (opt_algo == ALGO_M7) {		       
 			if (work.data[29] >= end_nonce && !memcmp(work.data, g_work.data, 116))
 					stratum_gen_work_m7(&stratum, &g_work);
@@ -1037,6 +1047,7 @@ static void *miner_thread(void *userdata)
 			} else {
 				nonce_over = work.data[19] >= end_nonce;
 			}
+			
 			if (!have_stratum && (time(NULL) - g_work_time >= min_scantime || nonce_over)) {
 				if (unlikely(!get_work(mythr, &g_work))) {
 					applog(LOG_ERR, "work retrieval failed, exiting "
@@ -1046,11 +1057,14 @@ static void *miner_thread(void *userdata)
 				}
 				g_work_time = have_stratum ? 0 : time(NULL);
 			}
+		}
+///weird stuff
+/*
 			if (have_stratum) {
 				pthread_mutex_unlock(&g_work_lock);
 				continue;
 			}
-		}
+*/		
 		if (opt_algo == ALGO_M7) {
 
 
@@ -1091,15 +1105,15 @@ static void *miner_thread(void *userdata)
 			}
 		}
 		if (opt_algo == ALGO_M7) {
-			if (work.data[29] + (uint32_t) max64 > end_nonce)
+			if ((int64_t) work.data[29] + max64 > (int64_t) end_nonce)
 				max_nonce = end_nonce;
 			else
-				max_nonce = work.data[29] + (uint32_t)max64;
+				max_nonce = (uint32_t)(work.data[29] + max64);
 		} else {
-			if (work.data[19] + (uint32_t) max64 > end_nonce)
-				max_nonce = end_nonce;
-			else
-				max_nonce = work.data[19] + (uint32_t)max64;
+			if ((int64_t) work.data[19] + max64 > (int64_t) end_nonce) {
+				max_nonce = end_nonce;}
+			else {
+				max_nonce = (uint32_t) (work.data[19] + max64);}
 		}
 
 
@@ -1194,6 +1208,11 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_m7(thr_id,work.data, work.target,max_nonce, &hashes_done);
 			
 			break;
+        case ALGO_LYRA:
+			rc = scanhash_lyra(thr_id,work.data, work.target,max_nonce, &hashes_done);			
+			break;
+
+
         case ALGO_WH:
 			rc = scanhash_wh(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
@@ -1206,10 +1225,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_keccak256(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
-		case ALGO_GOAL:
-			rc = scanhash_goal(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
+
 		default:
 			/* should never happen */
 			goto out;
@@ -1233,6 +1249,8 @@ static void *miner_thread(void *userdata)
 			applog(LOG_INFO, "GPU #%d: %s, %s khash/s",
 				device_map[thr_id], device_name[thr_id], s);
 		}
+/// restart thread when problem occurs with a card and xmg
+		if (1e-3 * thr_hashrates[thr_id]>1000000) { exit(0);}
 		if (opt_benchmark && thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
 			int i;
@@ -1757,11 +1775,11 @@ static void parse_cmdline(int argc, char *argv[])
 		show_usage_and_exit(1);
 	}
 
-	if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
-		fprintf(stderr, "%s: Heavycoin hash requires block reward vote parameter (see --vote)\n",
-			argv[0]);
-		show_usage_and_exit(1);
-	}
+	//if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
+	//	fprintf(stderr, "%s: Heavycoin hash requires block reward vote parameter (see --vote)\n",
+	//		argv[0]);
+	//	show_usage_and_exit(1);
+	//}
 
 	parse_config();
 }
@@ -1785,7 +1803,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "djm34 m7v7"
+#define PROGRAM_VERSION "djm34 vtc0.1"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
@@ -1806,7 +1824,7 @@ int main(int argc, char *argv[])
 	 printf("\tCuda additions Copyright 2014 DJM34\n");
 	 printf("\t  XCN donation address: CNh6F4h1byX7vvbmfQn4LMtsC4TYb8mgmn\n");
 	 printf("\t  BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze\n");
-	 printf("\t  TAC donation address: TuqNvPoQxghHfzwnPpAxSTiYoN6FM8LM5p\n");
+	 printf("\t  VTC donation address: VrLUQmH6Jk5gFii7fASc8vJ7eEgKJqhX11\n");
     
 	for(int thr_id = 0; thr_id < 8; thr_id++)
     {
@@ -1960,14 +1978,14 @@ int main(int argc, char *argv[])
 		algo_names[opt_algo]);
 
 #ifdef WIN32
-	timeBeginPeriod(1); // enable high timer precision (similar to Google Chrome Trick)
+//	timeBeginPeriod(1); // enable high timer precision (similar to Google Chrome Trick)
 #endif
 
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 
 #ifdef WIN32
-	timeEndPeriod(1); // be nice and forego high timer precision
+//	timeEndPeriod(1); // be nice and forego high timer precision
 #endif
 
 	applog(LOG_INFO, "workio thread dead, exiting.");

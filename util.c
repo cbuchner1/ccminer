@@ -74,21 +74,23 @@ void applog(int prio, const char *fmt, ...)
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog) {
-		va_list ap2;
+		va_list ap2, ap3;
 		char *buf;
 		int len;
 		
 		va_copy(ap2, ap);
+		va_copy(ap3, ap);
 		len = vsnprintf(NULL, 0, fmt, ap2) + 1;
 		va_end(ap2);
 		buf = alloca(len);
-		if (vsnprintf(buf, len, fmt, ap) >= 0)
+		if (vsnprintf(buf, len, fmt, ap3) >= 0)
 			syslog(prio, "%s", buf);
+		va_end(ap3);
 	}
 #else
 	if (0) {}
 #endif
-	else {
+	if (1) {
 		char *f;
 		int len;
 		time_t now;
