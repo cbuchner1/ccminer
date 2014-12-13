@@ -67,9 +67,6 @@
     <Filter Include="Source Files\CUDA\lyra2">
       <UniqueIdentifier>{406a090e-0e68-42b7-ab18-6dd75ed2c2dd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\CUDA\neoscrypt">
-      <UniqueIdentifier>{1987d993-c0f1-4ef1-aea8-074897489364}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -296,7 +293,6 @@
     <ClInclude Include="sph\sph_whirlpool.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h" />
     <ClInclude Include="sph\sph_haval.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
@@ -493,12 +489,6 @@
     </CudaCompile>
     <CudaCompile Include="qubit\doom.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
-    </CudaCompile>
-    <CudaCompile Include="neoscrypt\neoscrypt.cu">
-      <Filter>Source Files\CUDA\neoscrypt</Filter>
-    </CudaCompile>
-    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
-      <Filter>Source Files\CUDA\neoscrypt</Filter>
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2RE.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
