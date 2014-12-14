@@ -10,7 +10,7 @@
 
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
-
+extern int compute_version[8];
 
 #include "cuda_helper.h"
 static __constant__ uint64_t stateo[25];
@@ -132,6 +132,72 @@ static __device__ __forceinline__ void keccak_block(uint64_t *s, const uint64_t 
     }
 }
 
+static __device__ __forceinline__ void keccak_blockv35(uint2 *s, const uint64_t *keccak_round_constants) {
+	size_t i;
+	uint2 t[5], u[5], v, w;
+
+
+	for (i = 0; i < 24; i++) {
+		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
+		t[0] = s[0] ^ s[5] ^ s[10] ^ s[15] ^ s[20];
+		t[1] = s[1] ^ s[6] ^ s[11] ^ s[16] ^ s[21];
+		t[2] = s[2] ^ s[7] ^ s[12] ^ s[17] ^ s[22];
+		t[3] = s[3] ^ s[8] ^ s[13] ^ s[18] ^ s[23];
+		t[4] = s[4] ^ s[9] ^ s[14] ^ s[19] ^ s[24];
+
+		/* theta: d[i] = c[i+4] ^ rotl(c[i+1],1) */
+		u[0] = t[4] ^ ROL2(t[1], 1);
+		u[1] = t[0] ^ ROL2(t[2], 1);
+		u[2] = t[1] ^ ROL2(t[3], 1);
+		u[3] = t[2] ^ ROL2(t[4], 1);
+		u[4] = t[3] ^ ROL2(t[0], 1);
+
+		/* theta: a[0,i], a[1,i], .. a[4,i] ^= d[i] */
+		s[0] ^= u[0]; s[5] ^= u[0]; s[10] ^= u[0]; s[15] ^= u[0]; s[20] ^= u[0];
+		s[1] ^= u[1]; s[6] ^= u[1]; s[11] ^= u[1]; s[16] ^= u[1]; s[21] ^= u[1];
+		s[2] ^= u[2]; s[7] ^= u[2]; s[12] ^= u[2]; s[17] ^= u[2]; s[22] ^= u[2];
+		s[3] ^= u[3]; s[8] ^= u[3]; s[13] ^= u[3]; s[18] ^= u[3]; s[23] ^= u[3];
+		s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
+
+		/* rho pi: b[..] = rotl(a[..], ..) */
+		v = s[1];
+		s[1] = ROL2(s[6], 44);
+		s[6] = ROL2(s[9], 20);
+		s[9] = ROL2(s[22], 61);
+		s[22] = ROL2(s[14], 39);
+		s[14] = ROL2(s[20], 18);
+		s[20] = ROL2(s[2], 62);
+		s[2] = ROL2(s[12], 43);
+		s[12] = ROL2(s[13], 25);
+		s[13] = ROL2(s[19], 8);
+		s[19] = ROL2(s[23], 56);
+		s[23] = ROL2(s[15], 41);
+		s[15] = ROL2(s[4], 27);
+		s[4] = ROL2(s[24], 14);
+		s[24] = ROL2(s[21], 2);
+		s[21] = ROL2(s[8], 55);
+		s[8] = ROL2(s[16], 45);
+		s[16] = ROL2(s[5], 36);
+		s[5] = ROL2(s[3], 28);
+		s[3] = ROL2(s[18], 21);
+		s[18] = ROL2(s[17], 15);
+		s[17] = ROL2(s[11], 10);
+		s[11] = ROL2(s[7], 6);
+		s[7] = ROL2(s[10], 3);
+		s[10] = ROL2(v, 1);
+
+		/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
+		v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+		v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
+		v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
+		v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
+		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
+
+		/* iota: a[0,0] ^= round constant */
+		s[0] ^= vectorize(keccak_round_constants[i]);
+	}
+}
+
 
 static __forceinline__ void keccak_block_host(uint64_t *s, const uint64_t *keccak_round_constants) {
     size_t i;
@@ -239,7 +305,40 @@ for (int i=0;i<8;i++) {outputHash[i*threads+thread]=state[i];}
 	} //thread
 }
 
-   
+__global__ void  __launch_bounds__(256, 3) m7_keccak512_gpu_hash_120_v35(int threads, uint32_t startNounce, uint64_t *outputHash)
+{
+
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+
+		uint32_t nounce = startNounce + thread;
+
+		uint2 state[25];
+
+#pragma unroll 25
+		for (int i = 0; i<25; i++) { state[i] = vectorize(stateo[i]); }
+
+		state[0] ^= vectorize(c_PaddedMessage80[9]);
+		state[1] ^= vectorize(c_PaddedMessage80[10]);
+		state[2] ^= vectorize(c_PaddedMessage80[11]);
+		state[3] ^= vectorize(c_PaddedMessage80[12]);
+		state[4] ^= vectorize(c_PaddedMessage80[13]);
+		state[5] ^= make_uint2(((uint32_t*)c_PaddedMessage80)[28],nounce);
+		state[6] ^= vectorize(c_PaddedMessage80[15]);
+		
+		state[8] ^= make_uint2(0,0x80000000);
+
+		keccak_blockv35(state, RC);
+
+#pragma unroll 8 
+		for (int i = 0; i<8; i++) { outputHash[i*threads + thread] = devectorize(state[i]); }
+
+
+	} //thread
+}
+
+
 void m7_keccak512_cpu_init(int thr_id, int threads)
 {
     	
@@ -276,8 +375,13 @@ __host__ void m7_keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounc
     dim3 block(threadsperblock);
 
     size_t shared_size = 0;
-
+	if (compute_version[thr_id]<35) {
     m7_keccak512_gpu_hash_120<<<grid, block, shared_size>>>(threads, startNounce, d_hash);
+	}
+	else {
+	m7_keccak512_gpu_hash_120_v35 << <grid, block, shared_size >> >(threads, startNounce, d_hash);
+	}
+
     MyStreamSynchronize(NULL, order, thr_id);
 }
 

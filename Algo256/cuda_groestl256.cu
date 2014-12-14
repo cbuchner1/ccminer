@@ -184,7 +184,7 @@ __device__ __forceinline__ void groestl256_perm_Pf( uint32_t *a, uint32_t *mixta
 	a[0x4] ^= 0x29;
 	a[0xE] ^= 0x79;
 	RSTT(0xE, 0xF, a, 0xE, 0x0, 0x2, 0x4, 0x7, 0x9, 0xB, 0xD);
-
+	    a[14] = t[14];
 		a[15] = t[15];
 
 }
@@ -287,6 +287,7 @@ __global__ __launch_bounds__(256,1) void groestl256_gpu_hash32(int threads, uint
 #endif
 #pragma unroll 16
 		for (int u = 0; u<16; u++) state[u] ^= message[u];
+		message[14] = state[14];
 		message[15] = state[15];
 
 #if USE_SHARED
@@ -294,10 +295,10 @@ __global__ __launch_bounds__(256,1) void groestl256_gpu_hash32(int threads, uint
 #else
 		groestl256_perm_Pf(state, NULL);
 #endif
-
+state[14] ^= message[14];
 state[15] ^= message[15];
 
-		if (state[15] <= pTarget[7]) { nonceVector[0] = nonce; }
+		if (((uint64_t*)state)[7] <= ((uint64_t*)pTarget)[3]) { nonceVector[0] = nonce; }
 }
 }
 

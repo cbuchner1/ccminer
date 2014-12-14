@@ -5,6 +5,14 @@
 #define __launch_bounds__(x)
 #endif
 
+static __device__ void LOHI(uint32_t &lo, uint32_t &hi, uint64_t x)
+{
+	asm("{\n\t"
+		"mov.b64 {%0,%1},%2; \n\t"
+		"}"
+		: "=r"(lo), "=r"(hi) : "l"(x));
+}
+
 static __device__ unsigned long long oMAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 {
 #if __CUDA_ARCH__ >= 130
@@ -54,8 +62,7 @@ static __device__ uint32_t oHIWORD(const uint64_t &x) {
 
 #if __CUDA_ARCH__ < 350 
     // Kepler (Compute 3.0)
-//    #define SPH_ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-    #define SPH_ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
+    #define SPH_ROTL32(x, n) (((x) << (n)) | ((x) >> (32 - (n))))
     #define SPH_ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 #else
     // Kepler (Compute 3.5)
@@ -457,9 +464,31 @@ asm("not.b32 %0,%1;" : "=r"(d) : "r"(t));
 
 
 
-__forceinline__ __device__ void muladd128(uint64_t &u, uint64_t &v, uint64_t a, uint64_t b, uint64_t &c, uint64_t &e)
+__forceinline__ __device__ void muladd128(uint64_t &u,uint64_t &v,uint64_t a, uint64_t b,uint64_t &c,uint64_t &e)
 {
-
+/*
+asm("{\n\t"
+	".reg .b64 abl,abh; \n\t"
+	".reg .b32 abll,ablh,abhl,abhh,x1,x2,x3,x4; \n\t"
+	".reg .b32 cl,ch,el,eh; \n\t"
+	"mul.lo.u64 abl,%2,%3; \n\t"    
+	"mul.hi.u64 abh,%2,%3; \n\t" 
+	"mov.b64 {abll,ablh},abl; \n\t" 
+	"mov.b64 {abhl,abhh},abh; \n\t" 
+	"mov.b64 {cl,ch},%4; \n\t" 
+	"mov.b64 {el,eh},%5; \n\t" 
+    "add.cc.u32 x1,cl,el; \n\t"
+	"addc.cc.u32 x2,ch,eh; \n\t" 
+	"addc.u32 x3,0,0; \n\t" 
+	"add.cc.u32 x1,x1,abll; \n\t"
+	"addc.cc.u32 x2,x2,ablh; \n\t"  
+	"addc.cc.u32 x3,x3,abhl; \n\t" 
+	"addc.u32 x4,abhh,0; \n\t"
+	"mov.b64 %1,{x1,x2}; \n\t"
+	"mov.b64 %0,{x3,x4}; \n\t"
+	"}\n\t"
+	: "=l"(u), "=l"(v) : "l"(a) , "l"(b) , "l"(c) , "l"(e));
+*/
 
 	asm("{\n\t"
 		".reg .b32 al,ah,bl,bh; \n\t"
@@ -488,10 +517,7 @@ __forceinline__ __device__ void muladd128(uint64_t &u, uint64_t &v, uint64_t a, 
 		"}\n\t"
 		: "=l"(u), "=l"(v) : "l"(a), "l"(b), "l"(c), "l"(e));
 
-
-
 }
-
 
 
 
@@ -505,17 +531,18 @@ asm("{\n\t"
 return result;
 }
 
-static __device__ void LOHI(uint32_t &lo, uint32_t &hi, uint64_t x)
+__device__ __forceinline__ uint64_t shfl(uint64_t x, int lane)
 {
-	asm("{\n\t"
-		"mov.b64 {%0,%1},%2; \n\t"
-		"}"
-		: "=r"(lo), "=r"(hi) : "l"(x));
+uint32_t lo,hi;
+asm volatile("mov.b64 {%0,%1},%2;" : "=r"(lo), "=r"(hi) : "l"(x));
+lo = __shfl(lo, lane);
+hi = __shfl(hi, lane);
+asm volatile("mov.b64 %0,{%1,%2};" : "=l"(x) : "r"(lo) , "r"(hi));
+return x;
 }
 
+
 ///uint2 method
-
-
 
 #if  __CUDA_ARCH__ >= 350 
 __inline__ __device__ uint2 ROR2(const uint2 a, const int offset) {
@@ -664,6 +691,7 @@ static __forceinline__ __device__ uint2 shiftr2(uint2 a, int offset)
 	return result;
 }
 #endif
+
 
 
 

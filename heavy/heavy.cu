@@ -167,7 +167,7 @@ extern "C" int cuda_num_devices()
 // Gerätenamen holen
 extern char *device_name[8];
 extern int device_map[8];
-int device_major[8];
+int device_major[8]; 
 int device_minor[8];
 int compute_version[8];
 

@@ -59,7 +59,7 @@ inline void lyra_hash(void *state, const void *input)
 	sph_blake256_init(&ctx_blake);
 	sph_blake256(&ctx_blake, input, 80);
 	sph_blake256_close(&ctx_blake, hashA);
-
+	
 	sph_keccak256_init(&ctx_keccak);
 	sph_keccak256(&ctx_keccak, hashA, 32);
 	sph_keccak256_close(&ctx_keccak, hashB);
@@ -73,8 +73,8 @@ inline void lyra_hash(void *state, const void *input)
 	sph_groestl256_init(&ctx_groestl);
 	sph_groestl256(&ctx_groestl, hashB, 32);
 	sph_groestl256_close(&ctx_groestl, hash);
-
-    memcpy(state, hashB, 32);
+//for (int i = 0; i<4; i++)	{ printf("cpu groestl %d %08x %08x\n", i, hash[2 * i], hash[2 * i + 1]); }
+    memcpy(state, hash, 32);
 }
 
 extern int tp_coef[8];
@@ -96,7 +96,7 @@ extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(device_map[thr_id]); 
 
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 8 * sizeof(uint32_t) * throughput);
@@ -129,14 +129,17 @@ extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
 
 		// Scan nach Gewinner Hashes auf der GPU
  uint32_t	foundNonce = groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-//foundNonce = pdata[19]+0;
+//foundNonce = pdata[19]+10;
 		if  (foundNonce != 0xffffffff)
 		{
 			uint32_t vhash64[8];
-//			be32enc(&endiandata[19], foundNonce);
+			be32enc(&endiandata[19], foundNonce);
+			//pdata[19]=foundNonce;
 //			lyra_hash(vhash64, endiandata);
 
-//			if (vhash64[7]<=Htarg) { // && fulltest(vhash64, ptarget)) {
+//			if ( ((uint64_t*)vhash64)[3] <= ((uint64_t*)ptarget)[3]) { // && fulltest(vhash64, ptarget)) {
+//				printf("target %08x %08x %08x %08x\n", ptarget[0], ptarget[1], ptarget[2], ptarget[3]);
+//				printf("target %08x %08x %08x %08x\n", ptarget[4], ptarget[5], ptarget[6], ptarget[7]);
 
 				pdata[19] = foundNonce;
 				*hashes_done = foundNonce - first_nonce + 1;
