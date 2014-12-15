@@ -7,12 +7,6 @@ extern "C" {
 
 #include "cuda_helper.h"
 
-#ifdef _MSC_VER
-#define UINT2(x,y) { x, y }
-#else
-#define UINT2(x,y) (uint2) { x, y }
-#endif
-
 static const uint64_t host_keccak_round_constants[24] = {
 	0x0000000000000001ull, 0x0000000000008082ull,
 	0x800000000000808aull, 0x8000000080008000ull,
@@ -188,13 +182,13 @@ void keccak256_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash, 
 		#pragma unroll 25
 		for (int i=0; i<25; i++) {
 			if (i<9) keccak_gpu_state[i] = vectorize(c_PaddedMessage80[i]);
-			else     keccak_gpu_state[i] = UINT2(0, 0);
+			else     keccak_gpu_state[i] = make_uint2(0, 0);
 		}
 
 		keccak_gpu_state[9]= vectorize(c_PaddedMessage80[9]);
 		keccak_gpu_state[9].y = cuda_swab32(nounce);
-		keccak_gpu_state[10] = UINT2(1, 0);
-		keccak_gpu_state[16] = UINT2(0, 0x80000000);
+		keccak_gpu_state[10] = make_uint2(1, 0);
+		keccak_gpu_state[16] = make_uint2(0, 0x80000000);
 
 		keccak_blockv35(keccak_gpu_state,keccak_round_constants);
 		if (devectorize(keccak_gpu_state[3]) <= ((uint64_t*)pTarget)[3]) {resNounce[0] = nounce;}
@@ -248,10 +242,10 @@ void keccak256_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHa
 		#pragma unroll 25
 		for (int i = 0; i<25; i++) {
 			if (i<4) keccak_gpu_state[i] = vectorize(outputHash[i*threads+thread]);
-			else     keccak_gpu_state[i] = UINT2(0, 0);
+			else     keccak_gpu_state[i] = make_uint2(0, 0);
 		}
-		keccak_gpu_state[4]  = UINT2(1, 0);
-		keccak_gpu_state[16] = UINT2(0, 0x80000000);
+		keccak_gpu_state[4]  = make_uint2(1, 0);
+		keccak_gpu_state[16] = make_uint2(0, 0x80000000);
 		keccak_blockv35(keccak_gpu_state, keccak_round_constants);
 
 		#pragma unroll 4
