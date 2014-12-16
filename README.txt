@@ -173,8 +173,8 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Dec. 2014       v1.5.1 (not released yet!)
-                  Add lyra2 algo for Vertcoin (Release is 16 Dec 2014)
+  Dec. 16th 2014  v1.5.1
+                  Add lyra2RE algo for Vertcoin based on djm34/vtc code
                   Multiple shares support (2 for the moment)
                   X11 optimisations (From klaust and sp-hash)
                   HTML5 WebSocket api compatibility (see api/websocket.htm)
