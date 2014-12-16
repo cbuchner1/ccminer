@@ -301,8 +301,156 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 		TFBIG_MIX8(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3],  8, 35, 56, 22); \
 	}
 
+/* uint2 variant for SM3.2+ */
+
+#define TFBIG_KINIT_UI2(k0, k1, k2, k3, k4, k5, k6, k7, k8, t0, t1, t2) { \
+		k8 = ((k0 ^ k1) ^ (k2 ^ k3)) ^ ((k4 ^ k5) ^ (k6 ^ k7)) \
+			^ vectorize(SPH_C64(0x1BD11BDAA9FC1A22)); \
+		t2 = t0 ^ t1; \
+	}
+
+#define TFBIG_ADDKEY_UI2(w0, w1, w2, w3, w4, w5, w6, w7, k, t, s) { \
+		w0 = (w0 + SKBI(k, s, 0)); \
+		w1 = (w1 + SKBI(k, s, 1)); \
+		w2 = (w2 + SKBI(k, s, 2)); \
+		w3 = (w3 + SKBI(k, s, 3)); \
+		w4 = (w4 + SKBI(k, s, 4)); \
+		w5 = (w5 + SKBI(k, s, 5) + SKBT(t, s, 0)); \
+		w6 = (w6 + SKBI(k, s, 6) + SKBT(t, s, 1)); \
+		w7 = (w7 + SKBI(k, s, 7) + vectorize(s)); \
+	}
+
+#define TFBIG_MIX_UI2(x0, x1, rc) { \
+		x0 = x0 + x1; \
+		x1 = ROL2(x1, rc) ^ x0; \
+	}
+
+#define TFBIG_MIX8_UI2(w0, w1, w2, w3, w4, w5, w6, w7, rc0, rc1, rc2, rc3) { \
+		TFBIG_MIX_UI2(w0, w1, rc0); \
+		TFBIG_MIX_UI2(w2, w3, rc1); \
+		TFBIG_MIX_UI2(w4, w5, rc2); \
+		TFBIG_MIX_UI2(w6, w7, rc3); \
+	}
+
+#define TFBIG_4e_UI2(s)  { \
+		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, s); \
+		TFBIG_MIX8_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], 46, 36, 19, 37); \
+		TFBIG_MIX8_UI2(p[2], p[1], p[4], p[7], p[6], p[5], p[0], p[3], 33, 27, 14, 42); \
+		TFBIG_MIX8_UI2(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 17, 49, 36, 39); \
+		TFBIG_MIX8_UI2(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3], 44,  9, 54, 56); \
+	}
+
+#define TFBIG_4o_UI2(s)  { \
+		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, s); \
+		TFBIG_MIX8_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], 39, 30, 34, 24); \
+		TFBIG_MIX8_UI2(p[2], p[1], p[4], p[7], p[6], p[5], p[0], p[3], 13, 50, 10, 17); \
+		TFBIG_MIX8_UI2(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 25, 29, 39, 43); \
+		TFBIG_MIX8_UI2(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3],  8, 35, 56, 22); \
+	}
+
+
 __global__
 void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
+{
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		// Skein
+		uint2 p[8];
+		uint2 h0, h1, h2, h3, h4, h5, h6, h7, h8;
+		uint2 t0, t1, t2;
+
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+
+		int hashPosition = nounce - startNounce;
+		uint64_t *inpHash = &g_hash[8 * hashPosition];
+
+		// Initialisierung
+		h0 = vectorize(0x4903ADFF749C51CEull);
+		h1 = vectorize(0x0D95DE399746DF03ull);
+		h2 = vectorize(0x8FD1934127C79BCEull);
+		h3 = vectorize(0x9A255629FF352CB1ull);
+		h4 = vectorize(0x5DB62599DF6CA7B0ull);
+		h5 = vectorize(0xEABE394CA9D5C3F4ull);
+		h6 = vectorize(0x991112C71A75B523ull);
+		h7 = vectorize(0xAE18A40B660FCC33ull);
+
+		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg		
+		#pragma unroll 8
+		for(int i=0; i<8; i++)
+			p[i] = vectorize(inpHash[i]);
+
+		t0 = vectorize(64); // ptr
+		t1 = vectorize(480ull << 55); // etype
+		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+		TFBIG_4e_UI2(0);
+		TFBIG_4o_UI2(1);
+		TFBIG_4e_UI2(2);
+		TFBIG_4o_UI2(3);
+		TFBIG_4e_UI2(4);
+		TFBIG_4o_UI2(5);
+		TFBIG_4e_UI2(6);
+		TFBIG_4o_UI2(7);
+		TFBIG_4e_UI2(8);
+		TFBIG_4o_UI2(9);
+		TFBIG_4e_UI2(10);
+		TFBIG_4o_UI2(11);
+		TFBIG_4e_UI2(12);
+		TFBIG_4o_UI2(13);
+		TFBIG_4e_UI2(14);
+		TFBIG_4o_UI2(15);
+		TFBIG_4e_UI2(16);
+		TFBIG_4o_UI2(17);
+		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
+
+		h0 = vectorize(inpHash[0]) ^ p[0];
+		h1 = vectorize(inpHash[1]) ^ p[1];
+		h2 = vectorize(inpHash[2]) ^ p[2];
+		h3 = vectorize(inpHash[3]) ^ p[3];
+		h4 = vectorize(inpHash[4]) ^ p[4];
+		h5 = vectorize(inpHash[5]) ^ p[5];
+		h6 = vectorize(inpHash[6]) ^ p[6];
+		h7 = vectorize(inpHash[7]) ^ p[7];
+
+		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
+		#pragma unroll 8
+		for(int i=0; i<8; i++)
+			p[i] = make_uint2(0,0);
+
+		t0 = vectorize(8); // ptr
+		t1 = vectorize(510ull << 55); // etype
+		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
+		TFBIG_4e_UI2(0);
+		TFBIG_4o_UI2(1);
+		TFBIG_4e_UI2(2);
+		TFBIG_4o_UI2(3);
+		TFBIG_4e_UI2(4);
+		TFBIG_4o_UI2(5);
+		TFBIG_4e_UI2(6);
+		TFBIG_4o_UI2(7);
+		TFBIG_4e_UI2(8);
+		TFBIG_4o_UI2(9);
+		TFBIG_4e_UI2(10);
+		TFBIG_4o_UI2(11);
+		TFBIG_4e_UI2(12);
+		TFBIG_4o_UI2(13);
+		TFBIG_4e_UI2(14);
+		TFBIG_4o_UI2(15);
+		TFBIG_4e_UI2(16);
+		TFBIG_4o_UI2(17);
+		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
+
+		// fertig
+		uint64_t *outpHash = &g_hash[8 * hashPosition];
+
+		#pragma unroll 8
+		for(int i=0; i<8; i++)
+			outpHash[i] = devectorize(p[i]);
+	}
+}
+
+__global__
+void quark_skein512_gpu_hash_64_v30(int threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -328,8 +476,8 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 		h7 = 0xAE18A40B660FCC33ull;
 
 		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg		
-#pragma unroll 8
-		for(int i=0;i<8;i++)
+		#pragma unroll 8
+		for(int i=0; i<8; i++)
 			p[i] = inpHash[i];
 
 		t0 = 64; // ptr
@@ -365,8 +513,8 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 		h7 = inpHash[7] ^ p[7];
 
 		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
-#pragma unroll 8
-		for(int i=0;i<8;i++)
+		#pragma unroll 8
+		for(int i=0; i<8; i++)
 			p[i] = 0;
 
 		t0 = 8; // ptr
@@ -395,8 +543,8 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 		// fertig
 		uint64_t *outpHash = &g_hash[8 * hashPosition];
 
-#pragma unroll 8
-		for(int i=0;i<8;i++)
+		#pragma unroll 8
+		for(int i=0; i<8; i++)
 			outpHash[i] = p[i];
 	}
 }
@@ -416,10 +564,11 @@ void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, u
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
-	quark_skein512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	// uint2 uint64 variants for SM 3.2+
+	if (device_sm[device_map[thr_id]] >= 320)
+		quark_skein512_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	else
+		quark_skein512_gpu_hash_64_v30 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
 	MyStreamSynchronize(NULL, order, thr_id);
