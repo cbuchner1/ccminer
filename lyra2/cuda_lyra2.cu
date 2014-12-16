@@ -434,81 +434,6 @@ void lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 
 	} //thread
 }
-#if 0
-__global__ __launch_bounds__(TPB, 1)
-void lyra2_gpu_hash_32_test(int threads, uint32_t startNounce, uint64_t *outputHash)
-{
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint2 state[16];
-		#pragma unroll
-		for (int i = 0; i<4; i++) { LOHI(state[i].x, state[i].y, outputHash[threads*i + thread]); } //password
-		#pragma unroll
-		for (int i = 0; i<4; i++) { state[i + 4] = state[i]; } //salt
-		#pragma unroll
-		for (int i = 0; i<8; i++) { state[i + 8] = blake2b_IV[i]; }
-
-		// blake2blyra x2
-		#pragma unroll 24
-		for (int i = 0; i<24; i++) { round_lyra_v35(state); } //because 12 is not enough
-
-		uint2 Matrix[12][8][8]; // not cool
-
-		// reducedSqueezeRow0
-		#pragma unroll 8
-		for (int i = 0; i < 8; i++) {
-			#pragma unroll 12
-			for (int j = 0; j<12; j++) { Matrix[j][7-i][0] = state[j]; }
-			round_lyra_v35(state);
-		}
-
-		// reducedSqueezeRow1
-		#pragma unroll 8
-		for (int i = 0; i < 8; i++)
-		{
-			#pragma unroll 12
-			for (int j = 0; j<12; j++) { state[j] ^= Matrix[j][i][0]; }
-			round_lyra_v35(state);
-			#pragma unroll 12
-			for (int j = 0; j<12; j++) { Matrix[j][7-i][1] = Matrix[j][i][0] ^ state[j]; }
-		}
-
-		reduceDuplexRowSetup_test(1, 0, 2);
-		reduceDuplexRowSetup_test(2, 1, 3);
-		reduceDuplexRowSetup_test(3, 0, 4);
-		reduceDuplexRowSetup_test(4, 3, 5);
-		reduceDuplexRowSetup_test(5, 2, 6);
-		reduceDuplexRowSetup_test(6, 1, 7);
-
-		uint64_t rowa;
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(7, rowa, 0);
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(0, rowa, 3);
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(3, rowa, 6);
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(6, rowa, 1);
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(1, rowa, 4);
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(4, rowa, 7);
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(7, rowa, 2);
-		rowa = devectorize(state[0]) & 7;
-		reduceDuplexRow_test(2, rowa, 5);
-
-		absorbblock_test(rowa);
-
-		#pragma unroll
-		for (int i = 0; i<4; i++) {
-			outputHash[threads*i + thread] = devectorize(state[i]);
-		} //password
-
-	} //thread
-}
-#endif
 
 __host__
 void lyra2_cpu_init(int thr_id, int threads)
@@ -524,7 +449,7 @@ void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	if (device_sm[device_map[thr_id]] >= 350) {
+	if (device_sm[device_map[thr_id]] >= 320) {
 		lyra2_gpu_hash_32 <<<grid, block>>> (threads, startNounce, d_outputHash);
 	} else {
 		// kernel for compute30 card
