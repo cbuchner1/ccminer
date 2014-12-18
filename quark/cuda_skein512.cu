@@ -549,7 +549,6 @@ void quark_skein512_gpu_hash_64_v30(int threads, uint32_t startNounce, uint64_t 
 	}
 }
 
-// Setup-Funktionen
 __host__
 void quark_skein512_cpu_init(int thr_id, int threads)
 {

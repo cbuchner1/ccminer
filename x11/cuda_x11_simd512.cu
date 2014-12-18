@@ -16,8 +16,14 @@ uint4 *d_temp4[8];
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;
 
+#define DEVICE_DIRECT_CONSTANTS
+
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ uint8_t c_perm[8][8] = {
+#else
 __constant__ uint8_t c_perm[8][8];
 const uint8_t h_perm[8][8] = {
+#endif
 	{ 2, 3, 6, 7, 0, 1, 4, 5 },
 	{ 6, 7, 2, 3, 4, 5, 0, 1 },
 	{ 7, 6, 5, 4, 3, 2, 1, 0 },
@@ -28,16 +34,25 @@ const uint8_t h_perm[8][8] = {
 	{ 4, 5, 2, 3, 6, 7, 0, 1 }
 };
 
+/* for simd_functions.cu */
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ uint32_t c_IV_512[32] = {
+#else
 __constant__ uint32_t c_IV_512[32];
 const uint32_t h_IV_512[32] = {
+#endif
 	0x0ba16b95, 0x72f999ad, 0x9fecc2ae, 0xba3264fc, 0x5e894929, 0x8e9f30e5, 0x2f1daa37, 0xf0f2c558,
 	0xac506643, 0xa90635a5, 0xe25b878b, 0xaab7878f, 0x88817f7a, 0x0a02892b, 0x559a7550, 0x598f657e,
 	0x7eef60a1, 0x6b70e3e8, 0x9c1714d1, 0xb958e2a8, 0xab02675e, 0xed1c014f, 0xcd8d65bb, 0xfdb7a257,
 	0x09254899, 0xd699c7bc, 0x9019b6dc, 0x2b9022e4, 0x8fa14956, 0x21bf9bd3, 0xb94d0943, 0x6ffddc22
 };
 
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ short c_FFT128_8_16_Twiddle[128] = {
+#else
 __constant__ short c_FFT128_8_16_Twiddle[128];
 static const short h_FFT128_8_16_Twiddle[128] = {
+#endif
 	1,   1,   1,   1,   1,    1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
 	1,  60,   2, 120,   4,  -17,   8, -34,  16, -68,  32, 121,  64, -15, 128, -30,
 	1,  46,  60, -67,   2,   92, 120, 123,   4, -73, -17, -11,   8, 111, -34, -22,
@@ -48,8 +63,12 @@ static const short h_FFT128_8_16_Twiddle[128] = {
 	1, -61, 123, -50, -34,   18, -70, -99, 128, -98,  67,  25,  17,  -9,  35, -79
 };
 
+#ifdef DEVICE_DIRECT_CONSTANTS
+__constant__ short c_FFT256_2_128_Twiddle[128] = {
+#else
 __constant__ short c_FFT256_2_128_Twiddle[128];
 static const short h_FFT256_2_128_Twiddle[128] = {
+#endif
 	  1,  41,-118,  45,  46,  87, -31,  14,
 	 60,-110, 116,-127, -67,  80, -61,  69,
 	  2,  82,  21,  90,  92, -83, -62,  28,
@@ -100,15 +119,14 @@ static const short h_FFT256_2_128_Twiddle[128] = {
 #define REDUCE_FULL_S(x) \
 	EXTRA_REDUCE_S(REDUCE(x))
 
-__device__ __forceinline__
-void FFT_8(int *y, int stripe) {
-
-/*
+/**
  * FFT_8 using w=4 as 8th root of unity
  * Unrolled decimation in frequency (DIF) radix-2 NTT.
  * Output data is in revbin_permuted order.
  */
-
+__device__ __forceinline__
+void FFT_8(int *y, int stripe)
+{
 #define X(i) y[stripe*i]
 
 #define DO_REDUCE(i) \
@@ -163,13 +181,14 @@ do { \
 #undef BUTTERFLY
 }
 
-__device__ __forceinline__ void FFT_16(int *y) {
-
 /**
  * FFT_16 using w=2 as 16th root of unity
  * Unrolled decimation in frequency (DIF) radix-2 NTT.
  * Output data is in revbin_permuted order.
  */
+__device__ __forceinline__
+void FFT_16(int *y)
+{
 #define DO_REDUCE_FULL_S(i) \
 	do { \
 		y[i] = REDUCE(y[i]); \
@@ -550,24 +569,24 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 }
 
 /***************************************************/
-__global__ void __launch_bounds__(TPB, 8)
-x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_temp4)
+
+__global__ __launch_bounds__(TPB*2, 8)
+void x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_temp4)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x)/8;
+	int thread = (blockDim.x * blockIdx.x + threadIdx.x) / 8;
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
+		//uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		//int hashPosition = nounce - startNounce;
+		int hashPosition = thread;
 
 		uint32_t *inpHash = (uint32_t*)&g_hash[8 * hashPosition];
 
 		// Hash einlesen und auf 8 Threads und 2 Register verteilen
 		uint32_t Hash[2];
-
-		#pragma unroll 2
-		for (int i=0; i<2; i++)
-			Hash[i] = inpHash[8*i + (threadIdx.x & 7)];
+		int ndx = threadIdx.x & 7;
+		Hash[0] = inpHash[ndx];
+		Hash[1] = inpHash[ndx + 8];
 
 		// Puffer für expandierte Nachricht
 		uint4 *temp4 = &g_temp4[64 * hashPosition];
@@ -577,8 +596,8 @@ x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, u
 }
 
 
-__global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ __launch_bounds__(TPB, 4)
+void x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -591,8 +610,9 @@ x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash
 		Compression1(Hash, hashPosition, g_fft4, g_state);
 	}
 }
-__global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+
+__global__ __launch_bounds__(TPB, 4)
+void x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -605,9 +625,8 @@ x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash
 	}
 }
 
-
-__global__ void __launch_bounds__(TPB, 4)
-x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ __launch_bounds__(TPB, 4)
+void x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -622,9 +641,8 @@ x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t 
 	}
 }
 
-
-__global__ void  __launch_bounds__(TPB, 4)
-x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ __launch_bounds__(TPB, 4) /* 64, 12 seems ok */
+void x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -643,12 +661,12 @@ int x11_simd512_cpu_init(int thr_id, int threads)
 {
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads), (int) err); /* todo: prevent -i 21 */
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads), (int) err);
-
+#ifndef DEVICE_DIRECT_CONSTANTS
 	cudaMemcpyToSymbol(c_perm, h_perm, sizeof(h_perm), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
-
+#endif
 	cudaMemcpyToSymbol(d_cw0, h_cw0, sizeof(h_cw0), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cw1, h_cw1, sizeof(h_cw1), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cw2, h_cw2, sizeof(h_cw2), 0, cudaMemcpyHostToDevice);
@@ -659,6 +677,7 @@ int x11_simd512_cpu_init(int thr_id, int threads)
 	texRef1D_128.normalized = 0;
 	texRef1D_128.filterMode = cudaFilterModePoint;
 	texRef1D_128.addressMode[0] = cudaAddressModeClamp;
+
 	CUDA_CALL_OR_RET_X(cudaBindTexture(NULL, &texRef1D_128, d_temp4[thr_id], &channelDesc128, 64*sizeof(uint4)*threads), (int) err);
 
 	return 0;

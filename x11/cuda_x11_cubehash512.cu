@@ -228,7 +228,7 @@ void Init(uint32_t x[2][2][2][2][2])
 }
 
 __device__ __forceinline__
-void Update32(uint32_t x[2][2][2][2][2], const BitSequence *data)
+static void Update32(uint32_t x[2][2][2][2][2], const BitSequence *data)
 {
     /* "xor the block into the first b bytes of the state" */
     /* "and then transform the state invertibly through r identical rounds" */
@@ -237,7 +237,7 @@ void Update32(uint32_t x[2][2][2][2][2], const BitSequence *data)
 }
 
 __device__ __forceinline__
-void Final(uint32_t x[2][2][2][2][2], BitSequence *hashval)
+static void Final(uint32_t x[2][2][2][2][2], BitSequence *hashval)
 {
     int i;
 
