@@ -5,10 +5,10 @@
 //
 // STEP8_IF and STEP8_MAJ beinhalten je 2x 8-fach parallel Operations
 
-#define TPB 64
+#define TPB 128
 
+#include "miner.h"
 #include "cuda_helper.h"
-//#include <stdio.h>
 
 uint32_t *d_state[8];
 uint4 *d_temp4[8];
@@ -570,89 +570,69 @@ void Expansion(const uint32_t *data, uint4 *g_temp4)
 
 /***************************************************/
 
-__global__ __launch_bounds__(TPB*2, 8)
-void x11_simd512_gpu_expand_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_temp4)
+__global__ __launch_bounds__(TPB, 4)
+void x11_simd512_gpu_expand_64(int threads, uint32_t *g_hash, uint4 *g_temp4)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x) / 8;
-	if (thread < threads)
+	int threadBloc = (blockDim.x * blockIdx.x + threadIdx.x) / 8;
+	if (threadBloc < threads)
 	{
-		//uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-		//int hashPosition = nounce - startNounce;
-		int hashPosition = thread;
+		int hashPosition = threadBloc * 16;
+		uint32_t *inpHash = &g_hash[hashPosition];
 
-		uint32_t *inpHash = (uint32_t*)&g_hash[8 * hashPosition];
-
-		// Hash einlesen und auf 8 Threads und 2 Register verteilen
+		// Read hash per 8 threads
 		uint32_t Hash[2];
 		int ndx = threadIdx.x & 7;
 		Hash[0] = inpHash[ndx];
 		Hash[1] = inpHash[ndx + 8];
 
 		// Puffer für expandierte Nachricht
-		uint4 *temp4 = &g_temp4[64 * hashPosition];
+		uint4 *temp4 = &g_temp4[hashPosition * 4];
 
 		Expansion(Hash, temp4);
 	}
 }
 
-
-__global__ __launch_bounds__(TPB, 4)
-void x11_simd512_gpu_compress1_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ __launch_bounds__(TPB, 1)
+void x11_simd512_gpu_compress1_64(int threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
-
-		Compression1(Hash, hashPosition, g_fft4, g_state);
+		uint32_t *Hash = &g_hash[thread * 16];
+		Compression1(Hash, thread, g_fft4, g_state);
 	}
 }
 
-__global__ __launch_bounds__(TPB, 4)
-void x11_simd512_gpu_compress2_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ __launch_bounds__(TPB, 1)
+void x11_simd512_gpu_compress2_64(int threads, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-
-		Compression2(hashPosition, g_fft4, g_state);
+		Compression2(thread, g_fft4, g_state);
 	}
 }
 
-__global__ __launch_bounds__(TPB, 4)
-void x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ __launch_bounds__(TPB, 2)
+void x11_simd512_gpu_compress_64_maxwell(int threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
-
-		Compression1(Hash, hashPosition, g_fft4, g_state);
-		Compression2(hashPosition, g_fft4, g_state);
+		uint32_t *Hash = &g_hash[thread * 16];
+		Compression1(Hash, thread, g_fft4, g_state);
+		Compression2(thread, g_fft4, g_state);
 	}
 }
 
-__global__ __launch_bounds__(TPB, 4) /* 64, 12 seems ok */
-void x11_simd512_gpu_final_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint4 *g_fft4, uint32_t *g_state)
+__global__ __launch_bounds__(TPB, 2)
+void x11_simd512_gpu_final_64(int threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state)
 {
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
-
-		Final(Hash, hashPosition, g_fft4, g_state);
+		uint32_t *Hash = &g_hash[thread * 16];
+		Final(Hash, thread, g_fft4, g_state);
 	}
 }
 
@@ -690,18 +670,23 @@ void x11_simd512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint
 
 	dim3 block(threadsperblock);
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
+	dim3 gridX8(grid.x * 8);
 
-	dim3 grid8(((threads + threadsperblock - 1) / threadsperblock) * 8);
-	x11_simd512_gpu_expand_64 <<<grid8, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id]);
-
-	if (device_sm[device_map[thr_id]] >= 500) {
-		x11_simd512_gpu_compress_64_maxwell <<< grid, block >>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
-	} else {
-		x11_simd512_gpu_compress1_64 <<< grid, block >>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
-		x11_simd512_gpu_compress2_64 <<< grid, block >>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+	if (d_nonceVector != NULL) {
+		applog(LOG_ERR, "Sorry, nonce Vector param was removed!");
+		return;
 	}
 
-	x11_simd512_gpu_final_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector, d_temp4[thr_id], d_state[thr_id]);
+	x11_simd512_gpu_expand_64 <<<gridX8, block>>> (threads, d_hash, d_temp4[thr_id]);
+
+	if (device_sm[device_map[thr_id]] >= 500) {
+		x11_simd512_gpu_compress_64_maxwell <<< grid, block >>> (threads, d_hash, d_temp4[thr_id], d_state[thr_id]);
+	} else {
+		x11_simd512_gpu_compress1_64 <<< grid, block >>> (threads, d_hash, d_temp4[thr_id], d_state[thr_id]);
+		x11_simd512_gpu_compress2_64 <<< grid, block >>> (threads, d_temp4[thr_id], d_state[thr_id]);
+	}
+
+	x11_simd512_gpu_final_64 <<<grid, block>>> (threads, d_hash, d_temp4[thr_id], d_state[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 }
