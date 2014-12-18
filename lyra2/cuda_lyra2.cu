@@ -456,7 +456,7 @@ void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *
 		lyra2_gpu_hash_32_v30 <<<grid, block >>> (threads, startNounce, d_outputHash);
 	}
 
-	cudaDeviceSynchronize();
-	//MyStreamSynchronize(NULL, order, thr_id);
+	MyStreamSynchronize(NULL, order, thr_id);
+	//cudaThreadSynchronize();
 }
 
