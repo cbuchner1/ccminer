@@ -1,9 +1,9 @@
 ccminer
 =======
 
-Based on Christian Buchner's &amp; Christian H.'s CUDA project
+Based on Christian Buchner's &amp; Christian H.'s CUDA project, no more active on github recently.
 
-Fork by tpruvot@github with X14,X15,X17,WHIRL and Blake256 support (NEOS + BlakeCoin), and some others, check the [README.txt](README.txt)
+Fork by tpruvot@github with X14,X15,X17,WHIRL,Blake256,BlakeCoin,Lyra2RE and some others, check the [README.txt](README.txt)
 
    BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
    [![tip for next commit](https://tip4commit.com/projects/927.svg)](https://tip4commit.com/github/tpruvot/ccminer)
