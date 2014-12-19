@@ -193,6 +193,7 @@ bool have_longpoll = false;
 bool want_stratum = true;
 bool have_stratum = false;
 bool allow_gbt = true;
+bool check_dups = false;
 static bool submit_old = false;
 bool use_syslog = false;
 bool use_colors = true;
@@ -407,7 +408,8 @@ void proper_exit(int reason)
 {
 	cuda_devicereset();
 
-	hashlog_purge_all();
+	if (check_dups)
+		hashlog_purge_all();
 	stats_purge_all();
 
 #ifdef WIN32
@@ -547,6 +549,10 @@ static int share_result(int result, const char *reason)
 			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
 			return 0;
 		}
+		if (strncmp(reason, "Duplicate share", 15) == 0) {
+			applog(LOG_WARNING, "enabling duplicates check feature");
+			check_dups = true;
+		}
 	}
 	return 1;
 }
@@ -585,7 +591,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	calc_diff(work, 0);
 
 	if (have_stratum) {
-		uint32_t sent;
+		uint32_t sent = 0;
 		uint32_t ntime, nonce;
 		uint16_t nvote;
 		char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
@@ -595,7 +601,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		noncestr = bin2hex((const uchar*)(&nonce), 4);
 
-		sent = hashlog_already_submittted(work->job_id, nonce);
+		if (check_dups)
+			sent = hashlog_already_submittted(work->job_id, nonce);
 		if (sent > 0) {
 			sent = (uint32_t) time(NULL) - sent;
 			if (!opt_quiet) {
@@ -635,7 +642,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			return false;
 		}
 
-		hashlog_remember_submit(work, nonce);
+		if (check_dups)
+			hashlog_remember_submit(work, nonce);
 
 	} else {
 
@@ -666,8 +674,10 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		res = json_object_get(val, "result");
 		reason = json_object_get(val, "reject-reason");
-		if (!share_result(json_is_true(res), reason ? json_string_value(reason) : NULL))
-			hashlog_purge_job(work->job_id);
+		if (!share_result(json_is_true(res), reason ? json_string_value(reason) : NULL)) {
+			if (check_dups)
+				hashlog_purge_job(work->job_id);
+		}
 
 		json_decref(val);
 
@@ -1156,7 +1166,8 @@ static void *miner_thread(void *userdata)
 			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 			/* on new target, ignoring nonce, clear sent data (hashlog) */
 			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
-				hashlog_purge_job(work.job_id);
+				if (check_dups)
+					hashlog_purge_job(work.job_id);
 			}
 		}
 		if (memcmp(work.data, g_work.data, wcmplen)) {
@@ -1219,44 +1230,7 @@ static void *miner_thread(void *userdata)
 		max64 = min(UINT32_MAX, max64);
 
 		start_nonce = nonceptr[0];
-#if 0
-		/* do not recompute something already scanned (hashharder workaround) */
-		if (opt_algo == ALGO_BLAKE && opt_n_threads == 1) {
-			union {
-				uint64_t data;
-				uint32_t scanned[2];
-			} range;
 
-			range.data = hashlog_get_scan_range(work.job_id);
-			if (range.data && !opt_benchmark) {
-				bool stall = false;
-				if (range.scanned[0] == 1 && range.scanned[1] == UINT32_MAX) {
-					applog(LOG_WARNING, "detected a rescan of fully scanned job!");
-				} else if (range.scanned[0] > 0 && range.scanned[1] > 0 && range.scanned[1] < 0xFFFFFFF0UL) {
-					/* continue scan the end */
-					start_nonce = range.scanned[1] + 1;
-					//applog(LOG_DEBUG, "scan the next part %x + 1 (%x-%x)", range.scanned[1], range.scanned[0], range.scanned[1]);
-				}
-
-				stall = (start_nonce == work.scanned_from && end_nonce == work.scanned_to);
-				stall |= (start_nonce == work.scanned_from && start_nonce == range.scanned[1] + 1);
-				stall |= (start_nonce > range.scanned[0] && start_nonce < range.scanned[1]);
-
-				if (stall) {
-					if (opt_debug && !opt_quiet)
-						applog(LOG_DEBUG, "job done, wait for a new one...");
-					work_restart[thr_id].restart = 1;
-					hashlog_purge_old();
-					stats_purge_old();
-					// wait a bit for a new job...
-					usleep(500*1000);
-					nonceptr[0] = end_nonce + 1;
-					work_done = true;
-					continue;
-				}
-			}
-		}
-#endif
 		/* never let small ranges at end */
 		if (end_nonce >= UINT32_MAX - 256)
 			end_nonce = UINT32_MAX;
@@ -1459,7 +1433,8 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		hashlog_remember_scan_range(&work);
+		if (check_dups)
+			hashlog_remember_scan_range(&work);
 
 		/* output */
 		if (!opt_quiet && loopcnt) {
@@ -1697,7 +1672,8 @@ static void *stratum_thread(void *userdata)
 					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
 						stratum.job.height);
 				restart_threads();
-				hashlog_purge_old();
+				if (check_dups)
+					hashlog_purge_old();
 				stats_purge_old();
 			} else if (opt_debug && !opt_quiet) {
 					applog(LOG_BLUE, "%s asks job %d for block %d", short_url,

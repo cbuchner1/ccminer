@@ -173,6 +173,8 @@ features.
 
 >>> RELEASE HISTORY <<<
 
+                  Intelligent duplicate shares check feature (enabled if needed)
+
   Dec. 16th 2014  v1.5.1
                   Add lyra2RE algo for Vertcoin based on djm34/vtc code
                   Multiple shares support (2 for the moment)
