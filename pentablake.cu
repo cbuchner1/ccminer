@@ -127,99 +127,6 @@ static const uint64_t d_constHashPadding[8] = {
 	0x0002000000000000ull
 };
 
-#if 0
-
-__device__ __constant__
-static const uint64_t __align__(32) c_Padding[16] = {
-	0, 0, 0, 0,
-	0x80000000ULL, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 1, 0, 640,
-};
-
-__device__ static
-void pentablake_compress(uint64_t *h, const uint64_t *block, const uint32_t T0)
-{
-	uint64_t v[16], m[16];
-
-	m[0] = block[0];
-	m[1] = block[1];
-	m[2] = block[2];
-	m[3] = block[3];
-
-	for (uint32_t i = 4; i < 16; i++) {
-		m[i] = (T0 == 0x200) ? block[i] : c_Padding[i];
-	}
-
-	//#pragma unroll 8
-	for(uint32_t i = 0; i < 8; i++)
-		v[i] = h[i];
-
-	v[ 8] = c_u512[0];
-	v[ 9] = c_u512[1];
-	v[10] = c_u512[2];
-	v[11] = c_u512[3];
-
-	v[12] = xor1(c_u512[4], T0);
-	v[13] = xor1(c_u512[5], T0);
-	v[14] = c_u512[6];
-	v[15] = c_u512[7];
-
-	for (uint32_t i = 0; i < 16; i++) {
-		/* column step */
-		G(0, 4, 0x8, 0xC, 0x0);
-		G(1, 5, 0x9, 0xD, 0x2);
-		G(2, 6, 0xA, 0xE, 0x4);
-		G(3, 7, 0xB, 0xF, 0x6);
-		/* diagonal step */
-		G(0, 5, 0xA, 0xF, 0x8);
-		G(1, 6, 0xB, 0xC, 0xA);
-		G(2, 7, 0x8, 0xD, 0xC);
-		G(3, 4, 0x9, 0xE, 0xE);
-	}
-
-	//#pragma unroll 16
-	for (uint32_t i = 0; i < 16; i++) {
-		uint32_t j = i % 8;
-		h[j] ^= v[i];
-	}
-}
-
-__global__
-void pentablake_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
-{
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		const uint32_t nounce = startNounce + thread;
-		uint64_t h[8];
-
-		#pragma unroll
-		for(int i=0; i<8; i++) {
-			h[i] = c_IV512[i];
-		}
-
-		uint64_t ending[4];
-		ending[0] = c_data[16];
-		ending[1] = c_data[17];
-		ending[2] = c_data[18];
-		ending[3] = nounce; /* our tested value */
-
-		pentablake_compress(h, ending, 640);
-
-		// -----------------------------------
-
-		for (int r = 0; r < 4; r++) {
-			uint64_t data[8];
-			for (int i = 0; i < 7; i++) {
-				data[i] = h[i];
-			}
-			pentablake_compress(h, data, 512); /* todo: use h,h when ok*/
-		}
-	}
-}
-#endif
-
 __device__ static
 void pentablake_compress(uint64_t *h, const uint64_t *block, const uint64_t T0)
 {
@@ -376,33 +283,6 @@ void pentablake_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint3
 
 	MyStreamSynchronize(NULL, order, thr_id);
 }
-
-#if 0
-
-__host__
-uint32_t pentablake_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce)
-{
-	const int threadsperblock = TPB;
-	uint32_t result = UINT32_MAX;
-
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
-	size_t shared_size = 0;
-
-	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
-	if (cudaMemset(d_resNounce[thr_id], 0xff, 2*sizeof(uint32_t)) != cudaSuccess)
-		return result;
-
-	pentablake_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_resNounce[thr_id]);
-	cudaDeviceSynchronize();
-	if (cudaSuccess == cudaMemcpy(h_resNounce[thr_id], d_resNounce[thr_id], 2*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		cudaThreadSynchronize();
-		result = h_resNounce[thr_id][0];
-		extra_results[0] = h_resNounce[thr_id][1];
-	}
-	return result;
-}
-#endif
 
 __global__
 void pentablake_gpu_check_hash(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *resNounce)
