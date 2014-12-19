@@ -96,12 +96,14 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				*hashes_done = pdata[19] - first_nonce + throughput;
+				#if 0
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				if (secNonce != 0) {
 					pdata[21] = secNonce;
 					res++;
 				}
+				#endif
 				pdata[19] = foundNonce;
 				return res;
 			}
@@ -116,6 +118,6 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
