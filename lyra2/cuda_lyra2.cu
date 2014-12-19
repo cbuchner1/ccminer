@@ -2,7 +2,7 @@
 
 #include "cuda_helper.h"
 
-#define TPB 256
+#define TPB 160
 
 static __constant__ uint2 blake2b_IV[8] = {
 	{ 0xf3bcc908, 0x6a09e667 },
