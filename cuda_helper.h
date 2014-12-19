@@ -427,32 +427,41 @@ static __device__ __forceinline__ uint2 operator* (uint2 a, uint2 b)
 	return result;
 }
 
-// uint2 method
-#if  __CUDA_ARCH__ >= 350
-__device__ __inline__ uint2 ROR2(const uint2 a, const int offset) {
+// uint2 ROR/ROL methods
+__device__ __inline__ uint2 ROR2(const uint2 a, const int offset)
+{
 	uint2 result;
+#if __CUDA_ARCH__ > 300
 	if (offset < 32) {
 		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
 		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
-	}
-	else {
+	} else /* if (offset < 64) */ {
+		/* offset SHOULD BE < 64 ! */
 		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
 		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
 	}
-	return result;
-}
 #else
-__device__ __inline__ uint2 ROR2(const uint2 v, const int n) {
-	uint2 result;
-	result.x = (((v.x) >> (n)) | ((v.x) << (64 - (n))));
-	result.y = (((v.y) >> (n)) | ((v.y) << (64 - (n))));
+	if (!offset)
+		result = a;
+	else if (offset < 32) {
+		result.y = ((a.y >> offset) | (a.x << (32 - offset)));
+		result.x = ((a.x >> offset) | (a.y << (32 - offset)));
+	} else if (offset == 32) {
+		result.y = a.x;
+		result.x = a.y;
+	} else {
+		result.y = ((a.x >> (offset - 32)) | (a.y << (64 - offset)));
+		result.x = ((a.y >> (offset - 32)) | (a.x << (64 - offset)));
+	}
+#endif
 	return result;
 }
-#endif
 
-#if  __CUDA_ARCH__ >= 350
-__inline__ __device__ uint2 ROL2(const uint2 a, const int offset) {
+
+__inline__ __device__ uint2 ROL2(const uint2 a, const int offset)
+{
 	uint2 result;
+#if __CUDA_ARCH__ > 300
 	if (offset >= 32) {
 		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
 		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
@@ -461,16 +470,13 @@ __inline__ __device__ uint2 ROL2(const uint2 a, const int offset) {
 		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
 		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
 	}
-	return result;
-}
 #else
-__inline__ __device__ uint2 ROL2(const uint2 v, const int n) {
-	uint2 result;
-	result.x = (((v.x) << (n)) | ((v.x) >> (64 - (n))));
-	result.y = (((v.y) << (n)) | ((v.y) >> (64 - (n))));
+	if (!offset)
+		result = a;
+	else
+		result = ROR2(a, 64 - offset);
+#endif
 	return result;
 }
-#endif
-
 
 #endif // #ifndef CUDA_HELPER_H
