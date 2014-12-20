@@ -20,7 +20,6 @@ extern void skein256_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, u
 extern void skein256_cpu_init(int thr_id, int threads);
 
 extern void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void lyra2_cpu_init(int thr_id, int threads);
 
 extern void groestl256_setTarget(const void *ptarget);
 extern uint32_t groestl256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
@@ -78,7 +77,6 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
 		groestl256_cpu_init(thr_id, throughput);
-		lyra2_cpu_init(thr_id, throughput);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 

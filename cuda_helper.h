@@ -428,7 +428,8 @@ static __device__ __forceinline__ uint2 operator* (uint2 a, uint2 b)
 }
 
 // uint2 ROR/ROL methods
-__device__ __inline__ uint2 ROR2(const uint2 a, const int offset)
+__device__ __forceinline__
+uint2 ROR2(const uint2 a, const int offset)
 {
 	uint2 result;
 #if __CUDA_ARCH__ > 300
@@ -457,8 +458,8 @@ __device__ __inline__ uint2 ROR2(const uint2 a, const int offset)
 	return result;
 }
 
-
-__inline__ __device__ uint2 ROL2(const uint2 a, const int offset)
+__device__ __forceinline__
+uint2 ROL2(const uint2 a, const int offset)
 {
 	uint2 result;
 #if __CUDA_ARCH__ > 300
@@ -477,6 +478,12 @@ __inline__ __device__ uint2 ROL2(const uint2 a, const int offset)
 		result = ROR2(a, 64 - offset);
 #endif
 	return result;
+}
+
+__device__ __forceinline__
+uint2 SWAPUINT2(uint2 value)
+{
+	return make_uint2(value.y, value.x);
 }
 
 #endif // #ifndef CUDA_HELPER_H
