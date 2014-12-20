@@ -229,7 +229,7 @@ static __device__ __forceinline__ void round_lyra_v30(uint64_t *s)
 
 
 
-__global__ void __launch_bounds__(256, 1) lyra2_gpu_hash_32_v30(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__ void __launch_bounds__(160, 1) lyra2_gpu_hash_32_v30(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
 
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -312,7 +312,7 @@ int idx1= 84-idx0;
 }
 
 
-__global__ void __launch_bounds__(256, 1) lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
+__global__ void __launch_bounds__(160, 1) lyra2_gpu_hash_32(int threads, uint32_t startNounce, uint64_t *outputHash)
 {
 
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -401,7 +401,7 @@ void lyra2_cpu_init(int thr_id, int threads)
 __host__ void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
 	
-	const int threadsperblock = 256;
+	const int threadsperblock = 160;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
