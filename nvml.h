@@ -158,7 +158,8 @@ int nvml_get_power_usage(nvml_handle *nvmlh,
 
 /* api functions */
 
-int gpu_fanpercent(struct cgpu_info *gpu);
+unsigned int gpu_fanpercent(struct cgpu_info *gpu);
+unsigned int gpu_fanrpm(struct cgpu_info *gpu);
 float gpu_temp(struct cgpu_info *gpu);
 unsigned int gpu_power(struct cgpu_info *gpu);
 unsigned int gpu_usage(struct cgpu_info *gpu);

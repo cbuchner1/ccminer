@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.2"
+#define APIVERSION "1.3"
 
 #ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -121,7 +121,8 @@ static void gpustatus(int thr_id)
 		cgpu->has_monitoring = true;
 		cgpu->gpu_bus = gpu_busid(cgpu);
 		cgpu->gpu_temp = gpu_temp(cgpu);
-		cgpu->gpu_fan = gpu_fanpercent(cgpu);
+		cgpu->gpu_fan = (uint16_t) gpu_fanpercent(cgpu);
+		cgpu->gpu_fan_rpm = (uint16_t) gpu_fanrpm(cgpu);
 #endif
 		cuda_gpu_clocks(cgpu);
 
@@ -145,9 +146,9 @@ static void gpustatus(int thr_id)
 		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-			"TEMP=%.1f;FAN=%d;FREQ=%d;KHS=%.2f;HWF=%d;I=%d|",
+			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%d|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
-			cgpu->gpu_clock, cgpu->khashes,
+			cgpu->gpu_fan_rpm, cgpu->gpu_clock, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity);
 
 		// append to buffer for multi gpus
@@ -246,7 +247,8 @@ static void gpuhwinfos(int gpu_id)
 	cgpu->has_monitoring = true;
 	cgpu->gpu_bus = gpu_busid(cgpu);
 	cgpu->gpu_temp = gpu_temp(cgpu);
-	cgpu->gpu_fan = gpu_fanpercent(cgpu);
+	cgpu->gpu_fan = (uint16_t) gpu_fanpercent(cgpu);
+	cgpu->gpu_fan_rpm = (uint16_t) gpu_fanrpm(cgpu);
 	cgpu->gpu_pstate = gpu_pstate(cgpu);
 	gpu_info(cgpu);
 #endif
@@ -260,10 +262,11 @@ static void gpuhwinfos(int gpu_id)
 	card = device_name[gpu_id];
 
 	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%u;MEM=%lu;"
-		"TEMP=%.1f;FAN=%d;FREQ=%d;MEMFREQ=%d;PST=%s;"
+		"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;MEMFREQ=%d;PST=%s;"
 		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;SN=%s;BIOS=%s|",
 		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_arch, cgpu->gpu_mem,
-		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_clock, cgpu->gpu_memclock,
+		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_fan_rpm,
+		cgpu->gpu_clock, cgpu->gpu_memclock,
 		pstate, cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id,
 		cgpu->gpu_sn, cgpu->gpu_desc);
 

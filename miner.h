@@ -389,7 +389,8 @@ struct cgpu_info {
 	uint8_t intensity;
 	uint8_t has_monitoring;
 	float gpu_temp;
-	int gpu_fan;
+	uint16_t gpu_fan;
+	uint16_t gpu_fan_rpm;
 	uint16_t gpu_arch;
 	int gpu_clock;
 	int gpu_memclock;

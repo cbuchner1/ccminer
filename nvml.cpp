@@ -691,7 +691,7 @@ int nvapi_init()
 // assume 2500 rpm as default, auto-updated if more
 static unsigned int fan_speed_max = 2500;
 
-int gpu_fanpercent(struct cgpu_info *gpu)
+unsigned int gpu_fanpercent(struct cgpu_info *gpu)
 {
 	unsigned int pct = 0;
 	if (hnvml) {
@@ -708,8 +708,18 @@ int gpu_fanpercent(struct cgpu_info *gpu)
 		}
 	}
 #endif
-	return (int) pct;
+	return pct;
 }
+
+unsigned int gpu_fanrpm(struct cgpu_info *gpu)
+{
+	unsigned int rpm = 0;
+#ifdef WIN32
+	nvapi_fanspeed(nvapi_dev_map[gpu->gpu_id], &rpm);
+#endif
+	return rpm;
+}
+
 
 float gpu_temp(struct cgpu_info *gpu)
 {
