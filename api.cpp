@@ -270,12 +270,21 @@ static void gpuhwinfos(int gpu_id)
 	strcat(buffer, buf);
 }
 
+#ifndef WIN32
+static char os_version[64] = "linux ";
+#endif
+
 static const char* os_name()
 {
 #ifdef WIN32
 	return "windows";
 #else
-	return "linux";
+	FILE *fd = fopen("/proc/version", "r");
+	if (!fd || !fscanf(fd, "Linux version %48s", &os_version[6]))
+		return "linux";
+	fclose(fd);
+	os_version[48] = '\0';
+	return (const char*) os_version;
 #endif
 }
 
