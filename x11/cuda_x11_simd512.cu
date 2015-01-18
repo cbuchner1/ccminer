@@ -181,6 +181,13 @@ do { \
 #undef BUTTERFLY
 }
 
+#if defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ < 300
+  #define __shfl(var, srcLane, width) (uint32_t)(var)
+  // #error __shfl() not supported by SM 2.x
+#endif
+#endif
+
 /**
  * FFT_16 using w=2 as 16th root of unity
  * Unrolled decimation in frequency (DIF) radix-2 NTT.

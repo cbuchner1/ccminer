@@ -12,15 +12,20 @@ extern uint32_t *d_resultNonce[8];
 
 __constant__ uint32_t groestlcoin_gpu_msg[32];
 
-// 64 Register Variante für Compute 3.0
+#if __CUDA_ARCH__ >= 300
+
+// 64 Registers Variant for Compute 3.0
 #include "groestl_functions_quad.cu"
+
 #include "bitslice_transformations_quad.cu"
+#endif
 
 #define SWAB32(x) cuda_swab32(x)
 
 __global__ __launch_bounds__(256, 4)
 void groestlcoin_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *resNounce)
 {
+#if __CUDA_ARCH__ >= 300
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
     int thread = (blockDim.x * blockIdx.x + threadIdx.x) / 4;
     if (thread < threads)
@@ -86,6 +91,7 @@ void groestlcoin_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *resN
                     resNounce[0] = nounce;
         }
     }
+#endif
 }
 
 // Setup-Funktionen
@@ -138,6 +144,11 @@ __host__ void groestlcoin_cpu_hash(int thr_id, int threads, uint32_t startNounce
 
     // Größe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
+
+    if (device_sm[device_map[thr_id]] < 300) {
+        printf("Sorry, This algo is not supported by this GPU arch (SM 3.0 required)");
+        return;
+    }
 
     cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
     groestlcoin_gpu_hash_quad<<<grid, block, shared_size>>>(threads, startNounce, d_resultNonce[thr_id]);
