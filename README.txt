@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.1-tpruvot (16 Dec 2014) - "Vertcoin Lyra2"
+ccMiner release 1.5.2-tpruvot (Jan 2015) - "Happy new Year!"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -167,13 +167,17 @@ I plan to add a json format later, if requests are formatted in json too..
 >>> Additional Notes <<<
 
 This code should be running on nVidia GPUs ranging from compute capability
-3.0 up to compute capability 3.5. Support for Compute 2.0 has been dropped
+3.0 up to compute capability 5.2. Support for Compute 2.0 has been dropped
 so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
 
+  Jan.      2015  v1.5.2
                   Intelligent duplicate shares check feature (enabled if needed)
+                  api: Fan RPM (windows), Cuda threads count, linux kernel ver.
+                  More X11 optimisations from sp and KlausT
+                  SM 3.0 enhancements
 
   Dec. 16th 2014  v1.5.1
                   Add lyra2RE algo for Vertcoin based on djm34/vtc code

@@ -146,10 +146,10 @@ static void gpustatus(int thr_id)
 		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%d|",
+			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%d|THR=%u",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
 			cgpu->gpu_fan_rpm, cgpu->gpu_clock, cgpu->khashes,
-			cgpu->hw_errors, cgpu->intensity);
+			cgpu->hw_errors, cgpu->intensity, opt_work_size);
 
 		// append to buffer for multi gpus
 		strcat(buffer, buf);
