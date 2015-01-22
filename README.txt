@@ -115,6 +115,8 @@ its command line interface and options.
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
+      --cpu-affinity    set process affinity to specific cpu core(s)
+      --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)
   -c, --config=FILE     load a JSON-format configuration file
       --no-color        disable colored console output
   -V, --version         display version information and exit
@@ -174,6 +176,7 @@ features.
 >>> RELEASE HISTORY <<<
 
   Jan.      2015  v1.5.2
+                  Add CPU priority and affinity parameters
                   Intelligent duplicate shares check feature (enabled if needed)
                   api: Fan RPM (windows), Cuda threads count, linux kernel ver.
                   More X11 optimisations from sp and KlausT

@@ -207,6 +207,8 @@ static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
+int opt_affinity = -1;
+int opt_priority = 0;
 static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
@@ -320,6 +322,8 @@ Options:\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n\
+      --cpu-affinity    set process affinity to specific cpu core(s)\n\
+      --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)\n\
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n"
 
 #ifdef HAVE_SYSLOG_H
@@ -358,6 +362,8 @@ static struct option const options[] = {
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
 	{ "cputest", 0, NULL, 1006 },
+	{ "cpu-affinity", 1, NULL, 1020 },
+	{ "cpu-priority", 1, NULL, 1021 },
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
@@ -1091,17 +1097,52 @@ static void *miner_thread(void *userdata)
 	/* Set worker threads to nice 19 and then preferentially to SCHED_IDLE
 	 * and if that fails, then SCHED_BATCH. No need for this to be an
 	 * error if it fails */
-	if (!opt_benchmark) {
-		setpriority(PRIO_PROCESS, 0, 19);
+	if (!opt_benchmark && opt_priority == 0) {
+		setpriority(PRIO_PROCESS, 0, 18);
 		drop_policy();
+	} else {
+		int prio = 0;
+#ifndef WIN32
+		prio = 18;
+		// note: different behavior on linux (-19 to 19)
+		switch (opt_priority) {
+			case 1:
+				prio = 5;
+				break;
+			case 2:
+				prio = 0;
+				break;
+			case 3:
+				prio = -5;
+				break;
+			case 4:
+				prio = -10;
+				break;
+			case 5:
+				prio = -15;
+		}
+		applog(LOG_DEBUG, "Thread %d priority %d (set to %d)", thr_id,
+			opt_priority, prio);
+#endif
+		int ret = setpriority(PRIO_PROCESS, 0, prio);
+		if (opt_priority == 0) {
+			drop_policy();
+		}
 	}
 
 	/* Cpu thread affinity */
-	if (num_cpus > 1 && opt_n_threads > 1) {
-		if (!opt_quiet)
-			applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
-					thr_id % num_cpus);
-		affine_to_cpu(thr_id, thr_id % num_cpus);
+	if (num_cpus > 1) {
+		if (opt_affinity == -1 && opt_n_threads > 1) {
+			if (!opt_quiet)
+				applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
+						thr_id % num_cpus);
+			affine_to_cpu(thr_id, thr_id % num_cpus);
+		} else if (opt_affinity != -1) {
+			if (!opt_quiet)
+				applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
+						opt_affinity);
+			affine_to_cpu(thr_id, opt_affinity);
+		}
 	}
 
 	while (1) {
@@ -1964,6 +2005,20 @@ static void parse_arg(int key, char *arg)
 			free(opt_syslog_pfx);
 			opt_syslog_pfx = strdup(arg);
 		}
+		break;
+	case 1020:
+		v = atoi(arg);
+		if (v < -1)
+			v = -1;
+		if (v >= num_cpus)
+			v = num_cpus-1;
+		opt_affinity = v;
+		break;
+	case 1021:
+		v = atoi(arg);
+		if (v < 0 || v > 5)	/* sanity check */
+			show_usage_and_exit(1);
+		opt_priority = v;
 		break;
 	case 'd': // CB
 		{
