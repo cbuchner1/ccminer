@@ -555,7 +555,7 @@ static int share_result(int result, const char *reason)
 			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
 			return 0;
 		}
-		if (strncmp(reason, "Duplicate share", 15) == 0) {
+		if (strncmp(reason, "Duplicate share", 15) == 0 && !check_dups) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
 		}
