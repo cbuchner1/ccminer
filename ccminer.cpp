@@ -2276,6 +2276,24 @@ int main(int argc, char *argv[])
 	signal(SIGINT, signal_handler);
 #else
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
+	if (opt_priority > 0) {
+		DWORD prio = NORMAL_PRIORITY_CLASS;
+		SetPriorityClass(NULL, prio);
+		switch (opt_priority) {
+		case 1:
+			prio = BELOW_NORMAL_PRIORITY_CLASS;
+			break;
+		case 3:
+			prio = ABOVE_NORMAL_PRIORITY_CLASS;
+			break;
+		case 4:
+			prio = HIGH_PRIORITY_CLASS;
+			break;
+		case 5:
+			prio = REALTIME_PRIORITY_CLASS;
+		}
+		SetPriorityClass(GetCurrentProcess(), prio);
+	}
 #endif
 
 	if (active_gpus == 0) {
