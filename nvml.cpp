@@ -34,7 +34,7 @@ int cuda_num_devices();
 extern nvml_handle *hnvml;
 extern char driver_version[32];
 
-static uint32_t device_bus_ids[8] = { 0 };
+static uint32_t device_bus_ids[MAX_GPUS] = { 0 };
 
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
@@ -451,7 +451,7 @@ int nvml_destroy(nvml_handle *nvmlh)
 #ifdef WIN32
 #include "nvapi/nvapi_ccminer.h"
 
-static int nvapi_dev_map[8] = { 0 };
+static int nvapi_dev_map[MAX_GPUS] = { 0 };
 static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };
 static NvPhysicalGpuHandle phys[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 static NvU32 nvapi_dev_cnt = 0;

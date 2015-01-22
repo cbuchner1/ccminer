@@ -3,13 +3,13 @@
 #include "cuda_helper.h"
 
 // globaler Speicher für unsere Ergebnisse
-static uint32_t *d_hashoutput[8];
-extern uint32_t *d_hash2output[8];
-extern uint32_t *d_hash3output[8];
-extern uint32_t *d_hash4output[8];
-extern uint32_t *d_hash5output[8];
+static uint32_t *d_hashoutput[MAX_GPUS];
+extern uint32_t *d_hash2output[MAX_GPUS];
+extern uint32_t *d_hash3output[MAX_GPUS];
+extern uint32_t *d_hash4output[MAX_GPUS];
+extern uint32_t *d_hash5output[MAX_GPUS];
 
-extern uint32_t *heavy_nonceVector[8];
+extern uint32_t *heavy_nonceVector[MAX_GPUS];
 
 /* Combines top 64-bits from each hash into a single hash */
 __device__

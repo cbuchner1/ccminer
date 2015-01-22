@@ -4,11 +4,11 @@
 #include "cuda_helper.h"
 
 // globaler Speicher für alle HeftyHashes aller Threads
-extern uint32_t *heavy_heftyHashes[8];
-extern uint32_t *heavy_nonceVector[8];
+extern uint32_t *heavy_heftyHashes[MAX_GPUS];
+extern uint32_t *heavy_nonceVector[MAX_GPUS];
 
 // globaler Speicher für unsere Ergebnisse
-uint32_t *d_hash5output[8];
+uint32_t *d_hash5output[MAX_GPUS];
 
 // die Message (112 bzw. 116 Bytes) mit Padding zur Berechnung auf der GPU
 __constant__ uint64_t c_PaddedMessage[16]; // padded message (80/84+32 bytes + padding)

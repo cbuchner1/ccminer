@@ -10,8 +10,8 @@
 #include "miner.h"
 #include "cuda_helper.h"
 
-uint32_t *d_state[8];
-uint4 *d_temp4[8];
+uint32_t *d_state[MAX_GPUS];
+uint4 *d_temp4[MAX_GPUS];
 
 // texture bound to d_temp4[thr_id], for read access in Compaction kernel
 texture<uint4, 1, cudaReadModeElementType> texRef1D_128;

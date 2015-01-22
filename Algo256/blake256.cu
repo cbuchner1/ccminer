@@ -49,8 +49,8 @@ extern "C" uint32_t crc32_u32t(const uint32_t *buf, size_t size);
 #endif
 
 /* 8 adapters max */
-static uint32_t *d_resNonce[8];
-static uint32_t *h_resNonce[8];
+static uint32_t *d_resNonce[MAX_GPUS];
+static uint32_t *h_resNonce[MAX_GPUS];
 
 /* max count of found nonces in one call */
 #define NBN 2
@@ -377,7 +377,7 @@ void blake256_cpu_setBlock_16(uint32_t *penddata, const uint32_t *midstate, cons
 }
 #endif
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds=14)

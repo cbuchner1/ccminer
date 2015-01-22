@@ -9,7 +9,7 @@ extern "C" {
 #include "miner.h"
 #include "cuda_helper.h"
 
-static _ALIGN(64) uint64_t *d_hash[8];
+static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, int threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
@@ -55,7 +55,7 @@ extern "C" void lyra2_hash(void *state, const void *input)
 	memcpy(state, hashA, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,

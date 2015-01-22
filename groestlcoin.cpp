@@ -58,7 +58,7 @@ extern "C" void groestlhash(void *state, const void *input)
     memcpy(state, hashB, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
     uint32_t max_nonce, unsigned long *hashes_done)

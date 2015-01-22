@@ -4,11 +4,11 @@
 #include "cuda_helper.h"
 
 // globaler Speicher für alle HeftyHashes aller Threads
-extern uint32_t *heavy_heftyHashes[8];
-extern uint32_t *heavy_nonceVector[8];
+extern uint32_t *heavy_heftyHashes[MAX_GPUS];
+extern uint32_t *heavy_nonceVector[MAX_GPUS];
 
 // globaler Speicher für unsere Ergebnisse
-uint32_t *d_hash4output[8];
+uint32_t *d_hash4output[MAX_GPUS];
 
 __constant__ uint32_t groestl_gpu_state[32];
 __constant__ uint32_t groestl_gpu_msg[32];

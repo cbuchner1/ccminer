@@ -485,9 +485,10 @@ extern uint32_t opt_work_size;
 extern uint64_t global_hashrate;
 extern double   global_diff;
 
-extern char* device_name[8];
-extern short device_map[8];
-extern long  device_sm[8];
+#define MAX_GPUS 16
+extern char* device_name[MAX_GPUS];
+extern short device_map[MAX_GPUS];
+extern long  device_sm[MAX_GPUS];
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"

@@ -8,7 +8,7 @@
 #define USE_SHARED 1
 
 // globaler Speicher für alle HeftyHashes aller Threads
-uint32_t *heavy_heftyHashes[8];
+uint32_t *heavy_heftyHashes[MAX_GPUS];
 
 /* Hash-Tabellen */
 __constant__ uint32_t hefty_gpu_constantTable[64];

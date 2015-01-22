@@ -14,8 +14,8 @@
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t pTarget[8];
 
-uint32_t *d_wnounce[8];
-uint32_t *d_WNonce[8];
+uint32_t *d_wnounce[MAX_GPUS];
+uint32_t *d_WNonce[MAX_GPUS];
 
 #define USE_ALL_TABLES 1
 

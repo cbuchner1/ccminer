@@ -16,18 +16,18 @@ extern "C" {
 #include "heavy/heavy.h"
 #include "cuda_helper.h"
 
-extern uint32_t *d_hash2output[8];
-extern uint32_t *d_hash3output[8];
-extern uint32_t *d_hash4output[8];
-extern uint32_t *d_hash5output[8];
+extern uint32_t *d_hash2output[MAX_GPUS];
+extern uint32_t *d_hash3output[MAX_GPUS];
+extern uint32_t *d_hash4output[MAX_GPUS];
+extern uint32_t *d_hash5output[MAX_GPUS];
 
 #define HEAVYCOIN_BLKHDR_SZ 84
 #define MNR_BLKHDR_SZ       80
 
 // nonce-array für die threads
-uint32_t *heavy_nonceVector[8];
+uint32_t *heavy_nonceVector[MAX_GPUS];
 
-extern uint32_t *heavy_heftyHashes[8];
+extern uint32_t *heavy_heftyHashes[MAX_GPUS];
 
 /* Combines top 64-bits from each hash into a single hash */
 static void combine_hashes(uint32_t *out, const uint32_t *hash1, const uint32_t *hash2, const uint32_t *hash3, const uint32_t *hash4)
@@ -127,7 +127,7 @@ struct check_nonce_for_remove
     }
 };
 
-static bool init[8] = {0,0,0,0,0,0,0,0};
+static bool init[MAX_GPUS] = { 0 };
 
 __host__
 int scanhash_heavy(int thr_id, uint32_t *pdata,

@@ -31,7 +31,7 @@ extern "C"
 #include "miner.h"
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -184,7 +184,7 @@ extern "C" void x17hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_x17(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,

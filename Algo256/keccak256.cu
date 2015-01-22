@@ -14,7 +14,7 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void keccak256_cpu_init(int thr_id, int threads);
 extern void keccak256_setBlock_80(void *pdata,const void *ptarget);
@@ -34,7 +34,7 @@ extern "C" void keccak256_hash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,

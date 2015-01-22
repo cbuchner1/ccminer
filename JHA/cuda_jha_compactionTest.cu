@@ -4,11 +4,11 @@
 #include "cuda_helper.h"
 #include <sm_30_intrinsics.h>
 
-static uint32_t *d_tempBranch1Nonces[8];
-static uint32_t *d_numValid[8];
-static uint32_t *h_numValid[8];
+static uint32_t *d_tempBranch1Nonces[MAX_GPUS];
+static uint32_t *d_numValid[MAX_GPUS];
+static uint32_t *h_numValid[MAX_GPUS];
 
-static uint32_t *d_partSum[2][8]; // für bis zu vier partielle Summen
+static uint32_t *d_partSum[2][MAX_GPUS]; // für bis zu vier partielle Summen
 
 // True/False tester
 typedef uint32_t(*cuda_compactTestFunction_t)(uint32_t *inpHash);
@@ -26,7 +26,8 @@ __device__ uint32_t JackpotFalseTest(uint32_t *inpHash)
 }
 
 __device__ cuda_compactTestFunction_t d_JackpotTrueFunction = JackpotTrueTest, d_JackpotFalseFunction = JackpotFalseTest;
-cuda_compactTestFunction_t h_JackpotTrueFunction[8], h_JackpotFalseFunction[8];
+
+cuda_compactTestFunction_t h_JackpotTrueFunction[MAX_GPUS], h_JackpotFalseFunction[MAX_GPUS];
 
 // Setup-Funktionen
 __host__ void jackpot_compactTest_cpu_init(int thr_id, int threads)

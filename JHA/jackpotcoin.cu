@@ -10,7 +10,7 @@ extern "C"
 #include "miner.h"
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void jackpot_keccak512_cpu_init(int thr_id, int threads);
 extern void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen);
@@ -37,10 +37,10 @@ extern void jackpot_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t st
 extern uint32_t cuda_check_hash_branch(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
-static uint32_t *d_jackpotNonces[8];
-static uint32_t *d_branch1Nonces[8];
-static uint32_t *d_branch2Nonces[8];
-static uint32_t *d_branch3Nonces[8];
+static uint32_t *d_jackpotNonces[MAX_GPUS];
+static uint32_t *d_branch1Nonces[MAX_GPUS];
+static uint32_t *d_branch2Nonces[MAX_GPUS];
+static uint32_t *d_branch3Nonces[MAX_GPUS];
 
 // Original jackpothash Funktion aus einem miner Quelltext
 extern "C" unsigned int jackpothash(void *state, const void *input)
@@ -85,7 +85,7 @@ extern "C" unsigned int jackpothash(void *state, const void *input)
     return round;
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,

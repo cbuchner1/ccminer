@@ -8,8 +8,8 @@
 
 #define USE_SHARED 1
 
-uint32_t *d_fugue256_hashoutput[8];
-uint32_t *d_resultNonce[8];
+uint32_t *d_fugue256_hashoutput[MAX_GPUS];
+uint32_t *d_resultNonce[MAX_GPUS];
 
 __constant__ uint32_t GPUstate[30]; // Single GPU
 __constant__ uint32_t pTarget[8]; // Single GPU

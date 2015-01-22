@@ -9,7 +9,7 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void x15_whirlpool_cpu_init(int thr_id, int threads, int mode);
 extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -49,7 +49,7 @@ extern "C" void wcoinhash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,

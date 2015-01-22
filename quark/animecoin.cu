@@ -10,13 +10,13 @@ extern "C"
 #include "miner.h"
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
-static uint32_t *d_animeNonces[8];
-static uint32_t *d_branch1Nonces[8];
-static uint32_t *d_branch2Nonces[8];
-static uint32_t *d_branch3Nonces[8];
+static uint32_t *d_animeNonces[MAX_GPUS];
+static uint32_t *d_branch1Nonces[MAX_GPUS];
+static uint32_t *d_branch2Nonces[MAX_GPUS];
+static uint32_t *d_branch3Nonces[MAX_GPUS];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);
 extern void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -160,7 +160,7 @@ struct HashPredicate
 };
 */
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,

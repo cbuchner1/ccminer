@@ -12,13 +12,13 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
-static uint32_t *d_quarkNonces[8];
-static uint32_t *d_branch1Nonces[8];
-static uint32_t *d_branch2Nonces[8];
-static uint32_t *d_branch3Nonces[8];
+static uint32_t *d_quarkNonces[MAX_GPUS];
+static uint32_t *d_branch1Nonces[MAX_GPUS];
+static uint32_t *d_branch2Nonces[MAX_GPUS];
+static uint32_t *d_branch3Nonces[MAX_GPUS];
 
 extern void quark_blake512_cpu_init(int thr_id, int threads);
 extern void quark_blake512_cpu_setBlock_80(void *pdata);
@@ -130,7 +130,7 @@ extern "C" void quarkhash(void *state, const void *input)
     memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
     const uint32_t *ptarget, uint32_t max_nonce,
@@ -149,7 +149,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 
 		// Konstanten kopieren, Speicher belegen
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
 
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);

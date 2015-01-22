@@ -10,9 +10,9 @@
 
 __constant__ uint32_t pTarget[8]; // 32 bytes
 
-// store 8 device arrays of 8 nonces
-static uint32_t* h_resNonces[8];
-static uint32_t* d_resNonces[8];
+// store MAX_GPUS device arrays of 8 nonces
+static uint32_t* h_resNonces[MAX_GPUS];
+static uint32_t* d_resNonces[MAX_GPUS];
 
 __host__
 void cuda_check_cpu_init(int thr_id, int threads)

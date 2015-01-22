@@ -15,8 +15,8 @@
 
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
-uint32_t *d_outputHashes[8];
-extern uint32_t *d_resultNonce[8];
+uint32_t *d_outputHashes[MAX_GPUS];
+extern uint32_t *d_resultNonce[MAX_GPUS];
 
 __constant__ uint32_t myriadgroestl_gpu_msg[32];
 

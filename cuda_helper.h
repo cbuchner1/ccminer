@@ -13,8 +13,12 @@
 
 #include <stdint.h>
 
-extern "C" short device_map[8];
-extern "C"  long device_sm[8];
+#ifndef MAX_GPUS
+#define MAX_GPUS 16
+#endif
+
+extern "C" short device_map[MAX_GPUS];
+extern "C"  long device_sm[MAX_GPUS];
 
 // common functions
 extern void cuda_check_cpu_init(int thr_id, int threads);

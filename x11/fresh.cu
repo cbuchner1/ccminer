@@ -12,7 +12,7 @@ extern "C" {
 // to test gpu hash on a null buffer
 #define NULLTEST 0
 
-static uint32_t *d_hash[8];
+static uint32_t *d_hash[MAX_GPUS];
 
 extern void x11_shavite512_cpu_init(int thr_id, int threads);
 extern void x11_shavite512_setBlock_80(void *pdata);
@@ -68,7 +68,7 @@ extern "C" void fresh_hash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,

@@ -22,8 +22,8 @@ static const uint64_t host_keccak_round_constants[24] = {
 	0x0000000080000001ull, 0x8000000080008008ull
 };
 
-uint32_t *d_nounce[8];
-uint32_t *d_KNonce[8];
+uint32_t *d_nounce[MAX_GPUS];
+uint32_t *d_KNonce[MAX_GPUS];
 
 __constant__ uint32_t pTarget[8];
 __constant__ uint64_t keccak_round_constants[24];

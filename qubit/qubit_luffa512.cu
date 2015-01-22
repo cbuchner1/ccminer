@@ -32,8 +32,8 @@ typedef unsigned char BitSequence;
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t c_Target[8];
 
-static uint32_t *h_resNounce[8];
-static uint32_t *d_resNounce[8];
+static uint32_t *h_resNounce[MAX_GPUS];
+static uint32_t *d_resNounce[MAX_GPUS];
 
 #define NBN 1 /* max results, could be 2, see blake32.cu */
 #if NBN > 1

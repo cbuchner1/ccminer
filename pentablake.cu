@@ -49,9 +49,9 @@ static uint32_t __align__(32) c_Target[8];
 __constant__
 static uint64_t __align__(32) c_data[32];
 
-static uint32_t *d_hash[8];
-static uint32_t *d_resNounce[8];
-static uint32_t *h_resNounce[8];
+static uint32_t *d_hash[MAX_GPUS];
+static uint32_t *d_resNounce[MAX_GPUS];
+static uint32_t *h_resNounce[MAX_GPUS];
 static uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
@@ -362,7 +362,7 @@ void pentablake_cpu_setBlock_80(uint32_t *pdata, const uint32_t *ptarget)
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Target, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)

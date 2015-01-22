@@ -14,13 +14,13 @@ extern "C" void my_fugue256_close(void *cc, void *dst);
 extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst);
 
 // vorbereitete Kontexte nach den ersten 80 Bytes
-sph_fugue256_context  ctx_fugue_const[8];
+// sph_fugue256_context  ctx_fugue_const[MAX_GPUS];
 
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
-static bool init[8] = { 0 };
+static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
