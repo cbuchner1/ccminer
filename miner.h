@@ -378,6 +378,7 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 
 /* api related */
 void *api_thread(void *userdata);
+void apiReportThroughput(int thr_id, uint32_t throughput);
 
 struct cgpu_info {
 	uint8_t gpu_id;
@@ -386,7 +387,7 @@ struct cgpu_info {
 	int rejected;
 	int hw_errors;
 	double khashes;
-	uint8_t intensity;
+	uint8_t intensity_int;
 	uint8_t has_monitoring;
 	float gpu_temp;
 	uint16_t gpu_fan;
@@ -407,6 +408,8 @@ struct cgpu_info {
 
 	char gpu_sn[64];
 	char gpu_desc[64];
+	float intensity;
+	uint32_t throughput;
 };
 
 struct thr_api {

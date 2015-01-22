@@ -192,6 +192,7 @@ extern "C" int scanhash_x17(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8;
+	apiReportThroughput(thr_id, (uint32_t) throughput);
 	throughput = min(throughput, (int)(max_nonce - first_nonce));
 
 	if (opt_benchmark)

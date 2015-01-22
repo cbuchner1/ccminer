@@ -27,8 +27,9 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 {
 	uint32_t start_nonce = pdata[19]++;
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 19;
-	uint32_t throughPut = opt_work_size ? opt_work_size : (1 << intensity);
-	throughPut = min(throughPut, max_nonce - start_nonce);
+	uint32_t throughput = opt_work_size ? opt_work_size : (1 << intensity);
+	apiReportThroughput(thr_id, throughput);
+	throughput = min(throughput, max_nonce - start_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0xf;
@@ -36,7 +37,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	// init
 	if(!init[thr_id])
 	{
-		fugue256_cpu_init(thr_id, throughPut);
+		fugue256_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
 
@@ -51,7 +52,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	do {
 		// GPU
 		uint32_t foundNounce = 0xFFFFFFFF;
-		fugue256_cpu_hash(thr_id, throughPut, pdata[19], NULL, &foundNounce);
+		fugue256_cpu_hash(thr_id, throughput, pdata[19], NULL, &foundNounce);
 
 		if(foundNounce < 0xffffffff)
 		{
@@ -74,12 +75,12 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughPut > (uint64_t) max_nonce) {
+		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
 
-		pdata[19] += throughPut;
+		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);
 

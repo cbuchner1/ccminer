@@ -64,10 +64,11 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
     uint32_t max_nonce, unsigned long *hashes_done)
 {    
     uint32_t start_nonce = pdata[19]++;
-    uint32_t throughPut = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
-    throughPut = min(throughPut, max_nonce - start_nonce);
+    uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
+    apiReportThroughput(thr_id, throughput);
+    throughput = min(throughput, max_nonce - start_nonce);
 
-    uint32_t *outputHash = (uint32_t*)malloc(throughPut * 16 * sizeof(uint32_t));
+    uint32_t *outputHash = (uint32_t*)malloc(throughput * 16 * sizeof(uint32_t));
 
     if (opt_benchmark)
         ((uint32_t*)ptarget)[7] = 0x000000ff;
@@ -75,7 +76,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
     // init
     if(!init[thr_id])
     {
-        groestlcoin_cpu_init(thr_id, throughPut);
+        groestlcoin_cpu_init(thr_id, throughput);
         init[thr_id] = true;
     }
     
@@ -92,7 +93,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
         uint32_t foundNounce = 0xFFFFFFFF;
         const uint32_t Htarg = ptarget[7];
 
-        groestlcoin_cpu_hash(thr_id, throughPut, pdata[19], outputHash, &foundNounce);
+        groestlcoin_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
 
         if(foundNounce < 0xffffffff)
         {
@@ -112,9 +113,9 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
             foundNounce = 0xffffffff;
         }
 
-        if (pdata[19] + throughPut < pdata[19])
+        if (pdata[19] + throughput < pdata[19])
             pdata[19] = max_nonce;
-        else pdata[19] += throughPut;
+        else pdata[19] += throughput;
 
     } while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
     

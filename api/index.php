@@ -49,6 +49,7 @@ function translateField($key)
 	$intl['DIFF'] = 'Difficulty';
 	$intl['UPTIME'] = 'Miner up time';
 	$intl['TS'] = 'Last update';
+	$intl['THR'] = 'Throughput';
 
 	$intl['H'] = 'Bloc height';
 	$intl['I'] = 'Intensity';

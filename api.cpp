@@ -126,17 +126,6 @@ static void gpustatus(int thr_id)
 #endif
 		cuda_gpu_clocks(cgpu);
 
-		// todo: can be 0 if set by algo (auto)
-		if (opt_intensity == 0 && opt_work_size) {
-			int i = 0;
-			uint32_t ws = opt_work_size;
-			while (ws > 1 && i++ < 32)
-				ws = ws >> 1;
-			cgpu->intensity = i;
-		} else {
-			cgpu->intensity = opt_intensity;
-		}
-
 		// todo: per gpu
 		cgpu->accepted = accepted_count;
 		cgpu->rejected = rejected_count;
@@ -146,10 +135,10 @@ static void gpustatus(int thr_id)
 		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%d|THR=%u",
+			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%.2f;THR=%u|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
 			cgpu->gpu_fan_rpm, cgpu->gpu_clock, cgpu->khashes,
-			cgpu->hw_errors, cgpu->intensity, opt_work_size);
+			cgpu->hw_errors, cgpu->intensity, cgpu->throughput);
 
 		// append to buffer for multi gpus
 		strcat(buffer, buf);
@@ -884,4 +873,24 @@ void *api_thread(void *userdata)
 	tq_freeze(mythr->q);
 
 	return NULL;
+}
+
+/* to be able to report the default value set in each algo */
+void apiReportThroughput(int thr_id, uint32_t throughput)
+{
+	struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
+	if (cgpu) {
+		cgpu->throughput = throughput;
+		if (opt_intensity == 0) {
+			uint8_t i = 0;
+			uint32_t ws = throughput;
+			while (ws > 1 && i++ < 32)
+				ws = ws >> 1;
+			cgpu->intensity_int = i;
+		} else {
+			cgpu->intensity_int = (uint8_t) opt_intensity;
+		}
+		// dec. part to finish...
+		cgpu->intensity = (float) cgpu->intensity_int;
+	}
 }
