@@ -66,40 +66,6 @@ int cuda_finddevice(char *name);
 nvml_handle *hnvml = NULL;
 #endif
 
-#ifdef __linux /* Linux specific policy and affinity management */
-#include <sched.h>
-static inline void drop_policy(void) {
-	struct sched_param param;
-	param.sched_priority = 0;
-#ifdef SCHED_IDLE
-	if (unlikely(sched_setscheduler(0, SCHED_IDLE, &param) == -1))
-#endif
-#ifdef SCHED_BATCH
-		sched_setscheduler(0, SCHED_BATCH, &param);
-#endif
-}
-static inline void affine_to_cpu(int id, int cpu) {
-	cpu_set_t set;
-	CPU_ZERO(&set);
-	CPU_SET(cpu, &set);
-	sched_setaffinity(0, sizeof(&set), &set);
-}
-#elif defined(__FreeBSD__) /* FreeBSD specific policy and affinity management */
-#include <sys/cpuset.h>
-static inline void drop_policy(void) { }
-static inline void affine_to_cpu(int id, int cpu) {
-	cpuset_t set;
-	CPU_ZERO(&set);
-	CPU_SET(cpu, &set);
-	cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset_t), &set);
-}
-#else /* Windows */
-static inline void drop_policy(void) { }
-static inline void affine_to_cpu(int id, int cpu) {
-	SetThreadAffinityMask(GetCurrentThread(), 1 << cpu);
-}
-#endif
-		
 enum workio_commands {
 	WC_GET_WORK,
 	WC_SUBMIT_WORK,
@@ -387,6 +353,55 @@ static struct option const options[] = {
 static struct work _ALIGN(64) g_work;
 static time_t g_work_time;
 static pthread_mutex_t g_work_lock;
+
+
+#ifdef __linux /* Linux specific policy and affinity management */
+#include <sched.h>
+static inline void drop_policy(void) {
+	struct sched_param param;
+	param.sched_priority = 0;
+#ifdef SCHED_IDLE
+	if (unlikely(sched_setscheduler(0, SCHED_IDLE, &param) == -1))
+#endif
+#ifdef SCHED_BATCH
+		sched_setscheduler(0, SCHED_BATCH, &param);
+#endif
+}
+static void affine_to_cpu_mask(int id, uint8_t mask) {
+	cpu_set_t set;
+	CPU_ZERO(&set);
+	for (uint8_t i = 0; i < num_cpus; i++) {
+		// cpu mask
+		if (mask & (1<<i)) { CPU_SET(i, &set); printf("%d \n", i); }
+	}
+	if (id == -1) {
+		// process affinity
+		sched_setaffinity(0, sizeof(&set), &set);
+	} else {
+		// thread only
+		pthread_setaffinity_np(thr_info[id].pth, sizeof(&set), &set);
+	}
+}
+#elif defined(__FreeBSD__) /* FreeBSD specific policy and affinity management */
+#include <sys/cpuset.h>
+static inline void drop_policy(void) { }
+static void affine_to_cpu_mask(int id, uint8_t mask) {
+	cpuset_t set;
+	CPU_ZERO(&set);
+	for (uint8_t i = 0; i < num_cpus; i++) {
+		if (mask & (1<<i)) CPU_SET(i, &set);
+	}
+	cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset_t), &set);
+}
+#else /* Windows */
+static inline void drop_policy(void) { }
+static void affine_to_cpu_mask(int id, uint8_t mask) {
+	if (id == -1)
+		SetProcessAffinityMask(GetCurrentProcess(), mask);
+	else
+		SetThreadAffinityMask(GetCurrentThread(), mask);
+}
+#endif
 
 static bool get_blocktemplate(CURL *curl, struct work *work);
 
@@ -1122,14 +1137,14 @@ static void *miner_thread(void *userdata)
 	if (num_cpus > 1) {
 		if (opt_affinity == -1 && opt_n_threads > 1) {
 			if (!opt_quiet)
-				applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
-						thr_id % num_cpus);
-			affine_to_cpu(thr_id, thr_id % num_cpus);
+				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
+						thr_id % num_cpus, (1 << (thr_id % num_cpus)));
+			affine_to_cpu_mask(thr_id, 1 << (thr_id % num_cpus));
 		} else if (opt_affinity != -1) {
 			if (!opt_quiet)
-				applog(LOG_DEBUG, "Binding thread %d to cpu %d", thr_id,
+				applog(LOG_DEBUG, "Binding thread %d to cpu mask %x", thr_id,
 						opt_affinity);
-			affine_to_cpu(thr_id, opt_affinity);
+			affine_to_cpu_mask(thr_id, opt_affinity);
 		}
 	}
 
@@ -2287,14 +2302,12 @@ int main(int argc, char *argv[])
 		}
 		SetPriorityClass(GetCurrentProcess(), prio);
 	}
-	if (opt_affinity != -1) {
-		DWORD_PTR mask = (DWORD_PTR) opt_affinity;
-		if (!opt_quiet)
-			applog(LOG_DEBUG, "Binding process to cpu(s) mask %x", opt_affinity);
-		SetProcessAffinityMask(GetCurrentProcess(), mask);
-	}
 #endif
-
+	if (opt_affinity != -1) {
+		if (!opt_quiet)
+			applog(LOG_DEBUG, "Binding process to cpu mask %x", opt_affinity);
+		affine_to_cpu_mask(-1, opt_affinity);
+	}
 	if (active_gpus == 0) {
 		applog(LOG_ERR, "No CUDA devices found! terminating.");
 		exit(1);
