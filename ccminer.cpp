@@ -68,11 +68,9 @@ nvml_handle *hnvml = NULL;
 
 #ifdef __linux /* Linux specific policy and affinity management */
 #include <sched.h>
-static inline void drop_policy(void)
-{
+static inline void drop_policy(void) {
 	struct sched_param param;
 	param.sched_priority = 0;
-
 #ifdef SCHED_IDLE
 	if (unlikely(sched_setscheduler(0, SCHED_IDLE, &param) == -1))
 #endif
@@ -80,35 +78,25 @@ static inline void drop_policy(void)
 		sched_setscheduler(0, SCHED_BATCH, &param);
 #endif
 }
-
-static inline void affine_to_cpu(int id, int cpu)
-{
+static inline void affine_to_cpu(int id, int cpu) {
 	cpu_set_t set;
-
 	CPU_ZERO(&set);
 	CPU_SET(cpu, &set);
 	sched_setaffinity(0, sizeof(&set), &set);
 }
 #elif defined(__FreeBSD__) /* FreeBSD specific policy and affinity management */
 #include <sys/cpuset.h>
-static inline void drop_policy(void)
-{
-}
-
-static inline void affine_to_cpu(int id, int cpu)
-{
+static inline void drop_policy(void) { }
+static inline void affine_to_cpu(int id, int cpu) {
 	cpuset_t set;
 	CPU_ZERO(&set);
 	CPU_SET(cpu, &set);
 	cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset_t), &set);
 }
-#else
-static inline void drop_policy(void)
-{
-}
-
-static inline void affine_to_cpu(int id, int cpu)
-{
+#else /* Windows */
+static inline void drop_policy(void) { }
+static inline void affine_to_cpu(int id, int cpu) {
+	SetThreadAffinityMask(GetCurrentThread(), 1 << cpu);
 }
 #endif
 		
@@ -322,7 +310,7 @@ Options:\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n\
-      --cpu-affinity    set process affinity to specific cpu core(s)\n\
+      --cpu-affinity    set process affinity to cpu core(s), mask 0x3 for cores 0 and 1\n\
       --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)\n\
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n"
 
@@ -2010,8 +1998,8 @@ static void parse_arg(int key, char *arg)
 		v = atoi(arg);
 		if (v < -1)
 			v = -1;
-		if (v >= num_cpus)
-			v = num_cpus-1;
+		if (v > (1<<num_cpus)-1)
+			v = -1;
 		opt_affinity = v;
 		break;
 	case 1021:
@@ -2298,6 +2286,12 @@ int main(int argc, char *argv[])
 			prio = REALTIME_PRIORITY_CLASS;
 		}
 		SetPriorityClass(GetCurrentProcess(), prio);
+	}
+	if (opt_affinity != -1) {
+		DWORD_PTR mask = (DWORD_PTR) opt_affinity;
+		if (!opt_quiet)
+			applog(LOG_DEBUG, "Binding process to cpu(s) mask %x", opt_affinity);
+		SetProcessAffinityMask(GetCurrentProcess(), mask);
 	}
 #endif
 
