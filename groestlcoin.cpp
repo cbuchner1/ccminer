@@ -12,48 +12,21 @@
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
-void sha256func(unsigned char *hash, const unsigned char *data, int len)
-{
-    uint32_t S[16], T[16];
-    int i, r;
-
-    sha256_init(S);
-    for (r = len; r > -9; r -= 64) {
-        if (r < 64)
-            memset(T, 0, 64);
-        memcpy(T, data + len - r, r > 64 ? 64 : (r < 0 ? 0 : r));
-        if (r >= 0 && r < 64)
-            ((unsigned char *)T)[r] = 0x80;
-        for (i = 0; i < 16; i++)
-            T[i] = be32dec(T + i);
-        if (r < 56)
-            T[15] = 8 * len;
-        sha256_transform(S, T, 0);
-    }
-    /*
-    memcpy(S + 8, sha256d_hash1 + 8, 32);
-    sha256_init(T);
-    sha256_transform(T, S, 0);
-    */
-    for (i = 0; i < 8; i++)
-        be32enc((uint32_t *)hash + i, T[i]);
-}
-
+// CPU-groestl
 extern "C" void groestlhash(void *state, const void *input)
 {
-    // CPU-groestl
-    sph_groestl512_context ctx_groestl[2];
+    sph_groestl512_context ctx_groestl;
 
     //these uint512 in the c++ source of the client are backed by an array of uint32
     uint32_t hashA[16], hashB[16];
 
-    sph_groestl512_init(&ctx_groestl[0]);
-    sph_groestl512 (&ctx_groestl[0], input, 80); //6
-    sph_groestl512_close(&ctx_groestl[0], hashA); //7
+    sph_groestl512_init(&ctx_groestl);
+    sph_groestl512 (&ctx_groestl, input, 80); //6
+    sph_groestl512_close(&ctx_groestl, hashA); //7
 
-    sph_groestl512_init(&ctx_groestl[1]);
-    sph_groestl512 (&ctx_groestl[1], hashA, 64); //6
-    sph_groestl512_close(&ctx_groestl[1], hashB); //7
+    sph_groestl512_init(&ctx_groestl);
+    sph_groestl512 (&ctx_groestl, hashA, 64); //6
+    sph_groestl512_close(&ctx_groestl, hashB); //7
 
     memcpy(state, hashB, 32);
 }

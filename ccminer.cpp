@@ -83,6 +83,7 @@ enum sha_algos {
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
 	ALGO_DEEP,
+	ALGO_DMD_GR,
 	ALGO_DOOM,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
@@ -105,7 +106,6 @@ enum sha_algos {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
-	ALGO_DMD_GR,
 };
 
 static const char *algo_names[] = {
@@ -113,6 +113,7 @@ static const char *algo_names[] = {
 	"blake",
 	"blakecoin",
 	"deep",
+	"dmd-gr",
 	"doom", /* is luffa */
 	"fresh",
 	"fugue256",
@@ -135,7 +136,6 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
-	"dmd-gr",
 };
 
 bool opt_debug = false;
