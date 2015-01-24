@@ -424,6 +424,17 @@ static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b)
 }
 static __device__ __forceinline__ void operator+= (uint2 &a, uint2 b) { a = a + b; }
 
+static __device__ __forceinline__ uint2 operator- (uint2 a, uint2 b)
+{
+	uint2 result;
+	asm("{\n\t"
+		"sub.cc.u32 %0,%2,%4; \n\t"
+		"subc.u32 %1,%3,%5;   \n\t"
+		"}\n\t"
+		: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(b.x), "r"(b.y));
+	return result;
+}
+
 /**
  * basic multiplication between 64bit no carry outside that range (ie mul.lo.b64(a*b))
  * (what does uint64 "*" operator)
@@ -498,6 +509,70 @@ __device__ __forceinline__
 uint2 SWAPUINT2(uint2 value)
 {
 	return make_uint2(value.y, value.x);
+}
+
+/* uint2 for bmw512 - to double check later */
+
+__device__ __forceinline__
+static uint2 SHL2(uint2 a, int offset)
+{
+#if __CUDA_ARCH__ > 300
+	uint2 result;
+	if (offset < 32)  {
+		asm("{\n\t"
+			"shf.l.clamp.b32 %1,%2,%3,%4; \n\t"
+			"shl.b32 %0,%2,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	} else {
+		asm("{\n\t"
+			"shf.l.clamp.b32 %1,%2,%3,%4; \n\t"
+			"shl.b32 %0,%2,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	return result;
+#else
+	if (offset <= 32) {
+		a.y = (a.y << offset) | (a.x >> (32 - offset));
+		a.x = (a.x << offset);
+	} else {
+		a.y = (a.x << (offset-32));
+		a.x = 0;
+	}
+	return a;
+#endif
+}
+
+__device__ __forceinline__
+static uint2 SHR2(uint2 a, int offset)
+{
+#if __CUDA_ARCH__ > 300
+	uint2 result;
+	if (offset<32) {
+		asm("{\n\t"
+			"shf.r.clamp.b32 %0,%2,%3,%4; \n\t"
+			"shr.b32 %1,%3,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+	} else {
+		asm("{\n\t"
+			"shf.l.clamp.b32 %0,%2,%3,%4; \n\t"
+			"shl.b32 %1,%3,%4; \n\t"
+			"}\n\t"
+			: "=r"(result.x), "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+	}
+	return result;
+#else
+	if (offset <= 32) {
+		a.x = (a.x >> offset) | (a.y << (32 - offset));
+		a.y = (a.y >> offset);
+	} else {
+		a.x = (a.y >> (offset - 32));
+		a.y = 0;
+	}
+	return a;
+#endif
 }
 
 #endif // #ifndef CUDA_HELPER_H

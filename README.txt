@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.2-tpruvot (Jan 2015) - "Happy new Year!"
+ccMiner release 1.5.2-tpruvot (24 Jan 2015) - "Happy new Year!"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -175,7 +175,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Jan.      2015  v1.5.2
+  Jan. 24th 2015  v1.5.2
                   Add process CPU priority and affinity mask parameters
                   Intelligent duplicate shares check feature (enabled if needed)
                   api: Fan RPM (windows), Cuda threads count, linux kernel ver.
