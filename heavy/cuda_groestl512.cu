@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <memory.h>
 
+#define SPH_C32(x) ((uint32_t)(x ## U))
+#define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
+
 #include "cuda_helper.h"
 
 // globaler Speicher für alle HeftyHashes aller Threads
@@ -13,8 +16,6 @@ uint32_t *d_hash4output[MAX_GPUS];
 __constant__ uint32_t groestl_gpu_state[32];
 __constant__ uint32_t groestl_gpu_msg[32];
 
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
-
 #define PC32up(j, r)   ((uint32_t)((j) + (r)))
 #define PC32dn(j, r)   0
 #define QC32up(j, r)   0xFFFFFFFF
@@ -25,7 +26,6 @@ __constant__ uint32_t groestl_gpu_msg[32];
 #define B32_2(x)    (((x) >> 16) & 0xFF)
 #define B32_3(x)    ((x) >> 24)
 
-#define SPH_C32(x)	((uint32_t)(x ## U))
 #define C32e(x)     ((SPH_C32(x) >> 24) \
                     | ((SPH_C32(x) >>  8) & SPH_C32(0x0000FF00)) \
                     | ((SPH_C32(x) <<  8) & SPH_C32(0x00FF0000)) \

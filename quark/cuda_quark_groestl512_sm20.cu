@@ -5,8 +5,8 @@
 #define MAXWELL_OR_FERMI 0
 #define USE_SHARED 1
 
-#define SPH_C32(x)    ((uint32_t)(x ## U))
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
+// #define SPH_C32(x)    ((uint32_t)(x ## U))
+// #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
 #define PC32up(j, r)   ((uint32_t)((j) + (r)))
 #define PC32dn(j, r)   0

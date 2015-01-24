@@ -41,12 +41,12 @@
 
 #define USE_SHARED 1
 
+#define SPH_T64(x) ((x) & 0xFFFFFFFFFFFFFFFFULL)
+
 #include "cuda_helper.h"
 
 #define SPH_ROTL32(x, n)   SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
 #define SPH_ROTR32(x, n)   SPH_ROTL32(x, (32 - (n)))
-
-#define SPH_T64(x)    ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 
 static __constant__ uint32_t initVector[8];
 

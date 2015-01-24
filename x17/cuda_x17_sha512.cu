@@ -36,6 +36,7 @@
 #include <stdio.h>
 
 #define USE_SHARED 1
+#define SPH_C64(x) ((uint64_t)(x ## ULL))
 
 #include "cuda_helper.h"
 
@@ -43,9 +44,6 @@
 
 #define SPH_ROTL32(x, n)  SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
 #define SPH_ROTR32(x, n)  SPH_ROTL32(x, (32 - (n)))
-
-#define SPH_T32(x)  ((x) & SPH_C32(0xFFFFFFFF))
-#define SPH_T64(x)  ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 
 static __constant__ uint64_t H_512[8];
 

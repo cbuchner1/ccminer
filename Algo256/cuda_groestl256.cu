@@ -1,14 +1,14 @@
 #include <memory.h>
 
+#define SPH_C32(x)    ((uint32_t)(x ## U))
+#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
+
 #include "cuda_helper.h"
 
 uint32_t *d_gnounce[MAX_GPUS];
 uint32_t *d_GNonce[MAX_GPUS];
 
 __constant__ uint32_t pTarget[8];
-
-#define SPH_C32(x)    ((uint32_t)(x ## U))
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
 #define C32e(x) \
 	  ((SPH_C32(x) >> 24) \

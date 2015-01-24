@@ -37,14 +37,24 @@ extern const uint3 threadIdx;
 #endif
 
 #ifndef SPH_C32
-#define SPH_C32(x) ((uint32_t)(x ## U))
+#define SPH_C32(x) (x)
+// #define SPH_C32(x) ((uint32_t)(x ## U))
 #endif
 
 #ifndef SPH_C64
-#define SPH_C64(x) ((uint64_t)(x ## ULL))
+#define SPH_C64(x) (x)
+// #define SPH_C64(x) ((uint64_t)(x ## ULL))
 #endif
 
-#define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
+#ifndef SPH_T32
+#define SPH_T32(x) (x)
+// #define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
+#endif
+
+#ifndef SPH_T64
+#define SPH_T64(x) (x)
+// #define SPH_T64(x) ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
+#endif
 
 #if __CUDA_ARCH__ < 320
 // Kepler (Compute 3.0)
