@@ -27,8 +27,7 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 {
 	uint32_t start_nonce = pdata[19]++;
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 19;
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << intensity);
-	apiReportThroughput(thr_id, throughput);
+	int throughput = (int) device_intensity(thr_id, __func__, 1 << intensity); // 256*256*8
 	throughput = min(throughput, max_nonce - start_nonce);
 
 	if (opt_benchmark)

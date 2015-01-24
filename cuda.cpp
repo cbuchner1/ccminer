@@ -115,6 +115,13 @@ int cuda_finddevice(char *name)
 	return -1;
 }
 
+uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount)
+{
+	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
+	api_set_throughput(thr_id, throughput);
+	return throughput;
+}
+
 // Zeitsynchronisations-Routine von cudaminer mit CPU sleep
 typedef struct { double value[8]; } tsumarray;
 cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)

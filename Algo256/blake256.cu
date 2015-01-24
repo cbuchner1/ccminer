@@ -391,8 +391,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	uint32_t crcsum;
 #endif
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 20;
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << intensity);
-	apiReportThroughput(thr_id, (uint32_t) throughput);
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	int rc = 0;

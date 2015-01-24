@@ -36,14 +36,9 @@ static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
-{	
-    if (opt_benchmark)
-        ((uint32_t*)ptarget)[7] = 0x000000ff;
-
+{
 	uint32_t start_nonce = pdata[19]++;
-
-	uint32_t throughput = opt_work_size ? opt_work_size : (1 << 17);
-	apiReportThroughput(thr_id, throughput);
+    uint32_t throughput = device_intensity(thr_id, __func__, 1 << 17);
 	throughput = min(throughput, max_nonce - start_nonce);
 
 	uint32_t *outputHash = (uint32_t*)malloc(throughput * 16 * sizeof(uint32_t));
@@ -60,14 +55,14 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 #endif
 		init[thr_id] = true;
 	}
-	
+
 	uint32_t endiandata[32];
 	for (int kk=0; kk < 32; kk++)
 		be32enc(&endiandata[kk], pdata[kk]);
 
 	// Context mit dem Endian gedrehten Blockheader vorbereiten (Nonce wird später ersetzt)
 	myriadgroestl_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
-	
+
 	do {
 		// GPU
 		uint32_t foundNounce = 0xFFFFFFFF;
@@ -80,7 +75,7 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			uint32_t tmpHash[8];
 			endiandata[19] = SWAP32(foundNounce);
 			myriadhash(tmpHash, endiandata);
-			if (tmpHash[7] <= Htarg && 
+			if (tmpHash[7] <= Htarg &&
 					fulltest(tmpHash, ptarget)) {
 						pdata[19] = foundNounce;
 						*hashes_done = foundNounce - start_nonce + 1;

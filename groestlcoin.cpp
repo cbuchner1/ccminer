@@ -45,11 +45,11 @@ extern "C" void groestlhash(void *state, const void *input)
     sph_groestl512_context ctx_groestl[2];
 
     //these uint512 in the c++ source of the client are backed by an array of uint32
-    uint32_t hashA[16], hashB[16];    
+    uint32_t hashA[16], hashB[16];
 
     sph_groestl512_init(&ctx_groestl[0]);
     sph_groestl512 (&ctx_groestl[0], input, 80); //6
-    sph_groestl512_close(&ctx_groestl[0], hashA); //7    
+    sph_groestl512_close(&ctx_groestl[0], hashA); //7
 
     sph_groestl512_init(&ctx_groestl[1]);
     sph_groestl512 (&ctx_groestl[1], hashA, 64); //6
@@ -62,10 +62,9 @@ static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
     uint32_t max_nonce, unsigned long *hashes_done)
-{    
+{
     uint32_t start_nonce = pdata[19]++;
-    uint32_t throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*2048
-    apiReportThroughput(thr_id, throughput);
+    uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
     throughput = min(throughput, max_nonce - start_nonce);
 
     uint32_t *outputHash = (uint32_t*)malloc(throughput * 16 * sizeof(uint32_t));
@@ -79,7 +78,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
         groestlcoin_cpu_init(thr_id, throughput);
         init[thr_id] = true;
     }
-    
+
     // Endian Drehung ist notwendig
     uint32_t endiandata[32];
     for (int kk=0; kk < 32; kk++)
@@ -87,7 +86,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
 
     // Context mit dem Endian gedrehten Blockheader vorbereiten (Nonce wird später ersetzt)
     groestlcoin_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
-    
+
     do {
         // GPU
         uint32_t foundNounce = 0xFFFFFFFF;
@@ -118,7 +117,7 @@ extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t 
         else pdata[19] += throughput;
 
     } while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
-    
+
     *hashes_done = pdata[19] - start_nonce + 1;
     free(outputHash);
     return 0;

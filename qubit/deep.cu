@@ -60,9 +60,8 @@ extern "C" int scanhash_deep(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	int throughput = opt_work_size ? opt_work_size : (1 << 19); // 256*256*8
-	apiReportThroughput(thr_id, (uint32_t) throughput);
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	int throughput = (int) device_intensity(thr_id, __func__, 1U << 19); // 256*256*8
+	throughput = min(throughput, (int) (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000f;

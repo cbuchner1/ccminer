@@ -171,6 +171,7 @@ int active_gpus;
 char * device_name[MAX_GPUS];
 short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
+uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 char *rpc_user = NULL;
 static char *rpc_url;
 static char *rpc_userpass;
@@ -197,9 +198,6 @@ static double *thr_hashrates;
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
 int opt_statsavg = 30;
-int opt_intensity = 0;
-uint32_t opt_work_size = 0; /* default */
-uint32_t opt_work_adds = 0;
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
 char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
@@ -1831,16 +1829,32 @@ static void parse_arg(int key, char *arg)
 		v = (uint32_t) d;
 		if (v < 0 || v > 31)
 			show_usage_and_exit(1);
-		opt_intensity = v;
-		if (v > 7) { /* 0 = default */
-			opt_work_size = (1 << v);
-			if ((d - v) > 0.0) {
-				opt_work_adds = (uint32_t) floor((d - v) * (1 << (v-8))) * 256;
-				opt_work_size += opt_work_adds;
-				applog(LOG_INFO, "Adding %u threads to intensity %u, %u cuda threads",
-					opt_work_adds, v, opt_work_size);
-			} else {
-				applog(LOG_INFO, "Intensity set to %u, %u cuda threads", v, opt_work_size);
+		{
+			int n = 0, adds = 0;
+			int ngpus = cuda_num_devices();
+			char * pch = strtok(arg,",");
+			if (pch == NULL) {
+				for (n=0; n < ngpus; n++)
+					gpus_intensity[n] = (1 << v);
+				break;
+			}
+			while (pch != NULL) {
+				d = atof(pch);
+				v = (uint32_t) d;
+				if (v > 7) { /* 0 = default */
+					gpus_intensity[n] = (1 << v);
+					if ((d - v) > 0.0) {
+						adds = (uint32_t) floor((d - v) * (1 << (v-8))) * 256;
+						gpus_intensity[n] += adds;
+						applog(LOG_INFO, "Adding %u threads to intensity %u, %u cuda threads",
+							adds, v, gpus_intensity[n]);
+					} else {
+						applog(LOG_INFO, "Intensity set to %u, %u cuda threads",
+							v, gpus_intensity[n]);
+					}
+				}
+				n++;
+				pch = strtok(NULL, ",");
 			}
 		}
 		break;

@@ -94,7 +94,6 @@ extern char *opt_api_allow;
 extern int opt_api_listen; /* port */
 extern uint32_t accepted_count;
 extern uint32_t rejected_count;
-extern uint32_t opt_work_adds;
 extern int num_cpus;
 extern struct stratum_ctx stratum;
 extern char* rpc_user;
@@ -877,24 +876,19 @@ void *api_thread(void *userdata)
 }
 
 /* to be able to report the default value set in each algo */
-void apiReportThroughput(int thr_id, uint32_t throughput)
+void api_set_throughput(int thr_id, uint32_t throughput)
 {
 	struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 	if (cgpu) {
+		uint32_t ws = throughput;
+		uint8_t i = 0;
 		cgpu->throughput = throughput;
-		if (opt_intensity == 0) {
-			uint8_t i = 0;
-			uint32_t ws = throughput;
-			while (ws > 1 && i++ < 32)
-				ws = ws >> 1;
-			cgpu->intensity_int = i;
-			cgpu->intensity = (float) i;
-		} else {
-			cgpu->intensity_int = (uint8_t) opt_intensity;
-			cgpu->intensity = (float) opt_intensity;
-			if (opt_work_adds) {
-				cgpu->intensity += ((float) opt_work_adds / (1U << opt_intensity));
-			}
+		while (ws > 1 && i++ < 32)
+			ws = ws >> 1;
+		cgpu->intensity_int = i;
+		cgpu->intensity = (float) i;
+		if (i && (1U << i) < throughput) {
+			cgpu->intensity += ((float) (throughput-(1U << i)) / (1U << i));
 		}
 	}
 }

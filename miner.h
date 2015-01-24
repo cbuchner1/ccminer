@@ -378,7 +378,7 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 
 /* api related */
 void *api_thread(void *userdata);
-void apiReportThroughput(int thr_id, uint32_t throughput);
+void api_set_throughput(int thr_id, uint32_t throughput);
 
 struct cgpu_info {
 	uint8_t gpu_id;
@@ -462,7 +462,6 @@ extern bool opt_debug;
 extern bool opt_quiet;
 extern bool opt_protocol;
 extern bool opt_tracegpu;
-extern int opt_intensity;
 extern int opt_n_threads;
 extern int active_gpus;
 extern int opt_timeout;
@@ -483,7 +482,6 @@ extern int api_thr_id;
 extern struct work_restart *work_restart;
 extern bool opt_trust_pool;
 extern uint16_t opt_vote;
-extern uint32_t opt_work_size;
 
 extern uint64_t global_hashrate;
 extern double   global_diff;
@@ -492,6 +490,7 @@ extern double   global_diff;
 extern char* device_name[MAX_GPUS];
 extern short device_map[MAX_GPUS];
 extern long  device_sm[MAX_GPUS];
+extern uint32_t gpus_intensity[MAX_GPUS];
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
@@ -535,6 +534,7 @@ extern int timeval_subtract(struct timeval *result, struct timeval *x,
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
 extern void diff_to_target(uint32_t *target, double diff);
 extern void get_currentalgo(char* buf, int sz);
+extern uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
 
 struct stratum_job {
 	char *job_id;
