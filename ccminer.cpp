@@ -40,7 +40,6 @@
 #endif
 #endif
 
-#include "compat.h"
 #include "miner.h"
 
 #ifdef WIN32

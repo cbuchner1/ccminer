@@ -31,7 +31,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "compat.h"
 #include "miner.h"
 #include "nvml.h"
 
@@ -135,7 +134,7 @@ static void gpustatus(int thr_id)
 		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%.2f;THR=%u|",
+			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%.1f;THR=%u|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
 			cgpu->gpu_fan_rpm, cgpu->gpu_clock, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity, cgpu->throughput);

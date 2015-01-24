@@ -51,6 +51,8 @@ void *alloca (size_t);
 # endif
 #endif
 
+#include "compat.h"
+
 #ifdef __INTELLISENSE__
 /* should be in stdint.h but... */
 typedef __int64 int64_t;

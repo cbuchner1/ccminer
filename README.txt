@@ -176,6 +176,7 @@ features.
 >>> RELEASE HISTORY <<<
 
   Jan. 24th 2015  v1.5.2
+                  Allow per device intensity, example: -i 20,19.5
                   Add process CPU priority and affinity mask parameters
                   Intelligent duplicate shares check feature (enabled if needed)
                   api: Fan RPM (windows), Cuda threads count, linux kernel ver.

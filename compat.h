@@ -41,6 +41,10 @@ static __inline int setpriority(int which, int who, int prio)
 	return -!SetThreadPriority(GetCurrentThread(), prio);
 }
 
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
 #endif /* WIN32 */
 
 #endif /* __COMPAT_H__ */

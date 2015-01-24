@@ -21,10 +21,6 @@
 
 #include "cuda_runtime.h"
 
-#ifdef WIN32
-#include "compat.h" // sleep
-#endif
-
 // CUDA Devices on the System
 int cuda_num_devices()
 {
