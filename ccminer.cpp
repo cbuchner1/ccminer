@@ -369,7 +369,7 @@ static void affine_to_cpu_mask(int id, uint8_t mask) {
 	CPU_ZERO(&set);
 	for (uint8_t i = 0; i < num_cpus; i++) {
 		// cpu mask
-		if (mask & (1<<i)) { CPU_SET(i, &set); printf("%d \n", i); }
+		if (mask & (1<<i)) { CPU_SET(i, &set); }
 	}
 	if (id == -1) {
 		// process affinity
