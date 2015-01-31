@@ -13,7 +13,6 @@ extern "C"
 static uint32_t *d_hash[MAX_GPUS];
 
 // Speicher zur Generierung der Noncevektoren für die bedingten Hashes
-static uint32_t *d_animeNonces[MAX_GPUS];
 static uint32_t *d_branch1Nonces[MAX_GPUS];
 static uint32_t *d_branch2Nonces[MAX_GPUS];
 static uint32_t *d_branch3Nonces[MAX_GPUS];
@@ -188,7 +187,6 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 		cuda_check_cpu_init(thr_id, throughput);
 		quark_compactTest_cpu_init(thr_id, throughput);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_animeNonces[thr_id], sizeof(uint32_t)*throughput));
 		CUDA_SAFE_CALL(cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput));
 		CUDA_SAFE_CALL(cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput));
 		CUDA_SAFE_CALL(cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput));
