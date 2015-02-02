@@ -70,6 +70,9 @@
     <Filter Include="Header Files\lyra2">
       <UniqueIdentifier>{2ff6e4ce-7c92-4cb2-a3ad-c331e94fd81d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Ressources">
+      <UniqueIdentifier>{f5117ccb-a70d-411a-b7ea-d6faed230bc7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -362,6 +365,9 @@
     <ClInclude Include="lyra2\Sponge.h">
       <Filter>Header Files\lyra2</Filter>
     </ClInclude>
+    <ClInclude Include="res\resource.h">
+      <Filter>Ressources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
@@ -550,5 +556,15 @@
     <CudaCompile Include="lyra2\lyra2RE.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\ccminer.ico">
+      <Filter>Ressources</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\ccminer.rc">
+      <Filter>Ressources</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
