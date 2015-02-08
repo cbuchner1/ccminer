@@ -414,7 +414,8 @@ void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *
 			message[i] = vectorize(c_PaddedMessage80[i]);
 
 		// die Nounce durch die thread-spezifische ersetzen
-		message[9].x = cuda_swab32(nounce);	//REPLACE_HIWORD(message[9], cuda_swab32(nounce));
+		message[9].y = cuda_swab32(nounce);	//REPLACE_HIWORD(message[9], cuda_swab32(nounce));
+
 		// Compression 1
 		Compression512(message, h);
 
