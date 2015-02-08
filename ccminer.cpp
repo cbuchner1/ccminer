@@ -2208,7 +2208,7 @@ int main(int argc, char *argv[])
 
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by tpruvot@github ***\n");
 #ifdef WIN32
-	printf("\tBuilt with VC++ 2013 and nVidia CUDA SDK 7 RC\n\n");
+	printf("\tBuilt with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
 #else
 	printf("\tBuilt with the nVidia CUDA SDK 6.5\n\n");
 #endif
