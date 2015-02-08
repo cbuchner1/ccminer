@@ -2454,10 +2454,6 @@ int main(int argc, char *argv[])
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 
-#ifdef WIN32
-	timeEndPeriod(1); // be nice and forego high timer precision
-#endif
-
 	applog(LOG_INFO, "workio thread dead, exiting.");
 
 	proper_exit(0);
