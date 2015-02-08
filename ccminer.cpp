@@ -1121,8 +1121,9 @@ static void *miner_thread(void *userdata)
 			case 5:
 				prio = -15;
 		}
-		applog(LOG_DEBUG, "Thread %d priority %d (set to %d)", thr_id,
-			opt_priority, prio);
+		if (opt_debug)
+			applog(LOG_DEBUG, "Thread %d priority %d (nice %d)",
+				thr_id,	opt_priority, prio);
 #endif
 		int ret = setpriority(PRIO_PROCESS, 0, prio);
 		if (opt_priority == 0) {
@@ -1133,12 +1134,12 @@ static void *miner_thread(void *userdata)
 	/* Cpu thread affinity */
 	if (num_cpus > 1) {
 		if (opt_affinity == -1 && opt_n_threads > 1) {
-			if (!opt_quiet)
+			if (opt_debug)
 				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
 						thr_id % num_cpus, (1 << (thr_id % num_cpus)));
 			affine_to_cpu_mask(thr_id, 1 << (thr_id % num_cpus));
 		} else if (opt_affinity != -1) {
-			if (!opt_quiet)
+			if (opt_debug)
 				applog(LOG_DEBUG, "Binding thread %d to cpu mask %x", thr_id,
 						opt_affinity);
 			affine_to_cpu_mask(thr_id, opt_affinity);
@@ -2299,7 +2300,6 @@ int main(int argc, char *argv[])
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE);
 	if (opt_priority > 0) {
 		DWORD prio = NORMAL_PRIORITY_CLASS;
-		SetPriorityClass(NULL, prio);
 		switch (opt_priority) {
 		case 1:
 			prio = BELOW_NORMAL_PRIORITY_CLASS;
