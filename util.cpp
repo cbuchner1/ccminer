@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <jansson.h>
 #include <curl/curl.h>
+#include <sys/stat.h>
 #include <time.h>
 #ifdef WIN32
 #include "compat/winansi.h"
@@ -143,6 +144,33 @@ void applog(int prio, const char *fmt, ...)
 		pthread_mutex_unlock(&applog_lock);
 	}
 	va_end(ap);
+}
+
+/* Get default config.json path (system specific) */
+void get_defconfig_path(char *out, size_t bufsize, char *argv0)
+{
+	char *cmd = strdup(argv0);
+	char *dir = dirname(cmd);
+	const char *sep = strstr(dir, "\\") ? "\\" : "/";
+	struct stat info;
+#ifdef WIN32
+	snprintf(out, bufsize, "%s\\ccminer\\ccminer.conf\0", getenv("APPDATA"));
+#else
+	snprintf(out, bufsize, "%s\\.ccminer\\ccminer.conf", getenv("HOME"));
+#endif
+	if (dir && stat(out, &info) != 0) {
+		// binary folder if not present in user folder
+		snprintf(out, bufsize, "%s%sccminer.conf\0", dir, sep);
+	}
+	if (stat(out, &info) != 0) {
+		out[0] = '\0';
+		return;
+	}
+	out[bufsize - 1] = '\0';
+	free(cmd);
+#ifdef WIN32
+	if (dir) free(dir);
+#endif
 }
 
 static void databuf_free(struct data_buffer *db)

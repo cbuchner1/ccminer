@@ -14,12 +14,7 @@ extern "C" {
 #include <jansson.h>
 #include <curl/curl.h>
 
-#ifdef WIN32
-#define snprintf(...) _snprintf(__VA_ARGS__)
-#define strdup(x) _strdup(x)
-#define strncasecmp(x,y,z) _strnicmp(x,y,z)
-#define strcasecmp(x,y) _stricmp(x,y)
-typedef int ssize_t;
+#ifdef _MSC_VER
 #undef HAVE_ALLOCA_H
 #undef HAVE_SYSLOG_H
 #endif
@@ -69,11 +64,8 @@ typedef char *  va_list;
 #endif
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 0
+# undef _ALIGN
 # define _ALIGN(x) __align__(x)
-#elif _MSC_VER
-# define _ALIGN(x) __declspec(align(x))
-#else
-# define _ALIGN(x) __attribute__ ((aligned(x)))
 #endif
 
 #ifdef HAVE_SYSLOG_H
@@ -526,6 +518,7 @@ extern uint32_t gpus_intensity[MAX_GPUS];
 #define CL_WHT  "\x1B[01;37m" /* white */
 
 extern void applog(int prio, const char *fmt, ...);
+void get_defconfig_path(char *out, size_t bufsize, char *argv0);
 extern json_t *json_rpc_call(CURL *curl, const char *url, const char *userpass,
 	const char *rpc_req, bool, bool, int *);
 extern void cbin2hex(char *out, const char *in, size_t len);

@@ -172,9 +172,9 @@ short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 char *rpc_user = NULL;
-static char *rpc_url;
-static char *rpc_userpass;
 static char *rpc_pass;
+static char *rpc_userpass = NULL;
+static char *rpc_url;
 static char *short_url = NULL;
 char *opt_cert;
 char *opt_proxy;
@@ -364,6 +364,7 @@ static inline void drop_policy(void) {
 		sched_setscheduler(0, SCHED_BATCH, &param);
 #endif
 }
+
 static void affine_to_cpu_mask(int id, uint8_t mask) {
 	cpu_set_t set;
 	CPU_ZERO(&set);
@@ -1125,7 +1126,7 @@ static void *miner_thread(void *userdata)
 			applog(LOG_DEBUG, "Thread %d priority %d (nice %d)",
 				thr_id,	opt_priority, prio);
 #endif
-		int ret = setpriority(PRIO_PROCESS, 0, prio);
+		setpriority(PRIO_PROCESS, 0, prio);
 		if (opt_priority == 0) {
 			drop_policy();
 		}
@@ -1830,7 +1831,7 @@ static void parse_arg(int key, char *arg)
 		if (v < 0 || v > 31)
 			show_usage_and_exit(1);
 		{
-			int n = 0, adds = 0;
+			int n = 0;
 			int ngpus = cuda_num_devices();
 			char * pch = strtok(arg,",");
 			if (pch == NULL) {
@@ -1842,13 +1843,14 @@ static void parse_arg(int key, char *arg)
 				d = atof(pch);
 				v = (uint32_t) d;
 				if (v > 7) { /* 0 = default */
-					gpus_intensity[n] = (1 << v);
 					if ((d - v) > 0.0) {
-						adds = (uint32_t) floor((d - v) * (1 << (v-8))) * 256;
-						gpus_intensity[n] += adds;
+						int adds = (uint32_t)floor((d - v) * (1 << (v - 8))) * 256;
+						gpus_intensity[n] = (1 << v) + adds;
 						applog(LOG_INFO, "Adding %u threads to intensity %u, %u cuda threads",
 							adds, v, gpus_intensity[n]);
-					} else {
+					}
+					else if (gpus_intensity[n] != (1 << v)) {
+						gpus_intensity[n] = (1 << v);
 						applog(LOG_INFO, "Intensity set to %u, %u cuda threads",
 							v, gpus_intensity[n]);
 					}
@@ -1903,7 +1905,7 @@ static void parse_arg(int key, char *arg)
 		break;
 	case 't':
 		v = atoi(arg);
-		if (v < 1 || v > 9999)	/* sanity check */
+		if (v < 0 || v > 9999)	/* sanity check */
 			show_usage_and_exit(1);
 		opt_n_threads = v;
 		break;
@@ -2207,12 +2209,12 @@ int main(int argc, char *argv[])
 	int i;
 
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by tpruvot@github ***\n");
-#ifdef WIN32
-	printf("\tBuilt with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
+#ifdef _MSC_VER
+	printf("    Built with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
 #else
-	printf("\tBuilt with the nVidia CUDA SDK 6.5\n\n");
+	printf("    Built with the nVidia CUDA SDK 6.5\n\n");
 #endif
-	printf("  Based on pooler cpuminer 2.3.2\n");
+	printf("  Originally based on pooler cpuminer,\n");
 	printf("  CUDA support by Christian Buchner and Christian H.\n");
 	printf("  Include some of djm34 additions and sp optimisations\n\n");
 
@@ -2220,6 +2222,7 @@ int main(int argc, char *argv[])
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
+	rpc_url = strdup("");
 
 	pthread_mutex_init(&applog_lock, NULL);
 
@@ -2252,7 +2255,19 @@ int main(int argc, char *argv[])
 	/* parse command line */
 	parse_cmdline(argc, argv);
 
-	if (!opt_benchmark && !rpc_url) {
+	if (!opt_benchmark && !strlen(rpc_url)) {
+		// try default config file (user then binary folder)
+		char defconfig[MAX_PATH] = { 0 };
+		get_defconfig_path(defconfig, MAX_PATH, argv[0]);
+		if (strlen(defconfig)) {
+			if (opt_debug)
+				applog(LOG_DEBUG, "Using config %s", defconfig);
+			parse_arg('c', defconfig);
+			parse_cmdline(argc, argv);
+		}
+	}
+
+	if (!opt_benchmark && !strlen(rpc_url)) {
 		fprintf(stderr, "%s: no URL supplied\n", argv[0]);
 		show_usage_and_exit(1);
 	}

@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.2-tpruvot (24 Jan 2015) - "Happy new Year!"
+ccMiner release 1.5.3-tpruvot (11 Feb 2015) - "Default Config"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -174,6 +174,11 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Feb. 11th 2015  v1.5.3
+                  Fix anime algo
+                  Allow a default config file in user or ccminer folder
+                  SM 2.1 windows binary (lyra2 and blake/blakecoin for the moment)
 
   Jan. 24th 2015  v1.5.2
                   Allow per device intensity, example: -i 20,19.5
