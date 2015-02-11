@@ -18,9 +18,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef _MSC_VER
-#include <libgen.h>
-#endif
 
 #include "miner.h"
 #include "nvml.h"

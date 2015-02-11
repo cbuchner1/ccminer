@@ -69,6 +69,8 @@ static __inline char * dirname(char *file) {
 # define _ALIGN(x) __declspec(align(x))
 #else
 # define _ALIGN(x) __attribute__ ((aligned(x)))
+/* dirname() for linux/mingw */
+#include <libgen.h>
 #endif
 
 #ifndef WIN32
