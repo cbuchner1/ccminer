@@ -77,7 +77,7 @@ inline void lyra_hash(void *state, const void *input)
     memcpy(state, hash, 32);
 }
 
-extern int tp_coef[8];
+extern float tp_coef[8];
 extern bool opt_benchmark;
 
 extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
@@ -90,14 +90,16 @@ extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
 		((uint32_t*)ptarget)[7] = 0x0000ff;
 
 	const uint32_t Htarg = ptarget[7];
-
-	const int throughput = 256*256*tp_coef[thr_id];
+	if (tp_coef[thr_id]<0) { tp_coef[thr_id] = 4.; }
+	const int throughput = (int) (256*256*tp_coef[thr_id]);
 
 	static bool init[8] = {0,0,0,0,0,0,0,0};
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]); 
-
+		cudaDeviceReset();
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		// Konstanten kopieren, Speicher belegen
 		cudaMalloc(&d_hash[thr_id], 8 * sizeof(uint32_t) * throughput);
 		blake256_cpu_init(thr_id, throughput);
@@ -110,9 +112,9 @@ extern "C" int scanhash_lyra(int thr_id, uint32_t *pdata,
 
 	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++)
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]); 
 	blake256_cpu_setBlock_80(pdata);
-	groestl256_setTarget(ptarget);
+	groestl256_setTarget(ptarget); 
 
 	do {
 		int order = 0;

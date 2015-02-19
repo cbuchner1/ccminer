@@ -14,7 +14,7 @@ extern "C"
 #include "sph/sph_blake.h"
 #include "miner.h"
 }
-#include "mpir.h"
+//#include "mpir.h"
 
 extern int device_map[8];
 
@@ -26,6 +26,7 @@ static uint64_t *d_prod0[8];
 static uint64_t *d_prod1[8];
 
 extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+/*
 static void mpz_set_uint256(mpz_t r, uint8_t *u)
 {
     mpz_import(r, 32 / sizeof(unsigned long), -1, sizeof(unsigned long), -1, 0, u);
@@ -50,7 +51,7 @@ static void set_one_if_zero(uint8_t *hash512) {
     }
     hash512[0] = 1;
 }
-
+*/
 //extern uint32_t m7_sha256_cpu_hash_300(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern uint32_t m7_sha256_cpu_hash_300(int thr_id, int threads, uint32_t startNounce, uint64_t *d_nonceVector, uint64_t *d_hash, int order);
 
@@ -101,6 +102,7 @@ extern uint32_t quark_check_cpu_hash_120(int thr_id, int threads, uint32_t start
 
 
 // m7 Hashfunktion
+/*
 inline void m7_hash(void *state, const void *input,uint32_t TheNonce, int debug)
 {
     // sha256(sha256*sha512*keccak512*ripemd160*haval*tiger1*whirlpool) good luck with that...
@@ -228,7 +230,8 @@ if (debug == 1) {
 
     memcpy(state, hash, 32);
 }
-extern int tp_coef[8];
+*/
+extern float tp_coef[8];
 extern bool opt_benchmark;
 
 
@@ -318,16 +321,16 @@ cpu_mulT4(0, throughput*tp_coef[thr_id], 4, 28, KeccakH[thr_id], d_prod0[thr_id]
 uint32_t foundNonce = m7_sha256_cpu_hash_300(thr_id, throughput*tp_coef[thr_id], pdata[29], NULL, d_prod1[thr_id], order);
 if  (foundNonce != 0xffffffff) {
 			uint32_t vhash64[8];
-			m7_hash(vhash64, pdata,foundNonce,0);
+//			m7_hash(vhash64, pdata,foundNonce,0);
 			
-            if( (vhash64[7]<=Htarg )  ) {              
+//            if( (vhash64[7]<=Htarg )  ) {              
                 pdata[29] = foundNonce;
 				*hashes_done = foundNonce - FirstNonce + 1;
 				return 1;
-			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU! vhash64 %08x and htarg %08x", thr_id, foundNonce,vhash64[7],Htarg);
-			m7_hash(vhash64, pdata,foundNonce,1);
-			} 
+//			} else {
+//				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU! vhash64 %08x and htarg %08x", thr_id, foundNonce,vhash64[7],Htarg);
+//			m7_hash(vhash64, pdata,foundNonce,1);
+//			} 
         } // foundNonce
 		pdata[29] += throughput*tp_coef[thr_id];
 *hashes_done +=throughput*tp_coef[thr_id];
