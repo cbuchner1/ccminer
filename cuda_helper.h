@@ -3,6 +3,7 @@
 
 #ifdef __INTELLISENSE__
 #define __launch_bounds__(x)
+#define __byte_perm(x,y,z)
 #endif
 
 static __device__ void LOHI(uint32_t &lo, uint32_t &hi, uint64_t x)
@@ -113,7 +114,7 @@ static __device__ uint64_t oREPLACE_LOWORD(const uint64_t &x, const uint32_t &y)
 // Endian Drehung für 32 Bit Typen
 static __device__ uint32_t cuda_swab32(uint32_t x)
 {
-	return __byte_perm(x, x, 0x0123);
+	return __byte_perm(x, 0, 0x0123);
 }
 
 static __device__ uint64_t swap2ll(uint32_t lo, uint32_t hi)
@@ -466,29 +467,6 @@ asm("not.b32 %0,%1;" : "=r"(d) : "r"(t));
 
 __forceinline__ __device__ void muladd128(uint64_t &u,uint64_t &v,uint64_t a, uint64_t b,uint64_t &c,uint64_t &e)
 {
-/*
-asm("{\n\t"
-	".reg .b64 abl,abh; \n\t"
-	".reg .b32 abll,ablh,abhl,abhh,x1,x2,x3,x4; \n\t"
-	".reg .b32 cl,ch,el,eh; \n\t"
-	"mul.lo.u64 abl,%2,%3; \n\t"    
-	"mul.hi.u64 abh,%2,%3; \n\t" 
-	"mov.b64 {abll,ablh},abl; \n\t" 
-	"mov.b64 {abhl,abhh},abh; \n\t" 
-	"mov.b64 {cl,ch},%4; \n\t" 
-	"mov.b64 {el,eh},%5; \n\t" 
-    "add.cc.u32 x1,cl,el; \n\t"
-	"addc.cc.u32 x2,ch,eh; \n\t" 
-	"addc.u32 x3,0,0; \n\t" 
-	"add.cc.u32 x1,x1,abll; \n\t"
-	"addc.cc.u32 x2,x2,ablh; \n\t"  
-	"addc.cc.u32 x3,x3,abhl; \n\t" 
-	"addc.u32 x4,abhh,0; \n\t"
-	"mov.b64 %1,{x1,x2}; \n\t"
-	"mov.b64 %0,{x3,x4}; \n\t"
-	"}\n\t"
-	: "=l"(u), "=l"(v) : "l"(a) , "l"(b) , "l"(c) , "l"(e));
-*/
 
 	asm("{\n\t"
 		".reg .b32 al,ah,bl,bh; \n\t"
@@ -554,16 +532,24 @@ __inline__ __device__ uint2 ROR2(const uint2 a, const int offset) {
 	else {
 		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
 		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
+		
 	}
 	return result;
 }
 #else
-__inline__ __device__ uint2 ROR2(const uint2 v, const int n) {
-	uint2 result;
-	result.x = (((v.x) >> (n)) | ((v.x) << (64 - (n))));
-	result.y = (((v.y) >> (n)) | ((v.y) << (64 - (n))));
-	return result;
-}
+__inline__ __device__ uint2 ROR2(const uint2 v, const int a) {
+		uint2 result;
+        int n = 64 -a; //lazy
+		if (n <= 32) {
+			result.y = ((v.y << (n)) | (v.x >> (32 - n)));
+			result.x = ((v.x << (n)) | (v.y >> (32 - n)));
+		}
+		else {
+			result.y = ((v.x << (n - 32)) | (v.y >> (64 - n)));
+			result.x = ((v.y << (n - 32)) | (v.x >> (64 - n)));
+		}
+		return result;
+	}
 #endif
 
 
@@ -572,21 +558,28 @@ __inline__ __device__ uint2 ROL2(const uint2 a, const int offset) {
 	uint2 result;
 	if (offset >= 32) {
 		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.x), "r"(a.y), "r"(offset));
-		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));
+		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.y), "r"(a.x), "r"(offset));        
 	}
 	else {
 		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(a.y), "r"(a.x), "r"(offset));
 		asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(a.x), "r"(a.y), "r"(offset));
 	}
-	return result;
+return result;
 }
 #else
 __inline__ __device__ uint2 ROL2(const uint2 v, const int n) {
-	uint2 result;
-	result.x = (((v.x) << (n)) | ((v.x) >> (64 - (n))));
-	result.y = (((v.y) << (n)) | ((v.y) >> (64 - (n))));
-	return result;
-}
+		uint2 result;
+		if (n == 32) {result.x = v.y;result.y=v.x;}
+		if (n < 32) {
+			result.y = ((v.y << (n)) | (v.x >> (32 - n)));
+			result.x = ((v.x << (n)) | (v.y >> (32 - n)));
+		}
+		else {
+			result.y = ((v.x << (n - 32)) | (v.y >> (64 - n)));
+			result.x = ((v.y << (n - 32)) | (v.x >> (64 - n)));
+		}
+		return result;
+	}
 #endif
 
 static __forceinline__ __device__ uint64_t devectorize(uint2 v) { return MAKE_ULONGLONG(v.x, v.y); }
@@ -691,8 +684,7 @@ static __forceinline__ __device__ uint2 shiftr2(uint2 a, int offset)
 	return result;
 }
 #endif
-
-
+///////////////////////////////////////////////////////////////////////////////////
 
 
 #endif // #ifndef CUDA_HELPER_H

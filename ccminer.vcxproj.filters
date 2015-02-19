@@ -67,6 +67,9 @@
     <Filter Include="Source Files\CUDA\lyra2RE">
       <UniqueIdentifier>{e23c7c23-ddfd-4da2-a51d-4fbeab96c66c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\pluck">
+      <UniqueIdentifier>{59eb6b57-944a-425e-920a-bb168e950c45}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -315,6 +318,9 @@
     <ClInclude Include="sph\Sponge.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_vector.h">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
@@ -505,6 +511,12 @@
     </CudaCompile>
     <CudaCompile Include="Algo256\cuda_skein256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="pluck\cuda_pluck.cu">
+      <Filter>Source Files\CUDA\pluck</Filter>
+    </CudaCompile>
+    <CudaCompile Include="pluck\pluck.cu">
+      <Filter>Source Files\CUDA\pluck</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

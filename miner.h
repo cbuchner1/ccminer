@@ -332,6 +332,15 @@ extern int scanhash_lyra(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_neoscrypt(bool stratum,int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
+extern int scanhash_pluck(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
+
 extern int scanhash_keccak256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -384,14 +393,18 @@ extern uint16_t opt_vote;
 extern bool opt_redirect;
 extern bool have_gbt;
 extern bool allow_getwork;
-
+extern bool opt_redirect;
 
 extern void applog(int prio, const char *fmt, ...);
 extern json_t *json_rpc_call(CURL *curl, const char *url, const char *userpass,
 	const char *rpc_req, bool, bool, int *);
+extern json_t *json_rpc_call2(CURL *curl, const char *url, const char *userpass,
+	const char *rpc_req, int *curl_err, int flags);
 extern char *bin2hex(const unsigned char *p, size_t len);
 extern void abin2hex(char *s, const unsigned char *p, size_t len);
 extern bool hex2bin(unsigned char *p, const char *hexstr, size_t len);
+extern int varint_encode(unsigned char *p, uint64_t n);
+extern size_t address_to_script(unsigned char *out, size_t outsz, const char *addr);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
