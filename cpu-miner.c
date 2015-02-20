@@ -204,7 +204,7 @@ static json_t *opt_config;
 static const bool opt_time = true;
 static sha256_algos opt_algo = ALGO_HEAVY;
 static int opt_n_threads = 0;
-static double opt_difficulty = 1; // CH
+static double opt_difficulty = 1.; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 static int num_processors;
@@ -1338,8 +1338,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		applog(LOG_DEBUG, "DEBUG: job_id='%s' extranonce2=%s ntime=%08x",
 		       work->job_id, xnonce2str, swab32(work->data[17]));
 		free(xnonce2str);
-	}
-
+	} 
+	
 	if (opt_algo == ALGO_JACKPOT || opt_algo == ALGO_NEOSCRYPT || opt_algo == ALGO_PLUCK)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
@@ -2161,6 +2161,7 @@ static void parse_arg (int key, char *arg)
 			}
 		} 
 		break;
+
     case 'F': 
 		{
 			char * pch = strtok (arg,",");
@@ -2172,6 +2173,7 @@ static void parse_arg (int key, char *arg)
 			}
 			while (tmp_n_threads < 8) tp_coef[tmp_n_threads++] = last;
 		}
+       break;
 	case 'f': // CH - Divisor for Difficulty
 		d = atof(arg);
 		if (d == 0)	/* sanity check */
@@ -2297,7 +2299,7 @@ int main(int argc, char *argv[])
 	 printf("\t  VTC donation address: VrLUQmH6Jk5gFii7fASc8vJ7eEgKJqhX11\n");
     
 	 for (int i = 0; i<8; i++) {tp_coef[i]=-1;}
-
+    opt_difficulty = 1. ;
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
 
