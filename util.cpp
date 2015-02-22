@@ -175,54 +175,31 @@ void get_defconfig_path(char *out, size_t bufsize, char *argv0)
 
 void format_hashrate(double hashrate, char *output)
 {
-	char prefix;
+	char prefix = '\0';
 
-	if (hashrate < 1e3)
-		prefix = ' ';
-	else if (hashrate < 1e6)
-	{
+	if (hashrate < 10000) {
+		// nop
+	}
+	else if (hashrate < 1e7) {
 		prefix = 'k';
 		hashrate *= 1e-3;
 	}
-	else if (hashrate < 1e9)
-	{
+	else if (hashrate < 1e10) {
 		prefix = 'M';
 		hashrate *= 1e-6;
 	}
-	else if (hashrate < 1e12)
-	{
+	else if (hashrate < 1e13) {
 		prefix = 'G';
 		hashrate *= 1e-9;
 	}
-	else if (hashrate < 1e15)
-	{
+	else {
 		prefix = 'T';
 		hashrate *= 1e-12;
-	}
-	else if (hashrate < 1e18)
-	{
-		prefix = 'P';
-		hashrate *= 1e-15;
-	}
-	else if (hashrate < 1e21)
-	{
-		prefix = 'E';
-		hashrate *= 1e-18;
-	}
-	else if (hashrate < 1e24)
-	{
-		prefix = 'Z';
-		hashrate *= 1e-21;
-	}
-	else
-	{
-		prefix = 'Y';
-		hashrate *= 1e-24;
 	}
 
 	sprintf(
 		output,
-		prefix == ' ' ? "%.0f%cH/s" : "%.2f %cH/s",
+		prefix ? "%.2f %cH/s" : "%.2f H/s%c",
 		hashrate, prefix
 	);
 }

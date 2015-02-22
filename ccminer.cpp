@@ -528,7 +528,7 @@ static void calc_diff(struct work *work, int known)
 
 static int share_result(int result, const char *reason)
 {
-	char s[345];
+	char s[32] = { 0 };
 	double hashrate = 0.;
 
 	pthread_mutex_lock(&stats_lock);
@@ -542,8 +542,8 @@ static int share_result(int result, const char *reason)
 
 	global_hashrate = llround(hashrate);
 
-	sprintf(s, hashrate >= 1e6 ? "%.0f" : "%.2f", 1e-3 * hashrate);
-	applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s khash/s %s",
+	format_hashrate(hashrate, s);
+	applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s %s",
 			accepted_count,
 			accepted_count + rejected_count,
 			100. * accepted_count / (accepted_count + rejected_count),
