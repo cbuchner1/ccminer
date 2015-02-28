@@ -218,7 +218,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 __host__
 void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
@@ -243,7 +243,7 @@ void blake256_cpu_setBlock_80(uint32_t *pdata)
 }
 
 __host__
-void blake256_cpu_init(int thr_id, int threads)
+void blake256_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaMemcpyToSymbol(u256, c_u256, sizeof(c_u256), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(sigma, c_sigma, sizeof(c_sigma), 0, cudaMemcpyHostToDevice);

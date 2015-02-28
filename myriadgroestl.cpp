@@ -7,9 +7,9 @@
 
 #include "miner.h"
 
-void myriadgroestl_cpu_init(int thr_id, int threads);
+void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
-void myriadgroestl_cpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce);
+void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce);
 
 #define SWAP32(x) \
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \

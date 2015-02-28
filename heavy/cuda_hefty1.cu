@@ -207,7 +207,7 @@ void hefty_cpu_round(uint32_t *regs, uint32_t W, uint32_t K, uint32_t *sponge)
 }
 
 __global__
-void hefty_gpu_hash(int threads, uint32_t startNounce, uint32_t *outputHash)
+void hefty_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *outputHash)
 {
 #if USE_SHARED
     extern __shared__ unsigned char heftytab[];
@@ -219,7 +219,7 @@ void hefty_gpu_hash(int threads, uint32_t startNounce, uint32_t *outputHash)
     __syncthreads();
 #endif
 
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
         // bestimme den aktuellen Zähler
@@ -306,7 +306,7 @@ void hefty_gpu_hash(int threads, uint32_t startNounce, uint32_t *outputHash)
 }
 
 __host__
-void hefty_cpu_init(int thr_id, int threads)
+void hefty_cpu_init(int thr_id, uint32_t threads)
 {
     cudaSetDevice(device_map[thr_id]);
 
@@ -320,7 +320,7 @@ void hefty_cpu_init(int thr_id, int threads)
 }
 
 __host__
-void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
+void hefty_cpu_setBlock(int thr_id, uint32_t threads, void *data, int len)
 // data muss 80/84-Byte haben!
 {
     // Nachricht expandieren und setzen
@@ -390,9 +390,9 @@ void hefty_cpu_setBlock(int thr_id, int threads, void *data, int len)
 }
 
 __host__
-void hefty_cpu_hash(int thr_id, int threads, int startNounce)
+void hefty_cpu_hash(int thr_id, uint32_t threads, int startNounce)
 {
-    int threadsperblock = 256;
+    uint32_t threadsperblock = 256;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);

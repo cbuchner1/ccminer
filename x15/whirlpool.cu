@@ -11,12 +11,12 @@ extern "C"
 
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void x15_whirlpool_cpu_init(int thr_id, int threads, int mode);
-extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode);
+extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
-extern void whirlpool512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 
 // CPU Hash function
@@ -57,8 +57,8 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	int throughput = (int) device_intensity(thr_id, __func__, 1U << 19); // 19=256*256*8;
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	uint32_t throughput =  device_intensity(thr_id, __func__, 1U << 19); // 19=256*256*8;
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;

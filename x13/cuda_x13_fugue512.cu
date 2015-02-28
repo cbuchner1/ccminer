@@ -553,7 +553,7 @@ static const uint32_t mixtab0_cpu[] = {
 
 /***************************************************/
 // Die Hash-Funktion
-__global__ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	extern __shared__ char mixtabs[];
 
@@ -565,7 +565,7 @@ __global__ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint
 	__syncthreads();
 
 	int i;
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -667,7 +667,7 @@ __global__ void x13_fugue512_gpu_hash_64(int threads, uint32_t startNounce, uint
 	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
 
-__host__ void x13_fugue512_cpu_init(int thr_id, int threads)
+__host__ void x13_fugue512_cpu_init(int thr_id, uint32_t threads)
 {
 	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
 	texDef(mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
@@ -675,9 +675,9 @@ __host__ void x13_fugue512_cpu_init(int thr_id, int threads)
 	texDef(mixTab3Tex, mixTab3m, mixtab3_cpu, sizeof(uint32_t)*256);
 }
 
-__host__ void x13_fugue512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

@@ -105,7 +105,7 @@ extern uint32_t T3up_cpu[];
 extern uint32_t T3dn_cpu[];
 
 __device__ __forceinline__
-void groestl256_perm_P(int thread,uint32_t *a, char *mixtabs)
+void groestl256_perm_P(uint32_t thread,uint32_t *a, char *mixtabs)
 {
 	#pragma unroll 10
 	for (int r = 0; r<10; r++)
@@ -136,7 +136,7 @@ void groestl256_perm_P(int thread,uint32_t *a, char *mixtabs)
 }
 
 __device__ __forceinline__
-void groestl256_perm_Q(int thread, uint32_t *a, char *mixtabs)
+void groestl256_perm_Q(uint32_t thread, uint32_t *a, char *mixtabs)
 {
 	#pragma unroll
 	for (int r = 0; r<10; r++)
@@ -175,7 +175,7 @@ void groestl256_perm_Q(int thread, uint32_t *a, char *mixtabs)
 }
 
 __global__ __launch_bounds__(256,1)
-void groestl256_gpu_hash32(int threads, uint32_t startNounce, uint64_t *outputHash, uint32_t *nonceVector)
+void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash, uint32_t *nonceVector)
 {
 #if USE_SHARED
 	extern __shared__ char mixtabs[];
@@ -194,7 +194,7 @@ void groestl256_gpu_hash32(int threads, uint32_t startNounce, uint64_t *outputHa
 	__syncthreads();
 #endif
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// GROESTL
@@ -259,7 +259,7 @@ void groestl256_gpu_hash32(int threads, uint32_t startNounce, uint64_t *outputHa
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
 
 __host__
-void groestl256_cpu_init(int thr_id, int threads)
+void groestl256_cpu_init(int thr_id, uint32_t threads)
 {
 
 	// Texturen mit obigem Makro initialisieren
@@ -277,11 +277,11 @@ void groestl256_cpu_init(int thr_id, int threads)
 }
 
 __host__
-uint32_t groestl256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
+uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
 	uint32_t result = 0xffffffff;
 	cudaMemset(d_GNonce[thr_id], 0xff, sizeof(uint32_t));
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

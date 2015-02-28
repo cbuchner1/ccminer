@@ -202,7 +202,7 @@ void quark_groestl512_perm_Q(uint32_t *a, char *mixtabs)
 #endif
 
 __global__
-void quark_groestl512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
+void quark_groestl512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
 #if __CUDA_ARCH__ < 300
 	extern __shared__ char mixtabs[];
@@ -221,7 +221,7 @@ void quark_groestl512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g
 
 	__syncthreads();
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// GROESTL
@@ -285,7 +285,7 @@ void quark_groestl512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
 
 __host__
-void quark_groestl512_sm20_init(int thr_id, int threads)
+void quark_groestl512_sm20_init(int thr_id, uint32_t threads)
 {
 	// Texturen mit obigem Makro initialisieren
 	texDef(t0up1, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
@@ -299,7 +299,7 @@ void quark_groestl512_sm20_init(int thr_id, int threads)
 }
 
 __host__
-void quark_groestl512_sm20_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void quark_groestl512_sm20_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	int threadsperblock = 512;
 
@@ -314,7 +314,7 @@ void quark_groestl512_sm20_hash_64(int thr_id, int threads, uint32_t startNounce
 }
 
 __host__
-void quark_doublegroestl512_sm20_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void quark_doublegroestl512_sm20_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	int threadsperblock = 512;
 

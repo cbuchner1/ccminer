@@ -122,9 +122,9 @@ static const uint64_t d_constHashPadding[8] = {
 };
 
 __global__ __launch_bounds__(256, 4)
-void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
+void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 #if USE_SHUFFLE
 	const int warpID = threadIdx.x & 0x0F; // 16 warps
@@ -186,9 +186,9 @@ void quark_blake512_gpu_hash_64(int threads, uint32_t startNounce, uint32_t *g_n
 	}
 }
 
-__global__ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
+__global__ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t buf[16];
@@ -236,7 +236,7 @@ __global__ void quark_blake512_gpu_hash_80(int threads, uint32_t startNounce, vo
 // ---------------------------- END CUDA quark_blake512 functions ------------------------------------
 
 // Setup-Funktionen
-__host__ void quark_blake512_cpu_init(int thr_id, int threads)
+__host__ void quark_blake512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	CUDA_CALL_OR_RET( cudaMemcpyToSymbol(c_sigma,
@@ -263,9 +263,9 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 	);
 }
 
-__host__ void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
+__host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -280,9 +280,9 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, int threads, uint32_t start
 	MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_blake512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+__host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

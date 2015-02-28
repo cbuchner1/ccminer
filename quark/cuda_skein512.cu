@@ -350,9 +350,9 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 
 
 __global__
-void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
+void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// Skein
@@ -450,9 +450,9 @@ void quark_skein512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t * co
 }
 
 __global__
-void quark_skein512_gpu_hash_64_v30(int threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
+void quark_skein512_gpu_hash_64_v30(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// Skein
@@ -550,14 +550,14 @@ void quark_skein512_gpu_hash_64_v30(int threads, uint32_t startNounce, uint64_t 
 }
 
 __host__
-void quark_skein512_cpu_init(int thr_id, int threads)
+void quark_skein512_cpu_init(int thr_id, uint32_t threads)
 {
 }
 
 __host__
-void quark_skein512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

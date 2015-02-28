@@ -701,8 +701,8 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata,
 	uint32_t midstate[8];
 	uint32_t n = pdata[19] - 1;
 	const uint32_t Htarg = ptarget[7];
-	int throughput = scrypt_best_throughput();
-	int i;
+	uint32_t throughput =  scrypt_best_throughput();
+	uint32_t i;
 	
 #if HAVE_SHA256_4WAY
 	if (sha256_use_4way())

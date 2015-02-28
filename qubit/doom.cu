@@ -12,11 +12,11 @@ extern "C" {
 
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void qubit_luffa512_cpu_init(int thr_id, int threads);
+extern void qubit_luffa512_cpu_init(int thr_id, uint32_t threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
-extern void qubit_luffa512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 extern void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget);
-extern uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 extern void doomhash(void *state, const void *input)
 {
@@ -41,7 +41,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 22); // 256*256*8*8
-	throughput = min(throughput, (max_nonce - first_nonce));
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000f;

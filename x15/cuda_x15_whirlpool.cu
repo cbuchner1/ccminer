@@ -2285,7 +2285,7 @@ const int i0, const int i1, const int i2, const int i3, const int i4, const int 
 
 
 __global__
-void oldwhirlpool_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
+void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
@@ -2302,7 +2302,7 @@ void oldwhirlpool_gpu_hash_80(int threads, uint32_t startNounce, void *outputHas
 		#endif
 	}
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = startNounce + thread;
@@ -2381,7 +2381,7 @@ void oldwhirlpool_gpu_hash_80(int threads, uint32_t startNounce, void *outputHas
 }
 
 __global__
-void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
@@ -2398,7 +2398,7 @@ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_ha
 		#endif
 	}
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
@@ -2457,7 +2457,7 @@ void x15_whirlpool_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_ha
 }
 
 __global__
-void oldwhirlpool_gpu_finalhash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *resNounce)
+void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector, uint32_t *resNounce)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
@@ -2475,7 +2475,7 @@ void oldwhirlpool_gpu_finalhash_64(int threads, uint32_t startNounce, uint64_t *
 		#endif
 	}
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
@@ -2544,7 +2544,7 @@ void oldwhirlpool_gpu_finalhash_64(int threads, uint32_t startNounce, uint64_t *
 }
 
 __host__
-extern void x15_whirlpool_cpu_init(int thr_id, int threads, int mode)
+extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 {
 	switch (mode) {
 	case 0: /* x15 with rotated T1-T7 (based on T0) */
@@ -2586,7 +2586,7 @@ extern void x15_whirlpool_cpu_free(int thr_id)
 }
 
 __host__
-extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
@@ -2599,7 +2599,7 @@ extern void x15_whirlpool_cpu_hash_64(int thr_id, int threads, uint32_t startNou
 }
 
 __host__
-extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	uint32_t result = 0xffffffff;
 
@@ -2621,7 +2621,7 @@ extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, int threads, uint32_t 
 }
 
 __host__
-void whirlpool512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);

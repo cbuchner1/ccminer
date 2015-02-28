@@ -245,7 +245,7 @@ __host__
 uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint64_t highTarget,
 	const uint32_t crcsum, const int8_t rounds)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
@@ -331,7 +331,7 @@ __host__
 static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint64_t highTarget,
 	const int8_t rounds)
 {
-	const int threadsperblock = TPB;
+	const uint32_t threadsperblock = TPB;
 	uint32_t result = UINT32_MAX;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

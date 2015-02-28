@@ -361,11 +361,11 @@ static const uint32_t d_C512[] = {
 
 /***************************************************/
 // GPU Hash Function
-__global__ void x14_shabal512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__ void x14_shabal512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__syncthreads();
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	if (thread < threads)
 	{
@@ -453,14 +453,14 @@ __global__ void x14_shabal512_gpu_hash_64(int threads, uint32_t startNounce, uin
 	}
 }
 
-__host__ void x14_shabal512_cpu_init(int thr_id, int threads)
+__host__ void x14_shabal512_cpu_init(int thr_id, uint32_t threads)
 {
 }
 
 // #include <stdio.h>
-__host__ void x14_shabal512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void x14_shabal512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

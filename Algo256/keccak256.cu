@@ -16,9 +16,9 @@ extern "C"
 
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void keccak256_cpu_init(int thr_id, int threads);
+extern void keccak256_cpu_init(int thr_id, uint32_t threads);
 extern void keccak256_setBlock_80(void *pdata,const void *ptarget);
-extern uint32_t keccak256_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 // CPU Hash
 extern "C" void keccak256_hash(void *state, const void *input)
@@ -42,7 +42,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 21); // 256*256*8*4
-	throughput = min(throughput, (max_nonce - first_nonce));
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0005;

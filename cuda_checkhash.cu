@@ -15,7 +15,7 @@ static uint32_t* h_resNonces[MAX_GPUS];
 static uint32_t* d_resNonces[MAX_GPUS];
 
 __host__
-void cuda_check_cpu_init(int thr_id, int threads)
+void cuda_check_cpu_init(int thr_id, uint32_t threads)
 {
     CUDA_CALL_OR_RET(cudaMallocHost(&h_resNonces[thr_id], 8*sizeof(uint32_t)));
     CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 8*sizeof(uint32_t)));
@@ -71,9 +71,9 @@ static bool hashbelowtarget(const uint32_t *const __restrict__ hash, const uint3
 }
 
 __global__ __launch_bounds__(512, 4)
-void cuda_checkhash_64(int threads, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
+void cuda_checkhash_64(uint32_t threads, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// shl 4 = *16 x 4 (uint32) = 64 bytes
@@ -88,11 +88,11 @@ void cuda_checkhash_64(int threads, uint32_t startNounce, uint32_t *hash, uint32
 }
 
 __host__
-uint32_t cuda_check_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash)
+uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash)
 {
 	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
 
-	const int threadsperblock = 512;
+	const uint32_t threadsperblock = 512;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
@@ -109,7 +109,7 @@ uint32_t cuda_check_hash(int thr_id, int threads, uint32_t startNounce, uint32_t
 __global__ __launch_bounds__(512, 4)
 void cuda_checkhash_64_suppl(uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	uint32_t *inpHash = &hash[thread << 4];
 
@@ -122,11 +122,11 @@ void cuda_checkhash_64_suppl(uint32_t startNounce, uint32_t *hash, uint32_t *res
 }
 
 __host__
-uint32_t cuda_check_hash_suppl(int thr_id, int threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce)
+uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce)
 {
 	uint32_t rescnt, result = 0;
 
-	const int threadsperblock = 512;
+	const uint32_t threadsperblock = 512;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
@@ -152,9 +152,9 @@ uint32_t cuda_check_hash_suppl(int thr_id, int threads, uint32_t startNounce, ui
 /* --------------------------------------------------------------------------------------------- */
 
 __global__
-void cuda_check_hash_branch_64(int threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
+void cuda_check_hash_branch_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint32_t *g_hash, uint32_t *resNounce)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = g_nonceVector[thread];
@@ -175,12 +175,12 @@ void cuda_check_hash_branch_64(int threads, uint32_t startNounce, uint32_t *g_no
 }
 
 __host__
-uint32_t cuda_check_hash_branch(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
+uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
 {
 	uint32_t result = 0xffffffff;
 	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
 
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

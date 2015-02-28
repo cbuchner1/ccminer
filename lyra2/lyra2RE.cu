@@ -11,19 +11,19 @@ extern "C" {
 
 static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
 
-extern void blake256_cpu_init(int thr_id, int threads);
+extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
-extern void keccak256_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void keccak256_cpu_init(int thr_id, int threads);
-extern void skein256_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void skein256_cpu_init(int thr_id, int threads);
+extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void keccak256_cpu_init(int thr_id, uint32_t threads);
+extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
-extern void lyra2_cpu_hash_32(int thr_id, int threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 
 extern void groestl256_setTarget(const void *ptarget);
-extern uint32_t groestl256_cpu_hash_32(int thr_id, int threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
-extern void groestl256_cpu_init(int thr_id, int threads);
+extern uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
+extern void groestl256_cpu_init(int thr_id, uint32_t threads);
 
 extern "C" void lyra2_hash(void *state, const void *input)
 {
@@ -63,8 +63,8 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	int intensity = (device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 18 : 17;
-	int throughput = (int) device_intensity(thr_id, __func__, 1U << intensity); // 18=256*256*4;
-	throughput = min(throughput, (int)(max_nonce - first_nonce));
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity); // 18=256*256*4;
+	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;

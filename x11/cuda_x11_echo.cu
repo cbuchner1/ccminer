@@ -279,13 +279,13 @@ void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
 }
 
 __global__ __launch_bounds__(128, 7) /* will force 72 registers */
-void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
 	echo_gpu_init(sharedMemory);
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -298,15 +298,15 @@ void x11_echo512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash
 }
 
 __host__
-void x11_echo512_cpu_init(int thr_id, int threads)
+void x11_echo512_cpu_init(int thr_id, uint32_t threads)
 {
 	aes_cpu_init(thr_id);
 }
 
 __host__
-void x11_echo512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-	const int threadsperblock = 128;
+	const uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

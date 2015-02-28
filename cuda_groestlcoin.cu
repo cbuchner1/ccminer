@@ -23,11 +23,11 @@ __constant__ uint32_t groestlcoin_gpu_msg[32];
 #define SWAB32(x) cuda_swab32(x)
 
 __global__ __launch_bounds__(256, 4)
-void groestlcoin_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *resNounce)
+void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
 {
 #if __CUDA_ARCH__ >= 300
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x) / 4;
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) / 4;
     if (thread < threads)
     {
         // GROESTL
@@ -95,7 +95,7 @@ void groestlcoin_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *resN
 }
 
 // Setup-Funktionen
-__host__ void groestlcoin_cpu_init(int thr_id, int threads)
+__host__ void groestlcoin_cpu_init(int thr_id, uint32_t threads)
 {
     cudaSetDevice(device_map[thr_id]);
 
@@ -130,9 +130,9 @@ __host__ void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
                         sizeof(uint32_t) * 8 );
 }
 
-__host__ void groestlcoin_cpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
+__host__ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
 {
-    int threadsperblock = 256;
+    uint32_t threadsperblock = 256;
 
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl

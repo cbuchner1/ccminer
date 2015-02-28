@@ -137,9 +137,9 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
 }
 
 // Die Hash-Funktion
-template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// bestimme den aktuellen Zähler
@@ -186,7 +186,7 @@ template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(int threads, uint32_
 // ---------------------------- END CUDA keccak512 functions ------------------------------------
 
 __host__ 
-void keccak512_cpu_init(int thr_id, int threads)
+void keccak512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol( c_keccak_round_constants,
@@ -252,7 +252,7 @@ void keccak512_cpu_setBlock(void *data, int len)
 }
 
 __host__
-void keccak512_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
+void keccak512_cpu_copyHeftyHash(int thr_id, uint32_t threads, void *heftyHashes, int copy)
 {
 	// Hefty1 Hashes kopieren
 	if (copy)
@@ -261,9 +261,9 @@ void keccak512_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int
 }
 
 __host__
-void keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
+void keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-	const int threadsperblock = 128;
+	const uint32_t threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

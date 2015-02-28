@@ -16,11 +16,11 @@
 #include "quark/cuda_quark_groestl512_sm20.cu"
 
 __global__ __launch_bounds__(TPB, THF)
-void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t * __restrict g_hash, uint32_t * __restrict g_nonceVector)
+void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t * __restrict g_hash, uint32_t * __restrict g_nonceVector)
 {
 #if __CUDA_ARCH__ >= 300
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
     if (thread < threads)
     {
         // GROESTL
@@ -62,10 +62,10 @@ void quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32
 }
 
 __global__ void __launch_bounds__(TPB, THF)
- quark_doublegroestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
+ quark_doublegroestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
 #if __CUDA_ARCH__ >= 300
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x)>>2;
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x)>>2;
     if (thread < threads)
     {
         // GROESTL
@@ -124,13 +124,13 @@ __global__ void __launch_bounds__(TPB, THF)
 
 
 
-__host__ void quark_groestl512_cpu_init(int thr_id, int threads)
+__host__ void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
 {
     if (device_sm[device_map[thr_id]] < 300)
         quark_groestl512_sm20_init(thr_id, threads);
 }
 
-__host__ void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
     int threadsperblock = TPB;
 
@@ -154,7 +154,7 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t sta
     MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
     const int factor = THF;
     int threadsperblock = TPB;

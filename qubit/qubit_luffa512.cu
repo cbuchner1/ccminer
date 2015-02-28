@@ -352,9 +352,9 @@ void finalization512(hashState *state, uint32_t *b)
 /***************************************************/
 // Die Hash-Funktion
 __global__
-void qubit_luffa512_gpu_hash_80(int threads, uint32_t startNounce, void *outputHash)
+void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = startNounce + thread;
@@ -382,9 +382,9 @@ void qubit_luffa512_gpu_hash_80(int threads, uint32_t startNounce, void *outputH
 }
 
 __global__
-void qubit_luffa512_gpu_finalhash_80(int threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
+void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = startNounce + thread;
@@ -445,7 +445,7 @@ void qubit_luffa512_gpu_finalhash_80(int threads, uint32_t startNounce, void *ou
 }
 
 __host__
-void qubit_luffa512_cpu_init(int thr_id, int threads)
+void qubit_luffa512_cpu_init(int thr_id, uint32_t threads)
 {
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_IV, h2_IV, sizeof(h2_IV), 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_CNS, h2_CNS, sizeof(h2_CNS), 0, cudaMemcpyHostToDevice));
@@ -454,11 +454,11 @@ void qubit_luffa512_cpu_init(int thr_id, int threads)
 }
 
 __host__
-uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash,int order)
+uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash,int order)
 {
 	uint32_t result = UINT32_MAX;
 	cudaMemset(d_resNounce[thr_id], 0xff, NBN * sizeof(uint32_t));
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -478,9 +478,9 @@ uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, int threads, uint32_t start
 }
 
 __host__
-void qubit_luffa512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_outputHash,int order)
+void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash,int order)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

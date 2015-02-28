@@ -436,7 +436,7 @@ void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *
 }
 
 __host__
-void quark_bmw512_cpu_init(int thr_id, int threads)
+void quark_bmw512_cpu_init(int thr_id, uint32_t threads)
 {
 }
 
@@ -453,7 +453,7 @@ void quark_bmw512_cpu_setBlock_80(void *pdata)
 }
 
 __host__
-void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = 32;
 
@@ -465,7 +465,7 @@ void quark_bmw512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uin
 }
 
 __host__
-void quark_bmw512_cpu_hash_80(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order)
+void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = 128;
 

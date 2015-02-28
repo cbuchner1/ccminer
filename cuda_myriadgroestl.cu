@@ -222,11 +222,11 @@ __device__ void myriadgroestl_gpu_sha256(uint32_t *message)
 }
 
 __global__ void __launch_bounds__(256, 4)
- myriadgroestl_gpu_hash_quad(int threads, uint32_t startNounce, uint32_t *hashBuffer)
+ myriadgroestl_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t *hashBuffer)
 {
 #if __CUDA_ARCH__ >= 300
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x) / 4;
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) / 4;
     if (thread < threads)
     {
         // GROESTL
@@ -259,10 +259,10 @@ __global__ void __launch_bounds__(256, 4)
 }
 
 __global__ void
- myriadgroestl_gpu_hash_quad2(int threads, uint32_t startNounce, uint32_t *resNounce, uint32_t *hashBuffer)
+ myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, uint32_t *hashBuffer)
 {
 #if __CUDA_ARCH__ >= 300
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
         uint32_t nounce = startNounce + thread;
@@ -302,7 +302,7 @@ __global__ void
 }
 
 // Setup-Funktionen
-__host__ void myriadgroestl_cpu_init(int thr_id, int threads)
+__host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 {
     cudaSetDevice(device_map[thr_id]);
 
@@ -357,9 +357,9 @@ __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn
                         sizeof(uint32_t) * 8 );
 }
 
-__host__ void myriadgroestl_cpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
+__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
 {
-    int threadsperblock = 256;
+    uint32_t threadsperblock = 256;
 
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl

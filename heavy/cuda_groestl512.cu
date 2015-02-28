@@ -669,9 +669,9 @@ __device__ void groestl512_perm_Q(uint32_t *a)
 	}
 }
 
-template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t message[32];
@@ -741,7 +741,7 @@ template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(int threads, uint32
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
 
 // Setup-Funktionen
-__host__ void groestl512_cpu_init(int thr_id, int threads)
+__host__ void groestl512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Texturen mit obigem Makro initialisieren
 	texDef(t0up, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
@@ -794,16 +794,16 @@ __host__ void groestl512_cpu_setBlock(void *data, int len)
 	BLOCKSIZE = len;
 }
 
-__host__ void groestl512_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
+__host__ void groestl512_cpu_copyHeftyHash(int thr_id, uint32_t threads, void *heftyHashes, int copy)
 {
 	// Hefty1 Hashes kopieren (eigentlich nur zum debuggen)
 	if (copy)
 		CUDA_SAFE_CALL(cudaMemcpy(heavy_heftyHashes[thr_id], heftyHashes, 8 * sizeof(uint32_t) * threads, cudaMemcpyHostToDevice));
 }
 
-__host__ void groestl512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
+__host__ void groestl512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-	const int threadsperblock = 128;
+	const uint32_t threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

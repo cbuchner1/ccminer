@@ -118,9 +118,9 @@ template <int BLOCKSIZE> __device__ void blake512_compress( uint64_t *h, const u
     for( i = 0; i < 16; ++i )  h[i % 8] ^= v[i];
 }
 
-template <int BLOCKSIZE> __global__ void blake512_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void blake512_gpu_hash(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// bestimme den aktuellen Zähler
@@ -192,7 +192,7 @@ template <int BLOCKSIZE> __global__ void blake512_gpu_hash(int threads, uint32_t
 // ---------------------------- END CUDA blake512 functions ------------------------------------
 
 // Setup-Funktionen
-__host__ void blake512_cpu_init(int thr_id, int threads)
+__host__ void blake512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol( c_sigma,
@@ -238,9 +238,9 @@ __host__ void blake512_cpu_setBlock(void *pdata, int len)
 	BLOCKSIZE = len;
 }
 
-__host__ void blake512_cpu_hash(int thr_id, int threads, uint32_t startNounce)
+__host__ void blake512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

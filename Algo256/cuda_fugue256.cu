@@ -548,7 +548,7 @@ __global__ void  __launch_bounds__(256)
 #else
 __global__ void
 #endif
-fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
+fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *resNounce)
 {
 #if USE_SHARED
 	extern __shared__ char mixtabs[];
@@ -561,7 +561,7 @@ fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHas
 	__syncthreads();
 #endif
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		/* Nimm den State und verarbeite das letztenByte (die Nounce) */
@@ -718,7 +718,7 @@ fugue256_gpu_hash(int thr_id, int threads, uint32_t startNounce, void *outputHas
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
 
 
-void fugue256_cpu_init(int thr_id, int threads)
+void fugue256_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaSetDevice(device_map[thr_id]);
 
@@ -751,12 +751,12 @@ __host__ void fugue256_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 	cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
 }
 
-__host__ void fugue256_cpu_hash(int thr_id, int threads, int startNounce, void *outputHashes, uint32_t *nounce)
+__host__ void fugue256_cpu_hash(int thr_id, uint32_t threads, int startNounce, void *outputHashes, uint32_t *nounce)
 {
 #if USE_SHARED
-	const int threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
+	const uint32_t threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
 #else
-	const int threadsperblock = 512; // so einstellen wie gewünscht ;-)
+	const uint32_t threadsperblock = 512; // so einstellen wie gewünscht ;-)
 #endif
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

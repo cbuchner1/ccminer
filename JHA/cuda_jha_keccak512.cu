@@ -100,9 +100,9 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
     }
 }
 
-__global__ void jackpot_keccak512_gpu_hash(int threads, uint32_t startNounce, uint64_t *g_hash)
+__global__ void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
         uint32_t nounce = startNounce + thread;
@@ -145,7 +145,7 @@ __global__ void jackpot_keccak512_gpu_hash(int threads, uint32_t startNounce, ui
 }
 
 // Setup-Funktionen
-__host__ void jackpot_keccak512_cpu_init(int thr_id, int threads)
+__host__ void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads)
 {
     // Kopiere die Hash-Tabellen in den GPU-Speicher
     cudaMemcpyToSymbol( c_keccak_round_constants,
@@ -522,9 +522,9 @@ __host__ void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
                         0, cudaMemcpyHostToDevice);
 }
 
-__host__ void jackpot_keccak512_cpu_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *d_hash, int order)
+__host__ void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 256;
+    const uint32_t threadsperblock = 256;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);

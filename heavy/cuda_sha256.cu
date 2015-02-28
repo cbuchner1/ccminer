@@ -42,9 +42,9 @@ uint32_t sha256_cpu_constantTable[] = {
 #define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 
 // Die Hash-Funktion
-template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void sha256_gpu_hash(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		// bestimme den aktuellen Zähler
@@ -161,7 +161,7 @@ template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t s
 }
 
 // Setup-Funktionen
-__host__ void sha256_cpu_init(int thr_id, int threads)
+__host__ void sha256_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol(	sha256_gpu_constantTable,
@@ -248,7 +248,7 @@ __host__ void sha256_cpu_setBlock(void *data, int len)
 	BLOCKSIZE = len;
 }
 
-__host__ void sha256_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
+__host__ void sha256_cpu_copyHeftyHash(int thr_id, uint32_t threads, void *heftyHashes, int copy)
 {
 	// Hefty1 Hashes kopieren
 	if (copy)
@@ -256,9 +256,9 @@ __host__ void sha256_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashe
 	//else cudaThreadSynchronize();
 }
 
-__host__ void sha256_cpu_hash(int thr_id, int threads, int startNounce)
+__host__ void sha256_cpu_hash(int thr_id, uint32_t threads, int startNounce)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

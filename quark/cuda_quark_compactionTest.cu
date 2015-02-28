@@ -28,7 +28,7 @@ __device__ cuda_compactTestFunction_t d_QuarkTrueFunction = QuarkTrueTest, d_Qua
 cuda_compactTestFunction_t h_QuarkTrueFunction[MAX_GPUS], h_QuarkFalseFunction[MAX_GPUS];
 
 // Setup-Funktionen
-__host__ void quark_compactTest_cpu_init(int thr_id, int threads)
+__host__ void quark_compactTest_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaMemcpyFromSymbol(&h_QuarkTrueFunction[thr_id], d_QuarkTrueFunction, sizeof(cuda_compactTestFunction_t));
 	cudaMemcpyFromSymbol(&h_QuarkFalseFunction[thr_id], d_QuarkFalseFunction, sizeof(cuda_compactTestFunction_t));
@@ -54,7 +54,7 @@ __host__ void quark_compactTest_cpu_init(int thr_id, int threads)
 #endif
 
 // Die Summenfunktion (vom NVIDIA SDK)
-__global__ void quark_compactTest_gpu_SCAN(uint32_t *data, int width, uint32_t *partial_sums=NULL, cuda_compactTestFunction_t testFunc=NULL, int threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
+__global__ void quark_compactTest_gpu_SCAN(uint32_t *data, int width, uint32_t *partial_sums=NULL, cuda_compactTestFunction_t testFunc=NULL, uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
 {
 	extern __shared__ uint32_t sums[];
 	int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
@@ -183,7 +183,7 @@ __global__ void quark_compactTest_gpu_ADD(uint32_t *data, uint32_t *partial_sums
 }
 
 // Der Scatter
-__global__ void quark_compactTest_gpu_SCATTER(uint32_t *sum, uint32_t *outp, cuda_compactTestFunction_t testFunc, int threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
+__global__ void quark_compactTest_gpu_SCATTER(uint32_t *sum, uint32_t *outp, cuda_compactTestFunction_t testFunc, uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
 {
 	int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
 	uint32_t actNounce = id;
@@ -232,7 +232,7 @@ __host__ static uint32_t quark_compactTest_roundUpExp(uint32_t val)
 	return mask;
 }
 
-__host__ void quark_compactTest_cpu_singleCompaction(int thr_id, int threads, uint32_t *nrm,
+__host__ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t threads, uint32_t *nrm,
 														uint32_t *d_nonces1, cuda_compactTestFunction_t function,
 														uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable)
 {
@@ -288,7 +288,7 @@ __host__ void quark_compactTest_cpu_singleCompaction(int thr_id, int threads, ui
 }
 
 ////// ACHTUNG: Diese funktion geht aktuell nur mit threads > 65536 (Am besten 256 * 1024 oder 256*2048)
-__host__ void quark_compactTest_cpu_dualCompaction(int thr_id, int threads, uint32_t *nrm,
+__host__ void quark_compactTest_cpu_dualCompaction(int thr_id, uint32_t threads, uint32_t *nrm,
 													 uint32_t *d_nonces1, uint32_t *d_nonces2,
 													 uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable)
 {
@@ -327,7 +327,7 @@ __host__ void quark_compactTest_cpu_dualCompaction(int thr_id, int threads, uint
 	*/
 }
 
-__host__ void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
+__host__ void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
 											uint32_t *d_nonces1, size_t *nrm1,
 											uint32_t *d_nonces2, size_t *nrm2,
 											int order)
@@ -344,7 +344,7 @@ __host__ void quark_compactTest_cpu_hash_64(int thr_id, int threads, uint32_t st
 	*nrm2 = (size_t)h_numValid[thr_id][1];
 }
 
-__host__ void quark_compactTest_single_false_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
+__host__ void quark_compactTest_single_false_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
 											uint32_t *d_nonces1, size_t *nrm1,
 											int order)
 {

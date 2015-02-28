@@ -102,9 +102,9 @@ static void combine_hashes(uint32_t *out, uint32_t *hash1, uint32_t *hash2, uint
 }
 
 __global__
-void combine_gpu_hash(int threads, uint32_t startNounce, uint32_t *out, uint32_t *hash2, uint32_t *hash3, uint32_t *hash4, uint32_t *hash5, uint32_t *nonceVector)
+void combine_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *out, uint32_t *hash2, uint32_t *hash3, uint32_t *hash4, uint32_t *hash5, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = nonceVector[thread];
@@ -121,18 +121,18 @@ void combine_gpu_hash(int threads, uint32_t startNounce, uint32_t *out, uint32_t
 }
 
 __host__
-void combine_cpu_init(int thr_id, int threads)
+void combine_cpu_init(int thr_id, uint32_t threads)
 {
 	// Speicher für alle Ergebnisse belegen
 	CUDA_SAFE_CALL(cudaMalloc(&d_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads));
 }
 
 __host__
-void combine_cpu_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *hash)
+void combine_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *hash)
 {
 	// diese Kopien sind optional, da die Hashes jetzt bereits auf der GPU liegen sollten
 
-	const int threadsperblock = 128;
+	const uint32_t threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
