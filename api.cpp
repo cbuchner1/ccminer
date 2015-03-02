@@ -932,8 +932,8 @@ void *api_thread(void *userdata)
 /* to be able to report the default value set in each algo */
 void api_set_throughput(int thr_id, uint32_t throughput)
 {
-	struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
-	if (cgpu) {
+	if (&thr_info[thr_id]) {
+		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 		uint32_t ws = throughput;
 		uint8_t i = 0;
 		cgpu->throughput = throughput;

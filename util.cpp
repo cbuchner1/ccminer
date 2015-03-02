@@ -1660,11 +1660,14 @@ void do_gpu_tests(void)
 	tgt[7] = 0xffff;
 
 	memset(buf, 0, sizeof buf);
+	scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
+
+	memset(buf, 0, sizeof buf);
 	// buf[0] = 1; buf[64] = 2; // for endian tests
 	scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
 
-	memset(buf, 0, sizeof buf);
-	scanhash_heavy(0, (uint32_t*)buf, tgt, 1, &done, 1, 84); // HEAVYCOIN_BLKHDR_SZ=84
+	//memset(buf, 0, sizeof buf);
+	//scanhash_heavy(0, (uint32_t*)buf, tgt, 1, &done, 1, 84); // HEAVYCOIN_BLKHDR_SZ=84
 
 	free(work_restart);
 	work_restart = NULL;

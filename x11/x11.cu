@@ -125,6 +125,21 @@ extern "C" void x11hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+#ifdef _DEBUG
+#define TRACE(algo) { \
+	if (max_nonce == 1 && pdata[19] <= 1) { \
+		uint32_t* debugbuf = NULL; \
+		cudaMallocHost(&debugbuf, 8*sizeof(uint32_t)); \
+		cudaMemcpy(debugbuf, d_hash[thr_id], 8*sizeof(uint32_t), cudaMemcpyDeviceToHost); \
+		printf("%s %08x %08x %08x %08x...\n", algo, htobe32(debugbuf[0]), htobe32(debugbuf[1]), \
+			htobe32(debugbuf[2]), htobe32(debugbuf[3])); \
+		cudaFree(debugbuf); \
+	} \
+}
+#else
+#define TRACE(algo) {}
+#endif
+
 static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
@@ -133,7 +148,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 {
 	const uint32_t first_nonce = pdata[19];
 	int intensity = (device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 20 : 19;
-	uint32_t throughput =  device_intensity(thr_id, __func__, 1 << intensity); // 19=256*256*8;
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity); // 19=256*256*8;
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
@@ -176,15 +191,25 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 
 		// Hash with CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		TRACE("blake  :");
 		quark_bmw512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("bmw    :");
 		quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("groestl:");
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("skein  :");
 		quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("jh512  :");
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("keccak :");
 		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("luffa+c:");
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("shavite:");
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("simd   :");
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("echo X11 =>");
 
 		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
