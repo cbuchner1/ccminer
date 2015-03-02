@@ -161,7 +161,7 @@ static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
 int opt_affinity = -1;
-int opt_priority = 0;
+int opt_priority = 3;
 static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
@@ -275,7 +275,7 @@ Options:\n\
   -D, --debug           enable debug output\n\
   -P, --protocol-dump   verbose dump of protocol-level activities\n\
       --cpu-affinity    set process affinity to cpu core(s), mask 0x3 for cores 0 and 1\n\
-      --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)\n\
+      --cpu-priority    set process priority (default: 3) 0 idle, 2 normal to 5 highest\n\
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n\
       --api-remote      Allow remote control\n"
 
@@ -1100,23 +1100,26 @@ static void *miner_thread(void *userdata)
 	/* Set worker threads to nice 19 and then preferentially to SCHED_IDLE
 	 * and if that fails, then SCHED_BATCH. No need for this to be an
 	 * error if it fails */
-	if (!opt_benchmark && opt_priority == 0) {
-		setpriority(PRIO_PROCESS, 0, 18);
+	if (opt_benchmark) {
+		setpriority(PRIO_PROCESS, 0, -1);
 		drop_policy();
 	} else {
-		int prio = 0;
+		int prio = 3; // default for ccminer is above normal
 #ifndef WIN32
-		prio = 18;
+		prio = -1;
 		// note: different behavior on linux (-19 to 19)
 		switch (opt_priority) {
+			case 0:
+				prio = 15;
+				break;
 			case 1:
 				prio = 5;
 				break;
 			case 2:
-				prio = 0;
+				prio = 0; // normal process
 				break;
 			case 3:
-				prio = -5;
+				prio = -1; // above
 				break;
 			case 4:
 				prio = -10;
@@ -1129,9 +1132,7 @@ static void *miner_thread(void *userdata)
 				thr_id,	opt_priority, prio);
 #endif
 		setpriority(PRIO_PROCESS, 0, prio);
-		if (opt_priority == 0) {
-			drop_policy();
-		}
+		drop_policy();
 	}
 
 	/* Cpu thread affinity */
