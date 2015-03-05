@@ -166,7 +166,7 @@ do {                                                                  \
 } while (0)
 
 /*********************************************************************/
-#ifdef _WIN64
+#if !defined(__CUDA_ARCH__) || defined(_WIN64)
 #define USE_XOR_ASM_OPTS 0
 #else
 #define USE_XOR_ASM_OPTS 1
