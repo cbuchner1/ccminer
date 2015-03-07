@@ -101,6 +101,7 @@ enum sha_algos {
 	ALGO_QUBIT,
 	ALGO_S3,
 	ALGO_WHC,
+	ALGO_WHPX,
 	ALGO_X11,
 	ALGO_X13,
 	ALGO_X14,
@@ -131,6 +132,7 @@ static const char *algo_names[] = {
 	"qubit",
 	"s3",
 	"whirl",
+	"whirlpoolx",
 	"x11",
 	"x13",
 	"x14",
@@ -244,6 +246,7 @@ Options:\n\
 			x15         X15\n\
 			x17         X17 (peoplecurrency)\n\
 			whirl       Whirlcoin (old whirlpool)\n\
+			whirlpoolx  Whirlpoolx (Vanilla coin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -1403,6 +1406,11 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_WHPX:
+			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
+				max_nonce, &hashes_done);
+			break;
+
 		case ALGO_X11:
 			rc = scanhash_x11(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
@@ -2229,9 +2237,11 @@ int main(int argc, char *argv[])
 #endif
 	printf("  Originally based on pooler cpuminer,\n");
 	printf("  CUDA support by Christian Buchner and Christian H.\n");
-	printf("  Include some of djm34 additions and sp optimisations\n\n");
-
+	printf("  Include some of djm34 additions and sp optimisations\n");
 	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
+
+	printf("  Whirlpoolx support by Provos Alexis.\n");
+	printf("VNL donation address: VrjvyQJ9d1Bfte5kVSA8qfZoYdN2C6weCG\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
