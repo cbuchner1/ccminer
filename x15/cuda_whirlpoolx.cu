@@ -155,7 +155,8 @@ uint64_t* d_xtra;
 uint64_t* d_tmp;
 
 __device__ __forceinline__
-static void getShared(uint64_t* sharedMemory){
+static void whirlpoolx_getShared(uint64_t* sharedMemory)
+{
 	if (threadIdx.x < 256) {
 		sharedMemory[threadIdx.x] = mixTob0Tox[threadIdx.x];
 		sharedMemory[threadIdx.x+256]  = ROTL64(sharedMemory[threadIdx.x], 8);
@@ -170,11 +171,12 @@ static void getShared(uint64_t* sharedMemory){
 }
 
 
-__global__ void precomputeX(int threads,uint64_t* d_xtra,uint64_t* d_tmp){
-
+__global__
+void whirlpoolx_gpu_precompute(int threads, uint64_t* d_xtra, uint64_t* d_tmp)
+{
 	__shared__ uint64_t sharedMemory[2048];
 
-	getShared(sharedMemory);
+	whirlpoolx_getShared(sharedMemory);
 	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -268,7 +270,7 @@ __global__ void precomputeX(int threads,uint64_t* d_xtra,uint64_t* d_tmp){
 		n[1] ^= h[1];
 		tmp2[1]^=sharedMemory[__byte_perm(n32[2], 0, 0x4440)];
 		tmp2[2]^=sharedMemory[__byte_perm(n32[2], 0, 0x4441) + 256];
-		tmp2[3]^=sharedMemory[__byte_perm(n32[2], 0, 0x4442) +  512];
+		tmp2[3]^=sharedMemory[__byte_perm(n32[2], 0, 0x4442) + 512];
 		tmp2[4]^=sharedMemory[__byte_perm(n32[2], 0, 0x4443) + 768];
 
 		d_tmp[threadIdx.x]=tmp2[threadIdx.x];
@@ -303,7 +305,7 @@ __global__ void precomputeX(int threads,uint64_t* d_xtra,uint64_t* d_tmp){
 		tmp4[5]=(sharedMemory[__byte_perm(n32[ 8], 0, 0x4441) + 256]	^sharedMemory[__byte_perm(n32[ 6], 0, 0x4442) +  512]^
 			sharedMemory[__byte_perm(n32[ 4], 0, 0x4443) + 768]	^sharedMemory[__byte_perm(n32[ 3], 0, 0x4440) + 1024]) ^tmp3[5];
 
-		tmp4[6]=(sharedMemory[__byte_perm(n32[ 8], 0, 0x4442) +  512]	^sharedMemory[__byte_perm(n32[ 6], 0, 0x4443) + 768]^
+		tmp4[6]=(sharedMemory[__byte_perm(n32[ 8], 0, 0x4442) + 512]	^sharedMemory[__byte_perm(n32[ 6], 0, 0x4443) + 768]^
 			sharedMemory[__byte_perm(n32[ 5], 0, 0x4440) + 1024]	^sharedMemory[__byte_perm(n32[ 3], 0, 0x4441) + 1280]) ^tmp3[6];
 
 		tmp4[7]=(sharedMemory[__byte_perm(n32[ 8], 0, 0x4443) + 768]	^sharedMemory[__byte_perm(n32[ 7], 0, 0x4440) + 1024]^
@@ -346,7 +348,7 @@ __global__ void precomputeX(int threads,uint64_t* d_xtra,uint64_t* d_tmp){
 		tmp7[7] = ROUND_ELT(sharedMemory, tmp6, 7, 6, 5, 4, 3, 2, 1, 0);
 
 		d_tmp[threadIdx.x+32]=tmp7[threadIdx.x];
-//-------------------
+
 		uint64_t tmp8[8];
 		tmp8[0] = xor1(ROUND_ELT(sharedMemory, tmp7, 0, 7, 6, 5, 4, 3, 2, 1), InitVector_RC[5]);
 		tmp8[1] = ROUND_ELT(sharedMemory, tmp7, 1, 0, 7, 6, 5, 4, 3, 2);
@@ -406,20 +408,18 @@ __global__ void precomputeX(int threads,uint64_t* d_xtra,uint64_t* d_tmp){
 }
 
 __global__ __launch_bounds__(threadsPerBlock,2)
-void whirlpoolx(uint32_t threads, uint32_t startNounce,uint32_t *resNounce){
-
+void whirlpoolx_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *resNounce)
+{
 	__shared__ uint64_t sharedMemory[2048];
 
-	getShared(sharedMemory);
+	whirlpoolx_getShared(sharedMemory);
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
-	if (thread < threads){
-
+	if (thread < threads)
+	{
 		uint64_t n[8];
 		uint64_t tmp[8];
 		uint32_t nounce = startNounce + thread;
-
 
 		n[1] = xor1(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)),c_xtra[0]);
 
@@ -527,48 +527,57 @@ void whirlpoolx(uint32_t threads, uint32_t startNounce,uint32_t *resNounce){
 		tmp[6] = xor1(ROUND_ELT(sharedMemory, n, 6, 5, 4, 3, 2, 1, 0, 7), c_tmp[6+64]);
 		tmp[7] = xor1(ROUND_ELT(sharedMemory, n, 7, 6, 5, 4, 3, 2, 1, 0), c_tmp[7+64]);
 
-		if (xor3(c_xtra[1],ROUND_ELT(sharedMemory, tmp, 3, 2, 1, 0, 7, 6, 5, 4),ROUND_ELT(sharedMemory, tmp, 5, 4, 3, 2, 1, 0, 7, 6)) <= pTarget[3])
-			atomicMin(&resNounce[0],nounce);
-	} // thread < threads
+		if (xor3(c_xtra[1], ROUND_ELT(sharedMemory, tmp, 3, 2, 1, 0, 7, 6, 5, 4), ROUND_ELT(sharedMemory, tmp, 5, 4, 3, 2, 1, 0, 7, 6)) <= pTarget[3]) {
+			atomicMin(&resNounce[0], nounce);
+		}
+	}
 }
 
-__host__ extern void whirlpoolx_cpu_init(int thr_id, int threads)
+__host__
+extern void whirlpoolx_cpu_init(int thr_id, int threads)
 {
 	cudaMemcpyToSymbol(InitVector_RC, plain_RC, sizeof(plain_RC), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
 	cudaMalloc(&d_WXNonce[thr_id], sizeof(uint32_t));
 	cudaMallocHost(&d_wxnounce[thr_id], sizeof(uint32_t));
-	cudaMalloc((void **)&d_xtra,8*sizeof(uint64_t));
-	cudaMalloc((void **)&d_tmp,8*9*sizeof(uint64_t));
+	cudaMalloc((void **)&d_xtra, 8 * sizeof(uint64_t));
+	CUDA_SAFE_CALL(cudaMalloc((void **)&d_tmp, 8 * 9 * sizeof(uint64_t)));
 }
 
-__host__ void whirlpoolx_setBlock_80(void *pdata, const void *ptarget)
+__host__
+void whirlpoolx_setBlock_80(void *pdata, const void *ptarget)
 {
 	uint64_t PaddedMessage[16];
 	memcpy(PaddedMessage, pdata, 80);
 	memset((uint8_t*)&PaddedMessage+80, 0, 48);
 	*(uint8_t*)(&PaddedMessage+80) = 0x80; /* ending */
 	cudaMemcpyToSymbol(pTarget, ptarget, 4*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }
 
-__host__ void whirlpoolx_precompute(){
+__host__
+void whirlpoolx_precompute()
+{
 	dim3 grid(1);
 	dim3 block(256);
 
-	precomputeX<<<grid, block>>>(8,&d_xtra[0],&d_tmp[0]);
+	whirlpoolx_gpu_precompute <<<grid, block>>>(8, &d_xtra[0], &d_tmp[0]);
 	cudaThreadSynchronize();
-	cudaMemcpyToSymbol(c_xtra,d_xtra,8*sizeof(uint64_t),0,cudaMemcpyDeviceToDevice);
-	cudaMemcpyToSymbol(c_tmp,d_tmp,8*9*sizeof(uint64_t),0,cudaMemcpyDeviceToDevice);
+	cudaMemcpyToSymbol(c_xtra, d_xtra, 8 * sizeof(uint64_t), 0, cudaMemcpyDeviceToDevice);
+	cudaMemcpyToSymbol(c_tmp, d_tmp, 8 * 9 * sizeof(uint64_t), 0, cudaMemcpyDeviceToDevice);
 }
-__host__ extern uint32_t cpu_whirlpoolx(int thr_id, uint32_t threads, uint32_t startNounce)
+
+__host__
+uint32_t whirlpoolx_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce)
 {
 	dim3 grid((threads + threadsPerBlock-1) / threadsPerBlock);
 	dim3 block(threadsPerBlock);
 
 	cudaMemset(d_WXNonce[thr_id], 0xff, sizeof(uint32_t));
-	whirlpoolx<<<grid, block>>>(threads, startNounce,d_WXNonce[thr_id]);
+	whirlpoolx_gpu_hash<<<grid, block>>>(threads, startNounce,d_WXNonce[thr_id]);
+
 	cudaThreadSynchronize();
 	cudaMemcpy(d_wxnounce[thr_id], d_WXNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
 	return *d_wxnounce[thr_id];
 }

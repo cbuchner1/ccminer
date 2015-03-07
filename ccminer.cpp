@@ -100,8 +100,8 @@ enum sha_algos {
 	ALGO_QUARK,
 	ALGO_QUBIT,
 	ALGO_S3,
-	ALGO_WHC,
-	ALGO_WHPX,
+	ALGO_WHIRLCOIN,
+	ALGO_WHIRLPOOLX,
 	ALGO_X11,
 	ALGO_X13,
 	ALGO_X14,
@@ -1001,7 +1001,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_GROESTL:
 		case ALGO_KECCAK:
 		case ALGO_BLAKECOIN:
-		case ALGO_WHC:
+		case ALGO_WHIRLCOIN:
 			SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
 			break;
 		default:
@@ -1401,12 +1401,12 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
-		case ALGO_WHC:
+		case ALGO_WHIRLCOIN:
 			rc = scanhash_whc(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
-		case ALGO_WHPX:
+		case ALGO_WHIRLPOOLX:
 			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
 				max_nonce, &hashes_done);
 			break;

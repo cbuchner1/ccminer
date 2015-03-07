@@ -2,8 +2,7 @@
  * whirlpool routine (djm)
  * whirlpoolx routine (provos alexis)
  */
-extern "C"
-{
+extern "C" {
 #include "sph/sph_whirlpool.h"
 #include "miner.h"
 }
@@ -14,13 +13,12 @@ static uint32_t *d_hash[MAX_GPUS];
 
 extern void whirlpoolx_cpu_init(int thr_id, int threads);
 extern void whirlpoolx_setBlock_80(void *pdata, const void *ptarget);
-extern uint32_t cpu_whirlpoolx(int thr_id, uint32_t threads, uint32_t startNounce);
+extern uint32_t whirlpoolx_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce);
 extern void whirlpoolx_precompute();
 
 // CPU Hash function
 extern "C" void whirlxHash(void *state, const void *input)
 {
-
 	sph_whirlpool_context ctx_whirlpool;
 
 	unsigned char hash[64];
@@ -41,10 +39,13 @@ extern "C" void whirlxHash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata,const uint32_t *ptarget, uint32_t max_nonce,unsigned long *hashes_done){
+extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+	uint32_t max_nonce, unsigned long *hashes_done)
+{
 	const uint32_t first_nonce = pdata[19];
+	uint64_t n = first_nonce;
 	uint32_t endiandata[20];
-	uint32_t throughput = pow(2,25);
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 22);
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
@@ -52,28 +53,27 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata,const uint32_t *p
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
-		// Konstanten kopieren, Speicher belegen
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+
+		cudaMalloc(&d_hash[thr_id], 64 * throughput);
 		whirlpoolx_cpu_init(thr_id, throughput);
 
 		init[thr_id] = true;
 	}
 
 	for (int k=0; k < 20; k++) {
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[k], pdata[k]);
 	}
 
 	whirlpoolx_setBlock_80((void*)endiandata, ptarget);
 	whirlpoolx_precompute();
-	uint64_t n=pdata[19];
-	uint32_t foundNonce;
 	do {
-		if(n+throughput>=max_nonce){
-//			applog(LOG_INFO, "GPU #%d: Preventing glitch.", thr_id);
-			throughput=max_nonce-n;
+		uint32_t foundNonce = UINT32_MAX;
+		if((n+throughput) >= max_nonce) {
+			// Preventing glitch
+			throughput = (uint32_t) (max_nonce-n);
 		}
-		foundNonce = cpu_whirlpoolx(thr_id, throughput, n);
-		if (foundNonce != 0xffffffff)
+		foundNonce = whirlpoolx_cpu_hash(thr_id, throughput, (uint32_t) n);
+		if (foundNonce != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
@@ -82,12 +82,7 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata,const uint32_t *p
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				int res = 1;
-//				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				*hashes_done = n - first_nonce + throughput;
-/*				if (secNonce != 0) {
-					pdata[21] = secNonce;
-					res++;
-				}*/
+				*hashes_done = (unsigned long)(n - first_nonce + throughput);
 				pdata[19] = foundNonce;
 				return res;
 			}
@@ -101,6 +96,6 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata,const uint32_t *p
 		n += throughput;
 
 	} while (n < max_nonce && !work_restart[thr_id].restart);
-	*hashes_done = n - first_nonce;
+	*hashes_done = (unsigned long)(n - first_nonce);
 	return 0;
 }

@@ -667,6 +667,7 @@ void quarkhash(void *state, const void *input);
 void qubithash(void *state, const void *input);
 void s3hash(void *output, const void *input);
 void wcoinhash(void *state, const void *input);
+void whirlxHash(void *state, const void *input);
 void x11hash(void *output, const void *input);
 void x13hash(void *output, const void *input);
 void x14hash(void *output, const void *input);
