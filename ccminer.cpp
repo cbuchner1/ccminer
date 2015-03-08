@@ -159,7 +159,7 @@ bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_timeout = 270;
-static int opt_scantime = 5;
+static int opt_scantime = 10;
 static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
@@ -249,12 +249,12 @@ Options:\n\
 			x15         X15\n\
 			x17         X17 (peoplecurrency)\n\
 			whirl       Whirlcoin (old whirlpool)\n\
-			whirlpoolx  Whirlpoolx (Vanilla coin)\n\
+			whirlpoolx  Vanilla coin\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
                         (matching 2nd gt640 in the PC)\n\
-  -i  --intensity=N     GPU intensity 8-31 (default: auto) \n\
+  -i  --intensity=N[,N] GPU intensity 8.0-25.0 (default: auto) \n\
                         Decimals are allowed for fine tuning \n\
   -f, --diff            Divide difficulty by this factor (std is 1) \n\
   -v, --vote=VOTE       block reward vote (for HeavyCoin)\n\
@@ -271,7 +271,7 @@ Options:\n\
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 30)\n\
   -T, --timeout=N       network timeout, in seconds (default: 270)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
-                          long polling is unavailable, in seconds (default: 5)\n\
+                          long polling is unavailable, in seconds (default: 10)\n\
   -N, --statsavg        number of samples used to display hashrate (default: 30)\n\
       --no-gbt          disable getblocktemplate support (height check in solo)\n\
       --no-longpoll     disable X-Long-Polling support\n\
@@ -1421,7 +1421,7 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_WHIRLPOOLX:
 			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
-				max_nonce, &hashes_done);
+			                      max_nonce, &hashes_done);
 			break;
 
 		case ALGO_X11:
@@ -1436,17 +1436,17 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_X14:
 			rc = scanhash_x14(thr_id, work.data, work.target,
-				max_nonce, &hashes_done);
+				                  max_nonce, &hashes_done);
 			break;
 
 		case ALGO_X15:
 			rc = scanhash_x15(thr_id, work.data, work.target,
-				max_nonce, &hashes_done);
+				                  max_nonce, &hashes_done);
 			break;
 
 		case ALGO_X17:
 			rc = scanhash_x17(thr_id, work.data, work.target,
-				max_nonce, &hashes_done);
+				                  max_nonce, &hashes_done);
 			break;
 
 		default:
@@ -2248,8 +2248,8 @@ int main(int argc, char *argv[])
 #else
 	printf("    Built with the nVidia CUDA SDK 6.5\n\n");
 #endif
-	printf("  Originally based on cudaminer by Christian Buchner and Christian H.,\n");
-	printf("  Include some work of djm34, sp, tsiv and klausT\n\n");
+	printf("  Originally based on Christian Buchner and Christian H. project\n");
+	printf("  Include some of the work of djm34, sp, tsiv and klausT.\n\n");
 	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
 
 	rpc_user = strdup("");
@@ -2302,7 +2302,7 @@ int main(int argc, char *argv[])
 	// extra credits..
 	if (opt_algo == ALGO_WHIRLPOOLX) {
 		printf("  Whirlpoolx support by Alexis Provos.\n");
-		printf("VNL donation address: VrjvyQJ9d1Bfte5kVSA8qfZoYdN2C6weCG\n\n");
+		printf("VNL donation address: Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W\n\n");
 	}
 
 	if (!opt_benchmark && !strlen(rpc_url)) {

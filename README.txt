@@ -1,5 +1,5 @@
 
-ccMiner release 1.5.3-tpruvot (11 Feb 2015) - "Default Config"
+ccMiner release 1.6.0-tpruvot (Mar 2015) - "Pluck & Whirlpoolx"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -32,7 +32,7 @@ JackpotCoin
 QuarkCoin family & AnimeCoin
 TalkCoin
 DarkCoin and other X11 coins
-NEOS blake (256 14-rounds)
+Saffroncoin blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
 Keccak (Maxcoin)
 Deep, Doom and Qubit
@@ -58,7 +58,7 @@ its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
                           anime       use to mine Animecoin
-                          blake       use to mine NEOS (Blake 256)
+                          blake       use to mine Saffroncoin (Blake 256)
                           blakecoin   use to mine Old Blake 256
                           deep        use to mine Deepcoin
                           dmd-gr      use to mine Diamond-Groestl
@@ -74,10 +74,12 @@ its command line interface and options.
                           myr-gr      use to mine Myriad-Groest
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
+                          pluck       use to mine Supcoin
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit Algo
                           s3          use to mine 1coin
                           whirl       use to mine Whirlcoin
+                          whirlpoolx  use to mine Vanillacoin
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
@@ -88,8 +90,8 @@ its command line interface and options.
                         Alternatively give string names of your card like
                         gtx780ti or gt640#2 (matching 2nd gt640 in the PC).
 
-  -i, --intensity       GPU threads per call 8-31 (default: 0=auto)
-                        Decimals are allowed for fine tuning
+  -i, --intensity=N[,N] GPU threads per call 8-25 (2^N + F, default: 0=auto)
+                        Decimals and multiple values are allowed for fine tuning
   -f, --diff            Divide difficulty by this factor (std is 1)
   -v, --vote            Heavycoin block vote (default: 512)
   -o, --url=URL         URL of mining server
@@ -152,6 +154,12 @@ and password with -O (or -u -p) as specified in the wallet config.
 
 The wallet must also be started with the -server option and/or with the server=1 flag in the .conf file
 
+>>> Configuration files <<<
+
+With the -c parameter you can use a json config file to set your prefered settings.
+An example is present in source tree, and is also the default one when no command line parameters are given.
+This allow you to run the miner without batch/script.
+
 
 >>> API and Monitoring <<<
 
@@ -174,6 +182,13 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Mar. 2015       v1.6.0 (Note for CryptoMiningBlog: NOT YET RELEASED/FINISHED!)
+                  Import pluck (djm34) and whirlpoolx (alexis78) algos
+                  Hashrate units based on hashing rate values (Hs/kHs/MHs/GHs)
+				  Default config file (also help to debug without command line)
+                  Various small fixes
+                  More to come soon...
 
   Feb. 11th 2015  v1.5.3
                   Fix anime algo
@@ -323,7 +338,7 @@ Notable contributors to this application are:
 
 Christian Buchner, Christian H. (Germany): Initial CUDA implementation
 
-djm34, tsiv, sp for cuda algos implementation and optimisation
+djm34, tsiv, sp and klausT for cuda algos implementation and optimisation
 
 Tanguy Pruvot : 750Ti tuning, blake, colors, general code cleanup/opts
                 API monitoring, linux Config/Makefile and vstudio stuff...

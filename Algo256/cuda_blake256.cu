@@ -73,7 +73,7 @@ static const uint32_t  c_u256[16] = {
 }
 
 //#define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
-#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
+//#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 #define hostGS(a,b,c,d,x) { \
 	const uint32_t idx1 = c_sigma[r][x]; \
 	const uint32_t idx2 = c_sigma[r][x+1]; \

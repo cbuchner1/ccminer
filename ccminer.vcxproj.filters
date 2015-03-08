@@ -582,4 +582,9 @@
       <Filter>Ressources</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="README.txt">
+      <Filter>Ressources</Filter>
+    </Text>
+  </ItemGroup>
 </Project>

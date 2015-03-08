@@ -160,7 +160,7 @@ void get_defconfig_path(char *out, size_t bufsize, char *argv0)
 #endif
 	if (dir && stat(out, &info) != 0) {
 		// binary folder if not present in user folder
-		snprintf(out, bufsize, "%s%sccminer.conf\0", dir, sep);
+		snprintf(out, bufsize, "%s%sccminer.conf%s", dir, sep, "");
 	}
 	if (stat(out, &info) != 0) {
 		out[0] = '\0';
@@ -1266,7 +1266,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	ntime = swab32(ntime) - (uint32_t) time(0);
 	if (ntime > sctx->srvtime_diff) {
 		sctx->srvtime_diff = ntime;
-		if (!opt_quiet && ntime > 20)
+		if (opt_protocol && ntime > 20)
 			applog(LOG_DEBUG, "stratum time is at least %ds in the future", ntime);
 	}
 
