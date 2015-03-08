@@ -313,6 +313,7 @@
     <ClInclude Include="cpuminer-config.h" />
     <ClInclude Include="cuda_groestlcoin.h" />
     <ClInclude Include="cuda_helper.h" />
+    <ClInclude Include="cuda_vector.h" />
     <ClInclude Include="elist.h" />
     <ClInclude Include="heavy\heavy.h" />
     <ClInclude Include="hefty1.h" />
@@ -416,6 +417,8 @@
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
+    <CudaCompile Include="pluck\pluck.cu" />
+    <CudaCompile Include="pluck\cuda_pluck.cu" />
     <CudaCompile Include="quark\cuda_quark_groestl512.cu">
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_keccak512.cu">

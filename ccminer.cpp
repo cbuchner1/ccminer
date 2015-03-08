@@ -97,6 +97,7 @@ enum sha_algos {
 	ALGO_MYR_GR,
 	ALGO_NIST5,
 	ALGO_PENTABLAKE,
+	ALGO_PLUCK,
 	ALGO_QUARK,
 	ALGO_QUBIT,
 	ALGO_S3,
@@ -128,6 +129,7 @@ static const char *algo_names[] = {
 	"myr-gr",
 	"nist5",
 	"penta",
+	"pluck",
 	"quark",
 	"qubit",
 	"s3",
@@ -237,6 +239,7 @@ Options:\n\
 			myr-gr      Myriad-Groestl\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
+			pluck       SupCoin\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
 			s3          S3 (1Coin)\n\
@@ -1059,6 +1062,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	switch (opt_algo) {
 		case ALGO_JACKPOT:
+		case ALGO_PLUCK:
 			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 			break;
 		case ALGO_DMD_GR:
@@ -1272,6 +1276,9 @@ static void *miner_thread(void *userdata)
 			case ALGO_LYRA2:
 				minmax = 0x100000;
 				break;
+			case ALGO_PLUCK:
+				minmax = 0x2000;
+				break;
 			}
 			max64 = max(minmax-1, max64);
 		}
@@ -1394,6 +1401,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_PENTABLAKE:
 			rc = scanhash_pentablake(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_PLUCK:
+			rc = scanhash_pluck(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
@@ -2237,8 +2249,8 @@ int main(int argc, char *argv[])
 	printf("    Built with the nVidia CUDA SDK 6.5\n\n");
 #endif
 	printf("  Originally based on cudaminer by Christian Buchner and Christian H.,\n");
-	printf("  Include some of djm34 additions and sp optimisations\n");
-	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
+	printf("  Include some work of djm34, sp, tsiv and klausT\n\n");
+	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");

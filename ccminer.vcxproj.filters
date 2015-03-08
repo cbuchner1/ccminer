@@ -308,6 +308,9 @@
     <ClInclude Include="cuda_helper.h">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="cuda_vector.h">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
     <ClInclude Include="sph\sph_hamsi.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
@@ -393,6 +396,12 @@
     </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_compactionTest.cu">
       <Filter>Source Files\CUDA\JHA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="pluck\pluck.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="pluck\cuda_pluck.cu">
+      <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_jh512.cu">
       <Filter>Source Files\CUDA\quark</Filter>
