@@ -39,11 +39,11 @@ extern "C" void whirlxHash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
+
 extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	uint64_t n = first_nonce;
 	uint32_t endiandata[20];
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 22);
 	throughput = min(throughput, max_nonce - first_nonce);
@@ -67,12 +67,7 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *
 	whirlpoolx_setBlock_80((void*)endiandata, ptarget);
 	whirlpoolx_precompute();
 	do {
-		uint32_t foundNonce = UINT32_MAX;
-		if((n+throughput) >= max_nonce) {
-			// Preventing glitch
-			throughput = (uint32_t) (max_nonce-n);
-		}
-		foundNonce = whirlpoolx_cpu_hash(thr_id, throughput, (uint32_t) n);
+		uint32_t foundNonce = whirlpoolx_cpu_hash(thr_id, throughput, pdata[19]);
 		if (foundNonce != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -81,10 +76,9 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *
 			whirlxHash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				*hashes_done = (unsigned long)(n - first_nonce + throughput);
+				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
-				return res;
+				return 1;
 			}
 			else if (vhash64[7] > Htarg) {
 				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
@@ -93,9 +87,16 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *
 				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
 			}
 		}
-		n += throughput;
 
-	} while (n < max_nonce && !work_restart[thr_id].restart);
-	*hashes_done = (unsigned long)(n - first_nonce);
+		pdata[19] += throughput;
+
+		if (((uint64_t)pdata[19]+throughput) >= max_nonce) {
+			break;
+		}
+
+	} while (!work_restart[thr_id].restart);
+
+	*(hashes_done) = pdata[19] - first_nonce + 1;
+
 	return 0;
 }

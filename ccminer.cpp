@@ -1253,6 +1253,7 @@ static void *miner_thread(void *userdata)
 			switch (opt_algo) {
 			case ALGO_BLAKECOIN:
 			case ALGO_BLAKE:
+			case ALGO_WHIRLPOOLX:
 				minmax = 0x80000000U;
 				break;
 			case ALGO_KECCAK:
@@ -2235,13 +2236,9 @@ int main(int argc, char *argv[])
 #else
 	printf("    Built with the nVidia CUDA SDK 6.5\n\n");
 #endif
-	printf("  Originally based on pooler cpuminer,\n");
-	printf("  CUDA support by Christian Buchner and Christian H.\n");
+	printf("  Originally based on cudaminer by Christian Buchner and Christian H.,\n");
 	printf("  Include some of djm34 additions and sp optimisations\n");
 	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo\n\n");
-
-	printf("  Whirlpoolx support by Provos Alexis.\n");
-	printf("VNL donation address: VrjvyQJ9d1Bfte5kVSA8qfZoYdN2C6weCG\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
@@ -2288,6 +2285,12 @@ int main(int argc, char *argv[])
 			parse_arg('c', defconfig);
 			parse_cmdline(argc, argv);
 		}
+	}
+
+	// extra credits..
+	if (opt_algo == ALGO_WHIRLPOOLX) {
+		printf("  Whirlpoolx support by Alexis Provos.\n");
+		printf("VNL donation address: VrjvyQJ9d1Bfte5kVSA8qfZoYdN2C6weCG\n\n");
 	}
 
 	if (!opt_benchmark && !strlen(rpc_url)) {
