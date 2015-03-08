@@ -42,7 +42,7 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-	int intensity = is_windows() ? 18 : 22;
+	int intensity = is_windows() ? 20 : 22;
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
 	throughput = min(throughput, max_nonce - first_nonce);
 
