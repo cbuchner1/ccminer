@@ -133,7 +133,7 @@ extern "C" void x11hash(void *output, const void *input)
 		cudaMemcpy(debugbuf, d_hash[thr_id], 8*sizeof(uint32_t), cudaMemcpyDeviceToHost); \
 		printf("%s %08x %08x %08x %08x...\n", algo, htobe32(debugbuf[0]), htobe32(debugbuf[1]), \
 			htobe32(debugbuf[2]), htobe32(debugbuf[3])); \
-		cudaFree(debugbuf); \
+		cudaFreeHost(debugbuf); \
 	} \
 }
 #else

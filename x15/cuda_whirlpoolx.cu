@@ -14,8 +14,8 @@ __constant__ uint64_t c_xtra[8];
 __constant__ uint64_t c_tmp[72];
 __constant__ uint64_t pTarget[4];
 
-uint32_t *d_wxnounce[MAX_GPUS];
-uint32_t *d_WXNonce[MAX_GPUS];
+static uint32_t *h_wxnounce[MAX_GPUS] = { 0 };
+static uint32_t *d_WXNonce[MAX_GPUS] = { 0 };
 
 /**
  * Whirlpool CUDA kernel implementation.
@@ -151,8 +151,8 @@ static uint64_t ROUND_ELT(const uint64_t* sharedMemory, const uint64_t* __restri
 	ROUND(table, in, out, key[0], key[1], key[2],key[3], key[4], key[5], key[6], key[7]) \
 	TRANSFER(in, out)
 
-uint64_t* d_xtra;
-uint64_t* d_tmp;
+static uint64_t* d_xtra[MAX_GPUS] = { 0 };
+static uint64_t* d_tmp[MAX_GPUS] = { 0 };
 
 __device__ __forceinline__
 static void whirlpoolx_getShared(uint64_t* sharedMemory)
@@ -172,12 +172,12 @@ static void whirlpoolx_getShared(uint64_t* sharedMemory)
 
 
 __global__
-void whirlpoolx_gpu_precompute(int threads, uint64_t* d_xtra, uint64_t* d_tmp)
+void whirlpoolx_gpu_precompute(uint32_t threads, uint64_t* d_xtra, uint64_t* d_tmp)
 {
 	__shared__ uint64_t sharedMemory[2048];
 
 	whirlpoolx_getShared(sharedMemory);
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t n[8];
@@ -534,14 +534,14 @@ void whirlpoolx_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *resNo
 }
 
 __host__
-extern void whirlpoolx_cpu_init(int thr_id, int threads)
+extern void whirlpoolx_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaMemcpyToSymbol(InitVector_RC, plain_RC, sizeof(plain_RC), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(mixTob0Tox, plain_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
 	cudaMalloc(&d_WXNonce[thr_id], sizeof(uint32_t));
-	cudaMallocHost(&d_wxnounce[thr_id], sizeof(uint32_t));
-	cudaMalloc((void **)&d_xtra, 8 * sizeof(uint64_t));
-	CUDA_SAFE_CALL(cudaMalloc((void **)&d_tmp, 8 * 9 * sizeof(uint64_t)));
+	cudaMallocHost(&h_wxnounce[thr_id], sizeof(uint32_t));
+	cudaMalloc(&d_xtra[thr_id], 8 * sizeof(uint64_t));
+	CUDA_SAFE_CALL(cudaMalloc(&d_tmp[thr_id], 8 * 9 * sizeof(uint64_t))); // d_tmp[threadIdx.x+64] (7+64)
 }
 
 __host__
@@ -550,21 +550,22 @@ void whirlpoolx_setBlock_80(void *pdata, const void *ptarget)
 	uint64_t PaddedMessage[16];
 	memcpy(PaddedMessage, pdata, 80);
 	memset((uint8_t*)&PaddedMessage+80, 0, 48);
-	*(uint8_t*)(&PaddedMessage+80) = 0x80; /* ending */
+	((uint8_t*)PaddedMessage)[80] = 0x80; /* ending */
 	cudaMemcpyToSymbol(pTarget, ptarget, 4*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 }
 
 __host__
-void whirlpoolx_precompute()
+void whirlpoolx_precompute(int thr_id)
 {
 	dim3 grid(1);
 	dim3 block(256);
 
-	whirlpoolx_gpu_precompute <<<grid, block>>>(8, &d_xtra[0], &d_tmp[0]);
+	whirlpoolx_gpu_precompute <<<grid, block>>>(8, d_xtra[thr_id], d_tmp[thr_id]);
 	cudaThreadSynchronize();
-	cudaMemcpyToSymbol(c_xtra, d_xtra, 8 * sizeof(uint64_t), 0, cudaMemcpyDeviceToDevice);
-	cudaMemcpyToSymbol(c_tmp, d_tmp, 8 * 9 * sizeof(uint64_t), 0, cudaMemcpyDeviceToDevice);
+
+	cudaMemcpyToSymbol(c_xtra, d_xtra[thr_id], 8 * sizeof(uint64_t), 0, cudaMemcpyDeviceToDevice);
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_tmp, d_tmp[thr_id], 8 * 9 * sizeof(uint64_t), 0, cudaMemcpyDeviceToDevice));
 }
 
 __host__
@@ -574,10 +575,11 @@ uint32_t whirlpoolx_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce)
 	dim3 block(threadsPerBlock);
 
 	cudaMemset(d_WXNonce[thr_id], 0xff, sizeof(uint32_t));
-	whirlpoolx_gpu_hash<<<grid, block>>>(threads, startNounce,d_WXNonce[thr_id]);
 
+	whirlpoolx_gpu_hash<<<grid, block>>>(threads, startNounce, d_WXNonce[thr_id]);
 	cudaThreadSynchronize();
-	cudaMemcpy(d_wxnounce[thr_id], d_WXNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-	return *d_wxnounce[thr_id];
+	cudaMemcpy(h_wxnounce[thr_id], d_WXNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
+	return *(h_wxnounce[thr_id]);
 }
