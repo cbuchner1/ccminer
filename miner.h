@@ -667,6 +667,7 @@ void lyra2_hash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
 void nist5hash(void *state, const void *input);
 void pentablakehash(void *output, const void *input);
+void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const int N);
 void quarkhash(void *state, const void *input);
 void qubithash(void *state, const void *input);
 void s3hash(void *output, const void *input);

@@ -539,8 +539,8 @@ void pluck_cpu_init(int thr_id, uint32_t threads, uint32_t* hash)
 __host__
 uint32_t pluck_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce,  int order)
 {
-	uint32_t result[8] = {0xffffffff};
-	cudaMemset(d_PlNonce[thr_id], 0xffffffff, sizeof(uint32_t));
+	uint32_t result[8] = { 0xffffffff };
+	cudaMemset(d_PlNonce[thr_id], 0xff, sizeof(uint32_t));
 
 	const uint32_t threadsperblock = 128;
 
@@ -557,7 +557,8 @@ uint32_t pluck_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce,  int
 		pluck_gpu_hash <<< grid, block >>>(threads, startNounce, d_PlNonce[thr_id]);
 	}
 
-	MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, order, thr_id);
+	CUDA_SAFE_CALL(cudaThreadSynchronize());
 	cudaMemcpy(&result[thr_id], d_PlNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
 	return result[thr_id];

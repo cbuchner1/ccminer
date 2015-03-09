@@ -1646,6 +1646,8 @@ extern void applog_hash(uchar *hash)
 #define printpfx(n,h) \
 	printf("%s%12s%s: %s\n", CL_BLU, n, CL_N, format_hash(s, h))
 
+static uchar scratchbuf[128 * 1024];
+
 void do_gpu_tests(void)
 {
 #ifdef _DEBUG
@@ -1678,8 +1680,11 @@ void do_gpu_tests(void)
 void print_hash_tests(void)
 {
 	char s[128] = {'\0'};
-	uchar buf[128], hash[128];
-	memset(buf, 0, sizeof buf);
+	uchar hash[128];
+	uchar* buf = scratchbuf;
+
+	//scratchbuf = (uchar*)malloc(1, 128*1024);
+	memset(buf, 0, sizeof scratchbuf);
 	// buf[0] = 1; buf[64] = 2; // for endian tests
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
@@ -1745,6 +1750,10 @@ void print_hash_tests(void)
 	printpfx("pentablake", hash);
 
 	memset(hash, 0, sizeof hash);
+	pluckhash((uint32_t*)&hash[0], (uint32_t*)&buf[0], &buf[0], 128);
+	printpfx("pluck", hash);
+
+	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
 
@@ -1787,4 +1796,6 @@ void print_hash_tests(void)
 	printf("\n");
 
 	do_gpu_tests();
+
+	//free(scratchbuf);
 }

@@ -1,10 +1,11 @@
 /* Based on djm code */
 
-extern "C" {
-#include "miner.h"
-}
-
 #include <stdint.h>
+
+#include "miner.h"
+#include "cuda_helper.h"
+
+#include <openssl/sha.h>
 
 static uint32_t *d_hash[MAX_GPUS] ;
 
@@ -84,137 +85,102 @@ static inline void xor_salsa8(uint32_t B[16], const uint32_t Bx[16])
 #undef ROTL
 }
 
-static void sha256_hash(unsigned char *hash, const unsigned char *data, int len)
+static void sha256_hash(uchar *hash, const uchar *data, int len)
 {
-	uint32_t S[16], T[16];
-	int i, r;
-
-	sha256_init(S);
-	for (r = len; r > -9; r -= 64) {
-		if (r < 64)
-			memset(T, 0, 64);
-		memcpy(T, data + len - r, r > 64 ? 64 : (r < 0 ? 0 : r));
-		if (r >= 0 && r < 64)
-			((unsigned char *)T)[r] = 0x80;
-		for (i = 0; i < 16; i++)
-			T[i] = be32dec(T + i);
-
-		if (r < 56)
-			T[15] = 8 * len;
-		sha256_transform(S, T, 0);
-	}
-	for (i = 0; i < 8; i++)
-		be32enc((uint32_t *)hash + i, S[i]);
+	SHA256_CTX ctx;
+	SHA256_Init(&ctx);
+	SHA256_Update(&ctx, data, len);
+	SHA256_Final(hash, &ctx);
 }
 
-static void sha256_hash512(unsigned char *hash, const unsigned char *data)
+// hash exactly 64 bytes (ie, sha256 block size)
+static void sha256_hash512(uint32_t *hash, const uint32_t *data)
 {
-	uint32_t S[16], T[16];
+	uint32_t _ALIGN(64) S[16];
+	uint32_t _ALIGN(64) T[16];
+	uchar _ALIGN(64) E[64] = { 0 };
 	int i;
 
 	sha256_init(S);
 
-	memcpy(T, data, 64);
 	for (i = 0; i < 16; i++)
-		T[i] = be32dec(T + i);
+		T[i] = be32dec(&data[i]);
 	sha256_transform(S, T, 0);
 
-	memset(T, 0, 64);
-	//memcpy(T, data + 64, 0);
-	((unsigned char *)T)[0] = 0x80;
-	for (i = 0; i < 16; i++)
-		T[i] = be32dec(T + i);
-	T[15] = 8 * 64;
-	sha256_transform(S, T, 0);
+	E[3] = 0x80;
+	E[61] = 0x02; // T[15] = 8 * 64 => 0x200;
+	sha256_transform(S, (uint32_t*)E, 0);
 
 	for (i = 0; i < 8; i++)
-		be32enc((uint32_t *)hash + i, S[i]);
+		be32enc(&hash[i], S[i]);
 }
 
-void pluckhash(uint32_t *hash, uint32_t *input)
+#define BLOCK_HEADER_SIZE 80
+void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const int N)
 {
+	int size = N * 1024;
+	sha256_hash(hashbuffer, (uchar*)data, BLOCK_HEADER_SIZE);
+	memset(&hashbuffer[32], 0, 32);
 
-	uint32_t data[20];
-	//uint32_t midstate[8];
+	for (int i = 64; i < size - 32; i += 32)
+	{
+		uint32_t _ALIGN(64) randseed[16];
+		uint32_t _ALIGN(64) randbuffer[16];
+		uint32_t _ALIGN(64) joint[16];
+		//i-4 because we use integers for all references against this, and we don't want to go 3 bytes over the defined area
+		//we could use size here, but then it's probable to use 0 as the value in most cases
+		int randmax = i - 4;
 
-	const int HASH_MEMORY = 128 * 1024;
-	uint8_t * scratchbuf = (uint8_t*)malloc(HASH_MEMORY);
+		//setup randbuffer to be an array of random indexes
+		memcpy(randseed, &hashbuffer[i - 64], 64);
 
-	for (int k = 0; k<20; k++) { data[k] = input[k]; }
+		if (i > 128) memcpy(randbuffer, &hashbuffer[i - 128], 64);
+		else memset(randbuffer, 0, 64);
 
-		uint8_t *hashbuffer = scratchbuf; //don't allocate this on stack, since it's huge..
-		int size = HASH_MEMORY;
-		memset(hashbuffer, 0, 64);
+		xor_salsa8((uint32_t*)randbuffer, (uint32_t*)randseed);
+		memcpy(joint, &hashbuffer[i - 32], 32);
 
-		sha256_hash(&hashbuffer[0], (uint8_t*)data, 80);
-		for (int i = 64; i < size - 32; i += 32)
+		//use the last hash value as the seed
+		for (int j = 32; j < 64; j += 4)
 		{
-			//i-4 because we use integers for all references against this, and we don't want to go 3 bytes over the defined area
-			int randmax = i - 4; //we could use size here, but then it's probable to use 0 as the value in most cases
-			uint32_t joint[16];
-			uint32_t randbuffer[16];
-
-			uint32_t randseed[16];
-			memcpy(randseed, &hashbuffer[i - 64], 64);
-			if (i>128)
-			{
-				memcpy(randbuffer, &hashbuffer[i - 128], 64);
-			}
-			else
-			{
-				memset(&randbuffer, 0, 64);
-			}
-
-			xor_salsa8(randbuffer, randseed);
-
-			memcpy(joint, &hashbuffer[i - 32], 32);
-			//use the last hash value as the seed
-			for (int j = 32; j < 64; j += 4)
-			{
-				uint32_t rand = randbuffer[(j - 32) / 4] % (randmax - 32); //randmax - 32 as otherwise we go beyond memory that's already been written to
-				joint[j / 4] = *((uint32_t*)&hashbuffer[rand]);
-			}
-			sha256_hash512(&hashbuffer[i], (uint8_t*)joint);
-//			for (int k = 0; k<8; k++) { printf("sha hashbuffer %d %08x\n", k, ((uint32_t*)(hashbuffer+i))[k]); }
-			memcpy(randseed, &hashbuffer[i - 32], 64); //use last hash value and previous hash value(post-mixing)
-			if (i>128)
-			{
-				memcpy(randbuffer, &hashbuffer[i - 128], 64);
-			}
-			else
-			{
-				memset(randbuffer, 0, 64);
-			}
-			xor_salsa8(randbuffer, randseed);
-			for (int j = 0; j < 32; j += 2)
-			{
-				uint32_t rand = randbuffer[j / 2] % randmax;
-				*((uint32_t*)&hashbuffer[rand]) = *((uint32_t*)&hashbuffer[j + i - 4]);
-			}
+			//every other time, change to next random index
+			//randmax - 32 as otherwise we go beyond memory that's already been written to
+			uint32_t rand = randbuffer[(j - 32) >> 2] % (randmax - 32);
+			joint[j >> 2] = *((uint32_t *)&hashbuffer[rand]);
 		}
 
-//		for (int k = 0; k<8; k++) { printf("cpu final hash %d %08x\n", k, ((uint32_t*)hashbuffer)[k]); }
+		sha256_hash512((uint32_t*)&hashbuffer[i], joint);
 
-		//note: off-by-one error is likely here...
-/*
-		for (int i = size - 64 - 1; i >= 64; i -= 64)
+		//setup randbuffer to be an array of random indexes
+		//use last hash value and previous hash value(post-mixing)
+		memcpy(randseed, &hashbuffer[i - 32], 64);
+
+		if (i > 128) memcpy(randbuffer, &hashbuffer[i - 128], 64);
+		else memset(randbuffer, 0, 64);
+
+		xor_salsa8((uint32_t*)randbuffer, (uint32_t*)randseed);
+
+		//use the last hash value as the seed
+		for (int j = 0; j < 32; j += 2)
 		{
-			sha256_hash512(&hashbuffer[i - 64], &hashbuffer[i]);
+			uint32_t rand = randbuffer[j >> 1] % randmax;
+			*((uint32_t *)(hashbuffer + rand)) = *((uint32_t *)(hashbuffer + j + randmax));
 		}
+	}
 
-		for (int k = 0; k<8; k++) { printf("cpu after of by one final hash %d %08x\n", k, ((uint32_t*)hashbuffer)[k]); }
-*/
-		memcpy((unsigned char*)hash, hashbuffer, 32);
+	memcpy(hash, hashbuffer, 32);
 }
 
 static bool init[MAX_GPUS] = { 0 };
+
+static uchar* scratchbuf = NULL;
 
 extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
-
+	int opt_pluck_n = 128;
 	int intensity = 18; /* beware > 20 could work and create diff problems later */
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
 	// divide by 128 for this algo which require a lot of memory
@@ -230,13 +196,14 @@ extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 		//cudaDeviceReset();
 		//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		//cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		cudaMalloc(&d_hash[thr_id], opt_pluck_n * 1024 * throughput);
 
-		cudaMalloc(&d_hash[thr_id], 32 * 1024 * sizeof(uint32_t) * throughput);
+		if (!scratchbuf)
+			scratchbuf = (uchar*) calloc(opt_pluck_n, 1024);
 
 		pluck_cpu_init(thr_id, throughput, d_hash[thr_id]);
 		init[thr_id] = true;
 	}
-
 
 	for (int k = 0; k < 20; k++)
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
@@ -247,18 +214,17 @@ extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 		uint32_t foundNonce = pluck_cpu_hash(thr_id, throughput, pdata[19], 0);
 		if (foundNonce != UINT32_MAX)
 		{
-//			const uint32_t Htarg = ptarget[7];
-//			uint32_t vhash64[8];
-//			be32enc(&endiandata[19], foundNonce);
-//			pluckhash(vhash64,endiandata);
-//			printf("target %08x vhash64 %08x", ptarget[7], vhash64[7]);
-//			if (vhash64[7] <= Htarg) { // && fulltest(vhash64, ptarget)) {
+			const uint32_t Htarg = ptarget[7];
+			uint32_t vhash64[8];
+			be32enc(&endiandata[19], foundNonce);
+			pluckhash(vhash64, endiandata, scratchbuf, opt_pluck_n);
+			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				pdata[19] = foundNonce;
 				return 1;
-//			} else {
-//				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
-//			}
+			} else {
+				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+			}
 		}
 
 		pdata[19] += throughput;
