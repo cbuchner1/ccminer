@@ -1644,10 +1644,8 @@ extern void applog_hash(uchar *hash)
 	applog(LOG_DEBUG, "%s", format_hash(s, hash));
 }
 
-static uchar *scratchbuf = NULL;
-
 #define printpfx(n,h) \
-	printf("%s%11s%s: %s\n", CL_BLU, n, CL_N, format_hash(s, h))
+	printf("%s%11s%s: %s\n", CL_GRN, n, CL_N, format_hash(s, h))
 
 void do_gpu_tests(void)
 {
@@ -1680,14 +1678,14 @@ void do_gpu_tests(void)
 
 void print_hash_tests(void)
 {
+	uchar *scratchbuf = NULL;
 	char s[128] = {'\0'};
 	uchar hash[128];
-	uchar* buf;
+	uchar buf[128];
 
 	// work space for scratchpad based algos
 	scratchbuf = (uchar*)calloc(128, 1024);
-	buf = &scratchbuf[0];
-	// memset(buf, 0, sizeof scratchbuf); calloc fills zeros
+	memset(buf, 0, sizeof buf);
 
 	// buf[0] = 1; buf[64] = 2; // for endian tests
 
@@ -1738,7 +1736,7 @@ void print_hash_tests(void)
 	pentablakehash(&hash[0], &buf[0]);
 	printpfx("pentablake", hash);
 
-	pluckhash((uint32_t*)&hash[0], (uint32_t*)&buf[0], &buf[0], 128);
+	pluckhash((uint32_t*)&hash[0], (uint32_t*)&buf[0], scratchbuf, 128);
 	printpfx("pluck", hash);
 
 	quarkhash(&hash[0], &buf[0]);
