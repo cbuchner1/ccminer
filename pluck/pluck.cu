@@ -181,7 +181,8 @@ extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 	int opt_pluck_n = 128;
-	int intensity = 18; /* beware > 20 could work and create diff problems later */
+
+	int intensity = is_windows() ? 17 : 19; /* beware > 20 could work and create diff problems later */
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
 	// divide by 128 for this algo which require a lot of memory
 	throughput = throughput / 128 - 256;

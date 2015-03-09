@@ -1238,6 +1238,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	int merkle_count, i;
 	json_t *merkle_arr;
 	uchar **merkle;
+	uchar(*merkle_tree)[32] = NULL;
 	int ntime;
 
 	job_id = json_string_value(json_array_get(params, 0));
@@ -1643,10 +1644,10 @@ extern void applog_hash(uchar *hash)
 	applog(LOG_DEBUG, "%s", format_hash(s, hash));
 }
 
-#define printpfx(n,h) \
-	printf("%s%12s%s: %s\n", CL_BLU, n, CL_N, format_hash(s, h))
+static uchar *scratchbuf = NULL;
 
-static uchar scratchbuf[128 * 1024];
+#define printpfx(n,h) \
+	printf("%s%11s%s: %s\n", CL_BLU, n, CL_N, format_hash(s, h))
 
 void do_gpu_tests(void)
 {
@@ -1681,115 +1682,92 @@ void print_hash_tests(void)
 {
 	char s[128] = {'\0'};
 	uchar hash[128];
-	uchar* buf = scratchbuf;
+	uchar* buf;
 
-	//scratchbuf = (uchar*)malloc(1, 128*1024);
-	memset(buf, 0, sizeof scratchbuf);
+	// work space for scratchpad based algos
+	scratchbuf = (uchar*)calloc(128, 1024);
+	buf = &scratchbuf[0];
+	// memset(buf, 0, sizeof scratchbuf); calloc fills zeros
+
 	// buf[0] = 1; buf[64] = 2; // for endian tests
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
-	memset(hash, 0, sizeof hash);
 	animehash(&hash[0], &buf[0]);
 	printpfx("anime", hash);
 
-	memset(hash, 0, sizeof hash);
 	blake256hash(&hash[0], &buf[0], 8);
 	printpfx("blakecoin", hash);
 
-	memset(hash, 0, sizeof hash);
 	blake256hash(&hash[0], &buf[0], 14);
 	printpfx("blake", hash);
 
-	memset(hash, 0, sizeof hash);
 	deephash(&hash[0], &buf[0]);
 	printpfx("deep", hash);
 
-	memset(hash, 0, sizeof hash);
 	fresh_hash(&hash[0], &buf[0]);
 	printpfx("fresh", hash);
 
-	memset(hash, 0, sizeof hash);
 	fugue256_hash(&hash[0], &buf[0], 32);
 	printpfx("fugue256", hash);
 
-	memset(hash, 0, sizeof hash);
 	groestlhash(&hash[0], &buf[0]);
 	printpfx("groestl", hash);
 
-	memset(hash, 0, sizeof hash);
 	heavycoin_hash(&hash[0], &buf[0], 32);
 	printpfx("heavy", hash);
 
-	memset(hash, 0, sizeof hash);
 	jackpothash(&hash[0], &buf[0]);
 	printpfx("jackpot", hash);
 
-	memset(hash, 0, sizeof hash);
 	keccak256_hash(&hash[0], &buf[0]);
 	printpfx("keccak", hash);
 
-	memset(hash, 0, sizeof hash);
 	doomhash(&hash[0], &buf[0]);
 	printpfx("luffa", hash);
 
-	memset(hash, 0, sizeof hash);
 	lyra2_hash(&hash[0], &buf[0]);
 	printpfx("lyra2", hash);
 
-	memset(hash, 0, sizeof hash);
 	myriadhash(&hash[0], &buf[0]);
 	printpfx("myriad", hash);
 
-	memset(hash, 0, sizeof hash);
 	nist5hash(&hash[0], &buf[0]);
 	printpfx("nist5", hash);
 
-	memset(hash, 0, sizeof hash);
 	pentablakehash(&hash[0], &buf[0]);
 	printpfx("pentablake", hash);
 
-	memset(hash, 0, sizeof hash);
 	pluckhash((uint32_t*)&hash[0], (uint32_t*)&buf[0], &buf[0], 128);
 	printpfx("pluck", hash);
 
-	memset(hash, 0, sizeof hash);
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
 
-	memset(hash, 0, sizeof hash);
 	qubithash(&hash[0], &buf[0]);
 	printpfx("qubit", hash);
 
-	memset(hash, 0, sizeof hash);
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);
 
-	memset(hash, 0, sizeof hash);
 	wcoinhash(&hash[0], &buf[0]);
 	printpfx("whirl", hash);
 
-	memset(hash, 0, sizeof hash);
 	whirlxHash(&hash[0], &buf[0]);
 	printpfx("whirlpoolx", hash);
 
-	memset(hash, 0, sizeof hash);
 	x11hash(&hash[0], &buf[0]);
 	printpfx("X11", hash);
 
-	memset(hash, 0, sizeof hash);
 	x13hash(&hash[0], &buf[0]);
 	printpfx("X13", hash);
 
-	memset(hash, 0, sizeof hash);
 	x14hash(&hash[0], &buf[0]);
 	printpfx("X14", hash);
 
-	memset(hash, 0, sizeof hash);
 	x15hash(&hash[0], &buf[0]);
 	printpfx("X15", hash);
 
-	memset(hash, 0, sizeof hash);
 	x17hash(&hash[0], &buf[0]);
 	printpfx("X17", hash);
 
@@ -1797,5 +1775,5 @@ void print_hash_tests(void)
 
 	do_gpu_tests();
 
-	//free(scratchbuf);
+	free(scratchbuf);
 }
