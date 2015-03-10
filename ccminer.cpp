@@ -150,6 +150,7 @@ bool have_longpoll = false;
 bool want_stratum = true;
 bool have_stratum = false;
 bool allow_gbt = true;
+bool allow_mininginfo = true;
 bool check_dups = false;
 static bool submit_old = false;
 bool use_syslog = false;
@@ -200,6 +201,9 @@ uint32_t rejected_count = 0L;
 static double *thr_hashrates;
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
+uint64_t net_hashrate = 0;
+uint64_t net_blocks = 0;
+
 int opt_statsavg = 30;
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
@@ -719,8 +723,21 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		if (key && json_is_integer(key)) {
 			work->height = (uint32_t) json_integer_value(key);
 			if (!opt_quiet && work->height > g_work.height) {
-				applog(LOG_BLUE, "%s %s block %d", short_url,
-					algo_names[opt_algo], work->height);
+				if (!have_stratum && allow_mininginfo && global_diff > 0) {
+					char netinfo[64] = { 0 };
+					char srate[32] = { 0 };
+					sprintf(netinfo, "diff %.2f", global_diff);
+					if (net_hashrate) {
+						format_hashrate((double) net_hashrate, srate);
+						strcat(netinfo, ", net ");
+						strcat(netinfo, srate);
+					}
+					applog(LOG_BLUE, "%s block %d, %s",
+						algo_names[opt_algo], work->height, netinfo);
+				} else {
+					applog(LOG_BLUE, "%s %s block %d", short_url,
+						algo_names[opt_algo], work->height);
+				}
 				g_work.height = work->height;
 			}
 		}
@@ -733,7 +750,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 static const char *gbt_req =
 	"{\"method\": \"getblocktemplate\", \"params\": ["
 	//	"{\"capabilities\": " GBT_CAPABILITIES "}"
-	"], \"id\":0}\r\n";
+	"], \"id\":9}\r\n";
 
 static bool get_blocktemplate(CURL *curl, struct work *work)
 {
@@ -758,6 +775,53 @@ static bool get_blocktemplate(CURL *curl, struct work *work)
 	json_decref(val);
 
 	return rc;
+}
+
+// good alternative for wallet mining, difficulty and net hashrate
+static const char *info_req =
+	"{\"method\": \"getmininginfo\", \"params\": [], \"id\":8}\r\n";
+
+static bool get_mininginfo(CURL *curl, struct work *work)
+{
+	if (have_stratum || !allow_mininginfo)
+		return false;
+
+	int curl_err = 0;
+	json_t *val = json_rpc_call(curl, rpc_url, rpc_userpass, info_req,
+			    want_longpoll, have_longpoll, &curl_err);
+
+	if (!val && curl_err == -1) {
+		allow_mininginfo = false;
+		if (opt_debug) {
+				applog(LOG_DEBUG, "getinfo not supported");
+		}
+		return false;
+	} else {
+		json_t *res = json_object_get(val, "result");
+		// "blocks": 491493 (= current work height - 1)
+		// "difficulty": 0.99607860999999998
+		// "networkhashps": 56475980
+		if (res) {
+			json_t *key = json_object_get(res, "difficulty");
+			if (key && json_is_real(key)) {
+				global_diff = json_real_value(key);
+				json_decref(key);
+			}
+			key = json_object_get(res, "networkhashps");
+			if (key && json_is_integer(key)) {
+				net_hashrate = json_integer_value(key);
+				json_decref(key);
+			}
+			key = json_object_get(res, "blocks");
+			if (key && json_is_integer(key)) {
+				net_blocks = json_integer_value(key);
+				json_decref(key);
+			}
+		}
+		json_decref(res);
+	}
+	json_decref(val);
+	return true;
 }
 
 static const char *rpc_req =
@@ -794,6 +858,7 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 
 	json_decref(val);
 
+	get_mininginfo(curl, work);
 	get_blocktemplate(curl, work);
 
 	return rc;
@@ -1214,7 +1279,7 @@ static void *miner_thread(void *userdata)
 		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
 		{
 			calc_diff(&g_work, 0);
-			if (!have_stratum)
+			if (!have_stratum && !allow_mininginfo)
 				global_diff = g_work.difficulty;
 			if (opt_debug) {
 				uint64_t target64 = g_work.target[7] * 0x100000000ULL + g_work.target[6];
