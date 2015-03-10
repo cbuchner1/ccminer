@@ -131,8 +131,8 @@ extern "C" void x11hash(void *output, const void *input)
 		uint32_t* debugbuf = NULL; \
 		cudaMallocHost(&debugbuf, 8*sizeof(uint32_t)); \
 		cudaMemcpy(debugbuf, d_hash[thr_id], 8*sizeof(uint32_t), cudaMemcpyDeviceToHost); \
-		printf("%s %08x %08x %08x %08x...\n", algo, htobe32(debugbuf[0]), htobe32(debugbuf[1]), \
-			htobe32(debugbuf[2]), htobe32(debugbuf[3])); \
+		printf("%s %08x %08x %08x %08x...\n", algo, swab32(debugbuf[0]), swab32(debugbuf[1]), \
+			swab32(debugbuf[2]), swab32(debugbuf[3])); \
 		cudaFreeHost(debugbuf); \
 	} \
 }
