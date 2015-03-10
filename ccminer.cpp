@@ -740,11 +740,18 @@ static bool get_blocktemplate(CURL *curl, struct work *work)
 	if (!allow_gbt)
 		return false;
 
+	int curl_err = 0;
 	json_t *val = json_rpc_call(curl, rpc_url, rpc_userpass, gbt_req,
-			    want_longpoll, false, NULL);
+			    want_longpoll, have_longpoll, &curl_err);
 
-	if (!val)
+	if (!val && curl_err == -1) {
+		// when getblocktemplate is not supported, disable it
+		allow_gbt = false;
+		if (!opt_quiet) {
+				applog(LOG_BLUE, "gbt not supported, block height notices disabled");
+		}
 		return false;
+	}
 
 	bool rc = gbt_work_decode(json_object_get(val, "result"), work);
 
