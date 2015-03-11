@@ -73,7 +73,7 @@ extern "C" int scanhash_whc(int thr_id, uint32_t *pdata,
 	}
 
 	for (int k=0; k < 20; k++) {
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[k], pdata[k]);
 	}
 
 	whirlpool512_setBlock_80((void*)endiandata, ptarget);

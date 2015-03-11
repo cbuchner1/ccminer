@@ -85,7 +85,7 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 
 	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++)
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[k], pdata[k]);
 
 	x11_shavite512_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);

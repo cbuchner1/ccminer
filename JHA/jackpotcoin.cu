@@ -125,7 +125,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 	uint32_t endiandata[22];
 	for (int k=0; k < 22; k++)
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[k], pdata[k]);
 
 	jackpot_keccak512_cpu_setBlock((void*)endiandata, 80);
 	cuda_check_cpu_setTarget(ptarget);

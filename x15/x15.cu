@@ -206,7 +206,7 @@ extern "C" int scanhash_x15(int thr_id, uint32_t *pdata,
 	}
 
 	for (int k=0; k < 20; k++)
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[k], pdata[k]);
 
 	quark_blake512_cpu_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
