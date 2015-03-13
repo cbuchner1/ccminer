@@ -49,9 +49,8 @@ __constant__  uint32_t c_data[20];
 #define HASH_MEMORY 4096
 
 static __constant__  uint32_t H256[8] = {
-	0x6A09E667, 0xBB67AE85, 0x3C6EF372,
-	0xA54FF53A, 0x510E527F, 0x9B05688C,
-	0x1F83D9AB, 0x5BE0CD19
+	0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
+	0x510E527F, 0x9B05688C,	0x1F83D9AB, 0x5BE0CD19
 };
 
 static  __constant__  uint32_t Ksha[64] = {
@@ -279,7 +278,7 @@ static __device__ __forceinline__ uint8 sha256_80(uint32_t nonce)
 	for (int i = 0; i<3; i++) { in[i] = cuda_swab32(c_data[i + 16]); }
 
 //	in[3] = cuda_swab32(nonce);
-    in[3] = nonce;
+	in[3] = nonce;
 	in[4] = 0x80000000;
 	in[15] = 0x280;
 
@@ -290,7 +289,8 @@ static __device__ __forceinline__ uint8 sha256_80(uint32_t nonce)
 	return swapvec((uint8*)buf);
 }
 
-#define SHIFT 32 * 1024 * 4
+// Pluck Factor 128
+#define SHIFT (1024 * 128)
 
 __global__ __launch_bounds__(256, 1)
 void pluck_gpu_hash0_v50(uint32_t threads, uint32_t startNonce)
@@ -309,14 +309,12 @@ void pluck_gpu_hash0_v50(uint32_t threads, uint32_t startNonce)
 			uint32_t randseed[16];
 			uint32_t randbuffer[16];
 			uint32_t joint[16];
-//			uint8 Buffbuffer[2];
 
 			((uint8*)randseed)[0] = __ldg8(&(hashbuffer + shift)[32 * i - 64]);
 			((uint8*)randseed)[1] = __ldg8(&(hashbuffer + shift)[32 * i - 32]);
 
 			((uint16*)randbuffer)[0] = xor_salsa8(((uint16*)randseed)[0]);
 
-//			((uint8*)joint)[0] = __ldg8(&(hashbuffer + shift)[(i - 1) << 5]);
 			((uint8*)joint)[0] = ((uint8*)randseed)[1];
 
 			#pragma unroll
@@ -428,14 +426,12 @@ void pluck_gpu_hash0(uint32_t threads, uint32_t startNonce)
 			uint32_t randseed[16];
 			uint32_t randbuffer[16];
 			uint32_t joint[16];
-//			uint8 Buffbuffer[2];
 
 			((uint8*)randseed)[0] = __ldg8(&(hashbuffer + shift)[32 * i - 64]);
 			((uint8*)randseed)[1] = __ldg8(&(hashbuffer + shift)[32 * i - 32]);
 
 			((uint16*)randbuffer)[0] = xor_salsa8(((uint16*)randseed)[0]);
 
-//			((uint8*)joint)[0] = __ldg8(&(hashbuffer + shift)[(i - 1) << 5]);
 			((uint8*)joint)[0] = ((uint8*)randseed)[1];
 
 			#pragma unroll
@@ -573,6 +569,6 @@ void pluck_setBlockTarget(const void *pdata, const void *ptarget)
 	unsigned char PaddedMessage[80];
 	memcpy(PaddedMessage, pdata, 80);
 
-	cudaMemcpyToSymbol(c_data, PaddedMessage, 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(pTarget, ptarget, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_data, PaddedMessage, 80, 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(pTarget, ptarget, 32, 0, cudaMemcpyHostToDevice);
 }

@@ -173,7 +173,7 @@ void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const in
 
 static bool init[MAX_GPUS] = { 0 };
 
-static uchar* scratchbuf = NULL;
+static __thread uchar* scratchbuf = NULL;
 
 extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
