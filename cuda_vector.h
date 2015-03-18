@@ -94,6 +94,12 @@ static __forceinline__ __device__ void operator+= (uchar4 &a, uchar4 b) { a = a 
 static __forceinline__ __device__  __host__ void operator+= (uint8 &a, const uint8 &b) { a = a + b; }
 static __forceinline__ __device__  __host__ void operator+= (uint16 &a, const uint16 &b) { a = a + b; }
 
+#if __CUDA_ARCH__ < 320
+
+#define rotate ROTL32
+#define rotateR ROTR32
+
+#else
 
 static __forceinline__ __device__ uint32_t rotate(uint32_t vec4, uint32_t shift)
 {
@@ -102,14 +108,12 @@ static __forceinline__ __device__ uint32_t rotate(uint32_t vec4, uint32_t shift)
 	return ret;
 }
 
-
 static __forceinline__ __device__ uint32_t rotateR(uint32_t vec4, uint32_t shift)
 {
 	uint32_t ret;
 	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(ret) : "r"(vec4), "r"(vec4), "r"(shift));
 	return ret;
 }
-
 
 static __device__ __inline__ uint8 __ldg8(const uint8_t *ptr)
 {
@@ -118,7 +122,6 @@ static __device__ __inline__ uint8 __ldg8(const uint8_t *ptr)
 	asm volatile ("ld.global.nc.v4.u32 {%0,%1,%2,%3},[%4+16];" : "=r"(test.s4), "=r"(test.s5), "=r"(test.s6), "=r"(test.s7) : __LDG_PTR(ptr));
 	return (test);
 }
-
 
 static __device__ __inline__ uint32_t __ldgtoint(const uint8_t *ptr)
 {
@@ -204,7 +207,7 @@ static __device__ __inline__ uint32_t __ldgtoint_unaligned2(const uint8_t *ptr)
 	return (test);
 }
 
-
+#endif
 
 
 static __forceinline__ __device__ uint8 swapvec(const uint8 *buf)

@@ -34,8 +34,9 @@
 #include <stdint.h>
 #include <memory.h>
 
-#include "cuda_helper.h"
 #include "cuda_vector.h"
+
+#include "miner.h"
 
 uint32_t *d_PlNonce[MAX_GPUS];
 
@@ -297,8 +298,8 @@ void pluck_gpu_hash0_v50(uint32_t threads, uint32_t startNonce)
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+#if __CUDA_ARCH__ >= 320
 		const uint32_t nonce = startNonce + thread;
-
 		uint32_t shift = SHIFT * thread;
 		((uint8*)(hashbuffer + shift))[0] = sha256_80(nonce);
 		((uint8*)(hashbuffer + shift))[1] = make_uint8(0, 0, 0, 0, 0, 0, 0, 0);
@@ -308,7 +309,7 @@ void pluck_gpu_hash0_v50(uint32_t threads, uint32_t startNonce)
 			uint32_t randseed[16];
 			uint32_t randbuffer[16];
 			uint32_t joint[16];
-			uint8 Buffbuffer[2];
+//			uint8 Buffbuffer[2];
 
 			((uint8*)randseed)[0] = __ldg8(&(hashbuffer + shift)[32 * i - 64]);
 			((uint8*)randseed)[1] = __ldg8(&(hashbuffer + shift)[32 * i - 32]);
@@ -339,8 +340,8 @@ void pluck_gpu_hash0_v50(uint32_t threads, uint32_t startNonce)
 				(hashbuffer + shift)[rand + 2] = __ldg(&(hashbuffer + shift)[randmax + j + 2]);
 				(hashbuffer + shift)[rand + 3] = __ldg(&(hashbuffer + shift)[randmax + j + 3]);
 			}
-
 		} // main loop
+#endif
 	}
 }
 
@@ -351,8 +352,8 @@ void pluck_gpu_hash_v50(uint32_t threads, uint32_t startNonce, uint32_t *nonceVe
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+#if __CUDA_ARCH__ >= 320
 		const uint32_t nonce = startNonce + thread;
-
 		uint32_t shift = SHIFT * thread;
 
 		for (int i = 5; i < HASH_MEMORY - 1; i++)
@@ -405,7 +406,7 @@ void pluck_gpu_hash_v50(uint32_t threads, uint32_t startNonce, uint32_t *nonceVe
 		if (outbuf <= pTarget[7]) {
 			nonceVector[0] = nonce;
 		}
-
+#endif
 	}
 }
 
@@ -415,6 +416,7 @@ void pluck_gpu_hash0(uint32_t threads, uint32_t startNonce)
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+#if __CUDA_ARCH__ >= 320
 		const uint32_t nonce = startNonce + thread;
 
 		uint32_t shift = SHIFT * thread;
@@ -426,7 +428,7 @@ void pluck_gpu_hash0(uint32_t threads, uint32_t startNonce)
 			uint32_t randseed[16];
 			uint32_t randbuffer[16];
 			uint32_t joint[16];
-			uint8 Buffbuffer[2];
+//			uint8 Buffbuffer[2];
 
 			((uint8*)randseed)[0] = __ldg8(&(hashbuffer + shift)[32 * i - 64]);
 			((uint8*)randseed)[1] = __ldg8(&(hashbuffer + shift)[32 * i - 32]);
@@ -457,9 +459,8 @@ void pluck_gpu_hash0(uint32_t threads, uint32_t startNonce)
 				(hashbuffer + shift)[rand + 2] = __ldg(&(hashbuffer + shift)[randmax + j + 2]);
 				(hashbuffer + shift)[rand + 3] = __ldg(&(hashbuffer + shift)[randmax + j + 3]);
 			}
-
 		} // main loop
-
+#endif
 	}
 }
 
@@ -469,6 +470,7 @@ void pluck_gpu_hash(uint32_t threads, uint32_t startNonce, uint32_t *nonceVector
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+#if __CUDA_ARCH__ >= 320
 		const uint32_t nonce = startNonce + thread;
 
 		uint32_t shift = SHIFT * thread;
@@ -508,7 +510,6 @@ void pluck_gpu_hash(uint32_t threads, uint32_t startNonce, uint32_t *nonceVector
 
 			((uint16*)randseed)[0] ^= ((uint16*)Buffbuffer)[0];
 			((uint16*)randbuffer)[0] = xor_salsa8(((uint16*)randseed)[0]);
-
 			for (int j = 0; j < 32; j += 2)
 			{
 				uint32_t rand = randbuffer[j / 2] % randmax;
@@ -518,7 +519,6 @@ void pluck_gpu_hash(uint32_t threads, uint32_t startNonce, uint32_t *nonceVector
 				(hashbuffer + shift)[rand + 2] = __ldg(&(hashbuffer + shift)[randmax + j + 2]);
 				(hashbuffer + shift)[rand + 3] = __ldg(&(hashbuffer + shift)[randmax + j + 3]);
 			}
-
 		} // main loop
 
 		uint32_t outbuf = __ldgtoint(&(hashbuffer + shift)[28]);
@@ -526,7 +526,7 @@ void pluck_gpu_hash(uint32_t threads, uint32_t startNonce, uint32_t *nonceVector
 		if (outbuf <= pTarget[7]) {
 			nonceVector[0] = nonce;
 		}
-
+#endif
 	}
 }
 
@@ -549,7 +549,10 @@ uint32_t pluck_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce,  int
 	dim3 grid50((threads + 256 - 1) / 256);
 	dim3 block50(256);
 
-	if (device_sm[device_map[thr_id]] >= 500) {
+	if (device_sm[device_map[thr_id]] <= 300) {
+		applog(LOG_ERR,"Sorry pluck not supported on SM 3.0 devices");
+		return 0;
+	} else if (device_sm[device_map[thr_id]] >= 500) {
 		pluck_gpu_hash0_v50 <<< grid50, block50 >>>(threads, startNounce);
 		pluck_gpu_hash_v50  <<< grid50, block50 >>>(threads, startNounce, d_PlNonce[thr_id]);
 	} else {
