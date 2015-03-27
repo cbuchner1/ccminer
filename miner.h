@@ -645,6 +645,7 @@ extern void tq_thaw(struct thread_q *tq);
 
 void parse_arg(int key, char *arg);
 void proper_exit(int reason);
+void restart_threads(void);
 
 size_t time2str(char* buf, time_t timer);
 char* atime2str(time_t timer);

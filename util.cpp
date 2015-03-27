@@ -1344,6 +1344,7 @@ out:
 	return ret;
 }
 
+extern time_t g_work_time;
 static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 {
 	double diff;
@@ -1360,6 +1361,7 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 	if (diff != global_diff) {
 		global_diff = diff;
 		applog(LOG_WARNING, "Stratum difficulty set to %g", diff);
+		g_work_time = 0;
 	}
 
 	return true;

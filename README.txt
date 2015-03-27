@@ -186,7 +186,7 @@ features.
   Mar. 2015       v1.6.0 (Note for CryptoMiningBlog: NOT YET RELEASED/FINISHED!)
                   Import pluck (djm34) and whirlpoolx (alexis78) algos
                   Hashrate units based on hashing rate values (Hs/kHs/MHs/GHs)
-				  Default config file (also help to debug without command line)
+                  Default config file (also help to debug without command line)
                   Various small fixes
                   More to come soon...
 

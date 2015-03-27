@@ -181,7 +181,7 @@ void whirlpoolx_gpu_precompute(uint32_t threads, uint64_t* d_xtra, uint64_t* d_t
 	if (thread < threads)
 	{
 		uint64_t n[8];
-		uint64_t h[8] = {0,0,0,0,0,0,0,0};
+		uint64_t h[8] = { 0 };
 
 		#pragma unroll 8
 		for (int i=0; i<8; i++) {

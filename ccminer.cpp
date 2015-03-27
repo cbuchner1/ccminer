@@ -360,9 +360,9 @@ static struct option const options[] = {
 	{ 0, 0, 0, 0 }
 };
 
-static struct work _ALIGN(64) g_work;
-static time_t g_work_time;
-static pthread_mutex_t g_work_lock;
+struct work _ALIGN(64) g_work;
+time_t g_work_time;
+pthread_mutex_t g_work_lock;
 
 
 #ifdef __linux /* Linux specific policy and affinity management */
@@ -597,7 +597,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		if (get_blocktemplate(curl, &wheight)) {
 			if (work->height && work->height < wheight.height) {
 				if (opt_debug)
-					applog(LOG_WARNING, "bloc %u was already solved", work->height, wheight.height);
+					applog(LOG_WARNING, "bloc %u was already solved", work->height);
 				return true;
 			}
 		}
@@ -631,9 +631,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			}
 			free(noncestr);
 			// prevent useless computing on some pools
-			stratum_need_reset = true;
-			for (int i = 0; i < opt_n_threads; i++)
-				work_restart[i].restart = 1;
+			g_work_time = 0;
+			restart_threads();
 			return true;
 		}
 
@@ -1148,7 +1147,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	}
 }
 
-static void restart_threads(void)
+void restart_threads(void)
 {
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG,"%s", __FUNCTION__);
@@ -1595,7 +1594,7 @@ static void *miner_thread(void *userdata)
 
 			// prevent stale work in solo
 			// we can't submit twice a block!
-			if (!have_stratum) {
+			if (!have_stratum && !have_longpoll) {
 				pthread_mutex_lock(&g_work_lock);
 				// will force getwork
 				g_work_time = 0;
@@ -1658,7 +1657,7 @@ start:
 		sprintf(lp_url, "%s%s%s", rpc_url, need_slash ? "/" : "", copy_start);
 	}
 
-	applog(LOG_INFO, "Long-polling activated for %s", lp_url);
+	applog(LOG_INFO, "Long-polling enabled on %s", lp_url);
 
 	while (1) {
 		json_t *val, *soval;
@@ -1672,13 +1671,12 @@ start:
 			goto out;
 		}
 		if (likely(val)) {
-			if (!opt_quiet) applog(LOG_INFO, "LONGPOLL detected new block");
 			soval = json_object_get(json_object_get(val, "result"), "submitold");
 			submit_old = soval ? json_is_true(soval) : false;
 			pthread_mutex_lock(&g_work_lock);
 			if (work_decode(json_object_get(val, "result"), &g_work)) {
-				if (opt_debug)
-					applog(LOG_BLUE, "LONGPOLL pushed new work");
+				if (!opt_quiet)
+					applog(LOG_BLUE, "%s detected new block", short_url);
 				g_work_time = time(NULL);
 				restart_threads();
 			}
