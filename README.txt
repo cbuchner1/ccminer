@@ -34,10 +34,11 @@ TalkCoin
 DarkCoin and other X11 coins
 Saffroncoin blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
-Keccak (Maxcoin)
 Deep, Doom and Qubit
+Keccak (Maxcoin)
 Pentablake (Blake 512 x5)
 1Coin Triple S
+Skein (Skein + SHA)
 Vertcoin Lyra2RE
 Ziftrcoin (ZR5)
 
@@ -79,6 +80,7 @@ its command line interface and options.
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit Algo
                           s3          use to mine 1coin
+                          skein       use to mine Skeincoin
                           whirl       use to mine Whirlcoin
                           whirlpoolx  use to mine Vanillacoin
                           x11         use to mine DarkCoin
@@ -187,6 +189,7 @@ features.
 
   Mar. 27th 2015  v1.6.0
                   Add the ZR5 Algo for Ziftcoin
+                  Implement Skeincoin algo (skein + sha)
                   Import pluck (djm34) and whirlpoolx (alexis78) algos
                   Hashrate units based on hashing rate values (Hs/kHs/MHs/GHs)
                   Default config file (also help to debug without command line)

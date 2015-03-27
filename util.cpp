@@ -1701,9 +1701,12 @@ void do_gpu_tests(void)
 	scanhash_zr5(0, (uint32_t*)buf, tgt, zrtest[19]+1, &done);
 
 	//memset(buf, 0, sizeof buf);
-	//scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
+	//scanhash_skeincoin(0, (uint32_t*)buf, tgt, 1, &done);
 
 	memset(buf, 0, sizeof buf);
+	scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
+
+	//memset(buf, 0, sizeof buf);
 	// buf[0] = 1; buf[64] = 2; // for endian tests
 	//scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
 
@@ -1785,6 +1788,9 @@ void print_hash_tests(void)
 
 	qubithash(&hash[0], &buf[0]);
 	printpfx("qubit", hash);
+
+	skeincoinhash(&hash[0], &buf[0]);
+	printpfx("skein", hash);
 
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);

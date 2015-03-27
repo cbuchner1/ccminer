@@ -574,6 +574,9 @@
     <CudaCompile Include="groestl_functions_quad.cu">
       <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
+    <CudaCompile Include="skein.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">

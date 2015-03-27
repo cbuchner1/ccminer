@@ -65,12 +65,12 @@ extern "C" int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptar
 
 	do {
 		// GPU
-		uint32_t foundNounce = 0xFFFFFFFF;
+		uint32_t foundNounce = UINT32_MAX;
 		const uint32_t Htarg = ptarget[7];
 
 		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
 
-		if(foundNounce < 0xffffffff)
+		if (foundNounce < UINT32_MAX)
 		{
 			uint32_t tmpHash[8];
 			endiandata[19] = SWAP32(foundNounce);
