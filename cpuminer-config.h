@@ -63,7 +63,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the <syslog.h> header file. */
-#define HAVE_SYSLOG_H 1
+/* #undef HAVE_SYSLOG_H */
 
 /* Define to 1 if you have the <sys/endian.h> header file. */
 /* #undef HAVE_SYS_ENDIAN_H */
@@ -108,7 +108,7 @@
 /* #undef LIBCURL_FEATURE_SSPI */
 
 /* Defined if libcurl supports DICT */
-#define LIBCURL_PROTOCOL_DICT 1
+/* #undef LIBCURL_PROTOCOL_DICT */
 
 /* Defined if libcurl supports FILE */
 #define LIBCURL_PROTOCOL_FILE 1
@@ -123,28 +123,28 @@
 #define LIBCURL_PROTOCOL_HTTP 1
 
 /* Defined if libcurl supports HTTPS */
-#define LIBCURL_PROTOCOL_HTTPS 1
+/* #undef LIBCURL_PROTOCOL_HTTPS */
 
 /* Defined if libcurl supports IMAP */
-#define LIBCURL_PROTOCOL_IMAP 1
+/* #undef LIBCURL_PROTOCOL_IMAP */
 
 /* Defined if libcurl supports LDAP */
-#define LIBCURL_PROTOCOL_LDAP 1
+/* #undef LIBCURL_PROTOCOL_LDAP */
 
 /* Defined if libcurl supports POP3 */
-#define LIBCURL_PROTOCOL_POP3 1
+/* #undef LIBCURL_PROTOCOL_POP3 */
 
 /* Defined if libcurl supports RTSP */
-#define LIBCURL_PROTOCOL_RTSP 1
+/* #undef LIBCURL_PROTOCOL_RTSP */
 
 /* Defined if libcurl supports SMTP */
-#define LIBCURL_PROTOCOL_SMTP 1
+/* #undef LIBCURL_PROTOCOL_SMTP */
 
 /* Defined if libcurl supports TELNET */
-#define LIBCURL_PROTOCOL_TELNET 1
+/* #undef LIBCURL_PROTOCOL_TELNET */
 
 /* Defined if libcurl supports TFTP */
-#define LIBCURL_PROTOCOL_TFTP 1
+/* #undef LIBCURL_PROTOCOL_TFTP */
 
 /* Define to 1 if your C compiler doesn't accept -c and -o together. */
 /* #undef NO_MINUS_C_MINUS_O */
@@ -159,16 +159,16 @@
 #define PACKAGE_NAME "ccminer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "ccminer 1.6-git"
+#define PACKAGE_STRING "ccminer 1.6"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "ccminer"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL ""
+#define PACKAGE_URL "http://github.com/tpruvot/ccminer"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.6-git"
+#define PACKAGE_VERSION "1.6"
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -191,10 +191,10 @@
 #define USE_XOP 1
 
 /* Version number of package */
-#define VERSION "1.6-git"
+#define VERSION "1.6"
 
 /* Define curl_free() as free() if our version of curl lacks curl_free. */
 /* #undef curl_free */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
-/* #undef size_t */
+//#define size_t unsigned int

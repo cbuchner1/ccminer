@@ -108,6 +108,7 @@ enum sha_algos {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
+	ALGO_ZR5,
 };
 
 static const char *algo_names[] = {
@@ -140,6 +141,7 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
+	"zr5",
 };
 
 bool opt_debug = false;
@@ -166,7 +168,7 @@ static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
 int opt_affinity = -1;
-int opt_priority = 3;
+int opt_priority = 0;
 static double opt_difficulty = 1; // CH
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
@@ -193,6 +195,7 @@ int api_thr_id = -1;
 bool stratum_need_reset = false;
 struct work_restart *work_restart = NULL;
 struct stratum_ctx stratum = { 0 };
+uint32_t zr5_pok = 0;
 
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
@@ -254,6 +257,7 @@ Options:\n\
 			x17         X17 (peoplecurrency)\n\
 			whirl       Whirlcoin (old whirlpool)\n\
 			whirlpoolx  Vanilla coin\n\
+			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -472,6 +476,10 @@ static bool work_decode(const json_t *val, struct work *work)
 	int adata_sz = ARRAY_SIZE(work->data), atarget_sz = ARRAY_SIZE(work->target);
 	int i;
 
+	if (opt_algo == ALGO_ZR5) {
+		data_size = 80; adata_sz = 20;
+	}
+
 	if (unlikely(!jobj_binary(val, "data", work->data, data_size))) {
 		applog(LOG_ERR, "JSON inval data");
 		return false;
@@ -564,12 +572,12 @@ static int share_result(int result, const char *reason)
 
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
-		if (strncmp(reason, "low difficulty share", 20) == 0) {
+		if (strncasecmp(reason, "low difficulty", 14) == 0) {
 			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
 			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
 			return 0;
 		}
-		if (strncmp(reason, "Duplicate share", 15) == 0 && !check_dups) {
+		if (strncasecmp(reason, "duplicate", 9) == 0 && !check_dups) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
 		}
@@ -603,7 +611,11 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		}
 	}
 
-	if (stale_work) {
+	if (opt_algo == ALGO_ZR5 && !stale_work) {
+		stale_work = (memcmp(&work->data[1], &g_work.data[1], 68));
+	}
+
+	if (!submit_old && stale_work) {
 		if (opt_debug)
 			applog(LOG_WARNING, "stale work detected, discarding");
 		return true;
@@ -616,9 +628,16 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		uint16_t nvote;
 		char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
 
-		le32enc(&ntime, work->data[17]);
-		le32enc(&nonce, work->data[19]);
-
+		switch (opt_algo) {
+		case ALGO_ZR5:
+			check_dups = true;
+			be32enc(&ntime, work->data[17]);
+			be32enc(&nonce, work->data[19]);
+			break;
+		default:
+			le32enc(&ntime, work->data[17]);
+			le32enc(&nonce, work->data[19]);
+		}
 		noncestr = bin2hex((const uchar*)(&nonce), 4);
 
 		if (check_dups)
@@ -666,14 +685,21 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 	} else {
 
+		int data_size = sizeof(work->data);
+		int adata_sz = ARRAY_SIZE(work->data);
+
 		/* build hex string */
 		char *str = NULL;
 
+		if (opt_algo == ALGO_ZR5) {
+			data_size = 80; adata_sz = 20;
+		}
+
 		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
-			for (int i = 0; i < ARRAY_SIZE(work->data); i++)
+			for (int i = 0; i < adata_sz; i++)
 				le32enc(work->data + i, work->data[i]);
 		}
-		str = bin2hex((uchar*)work->data, sizeof(work->data));
+		str = bin2hex((uchar*)work->data, data_size);
 		if (unlikely(!str)) {
 			applog(LOG_ERR, "submit_upstream_work OOM");
 			return false;
@@ -1098,10 +1124,18 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 	work->data[17] = le32dec(sctx->job.ntime);
 	work->data[18] = le32dec(sctx->job.nbits);
-	if (opt_algo == ALGO_MJOLLNIR || opt_algo == ALGO_HEAVY)
-	{
+
+	switch (opt_algo) {
+	case ALGO_MJOLLNIR:
+	case ALGO_HEAVY:
+		// todo: check if 19 is enough
 		for (i = 0; i < 20; i++)
 			work->data[i] = be32dec((uint32_t *)&work->data[i]);
+		break;
+	case ALGO_ZR5:
+		for (i = 0; i < 19; i++)
+			work->data[i] = be32dec((uint32_t *)&work->data[i]);
+		break;
 	}
 
 	work->data[20] = 0x80000000;
@@ -1227,6 +1261,7 @@ static void *miner_thread(void *userdata)
 
 		// &work.data[19]
 		int wcmplen = 76;
+		int wcmpoft = 0;
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
 		if (have_stratum) {
@@ -1284,7 +1319,14 @@ static void *miner_thread(void *userdata)
 					hashlog_purge_job(work.job_id);
 			}
 		}
-		if (memcmp(work.data, g_work.data, wcmplen)) {
+
+		if (opt_algo == ALGO_ZR5) {
+			// ignore pok/version header
+			wcmpoft = 1;
+			wcmplen -= 4;
+		}
+
+		if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
 			#if 0
 			if (opt_debug) {
 				for (int n=0; n <= (wcmplen-8); n+=8) {
@@ -1497,19 +1539,24 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_X14:
 			rc = scanhash_x14(thr_id, work.data, work.target,
-				                  max_nonce, &hashes_done);
+				              max_nonce, &hashes_done);
 			break;
 
 		case ALGO_X15:
 			rc = scanhash_x15(thr_id, work.data, work.target,
-				                  max_nonce, &hashes_done);
+				              max_nonce, &hashes_done);
 			break;
 
 		case ALGO_X17:
 			rc = scanhash_x17(thr_id, work.data, work.target,
-				                  max_nonce, &hashes_done);
+				              max_nonce, &hashes_done);
 			break;
 
+		case ALGO_ZR5: {
+			rc = scanhash_zr5(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+		}
 		default:
 			/* should never happen */
 			goto out;
@@ -1606,6 +1653,11 @@ static void *miner_thread(void *userdata)
 			if (rc > 1 && work.data[21]) {
 				work.data[19] = work.data[21];
 				work.data[21] = 0;
+				if (opt_algo == ALGO_ZR5) {
+					// todo: use + 4..6 index for pok to allow multiple nonces
+					work.data[0] = work.data[22]; // pok
+					work.data[22] = 0;
+				}
 				if (!submit_work(mythr, &work))
 					break;
 			}
@@ -1675,10 +1727,10 @@ start:
 			submit_old = soval ? json_is_true(soval) : false;
 			pthread_mutex_lock(&g_work_lock);
 			if (work_decode(json_object_get(val, "result"), &g_work)) {
+				restart_threads();
 				if (!opt_quiet)
 					applog(LOG_BLUE, "%s detected new block", short_url);
 				g_work_time = time(NULL);
-				restart_threads();
 			}
 			pthread_mutex_unlock(&g_work_lock);
 			json_decref(val);

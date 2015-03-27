@@ -1660,12 +1660,35 @@ extern void applog_hash(uchar *hash)
 #define printpfx(n,h) \
 	printf("%s%11s%s: %s\n", CL_GRN, n, CL_N, format_hash(s, h))
 
+static uint32_t zrtest[20] = {
+	swab32(0x01806486),
+	swab32(0x00000000),
+	swab32(0x00000000),
+	swab32(0x00000000),
+	swab32(0x00000000),
+	swab32(0x00000000),
+	swab32(0x00000000),
+	swab32(0x00000000),
+	swab32(0x00000000),
+	swab32(0x2ab03251),
+	swab32(0x87d4f28b),
+	swab32(0x6e22f086),
+	swab32(0x4845ddd5),
+	swab32(0x0ac4e6aa),
+	swab32(0x22a1709f),
+	swab32(0xfb4275d9),
+	swab32(0x25f26636),
+	swab32(0x300eed54),
+	swab32(0xffff0f1e),
+	swab32(0x2a9e2300),
+};
+
 void do_gpu_tests(void)
 {
 #ifdef _DEBUG
 	unsigned long done;
 	char s[128] = { '\0' };
-	uchar buf[128];
+	uchar buf[160];
 	uint32_t tgt[8] = { 0 };
 
 	opt_tracegpu = true;
@@ -1674,11 +1697,15 @@ void do_gpu_tests(void)
 	tgt[7] = 0xffff;
 
 	memset(buf, 0, sizeof buf);
-	scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
+	//memcpy(buf, zrtest, 80);
+	scanhash_zr5(0, (uint32_t*)buf, tgt, zrtest[19]+1, &done);
+
+	//memset(buf, 0, sizeof buf);
+	//scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
 
 	memset(buf, 0, sizeof buf);
 	// buf[0] = 1; buf[64] = 2; // for endian tests
-	scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
+	//scanhash_blake256(0, (uint32_t*)buf, tgt, 1, &done, 14);
 
 	//memset(buf, 0, sizeof buf);
 	//scanhash_heavy(0, (uint32_t*)buf, tgt, 1, &done, 1, 84); // HEAVYCOIN_BLKHDR_SZ=84
@@ -1688,6 +1715,7 @@ void do_gpu_tests(void)
 	opt_tracegpu = false;
 #endif
 }
+extern "C" void zr5hash_pok(void *output, uint32_t *pdata);
 
 void print_hash_tests(void)
 {
@@ -1781,6 +1809,11 @@ void print_hash_tests(void)
 
 	x17hash(&hash[0], &buf[0]);
 	printpfx("X17", hash);
+
+	//memcpy(buf, zrtest, 80);
+	zr5hash(&hash[0], &buf[0]);
+	//zr5hash_pok(&hash[0], (uint32_t*) &buf[0]);
+	printpfx("ZR5", hash);
 
 	printf("\n");
 

@@ -379,9 +379,6 @@
     <CudaCompile Include="cuda_groestlcoin.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
-    <CudaCompile Include="groestl_functions_quad.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
     <CudaCompile Include="bitslice_transformations_quad.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
@@ -570,6 +567,12 @@
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2RE.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="zr5.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="groestl_functions_quad.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

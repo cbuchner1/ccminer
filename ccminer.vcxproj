@@ -105,8 +105,9 @@
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
-      <Keep>false</Keep>
-      <CodeGeneration>compute_30,sm_30;compute_50,sm_50</CodeGeneration>
+      <Keep>true</Keep>
+      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <GenerateLineInfo>true</GenerateLineInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -176,8 +177,8 @@
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
-      <Keep>false</Keep>
-      <CodeGeneration>compute_50,sm_50;</CodeGeneration>
+      <Keep>true</Keep>
+      <CodeGeneration>compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;compute_52,sm_52</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Defines>
       </Defines>
@@ -221,7 +222,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>false</Keep>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
       <Include>
       </Include>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -355,6 +356,7 @@
     </CudaCompile>
     <CudaCompile Include="cuda_nist5.cu">
     </CudaCompile>
+    <CudaCompile Include="zr5.cu" />
     <CudaCompile Include="groestl_functions_quad.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </CudaCompile>

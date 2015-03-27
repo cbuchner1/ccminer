@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.0-tpruvot (Mar 2015) - "Pluck & Whirlpoolx"
+ccMiner release 1.6.0-tpruvot (Mar 2015) - "ZR5, Pluck & WhirlX"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -37,8 +37,9 @@ BlakeCoin (256 8-rounds)
 Keccak (Maxcoin)
 Deep, Doom and Qubit
 Pentablake (Blake 512 x5)
-S3 (OneCoin)
-Lyra2RE (new VertCoin algo)
+1Coin Triple S
+Vertcoin Lyra2RE
+Ziftrcoin (ZR5)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL Only) implementations.
@@ -84,6 +85,7 @@ its command line interface and options.
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
                           x17         use to mine X17
+                          zr5         use to mine ZiftrCoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
                         to operate on. Device IDs start counting from 0!
@@ -183,12 +185,12 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Mar. 2015       v1.6.0 (Note for CryptoMiningBlog: NOT YET RELEASED/FINISHED!)
+  Mar. 27th 2015  v1.6.0
+                  Add the ZR5 Algo for Ziftcoin
                   Import pluck (djm34) and whirlpoolx (alexis78) algos
                   Hashrate units based on hashing rate values (Hs/kHs/MHs/GHs)
                   Default config file (also help to debug without command line)
                   Various small fixes
-                  More to come soon...
 
   Feb. 11th 2015  v1.5.3
                   Fix anime algo
