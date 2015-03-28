@@ -313,7 +313,7 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 			zr5hash(vhash64, pdata);
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, oldp19, d_hash[thr_id], 1);
 				if (secNonce != 0) {
 					offset = secNonce - oldp19;
 					pok = version | (0x10000UL * h_poks[thr_id][offset]);
