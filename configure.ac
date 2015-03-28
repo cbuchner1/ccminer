@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [1.6])
+AC_INIT([ccminer], [1.6.1-git])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM

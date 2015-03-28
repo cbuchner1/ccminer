@@ -358,14 +358,13 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 	if (thread < threads)
 	{
 		// Skein
-		uint2 p[8];
 		uint2 h0, h1, h2, h3, h4, h5, h6, h7, h8;
 		uint2 t0, t1, t2;
 
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
-		uint64_t *inpHash = &g_hash[8 * hashPosition];
+		uint32_t hashPosition = nounce - startNounce;
+		uint64_t *inpHash = &g_hash[hashPosition * 8U];
 
 		// Initialisierung
 		h0 = vectorize(0x4903ADFF749C51CEull);
@@ -377,6 +376,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		h6 = vectorize(0x991112C71A75B523ull);
 		h7 = vectorize(0xAE18A40B660FCC33ull);
 
+		uint2 p[8];
 		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg
 		#pragma unroll 8
 		for (int i = 0; i < 8; i++)
@@ -417,7 +417,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
 		#pragma unroll 8
 		for(int i=0; i<8; i++)
-			p[i] = make_uint2(0,0);
+			p[i] = vectorize(0ull);
 
 		t0 = vectorize(8); // ptr
 		t1 = vectorize(510ull << 55); // etype
@@ -442,12 +442,11 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		TFBIG_4o_UI2(17);
 		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
 
-		// fertig
-		uint2 *outpHash = (uint2*) (&g_hash[hashPosition * 8]);
-
+		// output
+		uint64_t *outpHash = &g_hash[hashPosition * 8U];
 		#pragma unroll 8
 		for(int i=0; i<8; i++)
-			outpHash[i] = p[i];
+			outpHash[i] = devectorize(p[i]);
 	}
 }
 
@@ -467,7 +466,7 @@ void quark_skein512_gpu_hash_64_v30(uint32_t threads, uint32_t startNounce, uint
 		int hashPosition = nounce - startNounce;
 		uint64_t *inpHash = &g_hash[8 * hashPosition];
 
-		// Initialisierung
+		// Init
 		h0 = 0x4903ADFF749C51CEull;
 		h1 = 0x0D95DE399746DF03ull;
 		h2 = 0x8FD1934127C79BCEull;
@@ -517,7 +516,7 @@ void quark_skein512_gpu_hash_64_v30(uint32_t threads, uint32_t startNounce, uint
 		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
 		#pragma unroll 8
 		for(int i=0; i<8; i++)
-			p[i] = 0;
+			p[i] = 0ull;
 
 		t0 = 8; // ptr
 		t1 = 510ull << 55; // etype
@@ -574,9 +573,6 @@ void skein512_gpu_hash_close(uint32_t threads, uint32_t startNounce, uint64_t *g
 		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 
 		uint2 p[8] = { 0 };
-		//#pragma unroll 8
-		//for (int i = 0; i<8; i++)
-		//	p[i] = make_uint2(0, 0);
 
 		TFBIG_4e_UI2(0);
 		TFBIG_4o_UI2(1);
@@ -674,7 +670,7 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *outp
 
 		#pragma unroll
 		for (int i = 2; i < 8; i++)
-			p[i] = make_uint2(0,0);
+			p[i] = vectorize(0ull);
 
 		t0 = vectorize(0x50ull); // SPH_T64(bcount << 6) + (sph_u64)(extra);
 		t1 = vectorize(0xB000000000000000ull); // (bcount >> 58) + ((sph_u64)(etype) << 55);

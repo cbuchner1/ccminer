@@ -412,7 +412,7 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	throughput = min(throughput,  (max_nonce - first_nonce));
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0FFF;
+		((uint32_t*)ptarget)[7] = 0x07;
 
 	if (!init[thr_id])
 	{
