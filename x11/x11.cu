@@ -159,9 +159,9 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 		cudaSetDevice(device_map[thr_id]);
 
 		quark_blake512_cpu_init(thr_id, throughput);
+		quark_bmw512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
-		quark_bmw512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
 		quark_jh512_cpu_init(thr_id, throughput);
 		x11_luffaCubehash512_cpu_init(thr_id, throughput);

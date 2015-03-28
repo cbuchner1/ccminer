@@ -1696,12 +1696,12 @@ void do_gpu_tests(void)
 	work_restart[0].restart = 1;
 	tgt[7] = 0xffff;
 
-	memset(buf, 0, sizeof buf);
-	//memcpy(buf, zrtest, 80);
-	scanhash_zr5(0, (uint32_t*)buf, tgt, zrtest[19]+1, &done);
-
 	//memset(buf, 0, sizeof buf);
 	//scanhash_skeincoin(0, (uint32_t*)buf, tgt, 1, &done);
+
+	//memset(buf, 0, sizeof buf);
+	//memcpy(buf, zrtest, 80);
+	//scanhash_zr5(0, (uint32_t*)buf, tgt, zrtest[19]+1, &done);
 
 	memset(buf, 0, sizeof buf);
 	scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
@@ -1718,7 +1718,6 @@ void do_gpu_tests(void)
 	opt_tracegpu = false;
 #endif
 }
-extern "C" void zr5hash_pok(void *output, uint32_t *pdata);
 
 void print_hash_tests(void)
 {

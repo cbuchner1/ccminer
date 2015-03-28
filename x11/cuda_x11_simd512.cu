@@ -646,6 +646,8 @@ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4,
 __host__
 int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 {
+	cuda_get_arch(thr_id);
+
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads), (int) err); /* todo: prevent -i 21 */
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads), (int) err);
 #ifndef DEVICE_DIRECT_CONSTANTS
@@ -686,7 +688,7 @@ void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 
 	x11_simd512_gpu_expand_64 <<<gridX8, block>>> (threads, d_hash, d_temp4[thr_id]);
 
-	if (device_sm[device_map[thr_id]] >= 500) {
+	if (device_sm[device_map[thr_id]] >= 500 && cuda_arch[device_map[thr_id]] >= 500) {
 		x11_simd512_gpu_compress_64_maxwell <<< grid, block >>> (threads, d_hash, d_temp4[thr_id], d_state[thr_id]);
 	} else {
 		x11_simd512_gpu_compress1_64 <<< grid, block >>> (threads, d_hash, d_temp4[thr_id], d_state[thr_id]);

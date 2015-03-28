@@ -689,6 +689,7 @@ void x14hash(void *output, const void *input);
 void x15hash(void *output, const void *input);
 void x17hash(void *output, const void *input);
 void zr5hash(void *output, const void *input);
+void zr5hash_pok(void *output, uint32_t *pdata);
 
 #ifdef __cplusplus
 }
