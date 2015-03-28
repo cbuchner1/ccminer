@@ -248,7 +248,9 @@ void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNou
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	if (device_sm[device_map[thr_id]] >= 320)
+	int dev_id = device_map[thr_id];
+
+	if (device_sm[dev_id] >= 320)
 		quark_keccak512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	else
 		quark_keccak512_gpu_hash_64_v30<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);

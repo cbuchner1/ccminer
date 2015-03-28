@@ -295,7 +295,7 @@ void skein256_gpu_hash_32_v30(uint32_t threads, uint32_t startNounce, uint64_t *
 __host__
 void skein256_cpu_init(int thr_id, uint32_t threads)
 {
-	//empty
+	cuda_get_arch(thr_id);
 }
 
 __host__
@@ -306,7 +306,7 @@ void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, ui
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	if (device_sm[device_map[thr_id]] >= 320)
+	if (device_sm[device_map[thr_id]] > 300 && cuda_arch[device_map[thr_id]] > 300)
 		skein256_gpu_hash_32<<<grid, block>>>(threads, startNounce, d_outputHash);
 	else
 		skein256_gpu_hash_32_v30<<<grid, block>>>(threads, startNounce, d_outputHash);

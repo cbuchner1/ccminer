@@ -133,15 +133,17 @@ __global__ void __launch_bounds__(TPB, THF)
 #endif
 }
 
-
-
-__host__ void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
+__host__
+void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
 {
-    if (device_sm[device_map[thr_id]] < 300)
+    int dev_id = device_map[thr_id];
+    cuda_get_arch(thr_id);
+    if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300)
         quark_groestl512_sm20_init(thr_id, threads);
 }
 
-__host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__
+void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
     int threadsperblock = TPB;
 
@@ -153,11 +155,10 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
+    int dev_id = device_map[thr_id];
 
-    if (device_sm[device_map[thr_id]] >= 300)
-        quark_groestl512_gpu_hash_64_quad<<<grid, block, shared_size>>>(threads, startNounce, d_hash, d_nonceVector);
+    if (device_sm[dev_id] >= 300 && cuda_arch[dev_id] >= 300)
+        quark_groestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
     else
         quark_groestl512_sm20_hash_64(thr_id, threads, startNounce, d_nonceVector, d_hash, order);
 
@@ -165,7 +166,8 @@ __host__ void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_
     MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__
+void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
     const int factor = THF;
     int threadsperblock = TPB;
@@ -173,10 +175,10 @@ __host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, u
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
 
-    size_t shared_size = 0;
+    int dev_id = device_map[thr_id];
 
-    if (device_sm[device_map[thr_id]] >= 300)
-        quark_doublegroestl512_gpu_hash_64_quad<<<grid, block, shared_size>>>(threads, startNounce, d_hash, d_nonceVector);
+    if (device_sm[dev_id] >= 300 && cuda_arch[dev_id] >= 300)
+        quark_doublegroestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
     else
         quark_doublegroestl512_sm20_hash_64(thr_id, threads, startNounce, d_nonceVector, d_hash, order);
 

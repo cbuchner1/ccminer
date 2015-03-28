@@ -11,7 +11,7 @@ static __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes 
 #define SHL(x, n)			((x) << (n))
 #define SHR(x, n)			((x) >> (n))
 
-#if __CUDA_ARCH__ >= 320
+#if __CUDA_ARCH__ > 300
 __device__
 uint64_t skein_rotl64(const uint64_t x, const int offset)
 {
@@ -443,11 +443,11 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
 
 		// fertig
-		uint64_t *outpHash = &g_hash[8 * hashPosition];
+		uint2 *outpHash = (uint2*) (&g_hash[hashPosition * 8]);
 
 		#pragma unroll 8
 		for(int i=0; i<8; i++)
-			outpHash[i] = devectorize(p[i]);
+			outpHash[i] = p[i];
 	}
 }
 
@@ -724,6 +724,8 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *outp
 __host__
 void quark_skein512_cpu_init(int thr_id, uint32_t threads)
 {
+	// store the binary SM version
+	cuda_get_arch(thr_id);
 }
 
 __host__
@@ -734,8 +736,10 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
+	int dev_id = device_map[thr_id];
+
 	// uint2 uint64 variants for SM 3.2+
-	if (device_sm[device_map[thr_id]] >= 320)
+	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
 		quark_skein512_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	else
 		quark_skein512_gpu_hash_64_v30 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
