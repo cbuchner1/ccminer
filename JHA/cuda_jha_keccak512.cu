@@ -599,21 +599,18 @@ void zr5_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, 
 /* required for the second hash part of zr5 */
 
 __global__
-void zr5_keccak512_gpu_hash_pok(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint16_t *d_pokh, uint32_t version)
+void zr5_keccak512_gpu_hash_pok(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint16_t *d_poks, uint32_t version)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = startNounce + thread;
 
-		//uint32_t hashPosition = thread * 16;
-		uint32_t *prevHash = &g_hash[thread * 16]; // thread * 64 / sizeof(uint32_t)
 		uint32_t message[18]; /* 72 bytes */
 
 		// pok - hash[0] from prev hash
-		message[0] = version | (prevHash[0] & POK_DATA_MASK);
-		// save pok
-		d_pokh[thread] = (uint16_t) (message[0] / 0x10000);
+		message[0] = version | (0x10000UL * d_poks[thread]);
+		#pragma unroll
 		for (int i=1; i<18; i++) {
 			message[i]=d_OriginalData[i];
 		}

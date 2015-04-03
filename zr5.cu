@@ -23,15 +23,17 @@ extern "C" {
 #define POK_DATA_MASK 0xFFFF0000
 
 static uint32_t* d_hash[MAX_GPUS];
-static uint16_t* d_pokh[MAX_GPUS];
-static uint16_t* h_poks[MAX_GPUS];
+static uint16_t* d_poks[MAX_GPUS];
+
+static uint32_t**d_buffers[MAX_GPUS];
+static uint8_t*  d_permut[MAX_GPUS];
 
 static uint32_t* d_blake[MAX_GPUS];
 static uint32_t* d_groes[MAX_GPUS];
 static uint32_t* d_jh512[MAX_GPUS];
 static uint32_t* d_skein[MAX_GPUS];
 
-__constant__ uint8_t d_permut[24][4];
+__constant__ uint8_t c_permut[24][4];
 static const uint8_t permut[24][4] = {
 	{0, 1, 2, 3},
 	{0, 1, 3, 2},
@@ -123,28 +125,70 @@ extern "C" void zr5hash_pok(void *output, uint32_t *pdata)
 	memcpy(output, hash, 32);
 }
 
-__global__
-void zr5_copy_round_data_gpu(uint32_t threads, uint32_t *d_hash, uint32_t* d_blake, uint32_t* d_groes, uint32_t* d_jh512, uint32_t* d_skein, int rnd)
+// ------------------------------------------------------------------------------------------------
+
+__global__ __launch_bounds__(128, 8)
+void zr5_init_vars_gpu(uint32_t threads, uint32_t* d_hash, uint8_t* d_permut, uint32_t** d_buffers,
+        uint32_t* d_blake, uint32_t* d_groes, uint32_t* d_jh512, uint32_t* d_skein)
 {
-	// copy 64 bytes hash in the right algo buffer
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		const uint64_t offset = thread * 64 / 4;
+		uint32_t offset = thread * 16U; // 64U / sizeof(uint32_t);
 		uint32_t *phash = &d_hash[offset];
-		// algos hash order
-		uint32_t norder = phash[0] % ARRAY_SIZE(permut);
-		uint32_t algo = d_permut[norder][rnd];
-		uint32_t* buffers[4] = { d_blake, d_groes, d_jh512, d_skein };
 
-		if (rnd > 0) {
-			int algosrc = d_permut[norder][rnd - 1];
-			phash = buffers[algosrc] + offset;
-		}
+		// store the algos order for other procs
+		const uint8_t norder = (phash[0] % ARRAY_SIZE(permut));
+		const uint8_t algo = c_permut[norder][0];
+		d_permut[thread] = norder;
 
-		// uint4 = 4x4 uint32_t = 16 bytes
+		// init array for other procs
+		d_buffers[0] = d_blake;
+		d_buffers[1] = d_groes;
+		d_buffers[2] = d_jh512;
+		d_buffers[3] = d_skein;
+
+		// Copy From d_hash to the first algo buffer
+		// uint4 = 4x uint32_t = 16 bytes
 		uint4 *psrc = (uint4*) phash;
-		uint4 *pdst = (uint4*) (buffers[algo] + offset);
+		uint4 *pdst = (uint4*) (d_buffers[algo] + offset);
+		pdst[0] = psrc[0];
+		pdst[1] = psrc[1];
+		pdst[2] = psrc[2];
+		pdst[3] = psrc[3];
+	}
+}
+
+__host__
+void zr5_init_vars(int thr_id, uint32_t threads)
+{
+	const uint32_t threadsperblock = 128;
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	zr5_init_vars_gpu <<<grid, block>>> (
+		threads, d_hash[thr_id], d_permut[thr_id], d_buffers[thr_id],
+		d_blake[thr_id], d_groes[thr_id], d_jh512[thr_id], d_skein[thr_id]
+	);
+}
+
+
+__global__ __launch_bounds__(128, 8)
+void zr5_move_data_to_hash_gpu(const uint32_t threads, const int rnd, uint32_t** const d_buffers, uint8_t *d_permut, uint32_t *d_hash)
+{
+	// copy 64 bytes hash from/to the right algo buffers
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		const uint8_t norder = d_permut[thread];
+		const uint8_t algodst = c_permut[norder][rnd];
+		const uint8_t algosrc = c_permut[norder][rnd-1];
+
+		const uint32_t offset = thread * (64 / 4);
+
+		// uint4 = 4x uint32_t = 16 bytes
+		uint4 *psrc = (uint4*) (d_buffers[algosrc] + offset);
+		uint4 *pdst = (uint4*) (d_buffers[algodst] + offset);
 		pdst[0] = psrc[0];
 		pdst[1] = psrc[1];
 		pdst[2] = psrc[2];
@@ -159,31 +203,54 @@ void zr5_move_data_to_hash(int thr_id, uint32_t threads, int rnd)
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	zr5_copy_round_data_gpu <<<grid, block>>> (threads, d_hash[thr_id], d_blake[thr_id], d_groes[thr_id], d_jh512[thr_id], d_skein[thr_id], rnd);
+	zr5_move_data_to_hash_gpu <<<grid, block>>> (threads, rnd, d_buffers[thr_id], d_permut[thr_id], d_hash[thr_id]);
 }
 
-__global__
-void zr5_final_round_data_gpu(uint32_t threads, uint32_t* d_blake, uint32_t* d_groes, uint32_t* d_jh512, uint32_t* d_skein, uint32_t *d_hash, uint16_t *d_pokh)
+
+__global__ __launch_bounds__(128, 8)
+void zr5_get_poks_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* const d_permut, uint32_t *d_hash, uint16_t *d_poks)
+{
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		const uint8_t norder = d_permut[thread];
+		const uint8_t algosrc = c_permut[norder][3];
+
+		// copy only pok
+		const uint32_t offset = thread * 16U; // 64 / 4;
+		uint16_t* hash0 = (uint16_t*) (d_buffers[algosrc] + offset);
+		d_poks[thread] = hash0[1];
+	}
+}
+
+__host__
+void zr5_get_poks(int thr_id, uint32_t threads, uint16_t* d_poks)
+{
+	const uint32_t threadsperblock = 128;
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	zr5_get_poks_gpu <<<grid, block>>> (threads, d_buffers[thr_id], d_permut[thr_id], d_hash[thr_id], d_poks);
+}
+
+
+__global__ __launch_bounds__(128, 8)
+void zr5_final_round_data_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* const d_permut, uint32_t *d_hash, uint16_t *d_poks)
 {
 	// after the 4 algos rounds, copy back hash to d_hash
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		const uint64_t offset = thread * 16; // 64 / 4;
-		uint32_t *phash = &d_hash[offset];
-		uint16_t norder = phash[0] % ARRAY_SIZE(permut);
-		uint16_t algosrc = d_permut[norder][3];
+		const uint8_t norder = d_permut[thread];
+		const uint8_t algosrc = c_permut[norder][3];
+		const uint32_t offset = thread * 16U; // 64 / 4;
 
-		uint32_t* buffers[4] = { d_blake, d_groes, d_jh512, d_skein };
+		// copy only hash[4..7]
+		uint2 *psrc = (uint2*) (d_buffers[algosrc] + offset);
+		uint2 *phash = (uint2*) (&d_hash[offset]);
 
-		// copy only hash[0] + hash[6..7]
-		uint2 *psrc = (uint2*) (buffers[algosrc] + offset);
-		uint2 *pdst = (uint2*) phash;
-
-		pdst[0].x = psrc[0].x;
-		pdst[3] = psrc[3];
-
-		//phash[7] = *(buffers[algosrc] + offset + 7);
+		phash[2] = psrc[2];
+		phash[3] = psrc[3];
 	}
 }
 
@@ -194,8 +261,9 @@ void zr5_final_round(int thr_id, uint32_t threads)
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	zr5_final_round_data_gpu <<<grid, block>>> (threads, d_blake[thr_id], d_groes[thr_id], d_jh512[thr_id], d_skein[thr_id], d_hash[thr_id], d_pokh[thr_id]);
+	zr5_final_round_data_gpu <<<grid, block>>> (threads, d_buffers[thr_id], d_permut[thr_id], d_hash[thr_id], d_poks[thr_id]);
 }
+
 
 extern void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads);
 extern void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen);
@@ -236,12 +304,14 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 	{
 		cudaSetDevice(device_map[thr_id]);
 
+		// constants
+		cudaMemcpyToSymbol(c_permut, permut, 24*4, 0, cudaMemcpyHostToDevice);
+
 		// hash buffer = keccak hash 64 required
 		cudaMalloc(&d_hash[thr_id], 64 * throughput);
-		cudaMalloc(&d_pokh[thr_id], 2 * throughput);
-
-		cudaMemcpyToSymbol(d_permut, permut, 24*4, 0, cudaMemcpyHostToDevice);
-		cudaMallocHost(&h_poks[thr_id], 2 * throughput);
+		cudaMalloc(&d_poks[thr_id], sizeof(uint16_t) * throughput);
+		cudaMalloc(&d_permut[thr_id], sizeof(uint8_t) * throughput);
+		cudaMalloc(&d_buffers[thr_id], 4 * sizeof(uint32_t*));
 
 		// data buffers for the 4 rounds
 		cudaMalloc(&d_blake[thr_id], 64 * throughput);
@@ -272,23 +342,27 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 
 		// Keccak512 Hash with CUDA
 		zr5_keccak512_cpu_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		zr5_init_vars(thr_id, throughput);
 
 		for (int rnd=0; rnd<4; rnd++) {
-			zr5_move_data_to_hash(thr_id, throughput, rnd);
+			if (rnd > 0)
+				zr5_move_data_to_hash(thr_id, throughput, rnd);
 			quark_blake512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_blake[thr_id], order++);
 			quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_groes[thr_id], order++);
 			quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_jh512[thr_id], order++);
 			quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_skein[thr_id], order++);
 		}
 
-		// This generates all pok prefixes
-		zr5_final_round(thr_id, throughput);
+		// store on device d_poks all hash[0] prefixes
+		zr5_get_poks(thr_id, throughput, d_poks[thr_id]);
 
-		// Keccak512 pok
-		zr5_keccak512_cpu_hash_pok(thr_id, throughput, pdata[19], pdata, d_hash[thr_id], d_pokh[thr_id]);
+		// Keccak512 with pok
+		zr5_keccak512_cpu_hash_pok(thr_id, throughput, pdata[19], pdata, d_hash[thr_id], d_poks[thr_id]);
+		zr5_init_vars(thr_id, throughput);
 
 		for (int rnd=0; rnd<4; rnd++) {
-			zr5_move_data_to_hash(thr_id, throughput, rnd);
+			if (rnd > 0)
+				zr5_move_data_to_hash(thr_id, throughput, rnd);
 			quark_blake512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_blake[thr_id], order++);
 			quark_groestl512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_groes[thr_id], order++);
 			quark_jh512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_jh512[thr_id], order++);
@@ -304,11 +378,12 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 			uint32_t oldp19 = pdata[19];
 			uint32_t offset = foundNonce - pdata[19];
 			uint32_t pok = 0;
+			uint16_t h_pok;
 
 			*hashes_done = pdata[19] - first_nonce + throughput;
 
-			cudaMemcpy(h_poks[thr_id], d_pokh[thr_id], 2 * throughput, cudaMemcpyDeviceToHost);
-			pok = version | (0x10000UL * h_poks[thr_id][offset]);
+			cudaMemcpy(&h_pok, d_poks[thr_id] + offset, sizeof(uint16_t), cudaMemcpyDeviceToHost);
+			pok = version | (0x10000UL * h_pok);
 			pdata[0] = pok; pdata[19] = foundNonce;
 			zr5hash(vhash64, pdata);
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
@@ -316,7 +391,8 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, oldp19, d_hash[thr_id], 1);
 				if (secNonce != 0) {
 					offset = secNonce - oldp19;
-					pok = version | (0x10000UL * h_poks[thr_id][offset]);
+					cudaMemcpy(&h_pok, d_poks[thr_id] + offset, sizeof(uint16_t), cudaMemcpyDeviceToHost);
+					pok = version | (0x10000UL * h_pok);
 					memcpy(tmpdata, pdata, 80);
 					tmpdata[0] = pok; tmpdata[19] = secNonce;
 					zr5hash(vhash64, tmpdata);
@@ -328,7 +404,12 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 				}
 				return res;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+
+				// reinit card..
+				cudaDeviceReset();
+				init[thr_id] = false;
+
 				pdata[19]++;
 				pdata[0] = oldp0;
 			}

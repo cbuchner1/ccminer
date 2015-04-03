@@ -467,11 +467,14 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 				return res;
 			}
 			else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
-				pdata[19]++;
+				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", device_map[thr_id], foundNonce);
+
+				// reinit card
+				cudaDeviceReset();
+				init[thr_id] = false;
 			}
-		} else
-			pdata[19] += throughput;
+		}
+		pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
