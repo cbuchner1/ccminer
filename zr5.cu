@@ -302,6 +302,7 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 
 	if (!init[thr_id])
 	{
+		cudaDeviceReset();
 		cudaSetDevice(device_map[thr_id]);
 
 		// constants
@@ -406,8 +407,7 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 			} else {
 				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 
-				// reinit card..
-				cudaDeviceReset();
+				// reinit the card..
 				init[thr_id] = false;
 
 				pdata[19]++;

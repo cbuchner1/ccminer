@@ -416,7 +416,9 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 
 	if (!init[thr_id])
 	{
+		cudaDeviceReset();
 		cudaSetDevice(device_map[thr_id]);
+
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));
 
 		cuda_check_cpu_init(thr_id, throughput);
@@ -469,8 +471,7 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 			else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", device_map[thr_id], foundNonce);
 
-				// reinit card
-				cudaDeviceReset();
+				// reinit the card
 				init[thr_id] = false;
 			}
 		}
