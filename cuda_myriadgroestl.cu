@@ -6,11 +6,9 @@
 #include "cuda_helper.h"
 
 #if __CUDA_ARCH__ >= 300
-
 // 64 Registers Variant for Compute 3.0
-#include "groestl_functions_quad.cu"
-
-#include "bitslice_transformations_quad.cu"
+#include "quark/groestl_functions_quad.h"
+#include "quark/groestl_transf_quad.h"
 #endif
 
 // globaler Speicher für alle HeftyHashes aller Threads

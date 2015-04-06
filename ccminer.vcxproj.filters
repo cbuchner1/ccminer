@@ -368,6 +368,12 @@
     <ClInclude Include="lyra2\Sponge.h">
       <Filter>Header Files\lyra2</Filter>
     </ClInclude>
+    <ClInclude Include="quark\groestl_transf_quad.h">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </ClInclude>
+    <ClInclude Include="quark\groestl_functions_quad.h">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </ClInclude>
     <ClInclude Include="res\resource.h">
       <Filter>Ressources</Filter>
     </ClInclude>
@@ -377,9 +383,6 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_groestlcoin.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="bitslice_transformations_quad.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
@@ -570,9 +573,6 @@
     </CudaCompile>
     <CudaCompile Include="zr5.cu">
       <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="groestl_functions_quad.cu">
-      <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
     <CudaCompile Include="skein.cu">
       <Filter>Source Files\CUDA</Filter>

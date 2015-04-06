@@ -9,8 +9,8 @@
 #define THF 4
 
 #if __CUDA_ARCH__ >= 300
-#include "groestl_functions_quad.cu"
-#include "bitslice_transformations_quad.cu"
+#include "quark/groestl_functions_quad.h"
+#include "quark/groestl_transf_quad.h"
 #endif
 
 #include "quark/cuda_quark_groestl512_sm20.cu"

@@ -340,26 +340,18 @@
     <ClInclude Include="sph\sph_types.h" />
     <ClInclude Include="sph\sph_whirlpool.h" />
     <ClInclude Include="uint256.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="lyra2\Lyra2.h" />
     <ClInclude Include="lyra2\Sponge.h" />
+    <ClInclude Include="quark\groestl_transf_quad.h" />
+    <ClInclude Include="quark\groestl_functions_quad.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp" />
-    <CudaCompile Include="bitslice_transformations_quad.cu">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </CudaCompile>
-    <CudaCompile Include="cuda_groestlcoin.cu">
-    </CudaCompile>
-    <CudaCompile Include="cuda_myriadgroestl.cu">
-    </CudaCompile>
+    <CudaCompile Include="cuda_groestlcoin.cu" />
+    <CudaCompile Include="cuda_myriadgroestl.cu" />
     <CudaCompile Include="cuda_nist5.cu">
     </CudaCompile>
     <CudaCompile Include="zr5.cu" />
-    <CudaCompile Include="groestl_functions_quad.cu">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </CudaCompile>
     <CudaCompile Include="heavy\cuda_blake512.cu">
     </CudaCompile>
     <CudaCompile Include="heavy\cuda_combine.cu">
