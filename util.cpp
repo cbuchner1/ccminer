@@ -1791,6 +1791,9 @@ void print_hash_tests(void)
 	skeincoinhash(&hash[0], &buf[0]);
 	printpfx("skein", hash);
 
+	skein2hash(&hash[0], &buf[0]);
+	printpfx("skein2", hash);
+
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);
 

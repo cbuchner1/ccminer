@@ -350,6 +350,10 @@ extern int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_skein2(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern int scanhash_s3(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -680,6 +684,7 @@ void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const in
 void quarkhash(void *state, const void *input);
 void qubithash(void *state, const void *input);
 void skeincoinhash(void *output, const void *input);
+void skein2hash(void *output, const void *input);
 void s3hash(void *output, const void *input);
 void wcoinhash(void *state, const void *input);
 void whirlxHash(void *state, const void *input);

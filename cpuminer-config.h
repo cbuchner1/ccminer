@@ -159,7 +159,7 @@
 #define PACKAGE_NAME "ccminer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "ccminer 1.6"
+#define PACKAGE_STRING "ccminer 1.6.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "ccminer"
@@ -168,7 +168,7 @@
 #define PACKAGE_URL "http://github.com/tpruvot/ccminer"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.6"
+#define PACKAGE_VERSION "1.6.1"
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -182,16 +182,16 @@
 #define STDC_HEADERS 1
 
 /* Define to 1 if AVX assembly is available. */
-#define USE_AVX 1
+/* #undef USE_AVX */
 
 /* Define to 1 if AVX2 assembly is available. */
 /* #undef USE_AVX2 */
 
 /* Define to 1 if XOP assembly is available. */
-#define USE_XOP 1
+/* undef USE_XOP */
 
 /* Version number of package */
-#define VERSION "1.6"
+#define VERSION "1.6.1"
 
 /* Define curl_free() as free() if our version of curl lacks curl_free. */
 /* #undef curl_free */

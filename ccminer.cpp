@@ -103,6 +103,7 @@ enum sha_algos {
 	ALGO_QUARK,
 	ALGO_QUBIT,
 	ALGO_SKEIN,
+	ALGO_SKEIN2,
 	ALGO_S3,
 	ALGO_WHIRLCOIN,
 	ALGO_WHIRLPOOLX,
@@ -137,6 +138,7 @@ static const char *algo_names[] = {
 	"quark",
 	"qubit",
 	"skein",
+	"skein2",
 	"s3",
 	"whirl",
 	"whirlpoolx",
@@ -254,6 +256,7 @@ Options:\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
 			skein       Skein SHA2 (Skeincoin)\n\
+			skein2      Double Skein (Woodcoin)\n\
 			s3          S3 (1Coin)\n\
 			x11         X11 (DarkCoin)\n\
 			x13         X13 (MaruCoin)\n\
@@ -1521,6 +1524,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_SKEIN:
 			rc = scanhash_skeincoin(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_SKEIN2:
+			rc = scanhash_skein2(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

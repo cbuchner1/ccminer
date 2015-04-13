@@ -103,11 +103,11 @@
     </Link>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
+      <GenerateLineInfo>true</GenerateLineInfo>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
       <CodeGeneration>compute_50,sm_50</CodeGeneration>
-      <GenerateLineInfo>true</GenerateLineInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -133,6 +133,7 @@
     </Link>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
+      <GenerateLineInfo>true</GenerateLineInfo>
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
@@ -433,6 +434,9 @@
     <CudaCompile Include="lyra2\lyra2RE.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="skein.cu">
+      <MaxRegCount>64</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="skein2.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_aes.cu">

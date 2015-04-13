@@ -39,6 +39,7 @@ Keccak (Maxcoin)
 Pentablake (Blake 512 x5)
 1Coin Triple S
 Skein (Skein + SHA)
+Woodcoin (Double Skein)
 Vertcoin Lyra2RE
 Ziftrcoin (ZR5)
 
@@ -81,6 +82,7 @@ its command line interface and options.
                           qubit       use to mine Qubit Algo
                           s3          use to mine 1coin
                           skein       use to mine Skeincoin
+                          skein2      use to mine Woodcoin
                           whirl       use to mine Whirlcoin
                           whirlpoolx  use to mine Vanillacoin
                           x11         use to mine DarkCoin

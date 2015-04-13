@@ -41,7 +41,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  quark/cuda_bmw512.cu quark/cuda_quark_keccak512.cu \
 			  quark/quarkcoin.cu quark/animecoin.cu \
 			  quark/cuda_quark_compactionTest.cu  \
-			  cuda_nist5.cu pentablake.cu skein.cu zr5.cu \
+			  cuda_nist5.cu pentablake.cu skein.cu skein2.cu zr5.cu \
 			  sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/sha2.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \
@@ -71,7 +71,7 @@ ccminer_LDADD    = @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS
 ccminer_CPPFLAGS = @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(CPPFLAGS) $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) $(DEF_INCLUDES) $(nvml_defs) -DSCRYPT_KECCAK512 -DSCRYPT_CHACHA -DSCRYPT_CHOOSE_COMPILETIME
 
 nvcc_ARCH  = -gencode=arch=compute_50,code=\"sm_50,compute_50\"
-#nvcc_ARCH += -gencode=arch=compute_52,code=\"sm_52,compute_52\"
+nvcc_ARCH += -gencode=arch=compute_52,code=\"sm_52,compute_52\"
 
 #nvcc_ARCH = -gencode=arch=compute_35,code=\"sm_35,compute_35\"
 #nvcc_ARCH = -gencode=arch=compute_30,code=\"sm_30,compute_30\"
