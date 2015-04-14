@@ -263,7 +263,6 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17 (peoplecurrency)\n\
-			whirl       Whirlcoin (old whirlpool)\n\
 			whirlpoolx  Vanilla coin\n\
 			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
@@ -1396,7 +1395,7 @@ static void *miner_thread(void *userdata)
 			max64 = max(minmax-1, max64);
 		}
 
-		// we can't scan more than uint capacity
+		// we can't scan more than uint32 capacity
 		max64 = min(UINT32_MAX, max64);
 
 		start_nonce = nonceptr[0];
@@ -1411,6 +1410,11 @@ static void *miner_thread(void *userdata)
 			max_nonce = (uint32_t) (max64 + start_nonce);
 
 		// todo: keep it rounded for gpu threads ?
+
+		if (unlikely(start_nonce > max_nonce)) {
+			// should not happen but seen in skein2 benchmark with 2 gpus
+			max_nonce = end_nonce = UINT32_MAX;
+		}
 
 		work.scanned_from = start_nonce;
 		nonceptr[0] = start_nonce;
@@ -1537,6 +1541,7 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		/* to be deleted */
 		case ALGO_WHIRLCOIN:
 			rc = scanhash_whc(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);

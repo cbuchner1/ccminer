@@ -12,8 +12,7 @@
 	q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
 	q[i+12] + ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
 
-static __constant__ uint64_t d_constMem[16];
-static uint64_t h_constMem[16] = {
+static __constant__ uint64_t d_constMem[16] = {
 	SPH_C64(0x8081828384858687),
 	SPH_C64(0x88898A8B8C8D8E8F),
 	SPH_C64(0x9091929394959697),

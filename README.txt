@@ -1,16 +1,15 @@
 
-ccMiner release 1.6.0-tpruvot (Mar 2015) - "ZR5, Pluck & WhirlX"
+ccMiner release 1.6.1-tpruvot (Apr 2015) - "Skein512 Chainsaw"
 ---------------------------------------------------------------
 
 ***************************************************************
-If you find this tool useful and like to support its continued 
+If you find this tool useful and like to support its continuous
           development, then consider a donation.
 
 tpruvot@github:
-  BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
+  BTC  : 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
   DRK  : XeVrkPrWB7pDbdFLfKhF1Z3xpqhsx6wkH3
-  NEOS : NaEcVrdzoCWHUYXb7X8QoafoKS9UV69Yk4
-  XST  : S9TqZucWgT6ajZLDBxQnHUtmkotCEHn9z9
+  ZRC  : ZEcubH2xp2mpuwxMjy7wZThr5AzLGu3mqT
 
 DJM34:
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
@@ -56,7 +55,7 @@ that the most of our comments are in german.
 
 >>> Command Line Interface <<<
 
-This code is based on the pooler cpuminer 2.3.2 release and inherits
+This code is based on the pooler cpuminer and inherits
 its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
@@ -83,7 +82,6 @@ its command line interface and options.
                           s3          use to mine 1coin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
-                          whirl       use to mine Whirlcoin
                           whirlpoolx  use to mine Vanillacoin
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
@@ -113,20 +111,23 @@ its command line interface and options.
   -T, --timeout=N       network timeout, in seconds (default: 270)
   -s, --scantime=N      upper bound on time spent scanning current work when
                         long polling is unavailable, in seconds (default: 5)
+  -n, --ndevs           list cuda devices
   -N, --statsavg        number of samples used to display hashrate (default: 30)
       --no-gbt          disable getblocktemplate support (height check in solo)
       --no-longpoll     disable X-Long-Polling support
       --no-stratum      disable X-Stratum support
   -q, --quiet           disable per-thread hashmeter output
+      --no-color        disable colored output
   -D, --debug           enable debug output
   -P, --protocol-dump   verbose dump of protocol-level activities
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)
+      --api-remote      Allow remote control
+  -B, --background      run the miner in the background
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
       --cpu-affinity    set process affinity to specific cpu core(s) mask
       --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)
   -c, --config=FILE     load a JSON-format configuration file
-      --no-color        disable colored console output
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
 
@@ -188,6 +189,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Apr. 14th 2015  v1.6.1
+                  Add the Double Skein Algo for Woodcoin
 
   Mar. 27th 2015  v1.6.0
                   Add the ZR5 Algo for Ziftcoin
@@ -347,8 +351,8 @@ Christian Buchner, Christian H. (Germany): Initial CUDA implementation
 
 djm34, tsiv, sp and klausT for cuda algos implementation and optimisation
 
-Tanguy Pruvot : 750Ti tuning, blake, colors, general code cleanup/opts
-                API monitoring, linux Config/Makefile and vstudio stuff...
+Tanguy Pruvot : 750Ti tuning, blake, colors, zr5, skein, general code cleanup
+                API monitoring, linux Config/Makefile and vstudio libs...
 
 and also many thanks to anyone else who contributed to the original
 cpuminer application (Jeff Garzik, pooler), it's original HVC-fork

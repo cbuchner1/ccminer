@@ -7,8 +7,8 @@ else
 JANSSON_INCLUDES=
 endif
 
-EXTRA_DIST		= autogen.sh README.txt LICENSE.txt \
-			  cudaminer.sln cudaminer.vcxproj cudaminer.vcxproj.filters \
+EXTRA_DIST		= autogen.sh README.md README.txt LICENSE.txt \
+			  ccminer.sln ccminer.vcxproj ccminer.vcxproj.filters \
 			  compat/gettimeofday.c compat/getopt/getopt_long.c cpuminer-config.h.in
 
 SUBDIRS = compat
@@ -119,5 +119,8 @@ JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
 
 skein.o: skein.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
+
+skein2.o: skein2.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
 

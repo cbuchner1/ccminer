@@ -3,9 +3,7 @@
  * by tpruvot@github - 2015
  */
 
-extern "C" {
 #include "sph/sph_skein.h"
-}
 
 #include "miner.h"
 #include "cuda_helper.h"
@@ -101,70 +99,10 @@ void sha256_transform_gpu(uint32_t *state, uint32_t *message)
 	}
 
 	/* 3. Mix. */
-	RNDr(S, W, 0);
-	RNDr(S, W, 1);
-	RNDr(S, W, 2);
-	RNDr(S, W, 3);
-	RNDr(S, W, 4);
-	RNDr(S, W, 5);
-	RNDr(S, W, 6);
-	RNDr(S, W, 7);
-	RNDr(S, W, 8);
-	RNDr(S, W, 9);
-	RNDr(S, W, 10);
-	RNDr(S, W, 11);
-	RNDr(S, W, 12);
-	RNDr(S, W, 13);
-	RNDr(S, W, 14);
-	RNDr(S, W, 15);
-	RNDr(S, W, 16);
-	RNDr(S, W, 17);
-	RNDr(S, W, 18);
-	RNDr(S, W, 19);
-	RNDr(S, W, 20);
-	RNDr(S, W, 21);
-	RNDr(S, W, 22);
-	RNDr(S, W, 23);
-	RNDr(S, W, 24);
-	RNDr(S, W, 25);
-	RNDr(S, W, 26);
-	RNDr(S, W, 27);
-	RNDr(S, W, 28);
-	RNDr(S, W, 29);
-	RNDr(S, W, 30);
-	RNDr(S, W, 31);
-	RNDr(S, W, 32);
-	RNDr(S, W, 33);
-	RNDr(S, W, 34);
-	RNDr(S, W, 35);
-	RNDr(S, W, 36);
-	RNDr(S, W, 37);
-	RNDr(S, W, 38);
-	RNDr(S, W, 39);
-	RNDr(S, W, 40);
-	RNDr(S, W, 41);
-	RNDr(S, W, 42);
-	RNDr(S, W, 43);
-	RNDr(S, W, 44);
-	RNDr(S, W, 45);
-	RNDr(S, W, 46);
-	RNDr(S, W, 47);
-	RNDr(S, W, 48);
-	RNDr(S, W, 49);
-	RNDr(S, W, 50);
-	RNDr(S, W, 51);
-	RNDr(S, W, 52);
-	RNDr(S, W, 53);
-	RNDr(S, W, 54);
-	RNDr(S, W, 55);
-	RNDr(S, W, 56);
-	RNDr(S, W, 57);
-	RNDr(S, W, 58);
-	RNDr(S, W, 59);
-	RNDr(S, W, 60);
-	RNDr(S, W, 61);
-	RNDr(S, W, 62);
-	RNDr(S, W, 63);
+	#pragma unroll
+	for (int i = 0; i < 64; i++) {
+		RNDr(S, W, i);
+	}
 
 	for (int i = 0; i < 8; i++)
 		state[i] += S[i];
@@ -408,8 +346,8 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	const uint32_t first_nonce = pdata[19];
 	const int swap = 1;
 
-	uint32_t throughput =  device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
-	throughput = min(throughput,  (max_nonce - first_nonce));
+	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x07;
