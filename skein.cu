@@ -12,6 +12,8 @@
 
 static uint32_t *d_hash[MAX_GPUS];
 
+extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
+
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
 
@@ -305,13 +307,15 @@ void sha2_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *hashBuff
 }
 
 __host__
-void sha2_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHashes, int order)
+void sha2_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHashes)
 {
 	uint32_t threadsperblock = 128;
 	dim3 block(threadsperblock);
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
-	//cudaMemset(d_outputHashes, 0, 64 * threads);
+
 	sha2_gpu_hash_64 <<< grid, block >>>(threads, startNounce, d_outputHashes);
+
+	// required once per scan loop to prevent cpu 100% usage (linux)
 	MyStreamSynchronize(NULL, 0, thr_id);
 }
 
@@ -339,10 +343,11 @@ static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
-    unsigned long *hashes_done)
+extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+	uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t _ALIGN(64) endiandata[20];
+
 	const uint32_t first_nonce = pdata[19];
 	const int swap = 1;
 
@@ -357,31 +362,33 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 		cudaDeviceReset();
 		cudaSetDevice(device_map[thr_id]);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));
+		cudaMalloc(&d_hash[thr_id], throughput * 64U);
 
+		quark_skein512_cpu_init(thr_id, throughput);
 		cuda_check_cpu_init(thr_id, throughput);
+
+		CUDA_SAFE_CALL(cudaDeviceSynchronize());
+
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
-	for (int k=0; k < 20; k++)
+	for (int k=0; k < 19; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
 	skein512_cpu_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
-		int order = 0;
-		*hashes_done = pdata[19] - first_nonce + throughput;
-
 		// Hash with CUDA
 		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], swap);
-		sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+
+		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
-			uint32_t vhash64[8];
+			uint32_t _ALIGN(64) vhash64[8];
 
 			endiandata[19] = swab32_if(foundNonce, swap);
 			skeincoinhash(vhash64, endiandata);

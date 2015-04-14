@@ -10,6 +10,8 @@
 
 static uint32_t *d_hash[MAX_GPUS];
 
+extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
+
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
 
@@ -33,9 +35,8 @@ extern "C" void skein2hash(void *output, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_skein2(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
-    unsigned long *hashes_done)
+extern "C" int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
 
@@ -50,9 +51,13 @@ extern "C" int scanhash_skein2(int thr_id, uint32_t *pdata,
 		cudaDeviceReset();
 		cudaSetDevice(device_map[thr_id]);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64UL * throughput));
+		cudaMalloc(&d_hash[thr_id], throughput * 64U);
 
-		cuda_check_cpu_init(thr_id, throughput);
+                quark_skein512_cpu_init(thr_id, throughput);
+                cuda_check_cpu_init(thr_id, throughput);
+
+                CUDA_SAFE_CALL(cudaDeviceSynchronize());
+
 		init[thr_id] = true;
 	}
 

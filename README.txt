@@ -192,6 +192,7 @@ features.
 
   Apr. 14th 2015  v1.6.1
                   Add the Double Skein Algo for Woodcoin
+                  Skein/Skein2 SM 3.0 devices support
 
   Mar. 27th 2015  v1.6.0
                   Add the ZR5 Algo for Ziftcoin
