@@ -235,8 +235,8 @@ __global__ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounc
 
 // ---------------------------- END CUDA quark_blake512 functions ------------------------------------
 
-// Setup-Funktionen
-__host__ void quark_blake512_cpu_init(int thr_id, uint32_t threads)
+__host__
+void quark_blake512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	CUDA_CALL_OR_RET( cudaMemcpyToSymbol(c_sigma,
@@ -246,7 +246,8 @@ __host__ void quark_blake512_cpu_init(int thr_id, uint32_t threads)
 }
 
 // Blake512 für 80 Byte grosse Eingangsdaten
-__host__ void quark_blake512_cpu_setBlock_80(void *pdata)
+__host__
+void quark_blake512_cpu_setBlock_80(void *pdata)
 {
 	// Message mit Padding bereitstellen
 	// lediglich die korrekte Nonce ist noch ab Byte 76 einzusetzen.
@@ -263,7 +264,8 @@ __host__ void quark_blake512_cpu_setBlock_80(void *pdata)
 	);
 }
 
-__host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
+__host__
+void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
 {
 	const uint32_t threadsperblock = 256;
 
@@ -271,28 +273,19 @@ __host__ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
-	quark_blake512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
+	quark_blake512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+__host__
+void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
 	const uint32_t threadsperblock = 256;
 
-	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
-
-	quark_blake512_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
-
-	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, order, thr_id);
+	quark_blake512_gpu_hash_80<<<grid, block>>>(threads, startNounce, d_outputHash);
 }
