@@ -73,6 +73,9 @@
     <Filter Include="Ressources">
       <UniqueIdentifier>{f5117ccb-a70d-411a-b7ea-d6faed230bc7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\scrypt">
+      <UniqueIdentifier>{c26f5b02-37b5-4420-a4e8-ee1ad517dc95}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -109,9 +112,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="hefty1.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="scrypt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="fuguecoin.cpp">
@@ -224,6 +224,12 @@
     </ClCompile>
     <ClCompile Include="lyra2\Sponge.c">
       <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="scrypt.cpp">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </ClCompile>
+    <ClCompile Include="scrypt-jane.cpp">
+      <Filter>Source Files\CUDA\scrypt</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -376,6 +382,9 @@
     </ClInclude>
     <ClInclude Include="res\resource.h">
       <Filter>Ressources</Filter>
+    </ClInclude>
+    <ClInclude Include="scrypt\salsa_kernel.h">
+      <Filter>Source Files\CUDA\scrypt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -579,6 +588,36 @@
     </CudaCompile>
     <CudaCompile Include="skein2.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\blake.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\fermi_kernel.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\keccak.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\kepler_kernel.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\nv_kernel.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\nv_kernel2.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\salsa_kernel.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\sha256.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\test_kernel.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="scrypt\titan_kernel.cu">
+      <Filter>Source Files\CUDA\scrypt</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

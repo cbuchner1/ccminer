@@ -102,6 +102,8 @@ enum sha_algos {
 	ALGO_PLUCK,
 	ALGO_QUARK,
 	ALGO_QUBIT,
+	ALGO_SCRYPT,
+	ALGO_SCRYPT_JANE,
 	ALGO_SKEIN,
 	ALGO_SKEIN2,
 	ALGO_S3,
@@ -137,6 +139,8 @@ static const char *algo_names[] = {
 	"pluck",
 	"quark",
 	"qubit",
+	"scrypt",
+	"scrypt-jane",
 	"skein",
 	"skein2",
 	"s3",
@@ -184,6 +188,20 @@ char * device_name[MAX_GPUS];
 short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
+
+int device_interactive[MAX_GPUS] = { 0 };
+int device_batchsize[MAX_GPUS] = { 0 };
+int device_backoff[MAX_GPUS] = { 0 };
+int device_lookup_gap[MAX_GPUS] = { 0 };
+int device_texturecache[MAX_GPUS] = { 0 };
+int device_singlememory[MAX_GPUS] = { 0 };
+char *device_config[MAX_GPUS] = { 0 };
+int opt_nfactor = 0;
+int parallel = 2;
+bool autotune = true;
+bool abort_flag = false;
+char *jane_params = NULL;
+
 char *rpc_user = NULL;
 static char *rpc_pass;
 static char *rpc_userpass = NULL;
@@ -255,6 +273,8 @@ Options:\n\
 			pluck       SupCoin\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
+			scrypt      Scrypt\n\
+			scrypt-jane Scrypt-jane Chacha\n\
 			skein       Skein SHA2 (Skeincoin)\n\
 			skein2      Double Skein (Woodcoin)\n\
 			s3          S3 (1Coin)\n\
@@ -439,6 +459,7 @@ void get_currentalgo(char* buf, int sz)
  */
 void proper_exit(int reason)
 {
+	abort_flag = true;
 	cuda_devicereset();
 
 	if (check_dups)
@@ -1173,6 +1194,8 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	switch (opt_algo) {
 		case ALGO_JACKPOT:
 		case ALGO_PLUCK:
+		case ALGO_SCRYPT:
+		case ALGO_SCRYPT_JANE:
 			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 			break;
 		case ALGO_DMD_GR:
@@ -1386,6 +1409,8 @@ static void *miner_thread(void *userdata)
 				minmax = 0x400000;
 				break;
 			case ALGO_LYRA2:
+			case ALGO_SCRYPT:
+			case ALGO_SCRYPT_JANE:
 				minmax = 0x100000;
 				break;
 			case ALGO_PLUCK:
@@ -1524,6 +1549,16 @@ static void *miner_thread(void *userdata)
 		case ALGO_PLUCK:
 			rc = scanhash_pluck(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_SCRYPT:
+			rc = scanhash_scrypt(thr_id, work.data, work.target, NULL,
+			                      max_nonce, &hashes_done, &tv_start, &tv_end);
+			break;
+
+		case ALGO_SCRYPT_JANE:
+			rc = scanhash_scrypt_jane(thr_id, work.data, work.target, NULL,
+			                      max_nonce, &hashes_done, &tv_start, &tv_end);
 			break;
 
 		case ALGO_SKEIN:
@@ -1942,15 +1977,29 @@ void parse_arg(int key, char *arg)
 
 	switch(key) {
 	case 'a':
+		p = strstr(arg, ":"); // optional factor
+		if (p) *p = '\0';
 		for (i = 0; i < ARRAY_SIZE(algo_names); i++) {
-			if (algo_names[i] &&
-			    !strcmp(arg, algo_names[i])) {
+			if (algo_names[i] && !strcasecmp(arg, algo_names[i])) {
 				opt_algo = (enum sha_algos)i;
 				break;
 			}
 		}
 		if (i == ARRAY_SIZE(algo_names))
 			show_usage_and_exit(1);
+		if (p) {
+			opt_nfactor = atoi(p + 1);
+			if (opt_algo == ALGO_SCRYPT_JANE) {
+				free(jane_params);
+				jane_params = strdup(p+1);
+			}
+		}
+		if (!opt_nfactor) {
+			switch (opt_algo) {
+			case ALGO_SCRYPT:      opt_nfactor = 9;  break;
+			case ALGO_SCRYPT_JANE: opt_nfactor = 14; break;
+			}
+		}
 		break;
 	case 'b':
 		p = strstr(arg, ":");
@@ -2404,6 +2453,8 @@ int main(int argc, char *argv[])
 	rpc_pass = strdup("");
 	rpc_url = strdup("");
 
+	jane_params = strdup("");
+
 	pthread_mutex_init(&applog_lock, NULL);
 
 	// number of cpus for thread affinity
@@ -2423,9 +2474,17 @@ int main(int argc, char *argv[])
 	if (num_cpus < 1)
 		num_cpus = 1;
 
-	// default thread to device map
 	for (i = 0; i < MAX_GPUS; i++) {
 		device_map[i] = i;
+		device_name[i] = NULL;
+		// for future use, maybe
+		device_interactive[i] = -1;
+		device_batchsize[i] = 1024;
+		device_backoff[i] = is_windows() ? 12 : 2;
+		device_lookup_gap[i] = 1;
+		device_texturecache[i] = -1;
+		device_singlememory[i] = -1;
+		device_config[i] = NULL;
 	}
 
 	// number of gpus

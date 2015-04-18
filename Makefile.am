@@ -18,7 +18,7 @@ bin_PROGRAMS = ccminer
 ccminer_SOURCES	= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
-			  crc32.c hefty1.c scrypt.c \
+			  crc32.c hefty1.c \
 			  ccminer.cpp util.cpp \
 			  api.cpp hashlog.cpp nvml.cpp stats.cpp sysinfos.cpp cuda.cpp \
 			  heavy/heavy.cu \
@@ -56,6 +56,13 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x15/whirlpool.cu x15/whirlpoolx.cu x15/cuda_whirlpoolx.cu \
 			  x17/x17.cu x17/cuda_x17_haval512.cu x17/cuda_x17_sha512.cu \
 			  x11/s3.cu
+
+# scrypt
+ccminer_SOURCES += scrypt.cpp scrypt-jane.cpp \
+    scrypt/blake.cu scrypt/keccak.cu scrypt/sha256.cu \
+    scrypt/salsa_kernel.cu scrypt/test_kernel.cu \
+    scrypt/fermi_kernel.cu scrypt/kepler_kernel.cu \
+    scrypt/nv_kernel.cu scrypt/nv_kernel2.cu scrypt/titan_kernel.cu
 
 if HAVE_NVML
 nvml_defs = -DUSE_WRAPNVML
@@ -117,6 +124,10 @@ quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
 	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
+
+# This kernel need also an older SM to be able to autotune kernels
+scrypt/salsa_kernel.o: scrypt/salsa_kernel.cu
+	$(NVCC) $(nvcc_FLAGS) -gencode=arch=compute_20,code=\"sm_21,compute_20\" --maxrregcount=80 -o $@ -c $<
 
 skein.o: skein.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<

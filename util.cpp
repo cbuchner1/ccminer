@@ -1788,6 +1788,9 @@ void print_hash_tests(void)
 	qubithash(&hash[0], &buf[0]);
 	printpfx("qubit", hash);
 
+	scrypthash(&hash[0], &buf[0]);
+	printpfx("scrypt", hash);
+
 	skeincoinhash(&hash[0], &buf[0]);
 	printpfx("skein", hash);
 

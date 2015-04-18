@@ -272,8 +272,6 @@ void sha256_transform_8way(uint32_t *state, const uint32_t *block, int swap);
 extern int scanhash_sha256d(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done);
 
-extern unsigned char *scrypt_buffer_alloc();
-
 extern int scanhash_deep(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -343,8 +341,12 @@ extern int scanhash_qubit(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done);
 
 extern int scanhash_scrypt(int thr_id, uint32_t *pdata,
-	unsigned char *scratchbuf, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done);
+	const uint32_t *ptarget, unsigned char *scratchbuf, uint32_t max_nonce,
+	unsigned long *hashes_done, struct timeval *tv_start, struct timeval *tv_end);
+
+extern int scanhash_scrypt_jane(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, unsigned char *scratchbuf, uint32_t max_nonce,
+	unsigned long *hashes_done, struct timeval *tv_start, struct timeval *tv_end);
 
 extern int scanhash_skeincoin(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
@@ -683,6 +685,7 @@ void pentablakehash(void *output, const void *input);
 void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const int N);
 void quarkhash(void *state, const void *input);
 void qubithash(void *state, const void *input);
+void scrypthash(void* output, const void* input);
 void skeincoinhash(void *output, const void *input);
 void skein2hash(void *output, const void *input);
 void s3hash(void *output, const void *input);
