@@ -189,16 +189,18 @@ short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 
+// un-implemented scrypt options
 int device_interactive[MAX_GPUS] = { 0 };
 int device_batchsize[MAX_GPUS] = { 0 };
-int device_backoff[MAX_GPUS] = { 0 };
-int device_lookup_gap[MAX_GPUS] = { 0 };
 int device_texturecache[MAX_GPUS] = { 0 };
 int device_singlememory[MAX_GPUS] = { 0 };
+// implemented scrypt options
+int parallel = 2; // All should be made on GPU
 char *device_config[MAX_GPUS] = { 0 };
+int device_backoff[MAX_GPUS] = { 0 };
+int device_lookup_gap[MAX_GPUS] = { 0 };
 int opt_nfactor = 0;
-int parallel = 2;
-bool autotune = true;
+bool opt_autotune = true;
 bool abort_flag = false;
 char *jane_params = NULL;
 
@@ -345,7 +347,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:i:Dhp:Px:mnqr:R:s:t:T:o:u:O:Vd:f:v:N:b:";
+	"a:c:i:Dhp:Px:mnqr:R:s:t:T:o:u:O:Vd:f:v:N:b:l:L:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -368,6 +370,9 @@ static struct option const options[] = {
 	{ "no-gbt", 0, NULL, 1011 },
 	{ "no-longpoll", 0, NULL, 1003 },
 	{ "no-stratum", 0, NULL, 1007 },
+	{ "no-autotune", 0, NULL, 1004 },  // scrypt
+	{ "launch-config", 0, NULL, 'l' }, // scrypt
+	{ "lookup-gap", 0, NULL, 'L' },    // scrypt
 	{ "pass", 1, NULL, 'p' },
 	{ "protocol-dump", 0, NULL, 'P' },
 	{ "proxy", 1, NULL, 'x' },
@@ -392,6 +397,16 @@ static struct option const options[] = {
 	{ "diff", 1, NULL, 'f' },
 	{ 0, 0, 0, 0 }
 };
+
+static char const scrypt_usage[] = "\n\
+Scrypt specific options:\n\
+  -l, --launch-config   gives the launch configuration for each kernel\n\
+                        in a comma separated list, one per device.\n\
+  -L, --lookup-gap      Divides the per-hash memory requirement by this factor\n\
+                        by storing only every N'th value in the scratchpad.\n\
+                        Default is 1.\n\
+      --no-autotune     disable auto-tuning of kernel launch parameters\n\
+";
 
 struct work _ALIGN(64) g_work;
 time_t g_work_time;
@@ -1966,6 +1981,9 @@ static void show_usage_and_exit(int status)
 		fprintf(stderr, "Try `" PROGRAM_NAME " --help' for more information.\n");
 	else
 		printf(usage);
+	if (opt_algo == ALGO_SCRYPT || opt_algo == ALGO_SCRYPT_JANE) {
+		printf(scrypt_usage);
+	}
 	proper_exit(status);
 }
 
@@ -2227,6 +2245,33 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1002:
 		use_colors = false;
+		break;
+	case 1004:
+		opt_autotune = false;
+		break;
+	case 'l': /* scrypt --launch-config */
+		{
+			char *last = NULL, *pch = strtok(arg,",");
+			int n = 0;
+			while (pch != NULL) {
+				device_config[n++] = last = strdup(pch);
+				pch = strtok(NULL, ",");
+			}
+			while (n < MAX_GPUS)
+				device_config[n++] = last;
+		}
+		break;
+	case 'L': /* scrypt --lookup-gap */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0, last = 0;
+			while (pch != NULL) {
+				device_lookup_gap[n++] = last = atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+			while (n < MAX_GPUS)
+				device_lookup_gap[n++] = last;
+		}
 		break;
 	case 1005:
 		opt_benchmark = true;

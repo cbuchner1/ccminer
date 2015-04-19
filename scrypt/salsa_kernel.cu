@@ -526,7 +526,7 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 		if (device_config[thr_id] != NULL && strcasecmp("auto", device_config[thr_id]))
 			applog(LOG_WARNING, "GPU #%d: Given launch config '%s' does not validate.", device_map[thr_id], device_config[thr_id]);
 
-		if (autotune)
+		if (opt_autotune)
 		{
 			applog(LOG_INFO, "GPU #%d: Performing auto-tuning, please wait 2 minutes...", device_map[thr_id]);
 
