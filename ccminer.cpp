@@ -191,8 +191,7 @@ short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 
-// un-implemented scrypt options
-int device_interactive[MAX_GPUS] = { 0 };
+// un-linked to cmdline scrypt options (useless)
 int device_batchsize[MAX_GPUS] = { 0 };
 int device_texturecache[MAX_GPUS] = { 0 };
 int device_singlememory[MAX_GPUS] = { 0 };
@@ -201,6 +200,7 @@ int parallel = 2; // All should be made on GPU
 char *device_config[MAX_GPUS] = { 0 };
 int device_backoff[MAX_GPUS] = { 0 };
 int device_lookup_gap[MAX_GPUS] = { 0 };
+int device_interactive[MAX_GPUS] = { 0 };
 int opt_nfactor = 0;
 bool opt_autotune = true;
 bool abort_flag = false;
@@ -375,6 +375,7 @@ static struct option const options[] = {
 	{ "no-longpoll", 0, NULL, 1003 },
 	{ "no-stratum", 0, NULL, 1007 },
 	{ "no-autotune", 0, NULL, 1004 },  // scrypt
+	{ "interactive", 1, NULL, 1050 },  // scrypt
 	{ "launch-config", 0, NULL, 'l' }, // scrypt
 	{ "lookup-gap", 0, NULL, 'L' },    // scrypt
 	{ "pass", 1, NULL, 'p' },
@@ -410,6 +411,9 @@ Scrypt specific options:\n\
   -L, --lookup-gap      Divides the per-hash memory requirement by this factor\n\
                         by storing only every N'th value in the scratchpad.\n\
                         Default is 1.\n\
+      --interactive     comma separated list of flags (0/1) specifying\n\
+                        which of the CUDA device you need to run at inter-\n\
+                        active frame rates (because it drives a display).\n\
       --no-autotune     disable auto-tuning of kernel launch parameters\n\
 ";
 
@@ -2309,13 +2313,25 @@ void parse_arg(int key, char *arg)
 	case 'L': /* scrypt --lookup-gap */
 		{
 			char *pch = strtok(arg,",");
-			int n = 0, last = 0;
+			int n = 0, last = atoi(arg);
 			while (pch != NULL) {
 				device_lookup_gap[n++] = last = atoi(pch);
 				pch = strtok(NULL, ",");
 			}
 			while (n < MAX_GPUS)
 				device_lookup_gap[n++] = last;
+		}
+		break;
+	case 1050: /* scrypt --interactive */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0, last = atoi(arg);
+			while (pch != NULL) {
+				device_interactive[n++] = last = atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+			while (n < MAX_GPUS)
+				device_interactive[n++] = last;
 		}
 		break;
 	case 1005:
@@ -2582,14 +2598,13 @@ int main(int argc, char *argv[])
 	for (i = 0; i < MAX_GPUS; i++) {
 		device_map[i] = i;
 		device_name[i] = NULL;
-		// for future use, maybe
-		device_interactive[i] = -1;
-		device_batchsize[i] = 1024;
+		device_config[i] = NULL;
 		device_backoff[i] = is_windows() ? 12 : 2;
 		device_lookup_gap[i] = 1;
+		device_batchsize[i] = 1024;
+		device_interactive[i] = -1;
 		device_texturecache[i] = -1;
 		device_singlememory[i] = -1;
-		device_config[i] = NULL;
 	}
 
 	// number of gpus

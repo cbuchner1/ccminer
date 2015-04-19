@@ -307,9 +307,6 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 	checkCudaErrors(cudaGetDeviceProperties(&props, device_map[thr_id]));
 	concurrent = (props.concurrentKernels > 0);
 
-	device_name[thr_id] = strdup(props.name);
-	applog(LOG_INFO, "GPU #%d: %s with SM %d.%d", device_map[thr_id], props.name, props.major, props.minor);
-
 	WARPS_PER_BLOCK = -1;
 
 	// if not specified, use interactive mode for devices that have the watchdog timer enabled
@@ -375,10 +372,12 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 		device_lookup_gap[thr_id] = 1;
 	}
 
-	applog(LOG_INFO, "GPU #%d: interactive: %d, tex-cache: %d%s, single-alloc: %d", device_map[thr_id],
+	if (opt_debug) {
+		applog(LOG_INFO, "GPU #%d: interactive: %d, tex-cache: %d%s, single-alloc: %d", device_map[thr_id],
 		   (device_interactive[thr_id]  != 0) ? 1 : 0,
 		   (device_texturecache[thr_id] != 0) ? device_texturecache[thr_id] : 0, (device_texturecache[thr_id] != 0) ? "D" : "",
 		   (device_singlememory[thr_id] != 0) ? 1 : 0 );
+	}
 
 	// number of threads collaborating on one work unit (hash)
 	unsigned int THREADS_PER_WU = kernel->threads_per_wu();
@@ -814,7 +813,7 @@ void cuda_scrypt_serialize(int thr_id, int stream)
 {
 	// if the device can concurrently execute multiple kernels, then we must
 	// wait for the serialization event recorded by the other stream
-	//if (context_concurrent[thr_id] || device_interactive[thr_id])
+	if (context_concurrent[thr_id] || device_interactive[thr_id])
 		cudaStreamWaitEvent(context_streams[stream][thr_id], context_serialize[(stream+1)&1][thr_id], 0);
 }
 

@@ -137,6 +137,9 @@ its command line interface and options.
 Scrypt specific options:
   -l, --launch-config   gives the launch configuration for each kernel
                         in a comma separated list, one per device.
+      --interactive     comma separated list of flags (0/1) specifying
+                        which of the CUDA device you need to run at inter-
+                        active frame rates (because it drives a display).
   -L, --lookup-gap      Divides the per-hash memory requirement by this factor
                         by storing only every N'th value in the scratchpad.
                         Default is 1.
