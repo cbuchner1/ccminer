@@ -70,6 +70,7 @@ nvml_handle *hnvml = NULL;
 enum workio_commands {
 	WC_GET_WORK,
 	WC_SUBMIT_WORK,
+	WC_ABORT,
 };
 
 struct workio_cmd {
@@ -171,6 +172,7 @@ static bool opt_background = false;
 bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
+static int opt_time_limit = 0;
 int opt_timeout = 270;
 static int opt_scantime = 10;
 static json_t *opt_config;
@@ -220,6 +222,7 @@ int stratum_thr_id = -1;
 int api_thr_id = -1;
 bool stratum_need_reset = false;
 struct work_restart *work_restart = NULL;
+static int app_exit_code = EXIT_CODE_OK;
 struct stratum_ctx stratum = { 0 };
 uint32_t zr5_pok = 0;
 
@@ -306,6 +309,7 @@ Options:\n\
   -r, --retries=N       number of times to retry if a network call fails\n\
                           (default: retry indefinitely)\n\
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 30)\n\
+      --time-limit      maximum time [s] to mine before exiting the program.\n\
   -T, --timeout=N       network timeout, in seconds (default: 270)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
                           long polling is unavailable, in seconds (default: 10)\n\
@@ -383,8 +387,9 @@ static struct option const options[] = {
 	{ "statsavg", 1, NULL, 'N' },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
-	{ "syslog-prefix", 1, NULL, 1008 },
+	{ "syslog-prefix", 1, NULL, 1018 },
 #endif
+	{ "time-limit", 1, NULL, 1008 },
 	{ "threads", 1, NULL, 't' },
 	{ "vote", 1, NULL, 'v' },
 	{ "trust-pool", 0, NULL, 'm' },
@@ -475,7 +480,12 @@ void get_currentalgo(char* buf, int sz)
 void proper_exit(int reason)
 {
 	abort_flag = true;
+	usleep(200 * 1000);
 	cuda_devicereset();
+
+	if (reason == EXIT_CODE_OK && app_exit_code != EXIT_CODE_OK) {
+		reason = app_exit_code;
+	}
 
 	if (check_dups)
 		hashlog_purge_all();
@@ -947,6 +957,23 @@ static void workio_cmd_free(struct workio_cmd *wc)
 	free(wc);
 }
 
+static void workio_abort()
+{
+	struct workio_cmd *wc;
+
+	/* fill out work request message */
+	wc = (struct workio_cmd *)calloc(1, sizeof(*wc));
+	if (!wc)
+		return;
+
+	wc->cmd = WC_ABORT;
+
+	/* send work request to workio thread */
+	if (!tq_push(thr_info[work_thr_id].q, wc)) {
+		workio_cmd_free(wc);
+	}
+}
+
 static bool workio_get_work(struct workio_cmd *wc, CURL *curl)
 {
 	struct work *ret_work;
@@ -1028,7 +1055,7 @@ static void *workio_thread(void *userdata)
 		case WC_SUBMIT_WORK:
 			ok = workio_submit_work(wc, curl);
 			break;
-
+		case WC_ABORT:
 		default:		/* should never happen */
 			ok = false;
 			break;
@@ -1245,6 +1272,7 @@ static void *miner_thread(void *userdata)
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
 	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) - (thr_id + 1);
+	time_t firstwork_time = 0;
 	bool work_done = false;
 	bool extrajob = false;
 	char s[16];
@@ -1398,6 +1426,20 @@ static void *miner_thread(void *userdata)
 			max64 = LP_SCANTIME;
 		else
 			max64 = max(1, scan_time + g_work_time - time(NULL));
+
+		/* time limit */
+		if (opt_time_limit && firstwork_time) {
+			int passed = (int)(time(NULL) - firstwork_time);
+			int remain = (int)(opt_time_limit - passed);
+			if (remain < 0)  {
+				app_exit_code = EXIT_CODE_TIME_LIMIT;
+				abort_flag = true;
+				applog(LOG_NOTICE, "Mining timeout of %ds reached, exiting...", opt_time_limit);
+				workio_abort();
+				break;
+			}
+			if (remain < max64) max64 = remain;
+		}
 
 		max64 *= (uint32_t)thr_hashrates[thr_id];
 
@@ -1639,6 +1681,9 @@ static void *miner_thread(void *userdata)
 
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
+
+		if (firstwork_time == 0)
+			firstwork_time = time(NULL);
 
 		if (rc && opt_debug)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[0], swab32(nonceptr[0])); // data[19]
@@ -1972,7 +2017,7 @@ static void show_version_and_exit(void)
 		PTW32_VERSION_STRING,
 #endif
 		curl_version());
-	proper_exit(0);
+	proper_exit(EXIT_CODE_OK);
 }
 
 static void show_usage_and_exit(int status)
@@ -2057,7 +2102,7 @@ void parse_arg(int key, char *arg)
 #endif
 		if (!json_is_object(opt_config)) {
 			applog(LOG_ERR, "JSON decode of %s failed", arg);
-			proper_exit(1);
+			proper_exit(EXIT_CODE_USAGE);
 		}
 		break;
 	}
@@ -2114,7 +2159,7 @@ void parse_arg(int key, char *arg)
 		break;
 	case 'n': /* --ndevs */
 		cuda_print_devices();
-		proper_exit(0);
+		proper_exit(EXIT_CODE_OK);
 		break;
 	case 'q':
 		opt_quiet = true;
@@ -2281,7 +2326,7 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1006:
 		print_hash_tests();
-		proper_exit(0);
+		proper_exit(EXIT_CODE_OK);
 		break;
 	case 1003:
 		want_longpoll = false;
@@ -2289,11 +2334,14 @@ void parse_arg(int key, char *arg)
 	case 1007:
 		want_stratum = false;
 		break;
+	case 1008:
+		opt_time_limit = atoi(arg);
+		break;
 	case 1011:
 		allow_gbt = false;
 		break;
 	case 'S':
-	case 1008:
+	case 1018:
 		applog(LOG_INFO, "Now logging to syslog...");
 		use_syslog = true;
 		if (arg && strlen(arg)) {
@@ -2327,7 +2375,7 @@ void parse_arg(int key, char *arg)
 						device_map[opt_n_threads++] = atoi(pch);
 					else {
 						applog(LOG_ERR, "Non-existant CUDA device #%d specified in -d option", atoi(pch));
-						proper_exit(1);
+						proper_exit(EXIT_CODE_CUDA_NODEVICE);
 					}
 				} else {
 					int device = cuda_finddevice(pch);
@@ -2335,7 +2383,7 @@ void parse_arg(int key, char *arg)
 						device_map[opt_n_threads++] = device;
 					else {
 						applog(LOG_ERR, "Non-existant CUDA device '%s' specified in -d option", pch);
-						proper_exit(1);
+						proper_exit(EXIT_CODE_CUDA_NODEVICE);
 					}
 				}
 				// set number of active gpus
@@ -2451,11 +2499,11 @@ static void signal_handler(int sig)
 	case SIGINT:
 		signal(sig, SIG_IGN);
 		applog(LOG_INFO, "SIGINT received, exiting");
-		proper_exit(0);
+		proper_exit(EXIT_CODE_KILLED);
 		break;
 	case SIGTERM:
 		applog(LOG_INFO, "SIGTERM received, exiting");
-		proper_exit(0);
+		proper_exit(EXIT_CODE_KILLED);
 		break;
 	}
 }
@@ -2465,11 +2513,23 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 	switch (dwType) {
 	case CTRL_C_EVENT:
 		applog(LOG_INFO, "CTRL_C_EVENT received, exiting");
-		proper_exit(0);
+		proper_exit(EXIT_CODE_KILLED);
 		break;
 	case CTRL_BREAK_EVENT:
 		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
-		proper_exit(0);
+		proper_exit(EXIT_CODE_KILLED);
+		break;
+	case CTRL_CLOSE_EVENT:
+		applog(LOG_INFO, "CTRL_CLOSE_EVENT received, exiting");
+		proper_exit(EXIT_CODE_KILLED);
+		break;
+	case CTRL_LOGOFF_EVENT:
+		applog(LOG_INFO, "CTRL_LOGOFF_EVENT received, exiting");
+		proper_exit(EXIT_CODE_KILLED);
+		break;
+	case CTRL_SHUTDOWN_EVENT:
+		applog(LOG_INFO, "CTRL_SHUTDOWN_EVENT received, exiting");
+		proper_exit(EXIT_CODE_KILLED);
 		break;
 	default:
 		return false;
@@ -2582,14 +2642,14 @@ int main(int argc, char *argv[])
 	      : CURL_GLOBAL_ALL;
 	if (curl_global_init(flags)) {
 		applog(LOG_ERR, "CURL initialization failed");
-		return 1;
+		return EXIT_CODE_SW_INIT_ERROR;
 	}
 
 #ifndef WIN32
 	if (opt_background) {
 		i = fork();
-		if (i < 0) exit(1);
-		if (i > 0) exit(0);
+		if (i < 0) proper_exit(EXIT_CODE_SW_INIT_ERROR);
+		if (i > 0) proper_exit(EXIT_CODE_OK);
 		i = setsid();
 		if (i < 0)
 			applog(LOG_ERR, "setsid() failed (errno = %d)", errno);
@@ -2643,15 +2703,15 @@ int main(int argc, char *argv[])
 
 	work_restart = (struct work_restart *)calloc(opt_n_threads, sizeof(*work_restart));
 	if (!work_restart)
-		return 1;
+		return EXIT_CODE_SW_INIT_ERROR;
 
 	thr_info = (struct thr_info *)calloc(opt_n_threads + 4, sizeof(*thr));
 	if (!thr_info)
-		return 1;
+		return EXIT_CODE_SW_INIT_ERROR;
 
 	thr_hashrates = (double *) calloc(opt_n_threads, sizeof(double));
 	if (!thr_hashrates)
-		return 1;
+		return EXIT_CODE_SW_INIT_ERROR;
 
 	/* init workio thread info */
 	work_thr_id = opt_n_threads;
@@ -2659,12 +2719,12 @@ int main(int argc, char *argv[])
 	thr->id = work_thr_id;
 	thr->q = tq_new();
 	if (!thr->q)
-		return 1;
+		return EXIT_CODE_SW_INIT_ERROR;
 
 	/* start work I/O thread */
 	if (pthread_create(&thr->pth, NULL, workio_thread, thr)) {
 		applog(LOG_ERR, "workio thread create failed");
-		return 1;
+		return EXIT_CODE_SW_INIT_ERROR;
 	}
 
 	if (want_longpoll && !have_stratum) {
@@ -2674,12 +2734,12 @@ int main(int argc, char *argv[])
 		thr->id = longpoll_thr_id;
 		thr->q = tq_new();
 		if (!thr->q)
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 
 		/* start longpoll thread */
 		if (unlikely(pthread_create(&thr->pth, NULL, longpoll_thread, thr))) {
 			applog(LOG_ERR, "longpoll thread create failed");
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 		}
 	}
 
@@ -2690,12 +2750,12 @@ int main(int argc, char *argv[])
 		thr->id = stratum_thr_id;
 		thr->q = tq_new();
 		if (!thr->q)
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 
 		/* start stratum thread */
 		if (unlikely(pthread_create(&thr->pth, NULL, stratum_thread, thr))) {
 			applog(LOG_ERR, "stratum thread create failed");
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 		}
 
 		if (have_stratum)
@@ -2723,12 +2783,12 @@ int main(int argc, char *argv[])
 		thr->id = api_thr_id;
 		thr->q = tq_new();
 		if (!thr->q)
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 
 		/* start stratum thread */
 		if (unlikely(pthread_create(&thr->pth, NULL, api_thread, thr))) {
 			applog(LOG_ERR, "api thread create failed");
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 		}
 	}
 
@@ -2742,11 +2802,11 @@ int main(int argc, char *argv[])
 		thr->gpu.gpu_arch = (uint16_t) device_sm[device_map[i]];
 		thr->q = tq_new();
 		if (!thr->q)
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 
 		if (unlikely(pthread_create(&thr->pth, NULL, miner_thread, thr))) {
 			applog(LOG_ERR, "thread %d create failed", i);
-			return 1;
+			return EXIT_CODE_SW_INIT_ERROR;
 		}
 	}
 
@@ -2764,7 +2824,7 @@ int main(int argc, char *argv[])
 
 	applog(LOG_INFO, "workio thread dead, exiting.");
 
-	proper_exit(0);
+	proper_exit(EXIT_CODE_OK);
 
 	return 0;
 }

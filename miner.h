@@ -657,6 +657,15 @@ extern void *tq_pop(struct thread_q *tq, const struct timespec *abstime);
 extern void tq_freeze(struct thread_q *tq);
 extern void tq_thaw(struct thread_q *tq);
 
+#define EXIT_CODE_OK            0
+#define EXIT_CODE_USAGE         1
+#define EXIT_CODE_POOL_TIMEOUT  2
+#define EXIT_CODE_SW_INIT_ERROR 3
+#define EXIT_CODE_CUDA_NODEVICE 4
+#define EXIT_CODE_CUDA_ERROR    5
+#define EXIT_CODE_TIME_LIMIT    0
+#define EXIT_CODE_KILLED        7
+
 void parse_arg(int key, char *arg);
 void proper_exit(int reason);
 void restart_threads(void);

@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.1-tpruvot (Apr 2015) - "Skein512 Chainsaw"
+ccMiner release 1.6.2-tpruvot (May 2015) - "Scrypt algos (dev)"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -78,7 +78,8 @@ its command line interface and options.
                           penta       use to mine Joincoin / Pentablake
                           pluck       use to mine Supcoin
                           quark       use to mine Quarkcoin
-                          qubit       use to mine Qubit Algo
+                          qubit       use to mine Qubit
+                          scrypt      use to mine Scrypt
                           s3          use to mine 1coin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
@@ -108,6 +109,7 @@ its command line interface and options.
   -r, --retries=N       number of times to retry if a network call fails
                           (default: retry indefinitely)
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 15)
+      --time-limit      maximum time [s] to mine before exiting the program.
   -T, --timeout=N       network timeout, in seconds (default: 270)
   -s, --scantime=N      upper bound on time spent scanning current work when
                         long polling is unavailable, in seconds (default: 5)
@@ -130,6 +132,15 @@ its command line interface and options.
   -c, --config=FILE     load a JSON-format configuration file
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
+
+
+Scrypt specific options:
+  -l, --launch-config   gives the launch configuration for each kernel
+                        in a comma separated list, one per device.
+  -L, --lookup-gap      Divides the per-hash memory requirement by this factor
+                        by storing only every N'th value in the scratchpad.
+                        Default is 1.
+      --no-autotune     disable auto-tuning of kernel launch parameters
 
 
 >>> Examples <<<
