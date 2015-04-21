@@ -114,20 +114,37 @@ x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
 quark/cuda_quark_blake512.o: quark/cuda_quark_blake512.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
 quark/cuda_quark_keccak512.o: quark/cuda_quark_keccak512.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=88 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=88 -o $@ -c $<
 
 quark/cuda_quark_compactionTest.o: quark/cuda_quark_compactionTest.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
 JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
-	$(NVCC) $(nvcc_FLAGS) -I cudpp-2.1/include --maxrregcount=80 -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
-# This kernel need also an older SM to be able to autotune kernels
+# This object does not use cuda device code but call the different kernels (autotune)
 scrypt/salsa_kernel.o: scrypt/salsa_kernel.cu
-	$(NVCC) -I . -gencode=arch=compute_20,code=\"sm_21,compute_20\" -o $@ -c $<
+	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_20,code=\"sm_21,compute_20\" -o $@ -c $<
+
+# These kernels are for older devices (SM)
+
+scrypt/test_kernel.o: scrypt/test_kernel.cu
+	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_20,code=\"sm_20,compute_20\" -o $@ -c $<
+
+scrypt/fermi_kernel.o: scrypt/fermi_kernel.cu
+	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_20,code=\"sm_21,compute_20\" -o $@ -c $<
+
+scrypt/kepler_kernel.o: scrypt/kepler_kernel.cu
+	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
+
+scrypt/nv_kernel.o: scrypt/nv_kernel.cu
+	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
+
+scrypt/titan_kernel.o: scrypt/titan_kernel.cu
+	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
 
 skein.o: skein.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
