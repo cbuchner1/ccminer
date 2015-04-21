@@ -80,7 +80,7 @@ ccminer_CPPFLAGS = @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(CPPFLAGS) $(PTHREAD_FLAG
 nvcc_ARCH  = -gencode=arch=compute_50,code=\"sm_50,compute_50\"
 nvcc_ARCH += -gencode=arch=compute_52,code=\"sm_52,compute_52\"
 
-#nvcc_ARCH = -gencode=arch=compute_35,code=\"sm_35,compute_35\"
+nvcc_ARCH += -gencode=arch=compute_35,code=\"sm_35,compute_35\"
 #nvcc_ARCH = -gencode=arch=compute_30,code=\"sm_30,compute_30\"
 #nvcc_ARCH = -gencode=arch=compute_20,code=\"sm_21,compute_20\"
 
@@ -144,7 +144,7 @@ scrypt/nv_kernel.o: scrypt/nv_kernel.cu
 	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
 
 scrypt/titan_kernel.o: scrypt/titan_kernel.cu
-	$(NVCC) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
+	$(NVCC) $(nvcc_FLAGS) -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
 
 skein.o: skein.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
