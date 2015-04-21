@@ -359,7 +359,6 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 
 	if (!init[thr_id])
 	{
-		cudaDeviceReset();
 		cudaSetDevice(device_map[thr_id]);
 
 		cudaMalloc(&d_hash[thr_id], throughput * 64U);

@@ -82,9 +82,9 @@ void cuda_print_devices()
 	}
 }
 
-// Can't be called directly in cpu-miner.c
-void cuda_devicereset()
+void cuda_shutdown()
 {
+	cudaDeviceSynchronize();
 	cudaDeviceReset();
 }
 
@@ -171,6 +171,20 @@ int cuda_gpu_clocks(struct cgpu_info *gpu)
 		return 0;
 	}
 	return -1;
+}
+
+// if we use 2 threads on the same gpu, we need to reinit the threads
+void cuda_reset_device(int thr_id, bool *init)
+{
+	int dev_id = device_map[thr_id];
+	for (int i=0; i < MAX_GPUS; i++) {
+		if (device_map[i] == dev_id) {
+			init[i] = false;
+		}
+	}
+	restart_threads();
+	cudaDeviceSynchronize();
+	cudaDeviceReset();
 }
 
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)

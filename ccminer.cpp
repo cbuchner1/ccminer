@@ -58,7 +58,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 // from cuda.cpp
 int cuda_num_devices();
 void cuda_devicenames();
-void cuda_devicereset();
+void cuda_shutdown();
 int cuda_finddevice(char *name);
 void cuda_print_devices();
 
@@ -485,7 +485,7 @@ void proper_exit(int reason)
 {
 	abort_flag = true;
 	usleep(200 * 1000);
-	cuda_devicereset();
+	cuda_shutdown();
 
 	if (reason == EXIT_CODE_OK && app_exit_code != EXIT_CODE_OK) {
 		reason = app_exit_code;

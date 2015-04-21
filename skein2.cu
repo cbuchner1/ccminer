@@ -48,15 +48,14 @@ extern "C" int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptar
 
 	if (!init[thr_id])
 	{
-		cudaDeviceReset();
 		cudaSetDevice(device_map[thr_id]);
 
 		cudaMalloc(&d_hash[thr_id], throughput * 64U);
 
-                quark_skein512_cpu_init(thr_id, throughput);
-                cuda_check_cpu_init(thr_id, throughput);
+		quark_skein512_cpu_init(thr_id, throughput);
+		cuda_check_cpu_init(thr_id, throughput);
 
-                CUDA_SAFE_CALL(cudaDeviceSynchronize());
+		CUDA_SAFE_CALL(cudaDeviceSynchronize());
 
 		init[thr_id] = true;
 	}
