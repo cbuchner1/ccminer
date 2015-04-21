@@ -1703,6 +1703,10 @@ void do_gpu_tests(void)
 	//memcpy(buf, zrtest, 80);
 	//scanhash_zr5(0, (uint32_t*)buf, tgt, zrtest[19]+1, &done);
 
+	struct timeval tv;
+	memset(buf, 0, sizeof buf);
+	scanhash_scrypt_jane(0, (uint32_t*)buf, tgt, NULL, 1, &done, &tv, &tv);
+
 	memset(buf, 0, sizeof buf);
 	scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
 
@@ -1790,6 +1794,9 @@ void print_hash_tests(void)
 
 	scrypthash(&hash[0], &buf[0]);
 	printpfx("scrypt", hash);
+
+	scryptjane_hash(&hash[0], &buf[0]);
+	printpfx("scrypt-jane", hash);
 
 	skeincoinhash(&hash[0], &buf[0]);
 	printpfx("skein", hash);

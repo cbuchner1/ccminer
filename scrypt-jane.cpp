@@ -8,7 +8,7 @@
 
 #include "scrypt/scrypt-jane.h"
 #include "scrypt/code/scrypt-jane-portable.h"
-#include "scrypt/code/scrypt-jane-romix.h"
+#include "scrypt/code/scrypt-jane-chacha.h"
 #include "scrypt/keccak.h"
 
 #include "scrypt/salsa_kernel.h"
@@ -434,6 +434,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 	uint32_t max_nonce, unsigned long *hashes_done, struct timeval *tv_start, struct timeval *tv_end)
 {
 	const uint32_t Htarg = ptarget[7];
+	uint64_t N;
 
 	if (s_Nfactor == 0 && strlen(jane_params) > 0)
 		applog(LOG_INFO, "Given scrypt-jane parameters: %s", jane_params);
@@ -442,14 +443,12 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 	if (Nfactor > scrypt_maxN) {
 		scrypt_fatal_error("scrypt: N out of range");
 	}
+	N = (1 << (Nfactor + 1));
 
 	if (Nfactor != s_Nfactor)
 	{
-		// all of this isn't very thread-safe...
-		opt_nfactor = (1 << (Nfactor + 1));
-
-		applog(LOG_INFO, "Nfactor is %d (N=%d)!", Nfactor, opt_nfactor);
-
+		opt_nfactor = Nfactor;
+		applog(LOG_INFO, "N-factor is %d (%d)!", Nfactor, N);
 		if (s_Nfactor != 0) {
 			// handle N-factor increase at runtime
 			// by adjusting the lookup_gap by factor 2
@@ -480,7 +479,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 	if (parallel == 2) prepare_keccak512(thr_id, pdata);
 
 	scrypt_aligned_alloc Xbuf[2] = { scrypt_alloc(128 * throughput), scrypt_alloc(128 * throughput) };
-	scrypt_aligned_alloc Vbuf = scrypt_alloc((uint64_t)opt_nfactor * 128);
+	scrypt_aligned_alloc Vbuf = scrypt_alloc(N * 128);
 	scrypt_aligned_alloc Ybuf = scrypt_alloc(128);
 
 	uint32_t nonce[2];
@@ -498,6 +497,8 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 
 		if (parallel < 2)
 		{
+			// half of cpu
+
 			for(int i=0;i<throughput;++i) {
 				uint32_t tmp_nonce = n++;
 				data[nxt][20*i + 19] = bswap_32x4(tmp_nonce);
@@ -509,15 +510,13 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 			memcpy(cuda_X[nxt], Xbuf[nxt].ptr, 128 * throughput);
 			cuda_scrypt_serialize(thr_id, nxt);
 			cuda_scrypt_HtoD(thr_id, cuda_X[nxt], nxt);
-			cuda_scrypt_core(thr_id, nxt, opt_nfactor);
+			cuda_scrypt_core(thr_id, nxt, N);
 			cuda_scrypt_done(thr_id, nxt);
 
 			cuda_scrypt_DtoH(thr_id, cuda_X[nxt], nxt, false);
-
 			cuda_scrypt_flush(thr_id, nxt);
 
-			if(!cuda_scrypt_sync(thr_id, cur))
-			{
+			if(!cuda_scrypt_sync(thr_id, cur)) {
 				return -1;
 			}
 
@@ -553,21 +552,25 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 			}
 #endif
 		} else {
+
+			// all on gpu
+
 			n += throughput;
+			if (opt_debug && (iteration % 64 == 0))
+				applog(LOG_DEBUG, "GPU #%d: n=%x", device_map[thr_id], n);
 
 			cuda_scrypt_serialize(thr_id, nxt);
 			pre_keccak512(thr_id, nxt, nonce[nxt], throughput);
-			cuda_scrypt_core(thr_id, nxt, opt_nfactor);
-
-			cuda_scrypt_flush(thr_id, nxt);
+			cuda_scrypt_core(thr_id, nxt, N);
+			cuda_scrypt_flush(thr_id, nxt); // required
 
 			post_keccak512(thr_id, nxt, nonce[nxt], throughput);
 			cuda_scrypt_done(thr_id, nxt);
 
 			cuda_scrypt_DtoH(thr_id, hash[nxt], nxt, true);
+			cuda_scrypt_flush(thr_id, nxt); // seems required here
 
-			if(!cuda_scrypt_sync(thr_id, cur))
-			{
+			if (!cuda_scrypt_sync(thr_id, cur)) {
 				return -1;
 			}
 		}
@@ -587,7 +590,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 					tdata[19] = bswap_32x4(tmp_nonce);
 
 					scrypt_pbkdf2_1((unsigned char *)tdata, 80, (unsigned char *)tdata, 80, Xbuf[cur].ptr + 128 * i, 128);
-					scrypt_ROMix_1((scrypt_mix_word_t *)(Xbuf[cur].ptr + 128 * i), (scrypt_mix_word_t *)(Ybuf.ptr), (scrypt_mix_word_t *)(Vbuf.ptr), opt_nfactor);
+					scrypt_ROMix_1((scrypt_mix_word_t *)(Xbuf[cur].ptr + 128 * i), (scrypt_mix_word_t *)(Ybuf.ptr), (scrypt_mix_word_t *)(Vbuf.ptr), N);
 					scrypt_pbkdf2_1((unsigned char *)tdata, 80, Xbuf[cur].ptr + 128 * i, 128, (unsigned char *)thash, 32);
 
 					if (memcmp(thash, &hash[cur][8*i], 32) == 0)
@@ -623,4 +626,56 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 	pdata[19] = n;
 	gettimeofday(tv_end, NULL);
 	return 0;
+}
+
+
+static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, const uchar*salt, size_t salt_len, uint32_t N,
+	uchar *out, size_t bytes, uint8_t *X, uint8_t *Y, uint8_t *V)
+{
+	uint32_t chunk_bytes, i;
+	const uint32_t p = SCRYPT_P;
+
+#if !defined(SCRYPT_CHOOSE_COMPILETIME)
+	scrypt_ROMixfn scrypt_ROMix = scrypt_getROMix();
+#endif
+
+	chunk_bytes = SCRYPT_BLOCK_BYTES * SCRYPT_R * 2;
+
+	/* 1: X = PBKDF2(password, salt) */
+	scrypt_pbkdf2_1(password, password_len, salt, salt_len, X, chunk_bytes * p);
+
+	/* 2: X = ROMix(X) */
+	for (i = 0; i < p; i++)
+		scrypt_ROMix_1((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V, N);
+
+	/* 3: Out = PBKDF2(password, X) */
+	scrypt_pbkdf2_1(password, password_len, X, chunk_bytes * p, out, bytes);
+
+#ifdef SCRYPT_PREVENT_STATE_LEAK
+	/* This is an unnecessary security feature - mikaelh */
+	scrypt_ensure_zero(Y, (p + 1) * chunk_bytes);
+#endif
+}
+
+/* for cpu hash test */
+void scryptjane_hash(void* output, const void* input)
+{
+	uint64_t Nsize = 1ULL << (opt_nfactor + 1);
+	uint64_t chunk_bytes;
+	uint8_t *X, *Y;
+	scrypt_aligned_alloc YX, V;
+
+	chunk_bytes = 2ULL * SCRYPT_BLOCK_BYTES * SCRYPT_R;
+	V  = scrypt_alloc(Nsize * chunk_bytes);
+	YX = scrypt_alloc((SCRYPT_P + 1) * chunk_bytes);
+
+	memset(V.ptr, 0, Nsize * chunk_bytes);
+
+	Y = YX.ptr;
+	X = Y + chunk_bytes;
+
+	scrypt_jane_hash_1_1((uchar*)input, 80, (uchar*)input, 80, Nsize, (uchar*)output, 32, X, Y, V.ptr);
+
+	scrypt_free(&V);
+	scrypt_free(&YX);
 }

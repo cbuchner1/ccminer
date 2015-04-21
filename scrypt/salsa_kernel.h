@@ -40,8 +40,8 @@ static int scrypt_algo = -1;
 static __inline int get_scrypt_type() {
 	if (scrypt_algo != -1) return scrypt_algo;
 	get_currentalgo(algo, 64);
-	if (!strcasecmp(algo,"scrypt-jane")) scrypt_algo = A_SCRYPT_JANE;
-	else if (!strcasecmp(algo,"scrypt")) scrypt_algo = A_SCRYPT;
+	if (!strncasecmp(algo,"scrypt-jane",11)) scrypt_algo = A_SCRYPT_JANE;
+	else if (!strncasecmp(algo,"scrypt",6)) scrypt_algo = A_SCRYPT;
 	return scrypt_algo;
 }
 static __inline bool IS_SCRYPT() { get_scrypt_type(); return (scrypt_algo == A_SCRYPT); }
@@ -65,8 +65,6 @@ extern void cuda_do_keccak256(int thr_id, int stream, uint32_t *hash, uint32_t n
 
 extern bool cuda_prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);
 extern void cuda_do_blake256(int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h);
-
-extern void computeGold(uint32_t *idata, uint32_t *reference, uchar *scratchpad);
 
 extern bool default_prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);
 extern bool default_prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);

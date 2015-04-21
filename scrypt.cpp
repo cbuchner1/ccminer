@@ -682,12 +682,13 @@ static inline void PBKDF2_SHA256_128_32(uint32_t *tstate, uint32_t *ostate,
 }
 
 static int lastFactor = 0;
-//
+
+static void computeGold(uint32_t* const input, uint32_t *reference, uchar *scratchpad);
+
 // Scrypt proof of work algorithm
 // using SSE2 vectorized HMAC SHA256 on CPU and
 // a salsa core implementation on GPU with CUDA
 //
-
 int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsigned char *scratchbuf,
 	uint32_t max_nonce, unsigned long *hashes_done, struct timeval *tv_start, struct timeval *tv_end)
 {
@@ -989,9 +990,9 @@ static void xor_salsa8(uint32_t * const B, const uint32_t * const C)
 /**
  * @param X input/ouput
  * @param V scratch buffer
- * @param N factor
+ * @param N factor (def. 1024)
  */
-static void scrypt_core(uint32_t *X, uint32_t *V, int N)
+static void scrypt_core(uint32_t *X, uint32_t *V, uint32_t N)
 {
 	for (int i = 0; i < N; i++) {
 		memcpy(&V[i * 32], X, 128);
@@ -1013,11 +1014,11 @@ static void scrypt_core(uint32_t *X, uint32_t *V, int N)
  * @param reference  reference data, computed but preallocated
  * @param scratchpad scrypt scratchpad
  **/
-void computeGold(uint32_t* const input, uint32_t *reference, uchar *scratchpad)
+static void computeGold(uint32_t* const input, uint32_t *reference, uchar *scratchpad)
 {
 	uint32_t X[32] = { 0 };
 	uint32_t *V = (uint32_t*) scratchpad;
-	int N = (1<<(opt_nfactor+1)); // default 9 = 1024
+	uint32_t N = (1<<(opt_nfactor+1)); // default 9 = 1024
 
 	for (int k = 0; k < 32; k++)
 		X[k] = input[k];
@@ -1028,31 +1029,17 @@ void computeGold(uint32_t* const input, uint32_t *reference, uchar *scratchpad)
 		reference[k] = X[k];
 }
 
-static void scrypt_1024_1_1_256(const uint32_t *input, uint32_t *output,
-	uint32_t *midstate, unsigned char *scratchpad, int N)
-{
-	uint32_t tstate[8], ostate[8];
-	uint32_t X[32] = { 0 };
-	uint32_t *V = (uint32_t *) scratchpad;
-
-	memcpy(tstate, midstate, 32);
-	HMAC_SHA256_80_init(input, tstate, ostate);
-	PBKDF2_SHA256_80_128(tstate, ostate, input, X);
-
-	scrypt_core(X, V, N);
-
-	PBKDF2_SHA256_128_32(tstate, ostate, X, output);
-}
-
 /* cputest */
 void scrypthash(void* output, const void* input)
 {
 	uint32_t _ALIGN(64) X[32], ref[32] = { 0 }, tstate[8], ostate[8], midstate[8];
 	uint32_t _ALIGN(64) data[20];
-	uchar *scratchbuf = (uchar *) calloc(4 * 128 + 63, 1024);
+	uchar *scratchbuf;
 
 	// no default set with --cputest
 	if (opt_nfactor == 0) opt_nfactor = 9;
+
+	scratchbuf = (uchar*) calloc(4 * 128 + 63, 1UL << (opt_nfactor+1));
 
 	memcpy(data, input, 80);
 
@@ -1071,27 +1058,4 @@ void scrypthash(void* output, const void* input)
 	}
 
 	free(scratchbuf);
-}
-
-#define SCRYPT_MAX_WAYS 1
-/* cputest */
-void scrypthash2(void* output, const void* input)
-{
-	uint32_t midstate[8] = { 0 };
-	uint32_t data[SCRYPT_MAX_WAYS * 20] = { 0 };
-	uint32_t hash[SCRYPT_MAX_WAYS * 8] = { 0 };
-	uint32_t N = 1U << ((opt_nfactor ? opt_nfactor : 9) + 1); // default 1024
-
-	uchar* scratch = (uchar*) calloc(4 * 128 + 63, N); // scrypt_buffer_alloc(N);
-
-	memcpy(data, input, 80);
-
-	sha256_init(midstate);
-	sha256_transform(midstate, data, 0);
-
-	scrypt_1024_1_1_256(data, hash, midstate, scratch, N);
-
-	memcpy(output, hash, 32);
-
-	free(scratch);
 }

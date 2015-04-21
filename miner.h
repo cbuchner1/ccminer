@@ -695,6 +695,7 @@ void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const in
 void quarkhash(void *state, const void *input);
 void qubithash(void *state, const void *input);
 void scrypthash(void* output, const void* input);
+void scryptjane_hash(void* output, const void* input);
 void skeincoinhash(void *output, const void *input);
 void skein2hash(void *output, const void *input);
 void s3hash(void *output, const void *input);
