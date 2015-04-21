@@ -1,9 +1,6 @@
-
 //
 // Contains the autotuning logic and some utility functions.
 // Note that all CUDA kernels have been moved to other .cu files
-//
-// NOTE: compile this .cu module for compute_20,sm_21 with --maxrregcount=64
 //
 
 #include <stdio.h>
@@ -152,13 +149,6 @@ std::map<int, uint32_t *> context_hash[2];
 
 int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurrent, int &wpb);
 
-void cuda_shutdown(int thr_id)
-{
-	cudaDeviceSynchronize();
-	cudaDeviceReset();
-	cudaThreadExit();
-}
-
 int cuda_throughput(int thr_id)
 {
 	int GRID_BLOCKS, WARPS_PER_BLOCK;
@@ -215,7 +205,7 @@ int cuda_throughput(int thr_id)
 				checkCudaErrors(cudaMalloc((void **) &tmp, state_size)); context_hash[1][thr_id] = tmp;
 			}
 		}
-		else if (IS_SCRYPT_JANE())
+		else /* if (IS_SCRYPT_JANE()) */
 		{
 			// allocate pinned host memory for scrypt_core input/output
 			checkCudaErrors(cudaHostAlloc((void **) &tmp, mem_size, cudaHostAllocDefault)); context_X[0][thr_id] = tmp;
@@ -502,9 +492,7 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 		}
 		MAXWARPS[thr_id] = warp;
 	}
-	if (IS_SCRYPT() || IS_SCRYPT_JANE()) {
-		kernel->set_scratchbuf_constants(MAXWARPS[thr_id], h_V[thr_id]);
-	}
+	kernel->set_scratchbuf_constants(MAXWARPS[thr_id], h_V[thr_id]);
 
 	if (validate_config(device_config[thr_id], optimal_blocks, WARPS_PER_BLOCK))
 	{
@@ -531,28 +519,16 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 
 			// allocate device memory
 			uint32_t *d_idata = NULL, *d_odata = NULL;
-			if (IS_SCRYPT() || IS_SCRYPT_JANE()) {
-				unsigned int mem_size = MAXWARPS[thr_id] * WU_PER_WARP * sizeof(uint32_t) * 32;
-				checkCudaErrors(cudaMalloc((void **) &d_idata, mem_size));
-				checkCudaErrors(cudaMalloc((void **) &d_odata, mem_size));
+			unsigned int mem_size = MAXWARPS[thr_id] * WU_PER_WARP * sizeof(uint32_t) * 32;
+			checkCudaErrors(cudaMalloc((void **) &d_idata, mem_size));
+			checkCudaErrors(cudaMalloc((void **) &d_odata, mem_size));
 
-				// pre-initialize some device memory
-				uint32_t *h_idata = (uint32_t*)malloc(mem_size);
-				for (unsigned int i=0; i < mem_size/sizeof(uint32_t); ++i) h_idata[i] = i*2654435761UL; // knuth's method
-				checkCudaErrors(cudaMemcpy(d_idata, h_idata, mem_size, cudaMemcpyHostToDevice));
-				free(h_idata);
-			}
-#if 0
-			else if (opt_algo == ALGO_KECCAK) {
-				uint32_t pdata[20] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-				uint32_t ptarget[8] = {0,0,0,0,0,0,0,0};
-				kernel->prepare_keccak256(thr_id, pdata, ptarget);
-			} else if (opt_algo == ALGO_BLAKE) {
-				uint32_t pdata[20] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-				uint32_t ptarget[8] = {0,0,0,0,0,0,0,0};
-				kernel->prepare_blake256(thr_id, pdata, ptarget);
-			}
-#endif
+			// pre-initialize some device memory
+			uint32_t *h_idata = (uint32_t*)malloc(mem_size);
+			for (unsigned int i=0; i < mem_size/sizeof(uint32_t); ++i) h_idata[i] = i*2654435761UL; // knuth's method
+			checkCudaErrors(cudaMemcpy(d_idata, h_idata, mem_size, cudaMemcpyHostToDevice));
+			free(h_idata);
+
 			double best_hash_sec = 0.0;
 			int best_wpb = 0;
 
@@ -592,11 +568,10 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 							int repeat = 0;
 							do  // average several measurements for better exactness
 							{
-								if (IS_SCRYPT() || IS_SCRYPT_JANE())
-									kernel->run_kernel(
-										grid, threads, WARPS_PER_BLOCK, thr_id, NULL,
-										d_idata, d_odata, N, LOOKUP_GAP, device_interactive[thr_id], true, device_texturecache[thr_id]
-									);
+								kernel->run_kernel(
+									grid, threads, WARPS_PER_BLOCK, thr_id, NULL, d_idata, d_odata, N,
+									LOOKUP_GAP, device_interactive[thr_id], true, device_texturecache[thr_id]
+								);
 								if(cudaDeviceSynchronize() != cudaSuccess)
 									break;
 								++repeat;
@@ -609,8 +584,11 @@ int find_optimal_blockcount(int thr_id, KernelInterface* &kernel, bool &concurre
 
 							// for scrypt: in interactive mode only find launch configs where kernel launch times are short enough
 							// TODO: instead we could reduce the batchsize parameter to meet the launch time requirement.
-							if (IS_SCRYPT() && device_interactive[thr_id] && GRID_BLOCKS > 2*props.multiProcessorCount && tdelta > 1.0/30)
+							if (IS_SCRYPT() && device_interactive[thr_id]
+								&& GRID_BLOCKS > 2*props.multiProcessorCount && tdelta > 1.0/30)
+							{
 								if (WARPS_PER_BLOCK == 1) goto skip; else goto skip2;
+							}
 
 							hash_sec = (double)WU_PER_LAUNCH / tdelta;
 							Hash[WARPS_PER_BLOCK] = hash_sec;
@@ -668,10 +646,8 @@ skip2:              ;
 skip:           ;
 			}
 
-			if (IS_SCRYPT() || IS_SCRYPT_JANE()) {
-				checkCudaErrors(cudaFree(d_odata));
-				checkCudaErrors(cudaFree(d_idata));
-			}
+			checkCudaErrors(cudaFree(d_odata));
+			checkCudaErrors(cudaFree(d_idata));
 
 			WARPS_PER_BLOCK = best_wpb;
 			applog(LOG_INFO, "GPU #%d: %7.2f hash/s with configuration %c%dx%d", device_map[thr_id], best_hash_sec, kernel->get_identifier(), optimal_blocks, WARPS_PER_BLOCK);
@@ -775,9 +751,7 @@ skip:           ;
 				}
 
 				// update pointers to scratch buffer in constant memory after reallocation
-				if (IS_SCRYPT() || IS_SCRYPT_JANE()) {
-					kernel->set_scratchbuf_constants(MAXWARPS[thr_id], h_V[thr_id]);
-				}
+				kernel->set_scratchbuf_constants(MAXWARPS[thr_id], h_V[thr_id]);
 			}
 			else
 			{

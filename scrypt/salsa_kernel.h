@@ -48,10 +48,7 @@ static __inline bool IS_SCRYPT() { get_scrypt_type(); return (scrypt_algo == A_S
 static __inline bool IS_SCRYPT_JANE() { get_scrypt_type(); return (scrypt_algo == A_SCRYPT_JANE); }
 
 // CUDA externals
-extern int cuda_num_devices();
-extern void cuda_shutdown(int thr_id);
 extern int cuda_throughput(int thr_id);
-
 extern uint32_t *cuda_transferbuffer(int thr_id, int stream);
 extern uint32_t *cuda_hashbuffer(int thr_id, int stream);
 
