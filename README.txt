@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.2-tpruvot (May 2015) - "Scrypt algos (dev)"
+ccMiner release 1.6.2-tpruvot (Apr 2015) - "Scrypt/N/Jane algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -37,6 +37,8 @@ Deep, Doom and Qubit
 Keccak (Maxcoin)
 Pentablake (Blake 512 x5)
 1Coin Triple S
+Scrypt and Scrypt:N
+Scrypt-Jane (Chacha)
 Skein (Skein + SHA)
 Woodcoin (Double Skein)
 Vertcoin Lyra2RE
@@ -79,7 +81,9 @@ its command line interface and options.
                           pluck       use to mine Supcoin
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit
-                          scrypt      use to mine Scrypt
+                          scrypt      use to mine Scrypt coins
+                          scrypt:N    use to mine Scrypt-N (:10 for 2048 iterations)
+                          scrypt-jane use to mine Chacha coins like Cache and Ultracoin
                           s3          use to mine 1coin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
@@ -169,6 +173,9 @@ Example for Groestlcoin solo mining
     ccminer -q -s 1 -a groestl -o http://127.0.0.1:1441/ -u USERNAME -p PASSWORD
 
 
+Example for Scrypt-N (2048) on Nicehash
+    ccminer -a scrypt:10 -o stratum+tcp://stratum.nicehash.com:3335 -u 3EujYFcoBzWvpUEvbe3obEG95mBuU88QBD -p x
+
 For solo-mining you typically use -o http://127.0.0.1:xxxx where xxxx represents
 the rpcport number specified in your wallet's .conf file and you have to pass the same username
 and password with -O (or -u -p) as specified in the wallet config.
@@ -203,6 +210,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Apr. 21th 2015  v1.6.2
+                  Import Scrypt, Scrypt:N and Scrypt-jane from Cudaminer
+                  Add the --time-limit command line parameter
 
   Apr. 14th 2015  v1.6.1
                   Add the Double Skein Algo for Woodcoin
