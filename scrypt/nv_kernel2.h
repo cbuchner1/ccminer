@@ -25,12 +25,6 @@ public:
 
 	virtual cudaSharedMemConfig shared_mem_config() { return cudaSharedMemBankSizeFourByte; }
 	virtual cudaFuncCache cache_config() { return cudaFuncCachePreferL1; }
-
-	virtual bool prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);
-	virtual void do_keccak256(dim3 grid, dim3 threads, int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h = false);
-
-	virtual bool prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t host_ptarget[8]);
-	virtual void do_blake256(dim3 grid, dim3 threads, int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h = false);
 };
 
 #endif // #ifndef NV2_KERNEL_H

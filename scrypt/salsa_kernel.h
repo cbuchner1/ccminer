@@ -58,20 +58,6 @@ extern void cuda_scrypt_DtoH(int thr_id, uint32_t *X, int stream, bool postSHA);
 extern bool cuda_scrypt_sync(int thr_id, int stream);
 extern void cuda_scrypt_flush(int thr_id, int stream);
 
-extern bool cuda_prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);
-extern void cuda_do_keccak256(int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h);
-
-extern bool cuda_prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);
-extern void cuda_do_blake256(int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h);
-
-extern bool default_prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);
-extern bool default_prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]);
-
-#ifdef __NVCC__
-extern void default_do_keccak256(dim3 grid, dim3 threads, int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h);
-extern void default_do_blake256(dim3 grid, dim3 threads, int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h);
-#endif
-
 // If we're in C++ mode, we're either compiling .cu files or scrypt.cpp
 
 #ifdef __NVCC__
@@ -101,20 +87,6 @@ public:
 	virtual bool support_lookup_gap() { return false; }
 	virtual cudaSharedMemConfig shared_mem_config() { return cudaSharedMemBankSizeDefault; }
 	virtual cudaFuncCache cache_config() { return cudaFuncCachePreferNone; }
-
-	virtual bool prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]) {
-		return default_prepare_keccak256(thr_id, host_pdata, ptarget);
-	}
-	virtual void do_keccak256(dim3 grid, dim3 threads, int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h = false) {
-		default_do_keccak256(grid, threads, thr_id, stream, hash, nonce, throughput, do_d2h);
-	}
-
-	virtual bool prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8]) {
-		return default_prepare_blake256(thr_id, host_pdata, ptarget);
-	}
-	virtual void do_blake256(dim3 grid, dim3 threads, int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h = false) {
-		default_do_blake256(grid, threads, thr_id, stream, hash, nonce, throughput, do_d2h);
-	}
 };
 
 // Not performing error checking is actually bad, but...

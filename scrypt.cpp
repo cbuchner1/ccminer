@@ -994,12 +994,12 @@ static void xor_salsa8(uint32_t * const B, const uint32_t * const C)
  */
 static void scrypt_core(uint32_t *X, uint32_t *V, uint32_t N)
 {
-	for (int i = 0; i < N; i++) {
+	for (uint32_t i = 0; i < N; i++) {
 		memcpy(&V[i * 32], X, 128);
 		xor_salsa8(&X[0], &X[16]);
 		xor_salsa8(&X[16], &X[0]);
 	}
-	for (int i = 0; i < N; i++) {
+	for (uint32_t i = 0; i < N; i++) {
 		uint32_t j = 32 * (X[16] & (N - 1));
 		for (uint8_t k = 0; k < 32; k++)
 			X[k] ^= V[j + k];

@@ -240,13 +240,12 @@ static void scrypt_hmac_finish(scrypt_hmac_state *st, scrypt_hash_digest mac)
  *  - mikaelh
  */
 static void scrypt_pbkdf2_1(const uint8_t *password, size_t password_len,
-	const uint8_t *salt, size_t salt_len, uint8_t *out, size_t bytes)
+	const uint8_t *salt, size_t salt_len, uint8_t *out, uint64_t bytes)
 {
 	scrypt_hmac_state hmac_pw, hmac_pw_salt, work;
 	scrypt_hash_digest ti, u;
 	uint8_t be[4];
-	uint32_t i, /*j,*/ blocks;
-//	uint64_t c;
+	uint32_t i, blocks;
 
 	/* bytes must be <= (0xffffffff - (SCRYPT_HASH_DIGEST_SIZE - 1)), which they will always be under scrypt */
 
@@ -266,7 +265,7 @@ static void scrypt_pbkdf2_1(const uint8_t *password, size_t password_len,
 		scrypt_hmac_finish(&work, ti);
 		memcpy(u, ti, sizeof(u));
 
-		memcpy(out, ti, (bytes > SCRYPT_HASH_DIGEST_SIZE) ? SCRYPT_HASH_DIGEST_SIZE : bytes);
+		memcpy(out, ti, (size_t) (bytes > SCRYPT_HASH_DIGEST_SIZE ? SCRYPT_HASH_DIGEST_SIZE : bytes));
 		out += SCRYPT_HASH_DIGEST_SIZE;
 		bytes -= SCRYPT_HASH_DIGEST_SIZE;
 	}
@@ -631,7 +630,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 
 
 static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, const uchar*salt, size_t salt_len, uint32_t N,
-	uchar *out, size_t bytes, uint8_t *X, uint8_t *Y, uint8_t *V)
+	uchar *out, uint32_t bytes, uint8_t *X, uint8_t *Y, uint8_t *V)
 {
 	uint32_t chunk_bytes, i;
 	const uint32_t p = SCRYPT_P;
@@ -650,7 +649,7 @@ static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, con
 		scrypt_ROMix_1((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V, N);
 
 	/* 3: Out = PBKDF2(password, X) */
-	scrypt_pbkdf2_1(password, password_len, X, chunk_bytes * p, out, bytes);
+	scrypt_pbkdf2_1(password, password_len, X, chunk_bytes * p, out, (size_t) bytes);
 
 #ifdef SCRYPT_PREVENT_STATE_LEAK
 	/* This is an unnecessary security feature - mikaelh */
@@ -661,7 +660,7 @@ static void scrypt_jane_hash_1_1(const uchar *password, size_t password_len, con
 /* for cpu hash test */
 void scryptjane_hash(void* output, const void* input)
 {
-	uint64_t Nsize = 1ULL << (opt_nfactor + 1);
+	uint32_t Nsize = 1UL << (opt_nfactor + 1);
 	uint64_t chunk_bytes;
 	uint8_t *X, *Y;
 	scrypt_aligned_alloc YX, V;
@@ -670,12 +669,12 @@ void scryptjane_hash(void* output, const void* input)
 	V  = scrypt_alloc(Nsize * chunk_bytes);
 	YX = scrypt_alloc((SCRYPT_P + 1) * chunk_bytes);
 
-	memset(V.ptr, 0, Nsize * chunk_bytes);
+	memset(V.ptr, 0, (size_t) (Nsize * chunk_bytes));
 
 	Y = YX.ptr;
 	X = Y + chunk_bytes;
 
-	scrypt_jane_hash_1_1((uchar*)input, 80, (uchar*)input, 80, Nsize, (uchar*)output, 32, X, Y, V.ptr);
+	scrypt_jane_hash_1_1((uchar*)input, 80, (uchar*)input, 80, (uint32_t) Nsize, (uchar*)output, 32, X, Y, V.ptr);
 
 	scrypt_free(&V);
 	scrypt_free(&YX);

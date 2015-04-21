@@ -821,44 +821,6 @@ void cuda_scrypt_core(int thr_id, int stream, unsigned int N)
 	);
 }
 
-bool cuda_prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8])
-{
-	return context_kernel[thr_id]->prepare_keccak256(thr_id, host_pdata, ptarget);
-}
-#if 0
-void cuda_do_keccak256(int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h)
-{
-	unsigned int GRID_BLOCKS = context_blocks[thr_id];
-	unsigned int WARPS_PER_BLOCK = context_wpb[thr_id];
-	unsigned int THREADS_PER_WU = context_kernel[thr_id]->threads_per_wu();
-
-	// setup execution parameters
-	dim3  grid(WU_PER_LAUNCH/WU_PER_BLOCK, 1, 1);
-	dim3  threads(THREADS_PER_WU*WU_PER_BLOCK, 1, 1);
-
-	context_kernel[thr_id]->do_keccak256(grid, threads, thr_id, stream, hash, nonce, throughput, do_d2h);
-}
-#endif
-bool cuda_prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t ptarget[8])
-{
-	return context_kernel[thr_id]->prepare_blake256(thr_id, host_pdata, ptarget);
-}
-
-#if 0
-void cuda_do_blake256(int thr_id, int stream, uint32_t *hash, uint32_t nonce, int throughput, bool do_d2h)
-{
-	unsigned int GRID_BLOCKS = context_blocks[thr_id];
-	unsigned int WARPS_PER_BLOCK = context_wpb[thr_id];
-	unsigned int THREADS_PER_WU = context_kernel[thr_id]->threads_per_wu();
-
-	// setup execution parameters
-	dim3  grid(WU_PER_LAUNCH/WU_PER_BLOCK, 1, 1);
-	dim3  threads(THREADS_PER_WU*WU_PER_BLOCK, 1, 1);
-
-	context_kernel[thr_id]->do_blake256(grid, threads, thr_id, stream, hash, nonce, throughput, do_d2h);
-}
-#endif
-
 void cuda_scrypt_DtoH(int thr_id, uint32_t *X, int stream, bool postSHA)
 {
 	unsigned int GRID_BLOCKS = context_blocks[thr_id];
