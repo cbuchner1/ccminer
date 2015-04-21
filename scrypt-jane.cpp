@@ -1,8 +1,10 @@
 /*
-	scrypt-jane by Andrew M, https://github.com/floodyberry/scrypt-jane
-
-	Public Domain or MIT License, whichever is easier
-*/
+ * scrypt-jane by Andrew M, https://github.com/floodyberry/scrypt-jane
+ *
+ * Public Domain or MIT License, whichever is easier
+ *
+ * Adapted to ccminer by tpruvot@github (2015)
+ */
 
 #include "miner.h"
 
@@ -50,8 +52,8 @@ static const uint64_t keccak_round_constants[24] = {
 	0x0000000080000001ull, 0x8000000080008008ull
 };
 
-static void
-keccak_block(scrypt_hash_state *S, const uint8_t *in) {
+static void keccak_block(scrypt_hash_state *S, const uint8_t *in)
+{
 	size_t i;
 	uint64_t *s = S->state, t[5], u[5], v, w;
 
@@ -120,13 +122,12 @@ keccak_block(scrypt_hash_state *S, const uint8_t *in) {
 	}
 }
 
-static void
-scrypt_hash_init(scrypt_hash_state *S) {
+static void scrypt_hash_init(scrypt_hash_state *S) {
 	memset(S, 0, sizeof(*S));
 }
 
-static void
-scrypt_hash_update(scrypt_hash_state *S, const uint8_t *in, size_t inlen) {
+static void scrypt_hash_update(scrypt_hash_state *S, const uint8_t *in, size_t inlen)
+{
 	size_t want;
 
 	/* handle the previous data */
@@ -155,8 +156,8 @@ scrypt_hash_update(scrypt_hash_state *S, const uint8_t *in, size_t inlen) {
 		memcpy(S->buffer, in, S->leftover);
 }
 
-static void
-scrypt_hash_finish(scrypt_hash_state *S, uint8_t *hash) {
+static void scrypt_hash_finish(scrypt_hash_state *S, uint8_t *hash)
+{
 	size_t i;
 
 	S->buffer[S->leftover] = 0x01;
@@ -178,17 +179,18 @@ typedef struct scrypt_hmac_state_t {
 } scrypt_hmac_state;
 
 
-static void
-scrypt_hash(scrypt_hash_digest hash, const uint8_t *m, size_t mlen) {
+static void scrypt_hash(scrypt_hash_digest hash, const uint8_t *m, size_t mlen)
+{
 	scrypt_hash_state st;
+
 	scrypt_hash_init(&st);
 	scrypt_hash_update(&st, m, mlen);
 	scrypt_hash_finish(&st, hash);
 }
 
 /* hmac */
-static void
-scrypt_hmac_init(scrypt_hmac_state *st, const uint8_t *key, size_t keylen) {
+static void scrypt_hmac_init(scrypt_hmac_state *st, const uint8_t *key, size_t keylen)
+{
 	uint8_t pad[SCRYPT_HASH_BLOCK_SIZE] = {0};
 	size_t i;
 
@@ -216,14 +218,14 @@ scrypt_hmac_init(scrypt_hmac_state *st, const uint8_t *key, size_t keylen) {
 	scrypt_hash_update(&st->outer, pad, SCRYPT_HASH_BLOCK_SIZE);
 }
 
-static void
-scrypt_hmac_update(scrypt_hmac_state *st, const uint8_t *m, size_t mlen) {
+static void scrypt_hmac_update(scrypt_hmac_state *st, const uint8_t *m, size_t mlen)
+{
 	/* h(inner || m...) */
 	scrypt_hash_update(&st->inner, m, mlen);
 }
 
-static void
-scrypt_hmac_finish(scrypt_hmac_state *st, scrypt_hash_digest mac) {
+static void scrypt_hmac_finish(scrypt_hmac_state *st, scrypt_hash_digest mac)
+{
 	/* h(inner || m) */
 	scrypt_hash_digest innerhash;
 	scrypt_hash_finish(&st->inner, innerhash);
@@ -237,8 +239,9 @@ scrypt_hmac_finish(scrypt_hmac_state *st, scrypt_hash_digest mac) {
  * Special version where N = 1
  *  - mikaelh
  */
-static void
-scrypt_pbkdf2_1(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t salt_len, uint8_t *out, size_t bytes) {
+static void scrypt_pbkdf2_1(const uint8_t *password, size_t password_len,
+	const uint8_t *salt, size_t salt_len, uint8_t *out, size_t bytes)
+{
 	scrypt_hmac_state hmac_pw, hmac_pw_salt, work;
 	scrypt_hash_digest ti, u;
 	uint8_t be[4];
@@ -271,16 +274,14 @@ scrypt_pbkdf2_1(const uint8_t *password, size_t password_len, const uint8_t *sal
 
 // ---------------------------- END PBKDF2 functions ------------------------------------
 
-static void
-scrypt_fatal_error_default(const char *msg) {
+static void scrypt_fatal_error_default(const char *msg) {
 	fprintf(stderr, "%s\n", msg);
 	exit(1);
 }
 
 static scrypt_fatal_errorfn scrypt_fatal_error = scrypt_fatal_error_default;
 
-void
-scrypt_set_fatal_error_default(scrypt_fatal_errorfn fn) {
+void scrypt_set_fatal_error_default(scrypt_fatal_errorfn fn) {
 	scrypt_fatal_error = fn;
 }
 
@@ -293,8 +294,8 @@ static uint8_t *mem_base = (uint8_t *)0;
 static size_t mem_bump = 0;
 
 /* allocations are assumed to be multiples of 64 bytes and total allocations not to exceed ~1.01gb */
-static scrypt_aligned_alloc
-scrypt_alloc(uint64_t size) {
+static scrypt_aligned_alloc scrypt_alloc(uint64_t size)
+{
 	scrypt_aligned_alloc aa;
 	if (!mem_base) {
 		mem_base = (uint8_t *)malloc((1024 * 1024 * 1024) + (1024 * 1024) + (SCRYPT_BLOCK_BYTES - 1));
@@ -308,13 +309,13 @@ scrypt_alloc(uint64_t size) {
 	return aa;
 }
 
-static void
-scrypt_free(scrypt_aligned_alloc *aa) {
+static void scrypt_free(scrypt_aligned_alloc *aa)
+{
 	mem_bump = 0;
 }
 #else
-static scrypt_aligned_alloc
-scrypt_alloc(uint64_t size) {
+static scrypt_aligned_alloc scrypt_alloc(uint64_t size)
+{
 	static const size_t max_alloc = (size_t)-1;
 	scrypt_aligned_alloc aa;
 	size += (SCRYPT_BLOCK_BYTES - 1);
@@ -327,15 +328,16 @@ scrypt_alloc(uint64_t size) {
 	return aa;
 }
 
-static void
-scrypt_free(scrypt_aligned_alloc *aa) {
+static void scrypt_free(scrypt_aligned_alloc *aa)
+{
 	free(aa->mem);
 }
 #endif
 
 
 // yacoin: increasing Nfactor gradually
-unsigned char GetNfactor(unsigned int nTimestamp) {
+unsigned char GetNfactor(unsigned int nTimestamp)
+{
 	int l = 0;
 
 	unsigned int Nfactor = 0;
@@ -427,14 +429,13 @@ unsigned char GetNfactor(unsigned int nTimestamp) {
 
 #define bswap_32x4(x) ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u) \
 					 | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
-
 static int s_Nfactor = 0;
 
 int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsigned char *scratchbuf,
 	uint32_t max_nonce, unsigned long *hashes_done, struct timeval *tv_start, struct timeval *tv_end)
 {
 	const uint32_t Htarg = ptarget[7];
-	uint64_t N;
+	uint32_t N;
 
 	if (s_Nfactor == 0 && strlen(jane_params) > 0)
 		applog(LOG_INFO, "Given scrypt-jane parameters: %s", jane_params);

@@ -661,43 +661,43 @@ KeplerKernel::KeplerKernel() : KernelInterface()
 
 bool KeplerKernel::bindtexture_1D(uint32_t *d_V, size_t size)
 {
-		cudaChannelFormatDesc channelDesc4 = cudaCreateChannelDesc<uint4>();
-		texRef1D_4_V.normalized = 0;
-		texRef1D_4_V.filterMode = cudaFilterModePoint;
-		texRef1D_4_V.addressMode[0] = cudaAddressModeClamp;
-		checkCudaErrors(cudaBindTexture(NULL, &texRef1D_4_V, d_V, &channelDesc4, size));
-		return true;
+	cudaChannelFormatDesc channelDesc4 = cudaCreateChannelDesc<uint4>();
+	texRef1D_4_V.normalized = 0;
+	texRef1D_4_V.filterMode = cudaFilterModePoint;
+	texRef1D_4_V.addressMode[0] = cudaAddressModeClamp;
+	checkCudaErrors(cudaBindTexture(NULL, &texRef1D_4_V, d_V, &channelDesc4, size));
+	return true;
 }
 
 bool KeplerKernel::bindtexture_2D(uint32_t *d_V, int width, int height, size_t pitch)
 {
-		cudaChannelFormatDesc channelDesc4 = cudaCreateChannelDesc<uint4>();
-		texRef2D_4_V.normalized = 0;
-		texRef2D_4_V.filterMode = cudaFilterModePoint;
-		texRef2D_4_V.addressMode[0] = cudaAddressModeClamp;
-		texRef2D_4_V.addressMode[1] = cudaAddressModeClamp;
-		// maintain texture width of TEXWIDTH (max. limit is 65000)
-		while (width > TEXWIDTH) { width /= 2; height *= 2; pitch /= 2; }
-		while (width < TEXWIDTH) { width *= 2; height = (height+1)/2; pitch *= 2; }
-		checkCudaErrors(cudaBindTexture2D(NULL, &texRef2D_4_V, d_V, &channelDesc4, width, height, pitch));
-		return true;
+	cudaChannelFormatDesc channelDesc4 = cudaCreateChannelDesc<uint4>();
+	texRef2D_4_V.normalized = 0;
+	texRef2D_4_V.filterMode = cudaFilterModePoint;
+	texRef2D_4_V.addressMode[0] = cudaAddressModeClamp;
+	texRef2D_4_V.addressMode[1] = cudaAddressModeClamp;
+	// maintain texture width of TEXWIDTH (max. limit is 65000)
+	while (width > TEXWIDTH) { width /= 2; height *= 2; pitch /= 2; }
+	while (width < TEXWIDTH) { width *= 2; height = (height+1)/2; pitch *= 2; }
+	checkCudaErrors(cudaBindTexture2D(NULL, &texRef2D_4_V, d_V, &channelDesc4, width, height, pitch));
+	return true;
 }
 
 bool KeplerKernel::unbindtexture_1D()
 {
-		checkCudaErrors(cudaUnbindTexture(texRef1D_4_V));
-		return true;
+	checkCudaErrors(cudaUnbindTexture(texRef1D_4_V));
+	return true;
 }
 
 bool KeplerKernel::unbindtexture_2D()
 {
-		checkCudaErrors(cudaUnbindTexture(texRef2D_4_V));
-		return true;
+	checkCudaErrors(cudaUnbindTexture(texRef2D_4_V));
+	return true;
 }
 
 void KeplerKernel::set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V)
 {
-		checkCudaErrors(cudaMemcpyToSymbol(c_V, h_V, MAXWARPS*sizeof(uint32_t*), 0, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpyToSymbol(c_V, h_V, MAXWARPS*sizeof(uint32_t*), 0, cudaMemcpyHostToDevice));
 }
 
 bool KeplerKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_id, cudaStream_t stream,
@@ -706,21 +706,22 @@ bool KeplerKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int 
 	bool success = true;
 
 	// make some constants available to kernel, update only initially and when changing
-	static int prev_N[MAX_DEVICES] = {0};
+	static uint32_t prev_N[MAX_GPUS] = { 0 };
+
 	if (N != prev_N[thr_id]) {
-			uint32_t h_N = N;
-			uint32_t h_N_1 = N-1;
-			uint32_t h_SCRATCH = SCRATCH;
-			uint32_t h_SCRATCH_WU_PER_WARP = (SCRATCH * WU_PER_WARP);
-			uint32_t h_SCRATCH_WU_PER_WARP_1 = (SCRATCH * WU_PER_WARP) - 1;
+		uint32_t h_N = N;
+		uint32_t h_N_1 = N-1;
+		uint32_t h_SCRATCH = SCRATCH;
+		uint32_t h_SCRATCH_WU_PER_WARP = (SCRATCH * WU_PER_WARP);
+		uint32_t h_SCRATCH_WU_PER_WARP_1 = (SCRATCH * WU_PER_WARP) - 1;
 
-			cudaMemcpyToSymbolAsync(c_N, &h_N, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
-			cudaMemcpyToSymbolAsync(c_N_1, &h_N_1, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
-			cudaMemcpyToSymbolAsync(c_SCRATCH, &h_SCRATCH, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
-			cudaMemcpyToSymbolAsync(c_SCRATCH_WU_PER_WARP, &h_SCRATCH_WU_PER_WARP, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
-			cudaMemcpyToSymbolAsync(c_SCRATCH_WU_PER_WARP_1, &h_SCRATCH_WU_PER_WARP_1, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
+		cudaMemcpyToSymbolAsync(c_N, &h_N, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
+		cudaMemcpyToSymbolAsync(c_N_1, &h_N_1, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
+		cudaMemcpyToSymbolAsync(c_SCRATCH, &h_SCRATCH, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
+		cudaMemcpyToSymbolAsync(c_SCRATCH_WU_PER_WARP, &h_SCRATCH_WU_PER_WARP, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
+		cudaMemcpyToSymbolAsync(c_SCRATCH_WU_PER_WARP_1, &h_SCRATCH_WU_PER_WARP_1, sizeof(uint32_t), 0, cudaMemcpyHostToDevice, stream);
 
-			prev_N[thr_id] = N;
+		prev_N[thr_id] = N;
 	}
 
 	// First phase: Sequential writes to scratchpad.
@@ -732,14 +733,14 @@ bool KeplerKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int 
 	unsigned int pos = 0;
 	do
 	{
-			if (LOOKUP_GAP == 1) {
-					if (IS_SCRYPT())      kepler_scrypt_core_kernelA<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
-					if (IS_SCRYPT_JANE()) kepler_scrypt_core_kernelA<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
-			} else {
-					if (IS_SCRYPT())      kepler_scrypt_core_kernelA_LG<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
-					if (IS_SCRYPT_JANE()) kepler_scrypt_core_kernelA_LG<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
-			}
-			pos += batch;
+		if (LOOKUP_GAP == 1) {
+			if (IS_SCRYPT())      kepler_scrypt_core_kernelA<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
+			if (IS_SCRYPT_JANE()) kepler_scrypt_core_kernelA<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
+		} else {
+			if (IS_SCRYPT())      kepler_scrypt_core_kernelA_LG<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (IS_SCRYPT_JANE()) kepler_scrypt_core_kernelA_LG<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
+		}
+		pos += batch;
 	} while (pos < N);
 
 	// Second phase: Random read access from scratchpad.

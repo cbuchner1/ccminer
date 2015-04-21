@@ -678,7 +678,8 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int t
 	bool success = true;
 
 	// make some constants available to kernel, update only initially and when changing
-	static int prev_N[MAX_DEVICES] = {0};
+	static uint32_t prev_N[MAX_GPUS] = { 0 };
+
 	if (N != prev_N[thr_id]) {
 		uint32_t h_N = N;
 		uint32_t h_N_1 = N-1;

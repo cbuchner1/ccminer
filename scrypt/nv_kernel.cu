@@ -97,7 +97,8 @@ bool NVKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_
 	bool success = true;
 
 	// make some constants available to kernel, update only initially and when changing
-	static int prev_N[MAX_DEVICES] = {0};
+	static uint32_t prev_N[MAX_GPUS] = { 0 };
+
 	if (N != prev_N[thr_id]) {
 		uint32_t h_N = N;
 		uint32_t h_N_1 = N-1;
@@ -1025,7 +1026,8 @@ static std::map<int, uint32_t *> context_good[2];
 
 bool NVKernel::prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t host_ptarget[8])
 {
-	static bool init[MAX_DEVICES] = {false};
+	static bool init[MAX_GPUS] = { 0 };
+
 	if (!init[thr_id])
 	{
 		checkCudaErrors(cudaMemcpyToSymbol(KeccakF_RoundConstants, host_KeccakF_RoundConstants, sizeof(host_KeccakF_RoundConstants), 0, cudaMemcpyHostToDevice));
@@ -1452,7 +1454,8 @@ void kepler_blake256_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bo
 
 bool NVKernel::prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t host_ptarget[8])
 {
-	static bool init[MAX_DEVICES] = {false};
+	static bool init[MAX_GPUS] = { 0 };
+
 	if (!init[thr_id])
 	{
 		// allocate pinned host memory for good hashes

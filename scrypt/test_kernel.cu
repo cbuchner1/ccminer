@@ -710,7 +710,8 @@ bool TestKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int th
 	size_t shared = ((threads.x + 31) / 32) * (32+1) * sizeof(uint32_t);
 
 	// make some constants available to kernel, update only initially and when changing
-	static int prev_N[MAX_DEVICES] = {0};
+	static uint32_t prev_N[MAX_GPUS] = { 0 };
+
 	if (N != prev_N[thr_id]) {
 		uint32_t h_N = N;
 		uint32_t h_N_1 = N-1;

@@ -9,8 +9,6 @@
 
 #include "miner.h"
 
-#define MAX_DEVICES MAX_GPUS
-
 // from ccminer.cpp
 extern short device_map[MAX_GPUS];
 extern int device_batchsize[MAX_GPUS]; // cudaminer -b

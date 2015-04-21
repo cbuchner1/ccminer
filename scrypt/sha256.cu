@@ -409,7 +409,8 @@ __global__ void cuda_post_sha256(uint32_t g_output[8], uint32_t g_tstate_ext[8],
 
 void prepare_sha256(int thr_id, uint32_t host_pdata[20], uint32_t host_midstate[8])
 {
-	static bool init[8] = {false, false, false, false, false, false, false, false};
+	static bool init[MAX_GPUS] = { 0 };
+
 	if (!init[thr_id])
 	{
 		checkCudaErrors(cudaMemcpyToSymbol(sha256_h, host_sha256_h, sizeof(host_sha256_h), 0, cudaMemcpyHostToDevice));

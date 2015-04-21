@@ -459,10 +459,10 @@ void cuda_post_keccak512(uint32_t *g_odata, uint32_t *g_hash, uint32_t nonce)
 // callable host code to initialize constants and to call kernels
 //
 
-static bool init[MAX_GPUS] = { 0 };
-
 extern "C" void prepare_keccak512(int thr_id, const uint32_t host_pdata[20])
 {
+	static bool init[MAX_GPUS] = { 0 };
+
 	if (!init[thr_id])
 	{
 		checkCudaErrors(cudaMemcpyToSymbol(c_keccak_round_constants, host_keccak_round_constants, sizeof(host_keccak_round_constants), 0, cudaMemcpyHostToDevice));
@@ -796,10 +796,10 @@ void crypto_hash(uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool validat
 
 static std::map<int, uint32_t *> context_good[2];
 
-// ... keccak???
 bool default_prepare_keccak256(int thr_id, const uint32_t host_pdata[20], const uint32_t host_ptarget[8])
 {
-	static bool init[MAX_DEVICES] = {false};
+	static bool init[MAX_GPUS] = { 0 };
+
 	if (!init[thr_id])
 	{
 		checkCudaErrors(cudaMemcpyToSymbol(KeccakF_RoundConstants, host_KeccakF_RoundConstants, sizeof(host_KeccakF_RoundConstants), 0, cudaMemcpyHostToDevice));
