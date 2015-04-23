@@ -406,8 +406,8 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 			} else {
 				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 
-				// reinit the card..
-				cuda_reset_device(thr_id, init);
+				// reinit the card.. segfault so no
+				// cuda_reset_device(thr_id, init);
 
 				pdata[19]++;
 				pdata[0] = oldp0;

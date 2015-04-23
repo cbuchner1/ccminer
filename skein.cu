@@ -414,9 +414,6 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 			}
 			else {
 				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", device_map[thr_id], foundNonce);
-
-				// reinit the card
-				init[thr_id] = false;
 			}
 		}
 		pdata[19] += throughput;
