@@ -424,12 +424,8 @@ extern "C" int scanhash_pentablake(int thr_id, uint32_t *pdata, const uint32_t *
 				}
 				pdata[19] = foundNonce;
 				return rc;
-			}
-			else if (vhashcpu[7] > Htarg) {
-				applog(LOG_WARNING, "GPU #%d: result for nounce %08x is not in range: %x > %x", thr_id, foundNonce, vhashcpu[7], Htarg);
-			}
-			else {
-				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
+			} else {
+				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

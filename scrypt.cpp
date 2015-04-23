@@ -896,9 +896,10 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsign
 						if (memcmp(&hash[cur][i * 8], refhash, 32) != 0) good = false;
 					}
 
-					if (!good)
-						applog(LOG_INFO, "GPU #%d: %s result does not validate on CPU (i=%d, s=%d)!", device_map[thr_id], device_name[thr_id], i, cur);
-					else {
+					if (!good) {
+						applog(LOG_WARNING, "GPU #%d: %s result does not validate on CPU! (i=%d, s=%d)",
+							device_map[thr_id], device_name[thr_id], i, cur);
+					} else {
 						*hashes_done = n - pdata[19];
 						pdata[19] = nonce[cur] + i;
 						result = 1;

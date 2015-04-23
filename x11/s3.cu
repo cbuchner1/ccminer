@@ -119,7 +119,7 @@ extern "C" int scanhash_s3(int thr_id, uint32_t *pdata,
 				return res;
 
 			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for nonce $%08X does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

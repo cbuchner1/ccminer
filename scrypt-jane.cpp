@@ -595,8 +595,6 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 
 					if (memcmp(thash, &hash[cur][8*i], 32) == 0)
 					{
-						//applog(LOG_INFO, "GPU #%d: %s result validates on CPU.", device_map[thr_id], device_name[thr_id]);
-
 						*hashes_done = n - pdata[19];
 						pdata[19] = tmp_nonce;
 						scrypt_free(&Vbuf);
@@ -606,7 +604,8 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 						gettimeofday(tv_end, NULL);
 						return 1;
 					} else {
-						applog(LOG_INFO, "GPU #%d: %s result does not validate on CPU (i=%d, s=%d)!", device_map[thr_id], device_name[thr_id], i, cur);
+						applog(LOG_WARNING, "GPU #%d: %s result does not validate on CPU! (i=%d, s=%d)",
+							device_map[thr_id], device_name[thr_id], i, cur);
 					}
 				}
 			}

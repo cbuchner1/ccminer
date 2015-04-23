@@ -70,7 +70,8 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 				*hashes_done = foundNounce - start_nonce + 1;
 				return 1;
 			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNounce);
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!",
+					device_map[thr_id], foundNounce);
 			}
 		}
 

@@ -194,7 +194,6 @@ extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		//cudaDeviceReset();
 		//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		//cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 		cudaMalloc(&d_hash[thr_id], opt_pluck_n * 1024 * throughput);
@@ -224,7 +223,7 @@ extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 				pdata[19] = foundNonce;
 				return 1;
 			} else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

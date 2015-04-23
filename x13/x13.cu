@@ -226,12 +226,8 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 				}
 				pdata[19] = foundNonce;
 				return res;
-			}
-			else if (vhash64[7] > Htarg) {
-				applog(LOG_INFO, "GPU #%d: result for %08x is not in range: %x > %x", thr_id, foundNonce, vhash64[7], Htarg);
-			}
-			else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+			} else {
+				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

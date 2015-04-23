@@ -95,9 +95,8 @@ extern "C" int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptar
 				}
 				pdata[19] = swab32(foundNonce);
 				return res;
-			}
-			else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", device_map[thr_id], foundNonce);
+			} else {
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

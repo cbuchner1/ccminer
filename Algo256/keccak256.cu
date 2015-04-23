@@ -79,7 +79,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 				return 1;
 			}
 			else {
-				applog(LOG_DEBUG, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

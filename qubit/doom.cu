@@ -77,9 +77,8 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata,
 				*hashes_done = min(max_nonce - first_nonce, (uint64_t) pdata[19] - first_nonce + throughput);
 				pdata[19] = foundNonce;
 				return 1;
-			}
-			else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+			} else {
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

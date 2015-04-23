@@ -472,7 +472,7 @@ extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *pt
 			else if (opt_debug) {
 				applog_hash((uchar*)ptarget);
 				applog_compare_hash((uchar*)vhashcpu, (uchar*)ptarget);
-				applog(LOG_DEBUG, "GPU #%d: result for nonce %08x does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

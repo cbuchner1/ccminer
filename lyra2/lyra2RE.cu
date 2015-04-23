@@ -112,7 +112,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 				pdata[19] = foundNonce;
 				return 1;
 			} else {
-				applog(LOG_INFO, "GPU #%d: result for %08x does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 

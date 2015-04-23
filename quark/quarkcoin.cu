@@ -241,7 +241,7 @@ extern "C" int scanhash_quark(int thr_id, uint32_t *pdata,
 				*hashes_done = foundNonce - first_nonce + 1;
 				return 1;
 			} else {
-				applog(LOG_INFO, "GPU #%d: result for nonce $%08X does not validate on CPU!", thr_id, foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
 
