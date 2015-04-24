@@ -230,7 +230,7 @@ pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
 uint32_t accepted_count = 0L;
 uint32_t rejected_count = 0L;
-static double *thr_hashrates;
+static double thr_hashrates[MAX_GPUS] = { 0 };
 uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
 uint64_t net_hashrate = 0;
@@ -504,6 +504,8 @@ void proper_exit(int reason)
 #endif
 	free(opt_syslog_pfx);
 	free(opt_api_allow);
+	free(work_restart);
+	//free(thr_info);
 	exit(reason);
 }
 
@@ -2722,10 +2724,6 @@ int main(int argc, char *argv[])
 
 	thr_info = (struct thr_info *)calloc(opt_n_threads + 4, sizeof(*thr));
 	if (!thr_info)
-		return EXIT_CODE_SW_INIT_ERROR;
-
-	thr_hashrates = (double *) calloc(opt_n_threads, sizeof(double));
-	if (!thr_hashrates)
 		return EXIT_CODE_SW_INIT_ERROR;
 
 	/* init workio thread info */
