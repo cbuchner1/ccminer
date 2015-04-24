@@ -7,43 +7,41 @@
 
 #define USE_SHUFFLE 0
 
-__constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
+__constant__
+static uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 
 // ---------------------------- BEGIN CUDA quark_blake512 functions ------------------------------------
 
-__constant__ uint8_t c_sigma[16][16];
-
-const uint8_t host_sigma[16][16] =
-{
-  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-  {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
-  {11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
-  { 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
-  { 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
-  { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
-  {12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
-  {13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
-  { 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
-  {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13 , 0 },
-  { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-  {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
-  {11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
-  { 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
-  { 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
-  { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 }
-};
+__device__ __constant__
+static const uint8_t c_sigma[16][16] = {
+	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	{ 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	{ 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
+	{ 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
+	{12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
+	{13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
+	{ 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
+	{10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13 , 0 },
+	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	{ 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	{ 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
+	{ 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 }};
 
 __device__ __constant__
-const uint64_t c_u512[16] =
+static const uint64_t c_u512[16] =
 {
-  0x243f6a8885a308d3ULL, 0x13198a2e03707344ULL, 
-  0xa4093822299f31d0ULL, 0x082efa98ec4e6c89ULL,
-  0x452821e638d01377ULL, 0xbe5466cf34e90c6cULL, 
-  0xc0ac29b7c97c50ddULL, 0x3f84d5b5b5470917ULL,
-  0x9216d5d98979fb1bULL, 0xd1310ba698dfb5acULL, 
-  0x2ffd72dbd01adfb7ULL, 0xb8e1afed6a267e96ULL,
-  0xba7c9045f12c7f99ULL, 0x24a19947b3916cf7ULL, 
-  0x0801f2e2858efc16ULL, 0x636920d871574e69ULL
+	0x243f6a8885a308d3ULL, 0x13198a2e03707344ULL,
+	0xa4093822299f31d0ULL, 0x082efa98ec4e6c89ULL,
+	0x452821e638d01377ULL, 0xbe5466cf34e90c6cULL,
+	0xc0ac29b7c97c50ddULL, 0x3f84d5b5b5470917ULL,
+	0x9216d5d98979fb1bULL, 0xd1310ba698dfb5acULL,
+	0x2ffd72dbd01adfb7ULL, 0xb8e1afed6a267e96ULL,
+	0xba7c9045f12c7f99ULL, 0x24a19947b3916cf7ULL,
+	0x0801f2e2858efc16ULL, 0x636920d871574e69ULL
 };
 
 #define G(a,b,c,d,x) { \
@@ -111,14 +109,8 @@ void quark_blake512_compress( uint64_t *h, const uint64_t *block, const uint8_t 
 // Hash-Padding
 __device__ __constant__
 static const uint64_t d_constHashPadding[8] = {
-	0x0000000000000080ull,
-	0,
-	0,
-	0,
-	0,
-	0x0100000000000000ull,
-	0,
-	0x0002000000000000ull
+	0x0000000000000080ull, 0, 0, 0,
+	0, 0x0100000000000000ull, 0, 0x0002000000000000ull
 };
 
 __global__ __launch_bounds__(256, 4)
@@ -171,14 +163,14 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		quark_blake512_compress( h, buf, c_sigma, c_u512, 512 );
 
 #if __CUDA_ARCH__ <= 350
-		uint32_t *outHash = (uint32_t*)&g_hash[8 * hashPosition];
+		uint32_t *outHash = (uint32_t*)&g_hash[hashPosition * 8U];
 		#pragma unroll 8
 		for (int i=0; i < 8; i++) {
 			outHash[2*i+0] = cuda_swab32( _HIWORD(h[i]) );
 			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
 		}
 #else
-		uint64_t *outHash = &g_hash[8 * hashPosition];
+		uint64_t *outHash = &g_hash[hashPosition * 8U];
 		for (int i=0; i < 8; i++) {
 			outHash[i] = cuda_swab64(h[i]);
 		}
@@ -186,13 +178,20 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 	}
 }
 
-__global__ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
+__global__ __launch_bounds__(256,4)
+void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t buf[16];
-		uint32_t nounce = startNounce + thread;
+		#pragma unroll
+		for (int i=0; i < 16; ++i)
+			buf[i] = c_PaddedMessage80[i];
+
+		// The test Nonce
+		const uint32_t nounce = startNounce + thread;
+		((uint32_t*)buf)[19] = cuda_swab32(nounce);
 
 		uint64_t h[8] = {
 			0x6a09e667f3bcc908ULL,
@@ -205,30 +204,21 @@ __global__ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounc
 			0x5be0cd19137e2179ULL
 		};
 
-		// Message für die erste Runde in Register holen
-		#pragma unroll 16
-		for (int i=0; i < 16; ++i)
-			buf[i] = c_PaddedMessage80[i];
-
-		// The test Nonce
-		((uint32_t*)buf)[19] = cuda_swab32(nounce);
-
-		quark_blake512_compress( h, buf, c_sigma, c_u512, 640 );
+		quark_blake512_compress(h, buf, c_sigma, c_u512, 640);
 
 #if __CUDA_ARCH__ <= 350
-		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
+		uint32_t *outHash = (uint32_t*)outputHash + (thread * 16U);
 		#pragma unroll 8
 		for (uint32_t i=0; i < 8; i++) {
 			outHash[2*i]   = cuda_swab32( _HIWORD(h[i]) );
 			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
 		}
 #else
-		uint64_t *outHash = (uint64_t *)outputHash + 8 * thread;
+		uint64_t *outHash = (uint64_t*)outputHash + (thread * 8U);
 		for (uint32_t i=0; i < 8; i++) {
 			outHash[i] = cuda_swab64( h[i] );
 		}
 #endif
-
 	}
 }
 
@@ -238,30 +228,24 @@ __global__ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounc
 __host__
 void quark_blake512_cpu_init(int thr_id, uint32_t threads)
 {
-	// Kopiere die Hash-Tabellen in den GPU-Speicher
-	CUDA_CALL_OR_RET( cudaMemcpyToSymbol(c_sigma,
-						host_sigma,
-						sizeof(host_sigma),
-						0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaGetLastError());
 }
 
-// Blake512 für 80 Byte grosse Eingangsdaten
 __host__
-void quark_blake512_cpu_setBlock_80(void *pdata)
+void quark_blake512_cpu_setBlock_80(int thr_id, uint32_t *pdata)
 {
-	// Message mit Padding bereitstellen
-	// lediglich die korrekte Nonce ist noch ab Byte 76 einzusetzen.
-	unsigned char PaddedMessage[128];
-	memcpy(PaddedMessage, pdata, 80);
-	memset(PaddedMessage+80, 0, 48);
-	PaddedMessage[80] = 0x80;
-	PaddedMessage[111] = 1;
-	PaddedMessage[126] = 0x02;
-	PaddedMessage[127] = 0x80;
+	uint64_t message[16];
 
-	CUDA_SAFE_CALL(
-		cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 16*sizeof(uint64_t), 0, cudaMemcpyHostToDevice)
-	);
+	memcpy(message, pdata, 80);
+	message[10] = 0x80;
+	message[11] = 0;
+	message[12] = 0;
+	message[13] = 0x0100000000000000ull;
+	message[14] = 0;
+	message[15] = 0x8002000000000000ull; // 0x280
+
+	cudaMemcpyToSymbol(c_PaddedMessage80, message, sizeof(message), 0, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(cudaGetLastError());
 }
 
 __host__
@@ -269,18 +253,16 @@ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 {
 	const uint32_t threadsperblock = 256;
 
-	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
 	quark_blake512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_nonceVector, (uint64_t*)d_outputHash);
 
-	// Strategisches Sleep Kommando zur Senkung der CPU Last
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__
-void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
+void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash)
 {
 	const uint32_t threadsperblock = 256;
 
