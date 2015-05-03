@@ -77,8 +77,8 @@ __constant__ uint32_t BLAKE2S_SIGMA[10][16];
 }
 #endif
 
-#define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
-#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
+//#define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
+//#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 
 #define BLAKE_Ghost(idx0, idx1, a, b, c, d, key) { \
 	idx = BLAKE2S_SIGMA_host[idx0][idx1]; a += key[idx]; \

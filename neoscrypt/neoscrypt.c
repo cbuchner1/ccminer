@@ -881,7 +881,7 @@ static void neoscrypt_blkmix(uint *X, uint *Y, uint r, uint mixmode)
  *     .....
  *     11110 = N of 2147483648;
  *   profile bits 30 to 13 are reserved */
-void neoscrypt(const uchar *password, uchar *output, uint profile)
+void neoscrypt(unsigned char *output, const unsigned char *input, unsigned int profile)
 {
 	uint N = 128, r = 2, dblmix = 1, mixmode = 0x14, stack_align = 0x40;
 	uint kdf, i, j;
@@ -916,11 +916,11 @@ void neoscrypt(const uchar *password, uchar *output, uint profile)
 
 	default:
 	case(0x0):
-		neoscrypt_fastkdf(password, 80, password, 80, 32, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE);
+		neoscrypt_fastkdf(input, 80, input, 80, 32, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE);
 		break;
 
 	case(0x1):
-		neoscrypt_pbkdf2_sha256(password, 80, password, 80, 1, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE);
+		neoscrypt_pbkdf2_sha256(input, 80, input, 80, 1, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE);
 		break;
 	}
 
@@ -981,11 +981,11 @@ void neoscrypt(const uchar *password, uchar *output, uint profile)
 
 	default:
 	case(0x0):
-		neoscrypt_fastkdf(password, 80, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE, 32, output, 32);
+		neoscrypt_fastkdf(input, 80, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE, 32, output, 32);
 		break;
 
 	case(0x1):
-		neoscrypt_pbkdf2_sha256(password, 80, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE, 1, output, 32);
+		neoscrypt_pbkdf2_sha256(input, 80, (uchar *) X, r * 2 * SCRYPT_BLOCK_SIZE, 1, output, 32);
 		break;
 	}
 }

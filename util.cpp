@@ -1777,7 +1777,7 @@ void print_hash_tests(void)
 	myriadhash(&hash[0], &buf[0]);
 	printpfx("myriad", hash);
 
-	neoscrypt(&buf[0], &hash[0], 80000620);
+	neoscrypt(&hash[0], &buf[0], 80000620);
 	printpfx("neoscrypt", hash);
 
 	nist5hash(&hash[0], &buf[0]);

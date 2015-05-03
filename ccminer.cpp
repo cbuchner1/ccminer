@@ -275,7 +275,7 @@ Options:\n\
 			lyra2       VertCoin\n\
 			mjollnir    Mjollnircoin\n\
 			myr-gr      Myriad-Groestl\n\
-			neoscrypt   use to mine FeatherCoin\n\
+			neoscrypt   FeatherCoin, Phoenix, UFO...\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			pluck       SupCoin\n\

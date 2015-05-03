@@ -16,7 +16,6 @@ extern uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, uint32_t threads,
 int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
-	const int stratum = have_stratum;
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
@@ -41,7 +40,7 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 	}
 
 	uint32_t endiandata[20];
-	if (stratum) {
+	if (have_stratum) {
 		for (int k = 0; k < 20; k++)
 			be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 	} else {
@@ -52,19 +51,19 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 	neoscrypt_setBlockTarget(endiandata,ptarget);
 
 	do {
-		uint32_t foundNonce = neoscrypt_cpu_hash_k4(stratum, thr_id, throughput, pdata[19], 0);
+		uint32_t foundNonce = neoscrypt_cpu_hash_k4((int)have_stratum, thr_id, throughput, pdata[19], 0);
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash64[8];
 
 			*hashes_done = pdata[19] - first_nonce + 1;
 
-			if (stratum) {
+			if (have_stratum) {
 				be32enc(&endiandata[19], foundNonce);
 			} else {
 				endiandata[19] = foundNonce;
 			}
-			neoscrypt((uchar*) endiandata, (uchar*)vhash64, 0x80000620);
+			neoscrypt((uchar*)vhash64, (uchar*) endiandata, 0x80000620U);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				pdata[19] = foundNonce;
@@ -76,7 +75,7 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 
 		pdata[19] += throughput;
 
-	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
+	} while (!work_restart[thr_id].restart && (max_nonce > ((uint64_t)(pdata[19]) + throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;

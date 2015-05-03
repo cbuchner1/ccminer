@@ -231,6 +231,9 @@
     <ClCompile Include="scrypt-jane.cpp">
       <Filter>Source Files\CUDA\scrypt</Filter>
     </ClCompile>
+    <ClCompile Include="neoscrypt\neoscrypt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -618,6 +621,12 @@
     </CudaCompile>
     <CudaCompile Include="scrypt\titan_kernel.cu">
       <Filter>Source Files\CUDA\scrypt</Filter>
+    </CudaCompile>
+    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="neoscrypt.cu">
+      <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

@@ -692,7 +692,7 @@ unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
 void lyra2_hash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
-void neoscrypt(const uchar *password, uchar *output, uint profile);
+void neoscrypt(uchar *output, const uchar *input, uint32_t profile);
 void nist5hash(void *state, const void *input);
 void pentablakehash(void *output, const void *input);
 void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const int N);
