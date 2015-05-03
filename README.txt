@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.2-tpruvot (Apr 2015) - "Scrypt/N/Jane algos"
+ccMiner release 1.6.3-tpruvot (May 2015) - "Neoscrypt"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -37,6 +37,7 @@ Deep, Doom and Qubit
 Keccak (Maxcoin)
 Pentablake (Blake 512 x5)
 1Coin Triple S
+Neoscrypt (FeatherCoin)
 Scrypt and Scrypt:N
 Scrypt-Jane (Chacha)
 Skein (Skein + SHA)
@@ -76,6 +77,7 @@ its command line interface and options.
                           lyra2       use to mine Vertcoin
                           mjollnir    use to mine Mjollnircoin
                           myr-gr      use to mine Myriad-Groest
+                          neoscrypt   use to mine FeatherCoin
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
                           pluck       use to mine Supcoin
@@ -210,6 +212,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Not released!!  v1.6.3
+                  Import Neoscrypt from djm34 work
 
   Apr. 21th 2015  v1.6.2
                   Import Scrypt, Scrypt:N and Scrypt-jane from Cudaminer

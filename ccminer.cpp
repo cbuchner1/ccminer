@@ -98,6 +98,7 @@ enum sha_algos {
 	ALGO_LYRA2,
 	ALGO_MJOLLNIR,		/* Hefty hash */
 	ALGO_MYR_GR,
+	ALGO_NEOSCRYPT,
 	ALGO_NIST5,
 	ALGO_PENTABLAKE,
 	ALGO_PLUCK,
@@ -135,6 +136,7 @@ static const char *algo_names[] = {
 	"lyra2",
 	"mjollnir",
 	"myr-gr",
+	"neoscrypt",
 	"nist5",
 	"penta",
 	"pluck",
@@ -273,6 +275,7 @@ Options:\n\
 			lyra2       VertCoin\n\
 			mjollnir    Mjollnircoin\n\
 			myr-gr      Myriad-Groestl\n\
+			neoscrypt   use to mine FeatherCoin\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			pluck       SupCoin\n\
@@ -537,7 +540,7 @@ static bool work_decode(const json_t *val, struct work *work)
 	int adata_sz = ARRAY_SIZE(work->data), atarget_sz = ARRAY_SIZE(work->target);
 	int i;
 
-	if (opt_algo == ALGO_ZR5) {
+	if (opt_algo == ALGO_NEOSCRYPT || opt_algo == ALGO_ZR5) {
 		data_size = 80; adata_sz = 20;
 	}
 
@@ -1241,6 +1244,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	switch (opt_algo) {
 		case ALGO_JACKPOT:
+		case ALGO_NEOSCRYPT:
 		case ALGO_PLUCK:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
@@ -1472,6 +1476,7 @@ static void *miner_thread(void *userdata)
 				minmax = 0x400000;
 				break;
 			case ALGO_LYRA2:
+			case ALGO_NEOSCRYPT:
 			case ALGO_SCRYPT:
 			case ALGO_SCRYPT_JANE:
 				minmax = 0x100000;
@@ -1596,6 +1601,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_LYRA2:
 			rc = scanhash_lyra2(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_NEOSCRYPT:
+			rc = scanhash_neoscrypt(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

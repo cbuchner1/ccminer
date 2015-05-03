@@ -324,6 +324,9 @@ extern int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_neoscrypt(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done);
+
 extern int scanhash_nist5(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -689,6 +692,7 @@ unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
 void lyra2_hash(void *state, const void *input);
 void myriadhash(void *state, const void *input);
+void neoscrypt(const uchar *password, uchar *output, uint profile);
 void nist5hash(void *state, const void *input);
 void pentablakehash(void *output, const void *input);
 void pluckhash(uint32_t *hash, const uint32_t *data, uchar *hashbuffer, const int N);
