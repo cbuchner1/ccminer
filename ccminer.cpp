@@ -2139,8 +2139,9 @@ void parse_arg(int key, char *arg)
 				}
 				for (n=0; n < ngpus; n++)
 					gpus_intensity[n] = (1 << v) + adds;
-				applog(LOG_INFO, "Intensity set to %.1f, %u cuda threads",
-					d, gpus_intensity[0]);
+				if (opt_algo != ALGO_PLUCK && opt_algo != ALGO_NEOSCRYPT)
+					applog(LOG_INFO, "Intensity set to %.1f, %u cuda threads",
+						d, gpus_intensity[0]);
 				break;
 			}
 			while (pch != NULL) {

@@ -202,6 +202,10 @@ extern "C" int scanhash_pluck(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 			scratchbuf = (uchar*) calloc(opt_pluck_n, 1024);
 
 		pluck_cpu_init(thr_id, throughput, d_hash[thr_id]);
+
+		CUDA_SAFE_CALL(cudaGetLastError());
+		applog(LOG_INFO, "Using %d cuda threads", throughput);
+
 		init[thr_id] = true;
 	}
 
