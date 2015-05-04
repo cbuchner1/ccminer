@@ -4,40 +4,27 @@
 #include "cuda_helper.h"
 #include "cuda_vectors.h"
 
- __device__  uint4 *  W;
+ __device__ uint4* W;
 uint32_t *d_NNonce[MAX_GPUS];
 uint32_t *d_nnounce[MAX_GPUS];
-__constant__  uint32_t pTarget[8];
-__constant__  uint32_t key_init[16];
-__constant__  uint32_t input_init[16];
-__constant__  uint32_t  c_data[80];
+__constant__ uint32_t pTarget[8];
+__constant__ uint32_t key_init[16];
+__constant__ uint32_t input_init[16];
+__constant__ uint32_t c_data[80];
 
-
-#define SALSA_SMALL_UNROLL 1
-#define CHACHA_SMALL_UNROLL 1
-#define BLAKE2S_BLOCK_SIZE    64U
-#define BLAKE2S_OUT_SIZE      32U
-#define BLAKE2S_KEY_SIZE      32U
-#define BLOCK_SIZE            64U
-#define FASTKDF_BUFFER_SIZE  256U
-#define PASSWORD_LEN          80U
 /// constants ///
 
-static const __constant__  uint8 BLAKE2S_IV_Vec =
-	{
-		0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
-		0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
-	};
-
-
-static const  uint8 BLAKE2S_IV_Vechost =
-{
+static const __constant__ uint8 BLAKE2S_IV_Vec = {
 	0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
 	0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
 };
 
-static const uint32_t BLAKE2S_SIGMA_host[10][16] =
-{
+static const uint8 BLAKE2S_IV_Vechost = {
+	0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
+	0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
+};
+
+static const uint32_t BLAKE2S_SIGMA_host[10][16] = {
 	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 	{ 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
 	{ 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -49,7 +36,10 @@ static const uint32_t BLAKE2S_SIGMA_host[10][16] =
 	{ 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
 	{ 10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0 },
 };
-__constant__ uint32_t BLAKE2S_SIGMA[10][16];
+
+static __constant__ uint32_t BLAKE2S_SIGMA[10][16];
+
+#define FASTKDF_BUFFER_SIZE  256U
 
 // Blake2S
 
@@ -69,16 +59,13 @@ __constant__ uint32_t BLAKE2S_SIGMA[10][16];
 #else
 #define BLAKE_G(idx0, idx1, a, b, c, d, key) { \
 	idx = BLAKE2S_SIGMA[idx0][idx1]; a += key[idx]; \
-	a += b; d = rotate(d^a,16); \
+	a += b; d = rotate(d^a, 16); \
 	c += d; b = rotateR(b^c, 12); \
 	idx = BLAKE2S_SIGMA[idx0][idx1+1]; a += key[idx]; \
-	a += b; d = rotateR(d^a,8); \
+	a += b; d = rotateR(d^a, 8); \
 	c += d; b = rotateR(b^c, 7); \
 }
 #endif
-
-//#define ROTL32(x, n) ((x) << (n)) | ((x) >> (32 - (n)))
-//#define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
 
 #define BLAKE_Ghost(idx0, idx1, a, b, c, d, key) { \
 	idx = BLAKE2S_SIGMA_host[idx0][idx1]; a += key[idx]; \
@@ -89,8 +76,8 @@ __constant__ uint32_t BLAKE2S_SIGMA[10][16];
 	c += d; b = ROTR32(b^c, 7); \
 }
 
-
-static __forceinline__ __device__ void Blake2S(uint32_t * inout, const uint32_t * TheKey)
+static __forceinline__ __device__
+void Blake2S(uint32_t * inout, const uint32_t * TheKey)
 {
 	uint16 V;
 	uint32_t idx;
@@ -141,10 +128,10 @@ static __forceinline__ __device__ void Blake2S(uint32_t * inout, const uint32_t 
 	V.lo ^= V.hi ^ tmpblock;
 
 	((uint8*)inout)[0]=V.lo;
-
 }
 
-static __forceinline__ __host__ void Blake2Shost(uint32_t * inout, const uint32_t * inkey)
+static __forceinline__ __host__
+void Blake2Shost(uint32_t * inout, const uint32_t * inkey)
 {
 	uint16 V;
 	uint32_t idx;
@@ -197,7 +184,8 @@ static __forceinline__ __host__ void Blake2Shost(uint32_t * inout, const uint32_
 	((uint8*)inout)[0] = V.lo;
 }
 
-static __forceinline__ __device__ void fastkdf256(const uint32_t* password, uint8_t* output)
+static __forceinline__ __device__
+void fastkdf256(const uint32_t* password, uint8_t* output)
 {
 	uint8_t bufidx = 0;
 	uchar4 bufhelper;
@@ -275,7 +263,8 @@ static __forceinline__ __device__ void fastkdf256(const uint32_t* password, uint
 	}
 }
 
-static __forceinline__ __device__ void fastkdf32( const uint32_t * password, const uint32_t * salt, uint32_t * output)
+static __forceinline__ __device__
+void fastkdf32( const uint32_t * password, const uint32_t * salt, uint32_t * output)
 {
 	uint8_t bufidx = 0;
 	uchar4 bufhelper;
@@ -302,7 +291,8 @@ static __forceinline__ __device__ void fastkdf32( const uint32_t * password, con
 		bufidx = 0;
 		bufhelper = ((uchar4*)input)[0];
 
-		for (int x = 1; x < BLAKE2S_OUT_SIZE / 4; ++x) { bufhelper += ((uchar4*)input)[x]; }
+		for (int x = 1; x < BLAKE2S_OUT_SIZE / 4; ++x)
+			bufhelper += ((uchar4*)input)[x];
 
 		bufidx = bufhelper.x + bufhelper.y + bufhelper.z + bufhelper.w;
 		int qbuf = bufidx / 4;
@@ -316,19 +306,22 @@ static __forceinline__ __device__ void fastkdf32( const uint32_t * password, con
 			((uint32_t *)B)[k + qbuf] ^= ((uint32_t *)shifted)[k];
 		}
 
-		if (i<31){
-		if (bufidx < BLAKE2S_KEY_SIZE)                            {((uint8*)B)[8] = ((uint8*)B)[0];}
-		else if (bufidx > FASTKDF_BUFFER_SIZE - BLAKE2S_OUT_SIZE) {((uint8*)B)[0] = ((uint8*)B)[8];}
-//		MyUnion Test;
+		if (i<31) {
+			if (bufidx < BLAKE2S_KEY_SIZE)                            {((uint8*)B)[8] = ((uint8*)B)[0];}
+			else if (bufidx > FASTKDF_BUFFER_SIZE - BLAKE2S_OUT_SIZE) {((uint8*)B)[0] = ((uint8*)B)[8];}
 
-		for (uint8_t k = 0; k <BLAKE2S_BLOCK_SIZE/4 ; k++) {
-	((uchar4*)(input))[k] =
-	make_uchar4((A + bufidx)[4 * k], (A + bufidx)[4 * k + 1], (A + bufidx)[4 * k + 2], (A + bufidx)[4 * k + 3]);
-		}
-		for (uint8_t k = 0; k <BLAKE2S_KEY_SIZE / 4; k++) {
-	((uchar4*)(key))[k] =
-	make_uchar4((B + bufidx)[4 * k], (B + bufidx)[4 * k + 1], (B + bufidx)[4 * k + 2], (B + bufidx)[4 * k + 3]);
-		}
+			for (uint8_t k = 0; k < BLAKE2S_BLOCK_SIZE/4; k++) {
+				((uchar4*)(input))[k] = make_uchar4(
+					(A + bufidx)[4 * k], (A + bufidx)[4 * k + 1],
+					(A + bufidx)[4 * k + 2], (A + bufidx)[4 * k + 3]
+				);
+			}
+			for (uint8_t k = 0; k < BLAKE2S_KEY_SIZE / 4; k++) {
+				((uchar4*)(key))[k] = make_uchar4(
+					(B + bufidx)[4 * k], (B + bufidx)[4 * k + 1],
+					(B + bufidx)[4 * k + 2], (B + bufidx)[4 * k + 3]
+				);
+			}
 		}
 	}
 
@@ -339,10 +332,10 @@ static __forceinline__ __device__ void fastkdf32( const uint32_t * password, con
 
 
 #define SALSA(a,b,c,d) { \
-    t =a+d; b^=rotate(t,  7);    \
-    t =b+a; c^=rotate(t,  9);    \
-    t =c+b; d^=rotate(t, 13);    \
-    t =d+c; a^=rotate(t, 18);     \
+    t =a+d; b^=rotate(t,  7); \
+    t =b+a; c^=rotate(t,  9); \
+    t =c+b; d^=rotate(t, 13); \
+    t =d+c; a^=rotate(t, 18); \
 }
 
 #define SALSA_CORE(state) { \
@@ -568,13 +561,11 @@ uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, uint32_t threads, uint32
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-//	neoscrypt_gpu_hash_orig << <grid, block >> >(threads, startNounce, d_NNonce[thr_id]);
-
-	neoscrypt_gpu_hash_k0  << <grid, block >> >(stratum,threads, startNounce);
-	neoscrypt_gpu_hash_k01 << <grid, block >> >(threads, startNounce);
-	neoscrypt_gpu_hash_k2  << <grid, block >> >(threads, startNounce);
-	neoscrypt_gpu_hash_k3  << <grid, block >> >(threads, startNounce);
-	neoscrypt_gpu_hash_k4  << <grid, block >> >(stratum,threads, startNounce, d_NNonce[thr_id]);
+	neoscrypt_gpu_hash_k0  <<< grid, block >>>(stratum, threads, startNounce);
+	neoscrypt_gpu_hash_k01 <<< grid, block >>>(threads, startNounce);
+	neoscrypt_gpu_hash_k2  <<< grid, block >>>(threads, startNounce);
+	neoscrypt_gpu_hash_k3  <<< grid, block >>>(threads, startNounce);
+	neoscrypt_gpu_hash_k4  <<< grid, block >>>(stratum, threads, startNounce, d_NNonce[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(&result[thr_id], d_NNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
@@ -594,14 +585,13 @@ void neoscrypt_setBlockTarget(uint32_t* pdata, const void *target)
 
 	((uint16*)input)[0] = ((uint16*)pdata)[0];
 	((uint8*)key)[0] = ((uint8*)pdata)[0];
-//	for (int i = 0; i<10; i++) { printf(" pdata/input %d %08x %08x \n",i,pdata[2*i],pdata[2*i+1]); }
 
 	Blake2Shost(input,key);
 
-	cudaMemcpyToSymbol(pTarget, target, 8 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(input_init, input, 16 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(key_init, key, 16 * sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(pTarget, target, 32, 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(input_init, input, sizeof(input), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(key_init, key, sizeof(key), 0, cudaMemcpyHostToDevice);
 
-	cudaMemcpyToSymbol(c_data, PaddedMessage, 40 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_data, PaddedMessage, 80*4, 0, cudaMemcpyHostToDevice);
 }
 
