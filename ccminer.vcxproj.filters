@@ -76,6 +76,9 @@
     <Filter Include="Source Files\CUDA\scrypt">
       <UniqueIdentifier>{c26f5b02-37b5-4420-a4e8-ee1ad517dc95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\neoscrypt">
+      <UniqueIdentifier>{2037fd0d-e7a2-4da8-956c-150aec726a99}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -118,9 +121,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="groestlcoin.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="neoscrypt\neoscrypt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="sph\aes_helper.c">
@@ -234,8 +234,11 @@
     <ClCompile Include="scrypt-jane.cpp">
       <Filter>Source Files\CUDA\scrypt</Filter>
     </ClCompile>
+    <ClCompile Include="neoscrypt\neoscrypt.cpp">
+      <Filter>Source Files\neoscrypt</Filter>
+    </ClCompile>
     <ClCompile Include="neoscrypt\neoscrypt-cpu.c">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\neoscrypt</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -391,6 +394,12 @@
     </ClInclude>
     <ClInclude Include="scrypt\salsa_kernel.h">
       <Filter>Source Files\CUDA\scrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="neoscrypt\neoscrypt.h">
+      <Filter>Source Files\neoscrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="neoscrypt\cuda_vectors.h">
+      <Filter>Source Files\neoscrypt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -626,7 +635,7 @@
       <Filter>Source Files\CUDA\scrypt</Filter>
     </CudaCompile>
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
-      <Filter>Source Files\CUDA</Filter>
+      <Filter>Source Files\neoscrypt</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

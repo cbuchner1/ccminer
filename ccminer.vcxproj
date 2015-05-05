@@ -265,8 +265,11 @@
     <ClCompile Include="myriadgroestl.cpp" />
     <ClCompile Include="lyra2\Lyra2.c" />
     <ClCompile Include="lyra2\Sponge.c" />
-    <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />
+    <ClInclude Include="neoscrypt\neoscrypt.h" />
     <ClCompile Include="neoscrypt\neoscrypt.cpp" />
+    <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />
+    <ClInclude Include="neoscrypt\cuda_vectors.h" />
+    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />
     <ClCompile Include="sph\bmw.c" />
@@ -437,7 +440,6 @@
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
-    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
     <CudaCompile Include="pluck\pluck.cu" />
     <CudaCompile Include="pluck\cuda_pluck.cu" />
     <CudaCompile Include="quark\cuda_quark_groestl512.cu">
