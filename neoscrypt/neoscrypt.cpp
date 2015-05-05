@@ -1,10 +1,6 @@
-
-extern "C" {
-#include "neoscrypt/neoscrypt.h"
-}
-
-#include "cuda_helper.h"
+#include <cuda_runtime.h>
 #include "miner.h"
+#include "neoscrypt/neoscrypt.h"
 
 static uint32_t *d_hash[MAX_GPUS] ;
 extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
@@ -12,6 +8,8 @@ extern void neoscrypt_cpu_init(int thr_id, uint32_t threads, uint32_t* hash);
 extern uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, uint32_t threads, uint32_t startNounce, int order);
 
 #define SHIFT 130
+
+static bool init[MAX_GPUS] = { 0 };
 
 int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -25,17 +23,21 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 	throughput = throughput / 32; /* set for max intensity ~= 20 */
 	throughput = min(throughput, max_nonce - first_nonce + 1);
 
-	static bool init[MAX_GPUS] = { 0 };
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 32 * SHIFT * sizeof(uint64_t) * throughput));
+		cudaMalloc(&d_hash[thr_id], 32 * SHIFT * sizeof(uint64_t) * throughput);
 		neoscrypt_cpu_init(thr_id, throughput, d_hash[thr_id]);
 
 		applog(LOG_INFO, "Using %d cuda threads", throughput);
-
+		if (cudaGetLastError() != cudaSuccess) {
+			cudaError_t err = cudaGetLastError();
+		        fprintf(stderr, "Cuda error in func '%s' at line %i : %s.\n",
+			                 __FUNCTION__, __LINE__, cudaGetErrorString(err) );
+			proper_exit(EXIT_FAILURE);
+		}
 		init[thr_id] = true;
 	}
 

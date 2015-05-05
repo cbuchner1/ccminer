@@ -265,8 +265,8 @@
     <ClCompile Include="myriadgroestl.cpp" />
     <ClCompile Include="lyra2\Lyra2.c" />
     <ClCompile Include="lyra2\Sponge.c" />
-    <ClCompile Include="neoscrypt\neoscrypt.c" />
-    <ClCompile Include="neoscrypt.cpp" />
+    <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />
+    <ClCompile Include="neoscrypt\neoscrypt.cpp" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />
     <ClCompile Include="sph\bmw.c" />

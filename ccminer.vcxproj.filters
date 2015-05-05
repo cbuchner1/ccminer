@@ -120,9 +120,9 @@
     <ClCompile Include="groestlcoin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="neoscrypt.cpp">
+    <ClCompile Include="neoscrypt\neoscrypt.cpp">
       <Filter>Source Files</Filter>
-    </CudaCompile>
+    </ClCompile>
     <ClCompile Include="sph\aes_helper.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
@@ -234,7 +234,7 @@
     <ClCompile Include="scrypt-jane.cpp">
       <Filter>Source Files\CUDA\scrypt</Filter>
     </ClCompile>
-    <ClCompile Include="neoscrypt\neoscrypt.c">
+    <ClCompile Include="neoscrypt\neoscrypt-cpu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
