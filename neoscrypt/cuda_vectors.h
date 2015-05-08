@@ -435,8 +435,6 @@ static __forceinline__ __device__ ulonglonglong operator+ (const ulonglonglong &
 
 
 static __forceinline__ __device__ void operator^= (ulonglong2to8 &a, const ulonglong2to8 &b) { a = a ^ b; }
-
-
 static __forceinline__ __device__ void operator+= (uint4 &a, uint4 b) { a = a + b; }
 static __forceinline__ __device__ void operator+= (uchar4 &a, uchar4 b) { a = a + b; }
 static __forceinline__ __device__  __host__ void operator+= (uint8 &a, const uint8 &b) { a = a + b; }
@@ -452,44 +450,22 @@ static __forceinline__ __device__ void operator^= (ulonglong16to32 &a, const ulo
 static __forceinline__ __device__ void operator+= (ulonglong32to64 &a, const ulonglong32to64 &b) { a = a + b; }
 static __forceinline__ __device__ void operator^= (ulonglong32to64 &a, const ulonglong32to64 &b) { a = a ^ b; }
 
-
 static __forceinline__ __device__ void operator+= (ulonglonglong &a, const ulonglonglong &b) { a = a + b; }
 static __forceinline__ __device__ void operator^= (ulonglonglong &a, const ulonglonglong &b) { a = a ^ b; }
 
 #if __CUDA_ARCH__ < 320
 
-#define rotate ROTL32
+#define rotateL ROTL32
 #define rotateR ROTR32
 
 #else
 
-static __forceinline__ __device__ uint4 rotate4(uint4 vec4, uint32_t shift)
-{
-	uint4 ret;
-	asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.x) : "r"(vec4.x), "r"(vec4.x), "r"(shift));
-	asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.y) : "r"(vec4.y), "r"(vec4.y), "r"(shift));
-	asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.z) : "r"(vec4.z), "r"(vec4.z), "r"(shift));
-	asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.w) : "r"(vec4.w), "r"(vec4.w), "r"(shift));
-	return ret;
-}
-
-static __forceinline__ __device__ uint4 rotate4R(uint4 vec4, uint32_t shift)
-{
-	uint4 ret;
-	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.x) : "r"(vec4.x), "r"(vec4.x), "r"(shift));
-	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.y) : "r"(vec4.y), "r"(vec4.y), "r"(shift));
-	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.z) : "r"(vec4.z), "r"(vec4.z), "r"(shift));
-	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(ret.w) : "r"(vec4.w), "r"(vec4.w), "r"(shift));
-	return ret;
-}
-
-static __forceinline__ __device__ uint32_t rotate(uint32_t vec4, uint32_t shift)
+static __forceinline__ __device__ uint32_t rotateL(uint32_t vec4, uint32_t shift)
 {
 	uint32_t ret;
 	asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(ret) : "r"(vec4), "r"(vec4), "r"(shift));
 	return ret;
 }
-
 
 static __forceinline__ __device__ uint32_t rotateR(uint32_t vec4, uint32_t shift)
 {
@@ -498,104 +474,28 @@ static __forceinline__ __device__ uint32_t rotateR(uint32_t vec4, uint32_t shift
 	return ret;
 }
 
-
-
-static __device__ __inline__ uint8 __ldg8(const uint8_t *ptr)
-{
-	uint8 test;
-	asm volatile ("ld.global.nc.v4.u32 {%0,%1,%2,%3},[%4];" : "=r"(test.s0), "=r"(test.s1), "=r"(test.s2), "=r"(test.s3) : __LDG_PTR(ptr));
-	asm volatile ("ld.global.nc.v4.u32 {%0,%1,%2,%3},[%4+16];" : "=r"(test.s4), "=r"(test.s5), "=r"(test.s6), "=r"(test.s7) : __LDG_PTR(ptr));
-	return (test);
-}
-
-
-static __device__ __inline__ uint32_t __ldgtoint(const uint8_t *ptr)
-{
-	uint32_t test;
-	asm volatile ("ld.global.nc.u32 {%0},[%1];" : "=r"(test) : __LDG_PTR(ptr));
-	return (test);
-}
-
-static __device__ __inline__ uint32_t __ldgtoint64(const uint8_t *ptr)
-{
-	uint64_t test;
-	asm volatile ("ld.global.nc.u64 {%0},[%1];" : "=l"(test) : __LDG_PTR(ptr));
-	return (test);
-}
-
-
-static __device__ __inline__ uint32_t __ldgtoint_unaligned(const uint8_t *ptr)
-{
-	uint32_t test;
-	asm volatile ("{\n\t"
-		".reg .u8 a,b,c,d; \n\t"
-	"ld.global.nc.u8 a,[%1]; \n\t"
-	"ld.global.nc.u8 b,[%1+1]; \n\t"
-	"ld.global.nc.u8 c,[%1+2]; \n\t"
-	"ld.global.nc.u8 d,[%1+3]; \n\t"
-	"mov.b32 %0,{a,b,c,d}; }\n\t"
-		: "=r"(test) : __LDG_PTR(ptr));
-	return (test);
-}
-
-static __device__ __inline__ uint64_t __ldgtoint64_unaligned(const uint8_t *ptr)
-{
-	uint64_t test;
-	asm volatile ("{\n\t"
-		".reg .u8 a,b,c,d,e,f,g,h; \n\t"
-		".reg .u32 i,j; \n\t"
-		"ld.global.nc.u8 a,[%1]; \n\t"
-		"ld.global.nc.u8 b,[%1+1]; \n\t"
-		"ld.global.nc.u8 c,[%1+2]; \n\t"
-		"ld.global.nc.u8 d,[%1+3]; \n\t"
-		"ld.global.nc.u8 e,[%1+4]; \n\t"
-		"ld.global.nc.u8 f,[%1+5]; \n\t"
-		"ld.global.nc.u8 g,[%1+6]; \n\t"
-		"ld.global.nc.u8 h,[%1+7]; \n\t"
-		 "mov.b32 i,{a,b,c,d}; \n\t"
-         "mov.b32 j,{e,f,g,h}; \n\t"
-		 "mov.b64 %0,{i,j}; }\n\t"
-		: "=l"(test) : __LDG_PTR(ptr));
-	return (test);
-}
-
-
-static __device__ __inline__ uint64_t __ldgtoint64_trunc(const uint8_t *ptr)
-{
-	uint32_t zero = 0;
-	uint64_t test;
-	asm volatile ("{\n\t"
-		".reg .u8 a,b,c,d; \n\t"
-		".reg .u32 i; \n\t"
-		"ld.global.nc.u8 a,[%1]; \n\t"
-		"ld.global.nc.u8 b,[%1+1]; \n\t"
-		"ld.global.nc.u8 c,[%1+2]; \n\t"
-		"ld.global.nc.u8 d,[%1+3]; \n\t"
-		"mov.b32 i,{a,b,c,d}; \n\t"
-		"mov.b64 %0,{i,%1}; }\n\t"
-		: "=l"(test) : __LDG_PTR(ptr), "r"(zero));
-	return (test);
-}
-
-
-
-static __device__ __inline__ uint32_t __ldgtoint_unaligned2(const uint8_t *ptr)
-{
-	uint32_t test;
-	asm("{\n\t"
-		".reg .u8 e,b,c,d; \n\t"
-		"ld.global.nc.u8 e,[%1]; \n\t"
-		"ld.global.nc.u8 b,[%1+1]; \n\t"
-		"ld.global.nc.u8 c,[%1+2]; \n\t"
-		"ld.global.nc.u8 d,[%1+3]; \n\t"
-		"mov.b32 %0,{e,b,c,d}; }\n\t"
-		: "=r"(test) : __LDG_PTR(ptr));
-	return (test);
-}
-
 #endif
 
-static __forceinline__ __device__ void shift256R2(uint32_t * ret, const uint8 &vec4, uint32_t shift)
+#if __CUDA_ARCH__ < 320
+
+// TO FINISH FOR SM 3.0 SUPPORT...
+static __forceinline__ __device__ void shift256R2(uint32_t* ret, const uint8 &vec4, uint32_t shift)
+{
+	uint32_t *v = (uint32_t*) &vec4.s0;
+	for (int i=0; i<8; i++) {
+		ret[i] = ROTR32(v[i], shift);
+	}
+}
+
+static __device__ __inline__ uintx64 __ldg32(const uint4 *ptr)
+{
+	uintx64 ret = { 0 };
+	return ret;
+}
+
+#else
+
+static __forceinline__ __device__ void shift256R2(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 {
 	uint32_t truc = 0, truc2 = cuda_swab32(vec4.s7), truc3 = 0;
 	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift));
@@ -623,68 +523,7 @@ static __forceinline__ __device__ void shift256R2(uint32_t * ret, const uint8 &v
 	ret[1] = cuda_swab32(truc);
 	asm("shr.b32        %0, %1, %2;" : "=r"(truc) : "r"(truc3), "r"(shift));
 	ret[0] = cuda_swab32(truc);
-
 }
-
-#define shift256R3(ret,vec4, shift) \
-{ \
- \
-uint32_t truc=0,truc2=cuda_swab32(vec4.s7),truc3=0; \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[8] = cuda_swab32(truc); \
-truc2=cuda_swab32(vec4.s6);truc3=cuda_swab32(vec4.s7); \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[7] = cuda_swab32(truc); \
-truc2=cuda_swab32(vec4.s5);truc3=cuda_swab32(vec4.s6); \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[6] = cuda_swab32(truc); \
-truc2 = cuda_swab32(vec4.s4); truc3 = cuda_swab32(vec4.s5); \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[5] = cuda_swab32(truc); \
-truc2 = cuda_swab32(vec4.s3); truc3 = cuda_swab32(vec4.s4); \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[4] = cuda_swab32(truc); \
-truc2 = cuda_swab32(vec4.s2); truc3 = cuda_swab32(vec4.s3); \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[3] = cuda_swab32(truc); \
-truc2 = cuda_swab32(vec4.s1); truc3 = cuda_swab32(vec4.s2); \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[2] = cuda_swab32(truc); \
-truc2 = cuda_swab32(vec4.s0); truc3 = cuda_swab32(vec4.s1); \
-	asm volatile ("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift)); \
-		ret[1] = cuda_swab32(truc); \
-truc3 = cuda_swab32(vec4.s0); \
-	asm volatile ("shr.b32        %0, %1, %2;" : "=r"(truc) : "r"(truc3), "r"(shift)); \
-		ret[0] = cuda_swab32(truc); \
- \
- \
-}
-
-
-static __device__ __inline__ uint32 __ldg32b(const uint32 *ptr)
-{
-	uint32 ret;
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"     : "=r"(ret.lo.s0), "=r"(ret.lo.s1), "=r"(ret.lo.s2), "=r"(ret.lo.s3) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];"  : "=r"(ret.lo.s4), "=r"(ret.lo.s5), "=r"(ret.lo.s6), "=r"(ret.lo.s7) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret.lo.s8), "=r"(ret.lo.s9), "=r"(ret.lo.sa), "=r"(ret.lo.sb) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];"  : "=r"(ret.lo.sc), "=r"(ret.lo.sd), "=r"(ret.lo.se), "=r"(ret.lo.sf) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret.hi.s0), "=r"(ret.hi.s1), "=r"(ret.hi.s2), "=r"(ret.hi.s3) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];"  : "=r"(ret.hi.s4), "=r"(ret.hi.s5), "=r"(ret.hi.s6), "=r"(ret.hi.s7) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+96];"  : "=r"(ret.hi.s8), "=r"(ret.hi.s9), "=r"(ret.hi.sa), "=r"(ret.hi.sb) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+112];" : "=r"(ret.hi.sc), "=r"(ret.hi.sd), "=r"(ret.hi.se), "=r"(ret.hi.sf) : __LDG_PTR(ptr));
-	return ret;
-}
-
-static __device__ __inline__ uint16 __ldg16b(const uint16 *ptr)
-{
-	uint16 ret;
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"     : "=r"(ret.s0), "=r"(ret.s1), "=r"(ret.s2), "=r"(ret.s3) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];"  : "=r"(ret.s4), "=r"(ret.s5), "=r"(ret.s6), "=r"(ret.s7) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret.s8), "=r"(ret.s9), "=r"(ret.sa), "=r"(ret.sb) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];"  : "=r"(ret.sc), "=r"(ret.sd), "=r"(ret.se), "=r"(ret.sf) : __LDG_PTR(ptr));
-	return ret;
-}
-
 
 static __device__ __inline__ uintx64 __ldg32(const uint4 *ptr)
 {
@@ -708,330 +547,7 @@ static __device__ __inline__ uintx64 __ldg32(const uint4 *ptr)
 	return ret;
 }
 
-static __device__ __inline__ uintx64 __ldg32c(const uintx64 *ptr)
-{
-	uintx64 ret;
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret.s0.s0.s0.s0.x), "=r"(ret.s0.s0.s0.s0.y), "=r"(ret.s0.s0.s0.s0.z), "=r"(ret.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];"  : "=r"(ret.s0.s0.s0.s1.x), "=r"(ret.s0.s0.s0.s1.y), "=r"(ret.s0.s0.s0.s1.z), "=r"(ret.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret.s0.s0.s1.s0.x), "=r"(ret.s0.s0.s1.s0.y), "=r"(ret.s0.s0.s1.s0.z), "=r"(ret.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];"  : "=r"(ret.s0.s0.s1.s1.x), "=r"(ret.s0.s0.s1.s1.y), "=r"(ret.s0.s0.s1.s1.z), "=r"(ret.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret.s0.s1.s0.s0.x), "=r"(ret.s0.s1.s0.s0.y), "=r"(ret.s0.s1.s0.s0.z), "=r"(ret.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];"  : "=r"(ret.s0.s1.s0.s1.x), "=r"(ret.s0.s1.s0.s1.y), "=r"(ret.s0.s1.s0.s1.z), "=r"(ret.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+96];"  : "=r"(ret.s0.s1.s1.s0.x), "=r"(ret.s0.s1.s1.s0.y), "=r"(ret.s0.s1.s1.s0.z), "=r"(ret.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+112];"  : "=r"(ret.s0.s1.s1.s1.x), "=r"(ret.s0.s1.s1.s1.y), "=r"(ret.s0.s1.s1.s1.z), "=r"(ret.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+128];"  : "=r"(ret.s1.s0.s0.s0.x), "=r"(ret.s1.s0.s0.s0.y), "=r"(ret.s1.s0.s0.s0.z), "=r"(ret.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+144];"  : "=r"(ret.s1.s0.s0.s1.x), "=r"(ret.s1.s0.s0.s1.y), "=r"(ret.s1.s0.s0.s1.z), "=r"(ret.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+160];"  : "=r"(ret.s1.s0.s1.s0.x), "=r"(ret.s1.s0.s1.s0.y), "=r"(ret.s1.s0.s1.s0.z), "=r"(ret.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+176];"  : "=r"(ret.s1.s0.s1.s1.x), "=r"(ret.s1.s0.s1.s1.y), "=r"(ret.s1.s0.s1.s1.z), "=r"(ret.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+192];"  : "=r"(ret.s1.s1.s0.s0.x), "=r"(ret.s1.s1.s0.s0.y), "=r"(ret.s1.s1.s0.s0.z), "=r"(ret.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+208];"  : "=r"(ret.s1.s1.s0.s1.x), "=r"(ret.s1.s1.s0.s1.y), "=r"(ret.s1.s1.s0.s1.z), "=r"(ret.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+224];"  : "=r"(ret.s1.s1.s1.s0.x), "=r"(ret.s1.s1.s1.s0.y), "=r"(ret.s1.s1.s1.s0.z), "=r"(ret.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+240];"  : "=r"(ret.s1.s1.s1.s1.x), "=r"(ret.s1.s1.s1.s1.y), "=r"(ret.s1.s1.s1.s1.z), "=r"(ret.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-
-	return ret;
-}
-
-static __device__ __inline__ uintx128 __ldg128(const uintx128 *ptr)
-{
-	uintx128 ret;
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"     : "=r"(ret.s0.s0.s0.s0.s0.x), "=r"(ret.s0.s0.s0.s0.s0.y), "=r"(ret.s0.s0.s0.s0.s0.z), "=r"(ret.s0.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];"  : "=r"(ret.s0.s0.s0.s0.s1.x), "=r"(ret.s0.s0.s0.s0.s1.y), "=r"(ret.s0.s0.s0.s0.s1.z), "=r"(ret.s0.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret.s0.s0.s0.s1.s0.x), "=r"(ret.s0.s0.s0.s1.s0.y), "=r"(ret.s0.s0.s0.s1.s0.z), "=r"(ret.s0.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];"  : "=r"(ret.s0.s0.s0.s1.s1.x), "=r"(ret.s0.s0.s0.s1.s1.y), "=r"(ret.s0.s0.s0.s1.s1.z), "=r"(ret.s0.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret.s0.s0.s1.s0.s0.x), "=r"(ret.s0.s0.s1.s0.s0.y), "=r"(ret.s0.s0.s1.s0.s0.z), "=r"(ret.s0.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];"  : "=r"(ret.s0.s0.s1.s0.s1.x), "=r"(ret.s0.s0.s1.s0.s1.y), "=r"(ret.s0.s0.s1.s0.s1.z), "=r"(ret.s0.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+96];"  : "=r"(ret.s0.s0.s1.s1.s0.x), "=r"(ret.s0.s0.s1.s1.s0.y), "=r"(ret.s0.s0.s1.s1.s0.z), "=r"(ret.s0.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+112];" : "=r"(ret.s0.s0.s1.s1.s1.x), "=r"(ret.s0.s0.s1.s1.s1.y), "=r"(ret.s0.s0.s1.s1.s1.z), "=r"(ret.s0.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+128];" : "=r"(ret.s0.s1.s0.s0.s0.x), "=r"(ret.s0.s1.s0.s0.s0.y), "=r"(ret.s0.s1.s0.s0.s0.z), "=r"(ret.s0.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+144];" : "=r"(ret.s0.s1.s0.s0.s1.x), "=r"(ret.s0.s1.s0.s0.s1.y), "=r"(ret.s0.s1.s0.s0.s1.z), "=r"(ret.s0.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+160];" : "=r"(ret.s0.s1.s0.s1.s0.x), "=r"(ret.s0.s1.s0.s1.s0.y), "=r"(ret.s0.s1.s0.s1.s0.z), "=r"(ret.s0.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+176];" : "=r"(ret.s0.s1.s0.s1.s1.x), "=r"(ret.s0.s1.s0.s1.s1.y), "=r"(ret.s0.s1.s0.s1.s1.z), "=r"(ret.s0.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+192];" : "=r"(ret.s0.s1.s1.s0.s0.x), "=r"(ret.s0.s1.s1.s0.s0.y), "=r"(ret.s0.s1.s1.s0.s0.z), "=r"(ret.s0.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+208];" : "=r"(ret.s0.s1.s1.s0.s1.x), "=r"(ret.s0.s1.s1.s0.s1.y), "=r"(ret.s0.s1.s1.s0.s1.z), "=r"(ret.s0.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+224];" : "=r"(ret.s0.s1.s1.s1.s0.x), "=r"(ret.s0.s1.s1.s1.s0.y), "=r"(ret.s0.s1.s1.s1.s0.z), "=r"(ret.s0.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+240];" : "=r"(ret.s0.s1.s1.s1.s1.x), "=r"(ret.s0.s1.s1.s1.s1.y), "=r"(ret.s0.s1.s1.s1.s1.z), "=r"(ret.s0.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+256];" : "=r"(ret.s1.s0.s0.s0.s0.x), "=r"(ret.s1.s0.s0.s0.s0.y), "=r"(ret.s1.s0.s0.s0.s0.z), "=r"(ret.s1.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+272];" : "=r"(ret.s1.s0.s0.s0.s1.x), "=r"(ret.s1.s0.s0.s0.s1.y), "=r"(ret.s1.s0.s0.s0.s1.z), "=r"(ret.s1.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+288];" : "=r"(ret.s1.s0.s0.s1.s0.x), "=r"(ret.s1.s0.s0.s1.s0.y), "=r"(ret.s1.s0.s0.s1.s0.z), "=r"(ret.s1.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+304];" : "=r"(ret.s1.s0.s0.s1.s1.x), "=r"(ret.s1.s0.s0.s1.s1.y), "=r"(ret.s1.s0.s0.s1.s1.z), "=r"(ret.s1.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+320];" : "=r"(ret.s1.s0.s1.s0.s0.x), "=r"(ret.s1.s0.s1.s0.s0.y), "=r"(ret.s1.s0.s1.s0.s0.z), "=r"(ret.s1.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+336];" : "=r"(ret.s1.s0.s1.s0.s1.x), "=r"(ret.s1.s0.s1.s0.s1.y), "=r"(ret.s1.s0.s1.s0.s1.z), "=r"(ret.s1.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+352];" : "=r"(ret.s1.s0.s1.s1.s0.x), "=r"(ret.s1.s0.s1.s1.s0.y), "=r"(ret.s1.s0.s1.s1.s0.z), "=r"(ret.s1.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+368];" : "=r"(ret.s1.s0.s1.s1.s1.x), "=r"(ret.s1.s0.s1.s1.s1.y), "=r"(ret.s1.s0.s1.s1.s1.z), "=r"(ret.s1.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+384];" : "=r"(ret.s1.s1.s0.s0.s0.x), "=r"(ret.s1.s1.s0.s0.s0.y), "=r"(ret.s1.s1.s0.s0.s0.z), "=r"(ret.s1.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+400];" : "=r"(ret.s1.s1.s0.s0.s1.x), "=r"(ret.s1.s1.s0.s0.s1.y), "=r"(ret.s1.s1.s0.s0.s1.z), "=r"(ret.s1.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+416];" : "=r"(ret.s1.s1.s0.s1.s0.x), "=r"(ret.s1.s1.s0.s1.s0.y), "=r"(ret.s1.s1.s0.s1.s0.z), "=r"(ret.s1.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+432];" : "=r"(ret.s1.s1.s0.s1.s1.x), "=r"(ret.s1.s1.s0.s1.s1.y), "=r"(ret.s1.s1.s0.s1.s1.z), "=r"(ret.s1.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+448];" : "=r"(ret.s1.s1.s1.s0.s0.x), "=r"(ret.s1.s1.s1.s0.s0.y), "=r"(ret.s1.s1.s1.s0.s0.z), "=r"(ret.s1.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+464];" : "=r"(ret.s1.s1.s1.s0.s1.x), "=r"(ret.s1.s1.s1.s0.s1.y), "=r"(ret.s1.s1.s1.s0.s1.z), "=r"(ret.s1.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+480];" : "=r"(ret.s1.s1.s1.s1.s0.x), "=r"(ret.s1.s1.s1.s1.s0.y), "=r"(ret.s1.s1.s1.s1.s0.z), "=r"(ret.s1.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+496];" : "=r"(ret.s1.s1.s1.s1.s1.x), "=r"(ret.s1.s1.s1.s1.s1.y), "=r"(ret.s1.s1.s1.s1.s1.z), "=r"(ret.s1.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-
-	return ret;
-}
-
-static __device__ __inline__ uintx256 __ldg256(const uintx256 *ptr)
-{
-	uintx256 ret;
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"     : "=r"(ret.s0.s0.s0.s0.s0.s0.x), "=r"(ret.s0.s0.s0.s0.s0.s0.y), "=r"(ret.s0.s0.s0.s0.s0.s0.z), "=r"(ret.s0.s0.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+16];"  : "=r"(ret.s0.s0.s0.s0.s0.s1.x), "=r"(ret.s0.s0.s0.s0.s0.s1.y), "=r"(ret.s0.s0.s0.s0.s0.s1.z), "=r"(ret.s0.s0.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+32];"  : "=r"(ret.s0.s0.s0.s0.s1.s0.x), "=r"(ret.s0.s0.s0.s0.s1.s0.y), "=r"(ret.s0.s0.s0.s0.s1.s0.z), "=r"(ret.s0.s0.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+48];"  : "=r"(ret.s0.s0.s0.s0.s1.s1.x), "=r"(ret.s0.s0.s0.s0.s1.s1.y), "=r"(ret.s0.s0.s0.s0.s1.s1.z), "=r"(ret.s0.s0.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+64];"  : "=r"(ret.s0.s0.s0.s1.s0.s0.x), "=r"(ret.s0.s0.s0.s1.s0.s0.y), "=r"(ret.s0.s0.s0.s1.s0.s0.z), "=r"(ret.s0.s0.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];"  : "=r"(ret.s0.s0.s0.s1.s0.s1.x), "=r"(ret.s0.s0.s0.s1.s0.s1.y), "=r"(ret.s0.s0.s0.s1.s0.s1.z), "=r"(ret.s0.s0.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+96];"  : "=r"(ret.s0.s0.s0.s1.s1.s0.x), "=r"(ret.s0.s0.s0.s1.s1.s0.y), "=r"(ret.s0.s0.s0.s1.s1.s0.z), "=r"(ret.s0.s0.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+112];" : "=r"(ret.s0.s0.s0.s1.s1.s1.x), "=r"(ret.s0.s0.s0.s1.s1.s1.y), "=r"(ret.s0.s0.s0.s1.s1.s1.z), "=r"(ret.s0.s0.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+128];" : "=r"(ret.s0.s0.s1.s0.s0.s0.x), "=r"(ret.s0.s0.s1.s0.s0.s0.y), "=r"(ret.s0.s0.s1.s0.s0.s0.z), "=r"(ret.s0.s0.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+144];" : "=r"(ret.s0.s0.s1.s0.s0.s1.x), "=r"(ret.s0.s0.s1.s0.s0.s1.y), "=r"(ret.s0.s0.s1.s0.s0.s1.z), "=r"(ret.s0.s0.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+160];" : "=r"(ret.s0.s0.s1.s0.s1.s0.x), "=r"(ret.s0.s0.s1.s0.s1.s0.y), "=r"(ret.s0.s0.s1.s0.s1.s0.z), "=r"(ret.s0.s0.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+176];" : "=r"(ret.s0.s0.s1.s0.s1.s1.x), "=r"(ret.s0.s0.s1.s0.s1.s1.y), "=r"(ret.s0.s0.s1.s0.s1.s1.z), "=r"(ret.s0.s0.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+192];" : "=r"(ret.s0.s0.s1.s1.s0.s0.x), "=r"(ret.s0.s0.s1.s1.s0.s0.y), "=r"(ret.s0.s0.s1.s1.s0.s0.z), "=r"(ret.s0.s0.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+208];" : "=r"(ret.s0.s0.s1.s1.s0.s1.x), "=r"(ret.s0.s0.s1.s1.s0.s1.y), "=r"(ret.s0.s0.s1.s1.s0.s1.z), "=r"(ret.s0.s0.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+224];" : "=r"(ret.s0.s0.s1.s1.s1.s0.x), "=r"(ret.s0.s0.s1.s1.s1.s0.y), "=r"(ret.s0.s0.s1.s1.s1.s0.z), "=r"(ret.s0.s0.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+240];" : "=r"(ret.s0.s0.s1.s1.s1.s1.x), "=r"(ret.s0.s0.s1.s1.s1.s1.y), "=r"(ret.s0.s0.s1.s1.s1.s1.z), "=r"(ret.s0.s0.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+256];" : "=r"(ret.s0.s1.s0.s0.s0.s0.x), "=r"(ret.s0.s1.s0.s0.s0.s0.y), "=r"(ret.s0.s1.s0.s0.s0.s0.z), "=r"(ret.s0.s1.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+272];" : "=r"(ret.s0.s1.s0.s0.s0.s1.x), "=r"(ret.s0.s1.s0.s0.s0.s1.y), "=r"(ret.s0.s1.s0.s0.s0.s1.z), "=r"(ret.s0.s1.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+288];" : "=r"(ret.s0.s1.s0.s0.s1.s0.x), "=r"(ret.s0.s1.s0.s0.s1.s0.y), "=r"(ret.s0.s1.s0.s0.s1.s0.z), "=r"(ret.s0.s1.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+304];" : "=r"(ret.s0.s1.s0.s0.s1.s1.x), "=r"(ret.s0.s1.s0.s0.s1.s1.y), "=r"(ret.s0.s1.s0.s0.s1.s1.z), "=r"(ret.s0.s1.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+320];" : "=r"(ret.s0.s1.s0.s1.s0.s0.x), "=r"(ret.s0.s1.s0.s1.s0.s0.y), "=r"(ret.s0.s1.s0.s1.s0.s0.z), "=r"(ret.s0.s1.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+336];" : "=r"(ret.s0.s1.s0.s1.s0.s1.x), "=r"(ret.s0.s1.s0.s1.s0.s1.y), "=r"(ret.s0.s1.s0.s1.s0.s1.z), "=r"(ret.s0.s1.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+352];" : "=r"(ret.s0.s1.s0.s1.s1.s0.x), "=r"(ret.s0.s1.s0.s1.s1.s0.y), "=r"(ret.s0.s1.s0.s1.s1.s0.z), "=r"(ret.s0.s1.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+368];" : "=r"(ret.s0.s1.s0.s1.s1.s1.x), "=r"(ret.s0.s1.s0.s1.s1.s1.y), "=r"(ret.s0.s1.s0.s1.s1.s1.z), "=r"(ret.s0.s1.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+384];" : "=r"(ret.s0.s1.s1.s0.s0.s0.x), "=r"(ret.s0.s1.s1.s0.s0.s0.y), "=r"(ret.s0.s1.s1.s0.s0.s0.z), "=r"(ret.s0.s1.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+400];" : "=r"(ret.s0.s1.s1.s0.s0.s1.x), "=r"(ret.s0.s1.s1.s0.s0.s1.y), "=r"(ret.s0.s1.s1.s0.s0.s1.z), "=r"(ret.s0.s1.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+416];" : "=r"(ret.s0.s1.s1.s0.s1.s0.x), "=r"(ret.s0.s1.s1.s0.s1.s0.y), "=r"(ret.s0.s1.s1.s0.s1.s0.z), "=r"(ret.s0.s1.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+432];" : "=r"(ret.s0.s1.s1.s0.s1.s1.x), "=r"(ret.s0.s1.s1.s0.s1.s1.y), "=r"(ret.s0.s1.s1.s0.s1.s1.z), "=r"(ret.s0.s1.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+448];" : "=r"(ret.s0.s1.s1.s1.s0.s0.x), "=r"(ret.s0.s1.s1.s1.s0.s0.y), "=r"(ret.s0.s1.s1.s1.s0.s0.z), "=r"(ret.s0.s1.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+464];" : "=r"(ret.s0.s1.s1.s1.s0.s1.x), "=r"(ret.s0.s1.s1.s1.s0.s1.y), "=r"(ret.s0.s1.s1.s1.s0.s1.z), "=r"(ret.s0.s1.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+480];" : "=r"(ret.s0.s1.s1.s1.s1.s0.x), "=r"(ret.s0.s1.s1.s1.s1.s0.y), "=r"(ret.s0.s1.s1.s1.s1.s0.z), "=r"(ret.s0.s1.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+496];" : "=r"(ret.s0.s1.s1.s1.s1.s1.x), "=r"(ret.s0.s1.s1.s1.s1.s1.y), "=r"(ret.s0.s1.s1.s1.s1.s1.z), "=r"(ret.s0.s1.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+512];" : "=r"(ret.s1.s0.s0.s0.s0.s0.x), "=r"(ret.s1.s0.s0.s0.s0.s0.y), "=r"(ret.s1.s0.s0.s0.s0.s0.z), "=r"(ret.s1.s0.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+528];" : "=r"(ret.s1.s0.s0.s0.s0.s1.x), "=r"(ret.s1.s0.s0.s0.s0.s1.y), "=r"(ret.s1.s0.s0.s0.s0.s1.z), "=r"(ret.s1.s0.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+544];" : "=r"(ret.s1.s0.s0.s0.s1.s0.x), "=r"(ret.s1.s0.s0.s0.s1.s0.y), "=r"(ret.s1.s0.s0.s0.s1.s0.z), "=r"(ret.s1.s0.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+560];" : "=r"(ret.s1.s0.s0.s0.s1.s1.x), "=r"(ret.s1.s0.s0.s0.s1.s1.y), "=r"(ret.s1.s0.s0.s0.s1.s1.z), "=r"(ret.s1.s0.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+576];" : "=r"(ret.s1.s0.s0.s1.s0.s0.x), "=r"(ret.s1.s0.s0.s1.s0.s0.y), "=r"(ret.s1.s0.s0.s1.s0.s0.z), "=r"(ret.s1.s0.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+592];" : "=r"(ret.s1.s0.s0.s1.s0.s1.x), "=r"(ret.s1.s0.s0.s1.s0.s1.y), "=r"(ret.s1.s0.s0.s1.s0.s1.z), "=r"(ret.s1.s0.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+608];" : "=r"(ret.s1.s0.s0.s1.s1.s0.x), "=r"(ret.s1.s0.s0.s1.s1.s0.y), "=r"(ret.s1.s0.s0.s1.s1.s0.z), "=r"(ret.s1.s0.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+624];" : "=r"(ret.s1.s0.s0.s1.s1.s1.x), "=r"(ret.s1.s0.s0.s1.s1.s1.y), "=r"(ret.s1.s0.s0.s1.s1.s1.z), "=r"(ret.s1.s0.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+640];" : "=r"(ret.s1.s0.s1.s0.s0.s0.x), "=r"(ret.s1.s0.s1.s0.s0.s0.y), "=r"(ret.s1.s0.s1.s0.s0.s0.z), "=r"(ret.s1.s0.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+656];" : "=r"(ret.s1.s0.s1.s0.s0.s1.x), "=r"(ret.s1.s0.s1.s0.s0.s1.y), "=r"(ret.s1.s0.s1.s0.s0.s1.z), "=r"(ret.s1.s0.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+672];" : "=r"(ret.s1.s0.s1.s0.s1.s0.x), "=r"(ret.s1.s0.s1.s0.s1.s0.y), "=r"(ret.s1.s0.s1.s0.s1.s0.z), "=r"(ret.s1.s0.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+688];" : "=r"(ret.s1.s0.s1.s0.s1.s1.x), "=r"(ret.s1.s0.s1.s0.s1.s1.y), "=r"(ret.s1.s0.s1.s0.s1.s1.z), "=r"(ret.s1.s0.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+704];" : "=r"(ret.s1.s0.s1.s1.s0.s0.x), "=r"(ret.s1.s0.s1.s1.s0.s0.y), "=r"(ret.s1.s0.s1.s1.s0.s0.z), "=r"(ret.s1.s0.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+720];" : "=r"(ret.s1.s0.s1.s1.s0.s1.x), "=r"(ret.s1.s0.s1.s1.s0.s1.y), "=r"(ret.s1.s0.s1.s1.s0.s1.z), "=r"(ret.s1.s0.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+736];" : "=r"(ret.s1.s0.s1.s1.s1.s0.x), "=r"(ret.s1.s0.s1.s1.s1.s0.y), "=r"(ret.s1.s0.s1.s1.s1.s0.z), "=r"(ret.s1.s0.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+752];" : "=r"(ret.s1.s0.s1.s1.s1.s1.x), "=r"(ret.s1.s0.s1.s1.s1.s1.y), "=r"(ret.s1.s0.s1.s1.s1.s1.z), "=r"(ret.s1.s0.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+768];" : "=r"(ret.s1.s1.s0.s0.s0.s0.x), "=r"(ret.s1.s1.s0.s0.s0.s0.y), "=r"(ret.s1.s1.s0.s0.s0.s0.z), "=r"(ret.s1.s1.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+784];" : "=r"(ret.s1.s1.s0.s0.s0.s1.x), "=r"(ret.s1.s1.s0.s0.s0.s1.y), "=r"(ret.s1.s1.s0.s0.s0.s1.z), "=r"(ret.s1.s1.s0.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+800];" : "=r"(ret.s1.s1.s0.s0.s1.s0.x), "=r"(ret.s1.s1.s0.s0.s1.s0.y), "=r"(ret.s1.s1.s0.s0.s1.s0.z), "=r"(ret.s1.s1.s0.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+816];" : "=r"(ret.s1.s1.s0.s0.s1.s1.x), "=r"(ret.s1.s1.s0.s0.s1.s1.y), "=r"(ret.s1.s1.s0.s0.s1.s1.z), "=r"(ret.s1.s1.s0.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+832];" : "=r"(ret.s1.s1.s0.s1.s0.s0.x), "=r"(ret.s1.s1.s0.s1.s0.s0.y), "=r"(ret.s1.s1.s0.s1.s0.s0.z), "=r"(ret.s1.s1.s0.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+848];" : "=r"(ret.s1.s1.s0.s1.s0.s1.x), "=r"(ret.s1.s1.s0.s1.s0.s1.y), "=r"(ret.s1.s1.s0.s1.s0.s1.z), "=r"(ret.s1.s1.s0.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+864];" : "=r"(ret.s1.s1.s0.s1.s1.s0.x), "=r"(ret.s1.s1.s0.s1.s1.s0.y), "=r"(ret.s1.s1.s0.s1.s1.s0.z), "=r"(ret.s1.s1.s0.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+880];" : "=r"(ret.s1.s1.s0.s1.s1.s1.x), "=r"(ret.s1.s1.s0.s1.s1.s1.y), "=r"(ret.s1.s1.s0.s1.s1.s1.z), "=r"(ret.s1.s1.s0.s1.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+896];" : "=r"(ret.s1.s1.s1.s0.s0.s0.x), "=r"(ret.s1.s1.s1.s0.s0.s0.y), "=r"(ret.s1.s1.s1.s0.s0.s0.z), "=r"(ret.s1.s1.s1.s0.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+912];" : "=r"(ret.s1.s1.s1.s0.s0.s1.x), "=r"(ret.s1.s1.s1.s0.s0.s1.y), "=r"(ret.s1.s1.s1.s0.s0.s1.z), "=r"(ret.s1.s1.s1.s0.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+928];" : "=r"(ret.s1.s1.s1.s0.s1.s0.x), "=r"(ret.s1.s1.s1.s0.s1.s0.y), "=r"(ret.s1.s1.s1.s0.s1.s0.z), "=r"(ret.s1.s1.s1.s0.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+944];" : "=r"(ret.s1.s1.s1.s0.s1.s1.x), "=r"(ret.s1.s1.s1.s0.s1.s1.y), "=r"(ret.s1.s1.s1.s0.s1.s1.z), "=r"(ret.s1.s1.s1.s0.s1.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+960];" : "=r"(ret.s1.s1.s1.s1.s0.s0.x), "=r"(ret.s1.s1.s1.s1.s0.s0.y), "=r"(ret.s1.s1.s1.s1.s0.s0.z), "=r"(ret.s1.s1.s1.s1.s0.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+976];" : "=r"(ret.s1.s1.s1.s1.s0.s1.x), "=r"(ret.s1.s1.s1.s1.s0.s1.y), "=r"(ret.s1.s1.s1.s1.s0.s1.z), "=r"(ret.s1.s1.s1.s1.s0.s1.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+992];" : "=r"(ret.s1.s1.s1.s1.s1.s0.x), "=r"(ret.s1.s1.s1.s1.s1.s0.y), "=r"(ret.s1.s1.s1.s1.s1.s0.z), "=r"(ret.s1.s1.s1.s1.s1.s0.w) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+1008];" : "=r"(ret.s1.s1.s1.s1.s1.s1.x), "=r"(ret.s1.s1.s1.s1.s1.s1.y), "=r"(ret.s1.s1.s1.s1.s1.s1.z), "=r"(ret.s1.s1.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
-
-	return ret;
-}
-
-static __device__ __inline__ ulonglong2 __ldg2(const ulonglong2 *ptr)
-{
-	ulonglong2 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"  : "=l"(ret.x), "=l"(ret.y) : __LDG_PTR(ptr));
-return ret;
-}
-
-static __device__ __inline__ ulonglong4 __ldg4(const ulonglong4 *ptr)
-{
-	ulonglong4 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"  : "=l"(ret.x), "=l"(ret.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.z), "=l"(ret.w) : __LDG_PTR(ptr));
-	return ret;
-}
-
-
-static __device__ __inline__ ulonglong2to8 __ldg2to8(const ulonglong2to8 *ptr)
-{
-	ulonglong2to8 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.l0.x), "=l"(ret.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.l1.x), "=l"(ret.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.l2.x), "=l"(ret.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.l3.x), "=l"(ret.l3.y) : __LDG_PTR(ptr));
-	return ret;
-}
-static __device__ __inline__ ulonglong8to16 __ldg8to16(const ulonglong8to16 *ptr)
-{
-	ulonglong8to16 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.lo.l0.x), "=l"(ret.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.lo.l1.x), "=l"(ret.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.lo.l2.x), "=l"(ret.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.lo.l3.x), "=l"(ret.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.hi.l0.x), "=l"(ret.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.hi.l1.x), "=l"(ret.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.hi.l2.x), "=l"(ret.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];" : "=l"(ret.hi.l3.x), "=l"(ret.hi.l3.y) : __LDG_PTR(ptr));
-	return ret;
-}
-
-static __device__ __inline__ ulonglonglong __ldgxtralong(const ulonglonglong *ptr)
-{
-	ulonglonglong ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.lo.l0.x), "=l"(ret.s0.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s0.lo.l1.x), "=l"(ret.s0.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s0.lo.l2.x), "=l"(ret.s0.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s0.lo.l3.x), "=l"(ret.s0.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s0.hi.l0.x), "=l"(ret.s0.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s0.hi.l1.x), "=l"(ret.s0.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s0.hi.l2.x), "=l"(ret.s0.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];" : "=l"(ret.s0.hi.l3.x), "=l"(ret.s0.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];"  : "=l"(ret.s1.lo.l0.x), "=l"(ret.s1.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];"  : "=l"(ret.s1.lo.l1.x), "=l"(ret.s1.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];"  : "=l"(ret.s1.lo.l2.x), "=l"(ret.s1.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];"  : "=l"(ret.s1.lo.l3.x), "=l"(ret.s1.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];"  : "=l"(ret.s1.hi.l0.x), "=l"(ret.s1.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];"  : "=l"(ret.s1.hi.l1.x), "=l"(ret.s1.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];"  : "=l"(ret.s1.hi.l2.x), "=l"(ret.s1.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];"  : "=l"(ret.s1.hi.l3.x), "=l"(ret.s1.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+256];"  : "=l"(ret.s2.lo.l0.x), "=l"(ret.s2.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+272];"  : "=l"(ret.s2.lo.l1.x), "=l"(ret.s2.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+288];"  : "=l"(ret.s2.lo.l2.x), "=l"(ret.s2.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+304];"  : "=l"(ret.s2.lo.l3.x), "=l"(ret.s2.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+320];"  : "=l"(ret.s2.hi.l0.x), "=l"(ret.s2.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+336];"  : "=l"(ret.s2.hi.l1.x), "=l"(ret.s2.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+352];"  : "=l"(ret.s2.hi.l2.x), "=l"(ret.s2.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+368];"  : "=l"(ret.s2.hi.l3.x), "=l"(ret.s2.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+384];"     : "=l"(ret.s3.lo.l0.x), "=l"(ret.s3.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+400];"  : "=l"(ret.s3.lo.l1.x), "=l"(ret.s3.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+416];"  : "=l"(ret.s3.lo.l2.x), "=l"(ret.s3.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+432];"  : "=l"(ret.s3.lo.l3.x), "=l"(ret.s3.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+448];"  : "=l"(ret.s3.hi.l0.x), "=l"(ret.s3.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+464];"  : "=l"(ret.s3.hi.l1.x), "=l"(ret.s3.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+480];"  : "=l"(ret.s3.hi.l2.x), "=l"(ret.s3.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+496];" : "=l"(ret.s3.hi.l3.x), "=l"(ret.s3.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+512];"     : "=l"(ret.s4.lo.l0.x), "=l"(ret.s4.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+528];"  : "=l"(ret.s4.lo.l1.x), "=l"(ret.s4.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+544];"  : "=l"(ret.s4.lo.l2.x), "=l"(ret.s4.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+560];"  : "=l"(ret.s4.lo.l3.x), "=l"(ret.s4.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+576];"  : "=l"(ret.s4.hi.l0.x), "=l"(ret.s4.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+592];"  : "=l"(ret.s4.hi.l1.x), "=l"(ret.s4.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+608];"  : "=l"(ret.s4.hi.l2.x), "=l"(ret.s4.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+624];" : "=l"(ret.s4.hi.l3.x), "=l"(ret.s4.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+640];"     : "=l"(ret.s5.lo.l0.x), "=l"(ret.s5.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+656];"  : "=l"(ret.s5.lo.l1.x), "=l"(ret.s5.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+672];"  : "=l"(ret.s5.lo.l2.x), "=l"(ret.s5.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+688];"  : "=l"(ret.s5.lo.l3.x), "=l"(ret.s5.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+704];"  : "=l"(ret.s5.hi.l0.x), "=l"(ret.s5.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+720];"  : "=l"(ret.s5.hi.l1.x), "=l"(ret.s5.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+736];"  : "=l"(ret.s5.hi.l2.x), "=l"(ret.s5.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+752];" : "=l"(ret.s5.hi.l3.x), "=l"(ret.s5.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+768];"     : "=l"(ret.s6.lo.l0.x), "=l"(ret.s6.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+784];"  : "=l"(ret.s6.lo.l1.x), "=l"(ret.s6.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+800];"  : "=l"(ret.s6.lo.l2.x), "=l"(ret.s6.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+816];"  : "=l"(ret.s6.lo.l3.x), "=l"(ret.s6.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+832];"  : "=l"(ret.s6.hi.l0.x), "=l"(ret.s6.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+848];"  : "=l"(ret.s6.hi.l1.x), "=l"(ret.s6.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+864];"  : "=l"(ret.s6.hi.l2.x), "=l"(ret.s6.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+880];" : "=l"(ret.s6.hi.l3.x), "=l"(ret.s6.hi.l3.y) : __LDG_PTR(ptr));
-
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+896];"     : "=l"(ret.s7.lo.l0.x), "=l"(ret.s7.lo.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+912];"  : "=l"(ret.s7.lo.l1.x), "=l"(ret.s7.lo.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+928];"  : "=l"(ret.s7.lo.l2.x), "=l"(ret.s7.lo.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+944];"  : "=l"(ret.s7.lo.l3.x), "=l"(ret.s7.lo.l3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+960];"  : "=l"(ret.s7.hi.l0.x), "=l"(ret.s7.hi.l0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+976];"  : "=l"(ret.s7.hi.l1.x), "=l"(ret.s7.hi.l1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+992];"  : "=l"(ret.s7.hi.l2.x), "=l"(ret.s7.hi.l2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+1008];" : "=l"(ret.s7.hi.l3.x), "=l"(ret.s7.hi.l3.y) : __LDG_PTR(ptr));
-
-
-
-	return ret;
-}
-
-
-static __device__ __inline__ ulonglong16 __ldg64(const ulonglong2 *ptr)
-{
-	ulonglong16 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.x), "=l"(ret.s0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s1.x), "=l"(ret.s1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s2.x), "=l"(ret.s2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s3.x), "=l"(ret.s3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s4.x), "=l"(ret.s4.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s5.x), "=l"(ret.s5.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s6.x), "=l"(ret.s6.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];"  : "=l"(ret.s7.x), "=l"(ret.s7.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];"  : "=l"(ret.s8.x), "=l"(ret.s8.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];"  : "=l"(ret.s9.x), "=l"(ret.s9.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];"  : "=l"(ret.sa.x), "=l"(ret.sa.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];"  : "=l"(ret.sb.x), "=l"(ret.sb.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];"  : "=l"(ret.sc.x), "=l"(ret.sc.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];"  : "=l"(ret.sd.x), "=l"(ret.sd.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];"  : "=l"(ret.se.x), "=l"(ret.se.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];"  : "=l"(ret.sf.x), "=l"(ret.sf.y) : __LDG_PTR(ptr));
-	return ret;
-}
-
-
-static __device__ __inline__ ulonglong16 __ldg64b(const ulonglong16 *ptr)
-{
-	ulonglong16 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.x), "=l"(ret.s0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s1.x), "=l"(ret.s1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s2.x), "=l"(ret.s2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s3.x), "=l"(ret.s3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s4.x), "=l"(ret.s4.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s5.x), "=l"(ret.s5.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s6.x), "=l"(ret.s6.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];" : "=l"(ret.s7.x), "=l"(ret.s7.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];" : "=l"(ret.s8.x), "=l"(ret.s8.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];" : "=l"(ret.s9.x), "=l"(ret.s9.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];" : "=l"(ret.sa.x), "=l"(ret.sa.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];" : "=l"(ret.sb.x), "=l"(ret.sb.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];" : "=l"(ret.sc.x), "=l"(ret.sc.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];" : "=l"(ret.sd.x), "=l"(ret.sd.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];" : "=l"(ret.se.x), "=l"(ret.se.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];" : "=l"(ret.sf.x), "=l"(ret.sf.y) : __LDG_PTR(ptr));
-	return ret;
-}
-
-
-
-static __device__ __inline__ ulonglong16 __ldg64b(const uint32 *ptr)
-{
-	ulonglong16 ret;
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2];"     : "=l"(ret.s0.x), "=l"(ret.s0.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.s1.x), "=l"(ret.s1.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+32];"  : "=l"(ret.s2.x), "=l"(ret.s2.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+48];"  : "=l"(ret.s3.x), "=l"(ret.s3.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+64];"  : "=l"(ret.s4.x), "=l"(ret.s4.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+80];"  : "=l"(ret.s5.x), "=l"(ret.s5.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+96];"  : "=l"(ret.s6.x), "=l"(ret.s6.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+112];" : "=l"(ret.s7.x), "=l"(ret.s7.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+128];" : "=l"(ret.s8.x), "=l"(ret.s8.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+144];" : "=l"(ret.s9.x), "=l"(ret.s9.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+160];" : "=l"(ret.sa.x), "=l"(ret.sa.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+176];" : "=l"(ret.sb.x), "=l"(ret.sb.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+192];" : "=l"(ret.sc.x), "=l"(ret.sc.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+208];" : "=l"(ret.sd.x), "=l"(ret.sd.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+224];" : "=l"(ret.se.x), "=l"(ret.se.y) : __LDG_PTR(ptr));
-	asm("ld.global.nc.v2.u64 {%0,%1}, [%2+240];" : "=l"(ret.sf.x), "=l"(ret.sf.y) : __LDG_PTR(ptr));
-	return ret;
-}
-
-
+#endif
 
 static __forceinline__ __device__ uint8 swapvec(const uint8 &buf)
 {
@@ -1046,7 +562,6 @@ static __forceinline__ __device__ uint8 swapvec(const uint8 &buf)
 	vec.s7 = cuda_swab32(buf.s7);
 	return vec;
 }
-
 
 static __forceinline__ __device__ uint8 swapvec(const uint8 *buf)
 {

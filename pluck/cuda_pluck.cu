@@ -74,10 +74,10 @@ static  __constant__  uint32_t Ksha[64] = {
 
 
 #define SALSA(a,b,c,d) { \
-    t = a+d; b^=rotate(t,  7); \
-    t = b+a; c^=rotate(t,  9); \
-    t = c+b; d^=rotate(t, 13); \
-    t = d+c; a^=rotate(t, 18); \
+    t = a+d; b^=rotateL(t,  7); \
+    t = b+a; c^=rotateL(t,  9); \
+    t = c+b; d^=rotateL(t, 13); \
+    t = d+c; a^=rotateL(t, 18); \
 }
 
 #define SALSA_CORE(state) { \
@@ -91,6 +91,7 @@ static  __constant__  uint32_t Ksha[64] = {
 	SALSA(state.sf,state.sc,state.sd,state.se); \
 }
 
+#if __CUDA_ARCH__ >= 320
 static __device__ __forceinline__ uint16 xor_salsa8(const uint16 &Bx)
 {
 	uint32_t t;
@@ -101,7 +102,7 @@ static __device__ __forceinline__ uint16 xor_salsa8(const uint16 &Bx)
 	SALSA_CORE(state);
 	return(state+Bx);
 }
-
+#endif
 
 // sha256
 
@@ -241,7 +242,6 @@ void sha2_round_body(uint32_t* in, uint32_t* r)
 	r[7] += h;
 }
 
-
 static __device__ __forceinline__ uint8 sha256_64(uint32_t *data)
 {
 	uint32_t __align__(64) in[16];
@@ -265,7 +265,6 @@ static __device__ __forceinline__ uint8 sha256_64(uint32_t *data)
 
 static __device__ __forceinline__ uint8 sha256_80(uint32_t nonce)
 {
-//	uint32_t in[16], buf[8];
 	uint32_t __align__(64) in[16];
 	uint32_t __align__(32) buf[8];
 
@@ -346,7 +345,6 @@ void pluck_gpu_hash0_v50(uint32_t threads, uint32_t startNonce)
 __global__ __launch_bounds__(256, 1)
 void pluck_gpu_hash_v50(uint32_t threads, uint32_t startNonce, uint32_t *nonceVector)
 {
-
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -528,6 +526,7 @@ void pluck_gpu_hash(uint32_t threads, uint32_t startNonce, uint32_t *nonceVector
 
 void pluck_cpu_init(int thr_id, uint32_t threads, uint32_t* hash)
 {
+	cuda_get_arch(thr_id);
 	cudaMemcpyToSymbol(hashbuffer, &hash, sizeof(hash), 0, cudaMemcpyHostToDevice);
 	cudaMalloc(&d_PlNonce[thr_id], sizeof(uint32_t));
 }

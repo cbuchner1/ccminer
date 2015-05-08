@@ -2,7 +2,7 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
-#include "cuda_vectors.h"
+#include "cuda_vectors.h" /* NOT COMPATIBLE WITH SM 3.0 !!! */
 
  __device__ uint4* W;
 uint32_t *d_NNonce[MAX_GPUS];
@@ -59,7 +59,7 @@ static __constant__ uint32_t BLAKE2S_SIGMA[10][16];
 #else
 #define BLAKE_G(idx0, idx1, a, b, c, d, key) { \
 	idx = BLAKE2S_SIGMA[idx0][idx1]; a += key[idx]; \
-	a += b; d = rotate(d^a, 16); \
+	a += b; d = rotateL(d^a, 16); \
 	c += d; b = rotateR(b^c, 12); \
 	idx = BLAKE2S_SIGMA[idx0][idx1+1]; a += key[idx]; \
 	a += b; d = rotateR(d^a, 8); \
@@ -212,7 +212,7 @@ void fastkdf256(const uint32_t* password, uint8_t* output)
 		int qbuf = bufidx/4;
 		int rbuf = bufidx&3;
 		int bitbuf = rbuf << 3;
-		 uint32_t shifted[9];
+		uint32_t shifted[9];
 
 		shift256R2(shifted, ((uint8*)input)[0], bitbuf);
 
@@ -332,10 +332,10 @@ void fastkdf32( const uint32_t * password, const uint32_t * salt, uint32_t * out
 
 
 #define SALSA(a,b,c,d) { \
-    t =a+d; b^=rotate(t,  7); \
-    t =b+a; c^=rotate(t,  9); \
-    t =c+b; d^=rotate(t, 13); \
-    t =d+c; a^=rotate(t, 18); \
+    t =a+d; b^=rotateL(t,  7); \
+    t =b+a; c^=rotateL(t,  9); \
+    t =c+b; d^=rotateL(t, 13); \
+    t =d+c; a^=rotateL(t, 18); \
 }
 
 #define SALSA_CORE(state) { \
@@ -352,16 +352,16 @@ void fastkdf32( const uint32_t * password, const uint32_t * salt, uint32_t * out
 #if __CUDA_ARCH__ >=500
 #define CHACHA_STEP(a,b,c,d) { \
     a += b; d = __byte_perm(d^a,0,0x1032); \
-    c += d; b = rotate(b^c, 12); \
+    c += d; b = rotateL(b^c, 12); \
     a += b; d = __byte_perm(d^a,0,0x2103); \
-    c += d; b = rotate(b^c, 7); \
+    c += d; b = rotateL(b^c, 7); \
 }
 #else
 #define CHACHA_STEP(a,b,c,d) { \
-    a += b; d = rotate(d^a,16); \
-    c += d; b = rotate(b^c, 12); \
-    a += b; d = rotate(d^a,8); \
-    c += d; b = rotate(b^c, 7); \
+    a += b; d = rotateL(d^a,16); \
+    c += d; b = rotateL(b^c, 12); \
+    a += b; d = rotateL(d^a,8); \
+    c += d; b = rotateL(b^c, 7); \
 }
 #endif
 

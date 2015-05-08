@@ -96,12 +96,12 @@ static __forceinline__ __device__  __host__ void operator+= (uint16 &a, const ui
 
 #if __CUDA_ARCH__ < 320
 
-#define rotate ROTL32
+#define rotateL ROTL32
 #define rotateR ROTR32
 
 #else
 
-static __forceinline__ __device__ uint32_t rotate(uint32_t vec4, uint32_t shift)
+static __forceinline__ __device__ uint32_t rotateL(uint32_t vec4, uint32_t shift)
 {
 	uint32_t ret;
 	asm("shf.l.wrap.b32 %0, %1, %2, %3;" : "=r"(ret) : "r"(vec4), "r"(vec4), "r"(shift));

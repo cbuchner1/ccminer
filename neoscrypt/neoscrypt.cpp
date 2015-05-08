@@ -6,6 +6,7 @@ static uint32_t *d_hash[MAX_GPUS] ;
 extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
 extern void neoscrypt_cpu_init(int thr_id, uint32_t threads, uint32_t* hash);
 extern uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, uint32_t threads, uint32_t startNounce, int order);
+extern int cuda_get_arch(int thr_id);
 
 #define SHIFT 130
 
@@ -25,8 +26,15 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		int dev_id = device_map[thr_id];
+		cudaSetDevice(dev_id);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+
+		cuda_get_arch(thr_id);
+		if (device_sm[dev_id] <= 300) {
+			applog(LOG_ERR, "Sorry neoscrypt is not supported on SM 3.0 devices");
+			proper_exit(EXIT_CODE_CUDA_ERROR);
+		}
 
 		cudaMalloc(&d_hash[thr_id], 32 * SHIFT * sizeof(uint64_t) * throughput);
 		neoscrypt_cpu_init(thr_id, throughput, d_hash[thr_id]);
