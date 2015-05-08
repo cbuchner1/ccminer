@@ -478,24 +478,23 @@ static __forceinline__ __device__ uint32_t rotateR(uint32_t vec4, uint32_t shift
 
 #if __CUDA_ARCH__ < 320
 
-// TO FINISH FOR SM 3.0 SUPPORT...
-static __forceinline__ __device__ void shift256R2(uint32_t* ret, const uint8 &vec4, uint32_t shift)
+// right shift a 64 bytes input (256-bits integer) by 0 8 16 24 bits
+static __forceinline__ __device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 {
-	uint32_t *v = (uint32_t*) &vec4.s0;
-	for (int i=0; i<8; i++) {
-		ret[i] = ROTR32(v[i], shift);
-	}
+	uint8_t *v = (uint8_t*) &vec4.s0;
+	uint8_t *r = (uint8_t*) ret;
+	uint8_t bytes = (uint8_t) (shift >> 3);
+	for (uint8_t i=0; i<bytes; i++)
+		r[i] = 0;
+	for (uint8_t i=bytes; i<32; i++)
+		r[i] = v[i-bytes];
+	ret[8] = vec4.s7 >> (32 - shift); // shuffled part required ?
+	//printf("A %02u %08x %08x > %08x %08x\n", shift, vec4.s6, vec4.s7, ret[7], ret[8]);
 }
-
-static __device__ __inline__ uintx64 __ldg32(const uint4 *ptr)
-{
-	uintx64 ret = { 0 };
-	return ret;
-}
-
 #else
 
-static __forceinline__ __device__ void shift256R2(uint32_t* ret, const uint8 &vec4, uint32_t shift)
+// right shift a 32 bytes input (256-bits integer) by 0 8 16 24 bits
+static __forceinline__ __device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 {
 	uint32_t truc = 0, truc2 = cuda_swab32(vec4.s7), truc3 = 0;
 	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift));
@@ -523,9 +522,28 @@ static __forceinline__ __device__ void shift256R2(uint32_t* ret, const uint8 &ve
 	ret[1] = cuda_swab32(truc);
 	asm("shr.b32        %0, %1, %2;" : "=r"(truc) : "r"(truc3), "r"(shift));
 	ret[0] = cuda_swab32(truc);
+	//printf("B %02u %08x %08x > %08x %08x\n", shift, vec4.s6, vec4.s7, ret[7], ret[8]);
+}
+#endif
+
+#if __CUDA_ARCH__ < 320
+
+// copy 256 bytes
+static __device__ __inline__ uintx64 ldg256(const uint4 *ptr)
+{
+	uintx64 ret;
+	uint32_t *dst = (uint32_t*) &ret.s0;
+	uint32_t *src = (uint32_t*) &ptr[0].x;
+	for (int i=0; i < (256 / sizeof(uint32_t)); i++) {
+		dst[i] = src[i];
+	}
+	return ret;
 }
 
-static __device__ __inline__ uintx64 __ldg32(const uint4 *ptr)
+#else
+
+// complicated way to copy 256 bytes ;)
+static __device__ __inline__ uintx64 ldg256(const uint4 *ptr)
 {
 	uintx64 ret;
 	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret.s0.s0.s0.s0.x), "=r"(ret.s0.s0.s0.s0.y), "=r"(ret.s0.s0.s0.s0.z), "=r"(ret.s0.s0.s0.s0.w) : __LDG_PTR(ptr));
@@ -546,79 +564,6 @@ static __device__ __inline__ uintx64 __ldg32(const uint4 *ptr)
 	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+240];"  : "=r"(ret.s1.s1.s1.s1.x), "=r"(ret.s1.s1.s1.s1.y), "=r"(ret.s1.s1.s1.s1.z), "=r"(ret.s1.s1.s1.s1.w) : __LDG_PTR(ptr));
 	return ret;
 }
-
 #endif
-
-static __forceinline__ __device__ uint8 swapvec(const uint8 &buf)
-{
-	uint8 vec;
-	vec.s0 = cuda_swab32(buf.s0);
-	vec.s1 = cuda_swab32(buf.s1);
-	vec.s2 = cuda_swab32(buf.s2);
-	vec.s3 = cuda_swab32(buf.s3);
-	vec.s4 = cuda_swab32(buf.s4);
-	vec.s5 = cuda_swab32(buf.s5);
-	vec.s6 = cuda_swab32(buf.s6);
-	vec.s7 = cuda_swab32(buf.s7);
-	return vec;
-}
-
-static __forceinline__ __device__ uint8 swapvec(const uint8 *buf)
-{
-	uint8 vec;
-	vec.s0 = cuda_swab32(buf[0].s0);
-	vec.s1 = cuda_swab32(buf[0].s1);
-	vec.s2 = cuda_swab32(buf[0].s2);
-	vec.s3 = cuda_swab32(buf[0].s3);
-	vec.s4 = cuda_swab32(buf[0].s4);
-	vec.s5 = cuda_swab32(buf[0].s5);
-	vec.s6 = cuda_swab32(buf[0].s6);
-	vec.s7 = cuda_swab32(buf[0].s7);
-	return vec;
-}
-
-static __forceinline__ __device__ uint16 swapvec(const uint16 *buf)
-{
-	uint16 vec;
-	vec.s0 = cuda_swab32(buf[0].s0);
-	vec.s1 = cuda_swab32(buf[0].s1);
-	vec.s2 = cuda_swab32(buf[0].s2);
-	vec.s3 = cuda_swab32(buf[0].s3);
-	vec.s4 = cuda_swab32(buf[0].s4);
-	vec.s5 = cuda_swab32(buf[0].s5);
-	vec.s6 = cuda_swab32(buf[0].s6);
-	vec.s7 = cuda_swab32(buf[0].s7);
-	vec.s8 = cuda_swab32(buf[0].s8);
-	vec.s9 = cuda_swab32(buf[0].s9);
-	vec.sa = cuda_swab32(buf[0].sa);
-	vec.sb = cuda_swab32(buf[0].sb);
-	vec.sc = cuda_swab32(buf[0].sc);
-	vec.sd = cuda_swab32(buf[0].sd);
-	vec.se = cuda_swab32(buf[0].se);
-	vec.sf = cuda_swab32(buf[0].sf);
-	return vec;
-}
-
-static __forceinline__ __device__ uint16 swapvec(const uint16 &buf)
-{
-	uint16 vec;
-	vec.s0 = cuda_swab32(buf.s0);
-	vec.s1 = cuda_swab32(buf.s1);
-	vec.s2 = cuda_swab32(buf.s2);
-	vec.s3 = cuda_swab32(buf.s3);
-	vec.s4 = cuda_swab32(buf.s4);
-	vec.s5 = cuda_swab32(buf.s5);
-	vec.s6 = cuda_swab32(buf.s6);
-	vec.s7 = cuda_swab32(buf.s7);
-	vec.s8 = cuda_swab32(buf.s8);
-	vec.s9 = cuda_swab32(buf.s9);
-	vec.sa = cuda_swab32(buf.sa);
-	vec.sb = cuda_swab32(buf.sb);
-	vec.sc = cuda_swab32(buf.sc);
-	vec.sd = cuda_swab32(buf.sd);
-	vec.se = cuda_swab32(buf.se);
-	vec.sf = cuda_swab32(buf.sf);
-	return vec;
-}
 
 #endif // #ifndef CUDA_VECTOR_H

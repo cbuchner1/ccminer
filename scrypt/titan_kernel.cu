@@ -23,7 +23,7 @@ typedef enum
 	SIMPLE
 } MemoryAccess;
 
-#if __CUDA_ARCH__ < 350
+#if __CUDA_ARCH__ < 320
 	// Kepler (Compute 3.0)
 	#define __ldg(x) (*(x))
 #endif

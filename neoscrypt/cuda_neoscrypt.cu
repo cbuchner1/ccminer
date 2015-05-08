@@ -214,7 +214,7 @@ void fastkdf256(const uint32_t* password, uint8_t* output)
 		int bitbuf = rbuf << 3;
 		uint32_t shifted[9];
 
-		shift256R2(shifted, ((uint8*)input)[0], bitbuf);
+		shift256R(shifted, ((uint8*)input)[0], bitbuf);
 
 		for (int k = 0; k < 9; ++k) {
 			((uint32_t *)B)[k + qbuf] ^= ((uint32_t *)shifted)[k];
@@ -264,7 +264,7 @@ void fastkdf256(const uint32_t* password, uint8_t* output)
 }
 
 static __forceinline__ __device__
-void fastkdf32( const uint32_t * password, const uint32_t * salt, uint32_t * output)
+void fastkdf32(const uint32_t * password, const uint32_t * salt, uint32_t * output)
 {
 	uint8_t bufidx = 0;
 	uchar4 bufhelper;
@@ -300,7 +300,7 @@ void fastkdf32( const uint32_t * password, const uint32_t * salt, uint32_t * out
 		int bitbuf = rbuf << 3;
 		uint32_t shifted[9];
 
-		shift256R2(shifted, ((uint8*)input)[0], bitbuf);
+		shift256R(shifted, ((uint8*)input)[0], bitbuf);
 
 		for (int k = 0; k < 9; ++k) {
 			((uint32_t *)B)[k + qbuf] ^= ((uint32_t *)shifted)[k];
@@ -455,7 +455,7 @@ void neoscrypt_gpu_hash_k01(uint32_t threads, uint32_t startNonce)
 //	if (thread < threads)
 	{
 		uint16 X[4];
-		((uintx64 *)X)[0]= __ldg32(&(W + shift)[0]);
+		((uintx64 *)X)[0]= ldg256(&(W + shift)[0]);
 
 		//#pragma unroll
 		for (int i = 0; i < 128; ++i)
@@ -475,12 +475,12 @@ void neoscrypt_gpu_hash_k2(uint32_t threads, uint32_t startNonce)
 //	if (thread < threads)
 	{
 		uint16 X[4];
-		((uintx64 *)X)[0] = __ldg32(&(W + shift)[2048]);
+		((uintx64 *)X)[0] = ldg256(&(W + shift)[2048]);
 
 		for (int t = 0; t < 128; t++)
 		{
 			int idx = X[3].lo.s0 & 0x7F;
-			((uintx64 *)X)[0] ^= __ldg32(&(W + shift)[idx << 4]);
+			((uintx64 *)X)[0] ^= ldg256(&(W + shift)[idx << 4]);
 			neoscrypt_chacha(X);
 
 		}
@@ -498,7 +498,7 @@ void neoscrypt_gpu_hash_k3(uint32_t threads, uint32_t startNonce)
 		uint32_t shift = SHIFT * 16 * thread;
 		uint16 Z[4];
 
-		((uintx64*)Z)[0] = __ldg32(&(W + shift)[0]);
+		((uintx64*)Z)[0] = ldg256(&(W + shift)[0]);
 
 		//#pragma unroll
 		for (int i = 0; i < 128; ++i) {
@@ -529,14 +529,14 @@ void neoscrypt_gpu_hash_k4(int stratum, uint32_t threads, uint32_t startNonce, u
 		data[19] = (stratum) ? cuda_swab32(nonce) : nonce;
 		data[39] = data[19];
 		data[59] = data[19];
-		((uintx64 *)Z)[0] = __ldg32(&(W + shift)[2048]);
+		((uintx64 *)Z)[0] = ldg256(&(W + shift)[2048]);
 		for (int t = 0; t < 128; t++)
 		{
 			int idx = Z[3].lo.s0 & 0x7F;
-			((uintx64 *)Z)[0] ^= __ldg32(&(W + shift)[idx << 4]);
+			((uintx64 *)Z)[0] ^= ldg256(&(W + shift)[idx << 4]);
 			neoscrypt_salsa(Z);
 		}
-		((uintx64 *)Z)[0] ^= __ldg32(&(W + shift)[2064]);
+		((uintx64 *)Z)[0] ^= ldg256(&(W + shift)[2064]);
 		fastkdf32(data, (uint32_t*)Z, outbuf);
 		if (outbuf[7] <= pTarget[7]) {
 			uint32_t tmp = atomicExch(&nonceVector[0], nonce);

@@ -64,6 +64,7 @@ extern const uint3 threadIdx;
 // Host and Compute 3.0
 #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
 #define ROTR32(x, n) (((x) >> (n)) | ((x) << (32 - (n))))
+#define __ldg(x) (*(x))
 #else
 // Compute 3.2+
 #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
