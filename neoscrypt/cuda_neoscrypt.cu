@@ -50,10 +50,10 @@ static __constant__ uint32_t BLAKE2S_SIGMA[10][16];
 #if __CUDA_ARCH__ >= 500
 #define BLAKE_G(idx0, idx1, a, b, c, d, key) { \
 	idx = BLAKE2S_SIGMA[idx0][idx1]; a += key[idx]; \
-	a += b; d = __byte_perm(d^a,0, 0x1032); \
+	a += b; d = __byte_perm(d^a, 0, 0x1032); \
 	c += d; b = rotateR(b^c, 12); \
 	idx = BLAKE2S_SIGMA[idx0][idx1+1]; a += key[idx]; \
-	a += b; d = __byte_perm(d^a,0, 0x0321); \
+	a += b; d = __byte_perm(d^a, 0, 0x0321); \
 	c += d; b = rotateR(b^c, 7); \
 }
 #else
@@ -62,6 +62,26 @@ static __constant__ uint32_t BLAKE2S_SIGMA[10][16];
 	a += b; d = rotateL(d^a, 16); \
 	c += d; b = rotateR(b^c, 12); \
 	idx = BLAKE2S_SIGMA[idx0][idx1+1]; a += key[idx]; \
+	a += b; d = rotateR(d^a, 8); \
+	c += d; b = rotateR(b^c, 7); \
+}
+#endif
+
+#if __CUDA_ARCH__ >= 500
+#define BLAKE_G_PRE(idx0, idx1, a, b, c, d, key) { \
+	a += key[idx0]; \
+	a += b; d = __byte_perm(d^a, 0, 0x1032); \
+	c += d; b = rotateR(b^c, 12); \
+	a += key[idx1]; \
+	a += b; d = __byte_perm(d^a, 0, 0x0321); \
+	c += d; b = rotateR(b^c, 7); \
+}
+#else
+#define BLAKE_G_PRE(idx0, idx1, a, b, c, d, key) { \
+	a += key[idx0]; \
+	a += b; d = rotateL(d^a, 16); \
+	c += d; b = rotateR(b^c, 12); \
+	a += key[idx1]; \
 	a += b; d = rotateR(d^a, 8); \
 	c += d; b = rotateR(b^c, 7); \
 }
@@ -92,17 +112,119 @@ void Blake2S(uint32_t * inout, const uint32_t * TheKey)
 
 	V.hi.s4 ^= BLAKE2S_BLOCK_SIZE;
 
+#if 0
 	for (int x = 0; x < 10; ++x)
 	{
-		BLAKE_G(x, 0x00, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
-		BLAKE_G(x, 0x02, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
-		BLAKE_G(x, 0x04, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
-		BLAKE_G(x, 0x06, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
-		BLAKE_G(x, 0x08, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
-		BLAKE_G(x, 0x0A, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
-		BLAKE_G(x, 0x0C, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
-		BLAKE_G(x, 0x0E, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+		BLAKE_G(x, 0x0, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+		BLAKE_G(x, 0x2, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+		BLAKE_G(x, 0x4, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+		BLAKE_G(x, 0x6, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+		BLAKE_G(x, 0x8, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+		BLAKE_G(x, 0xA, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+		BLAKE_G(x, 0xC, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+		BLAKE_G(x, 0xE, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
 	}
+#else
+	// { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	BLAKE_G_PRE(0x0, 0x1, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x2, 0x3, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x4, 0x5, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0x6, 0x7, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x8, 0x9, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xA, 0xB, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0xC, 0xD, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xE, 0xF, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	BLAKE_G_PRE(0xE, 0xA, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x4, 0x8, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x9, 0xF, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0xD, 0x6, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x1, 0xC, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x0, 0x2, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0xB, 0x7, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x5, 0x3, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	BLAKE_G_PRE(0xB, 0x8, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0xC, 0x0, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x5, 0x2, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0xF, 0xD, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xA, 0xE, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x3, 0x6, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x7, 0x1, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x9, 0x4, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	BLAKE_G_PRE(0x7, 0x9, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x3, 0x1, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xD, 0xC, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0xB, 0xE, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x2, 0x6, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x5, 0xA, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x4, 0x0, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xF, 0x8, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
+	BLAKE_G_PRE(0x9, 0x0, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x5, 0x7, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x2, 0x4, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0xA, 0xF, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xE, 0x1, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xB, 0xC, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x6, 0x8, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x3, 0xD, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9 },
+	BLAKE_G_PRE(0x2, 0xC, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x6, 0xA, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x0, 0xB, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0x8, 0x3, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x4, 0xD, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x7, 0x5, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0xF, 0xE, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x1, 0x9, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
+	BLAKE_G_PRE(0xC, 0x5, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x1, 0xF, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xE, 0xD, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0x4, 0xA, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x0, 0x7, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x6, 0x3, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x9, 0x2, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x8, 0xB, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
+	BLAKE_G_PRE(0xD, 0xB, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x7, 0xE, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xC, 0x1, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0x3, 0x9, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x5, 0x0, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xF, 0x4, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x8, 0x6, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x2, 0xA, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
+	BLAKE_G_PRE(0x6, 0xF, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0xE, 0x9, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xB, 0x3, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0x0, 0x8, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xC, 0x2, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xD, 0x7, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x1, 0x4, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xA, 0x5, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+
+	// { 10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0 },
+	BLAKE_G_PRE(0xA, 0x2, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x8, 0x4, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0x7, 0x6, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, TheKey);
+	BLAKE_G_PRE(0x1, 0x5, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0xF, 0xB, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, TheKey);
+	BLAKE_G_PRE(0x9, 0xE, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, TheKey);
+	BLAKE_G_PRE(0x3, 0xC, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, TheKey);
+	BLAKE_G_PRE(0xD, 0x0, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, TheKey);
+#endif
 
 	V.lo ^= V.hi;
 	V.lo ^= tmpblock;
@@ -113,17 +235,71 @@ void Blake2S(uint32_t * inout, const uint32_t * TheKey)
 	V.hi.s4 ^= 128;
 	V.hi.s6 = ~V.hi.s6;
 
+#if 0
 	for (int x = 0; x < 10; ++x)
 	{
-		BLAKE_G(x, 0x00, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
-		BLAKE_G(x, 0x02, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
-		BLAKE_G(x, 0x04, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
-		BLAKE_G(x, 0x06, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
-		BLAKE_G(x, 0x08, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
-		BLAKE_G(x, 0x0A, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
-		BLAKE_G(x, 0x0C, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
-		BLAKE_G(x, 0x0E, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
+		BLAKE_G(x, 0x0, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
+		BLAKE_G(x, 0x2, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
+		BLAKE_G(x, 0x4, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
+		BLAKE_G(x, 0x6, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
+		BLAKE_G(x, 0x8, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
+		BLAKE_G(x, 0xA, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
+		BLAKE_G(x, 0xC, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
+		BLAKE_G(x, 0xE, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
 	}
+#else
+	//	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
+	BLAKE_G_PRE(0x0, 0x1, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
+	BLAKE_G_PRE(0x2, 0x3, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
+	BLAKE_G_PRE(0x4, 0x5, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
+	BLAKE_G_PRE(0x6, 0x7, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
+	BLAKE_G_PRE(0x8, 0x9, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
+	BLAKE_G_PRE(0xA, 0xB, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
+	BLAKE_G_PRE(0xC, 0xD, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
+	BLAKE_G_PRE(0xE, 0xF, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
+
+	// { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
+	BLAKE_G_PRE(0xE, 0xA, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
+	BLAKE_G_PRE(0x4, 0x8, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
+	BLAKE_G_PRE(0x9, 0xF, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
+	BLAKE_G_PRE(0xD, 0x6, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
+	BLAKE_G_PRE(0x1, 0xC, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
+	BLAKE_G_PRE(0x0, 0x2, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
+	BLAKE_G_PRE(0xB, 0x7, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
+	BLAKE_G_PRE(0x5, 0x3, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
+
+	// { 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
+	BLAKE_G_PRE(0xB, 0x8, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
+	BLAKE_G_PRE(0xC, 0x0, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
+	BLAKE_G_PRE(0x5, 0x2, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
+	BLAKE_G_PRE(0xF, 0xD, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
+	BLAKE_G_PRE(0xA, 0xE, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
+	BLAKE_G_PRE(0x3, 0x6, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
+	BLAKE_G_PRE(0x7, 0x1, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
+	BLAKE_G_PRE(0x9, 0x4, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
+
+	// { 7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8 },
+	BLAKE_G_PRE(0x7, 0x9, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
+	BLAKE_G_PRE(0x3, 0x1, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
+	BLAKE_G_PRE(0xD, 0xC, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
+	BLAKE_G_PRE(0xB, 0xE, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
+	BLAKE_G_PRE(0x2, 0x6, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
+	BLAKE_G_PRE(0x5, 0xA, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
+	BLAKE_G_PRE(0x4, 0x0, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
+	BLAKE_G_PRE(0xF, 0x8, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
+
+	for (int x = 4; x < 10; ++x)
+	{
+		BLAKE_G(x, 0x0, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
+		BLAKE_G(x, 0x2, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
+		BLAKE_G(x, 0x4, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
+		BLAKE_G(x, 0x6, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
+		BLAKE_G(x, 0x8, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
+		BLAKE_G(x, 0xA, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
+		BLAKE_G(x, 0xC, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
+		BLAKE_G(x, 0xE, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
+	}
+#endif
 
 	V.lo ^= V.hi ^ tmpblock;
 
@@ -148,14 +324,14 @@ void Blake2Shost(uint32_t * inout, const uint32_t * inkey)
 
 	for (int x = 0; x < 10; ++x)
 	{
-		BLAKE_Ghost(x, 0x00, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inkey);
-		BLAKE_Ghost(x, 0x02, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inkey);
-		BLAKE_Ghost(x, 0x04, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inkey);
-		BLAKE_Ghost(x, 0x06, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inkey);
-		BLAKE_Ghost(x, 0x08, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inkey);
-		BLAKE_Ghost(x, 0x0A, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inkey);
-		BLAKE_Ghost(x, 0x0C, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inkey);
-		BLAKE_Ghost(x, 0x0E, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inkey);
+		BLAKE_Ghost(x, 0x0, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inkey);
+		BLAKE_Ghost(x, 0x2, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inkey);
+		BLAKE_Ghost(x, 0x4, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inkey);
+		BLAKE_Ghost(x, 0x6, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inkey);
+		BLAKE_Ghost(x, 0x8, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inkey);
+		BLAKE_Ghost(x, 0xA, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inkey);
+		BLAKE_Ghost(x, 0xC, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inkey);
+		BLAKE_Ghost(x, 0xE, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inkey);
 	}
 
 	V.lo ^= V.hi;
@@ -169,14 +345,14 @@ void Blake2Shost(uint32_t * inout, const uint32_t * inkey)
 
 	for (int x = 0; x < 10; ++x)
 	{
-		BLAKE_Ghost(x, 0x00, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
-		BLAKE_Ghost(x, 0x02, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
-		BLAKE_Ghost(x, 0x04, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
-		BLAKE_Ghost(x, 0x06, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
-		BLAKE_Ghost(x, 0x08, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
-		BLAKE_Ghost(x, 0x0A, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
-		BLAKE_Ghost(x, 0x0C, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
-		BLAKE_Ghost(x, 0x0E, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
+		BLAKE_Ghost(x, 0x0, V.lo.s0, V.lo.s4, V.hi.s0, V.hi.s4, inout);
+		BLAKE_Ghost(x, 0x2, V.lo.s1, V.lo.s5, V.hi.s1, V.hi.s5, inout);
+		BLAKE_Ghost(x, 0x4, V.lo.s2, V.lo.s6, V.hi.s2, V.hi.s6, inout);
+		BLAKE_Ghost(x, 0x6, V.lo.s3, V.lo.s7, V.hi.s3, V.hi.s7, inout);
+		BLAKE_Ghost(x, 0x8, V.lo.s0, V.lo.s5, V.hi.s2, V.hi.s7, inout);
+		BLAKE_Ghost(x, 0xA, V.lo.s1, V.lo.s6, V.hi.s3, V.hi.s4, inout);
+		BLAKE_Ghost(x, 0xC, V.lo.s2, V.lo.s7, V.hi.s0, V.hi.s5, inout);
+		BLAKE_Ghost(x, 0xE, V.lo.s3, V.lo.s4, V.hi.s1, V.hi.s6, inout);
 	}
 
 	V.lo ^= V.hi ^ tmpblock;
@@ -538,6 +714,11 @@ void neoscrypt_gpu_hash_k4(uint32_t threads, uint32_t startNonce, uint32_t *nonc
 		}
 		((uintx64 *)Z)[0] ^= ldg256(&(W + shift)[2064]);
 		fastkdf32(data, (uint32_t*)Z, outbuf);
+#if __CUDA_ARCH__ < 320
+		// workaround required when using SM 3.0 shift256R() func (tested on SM 5.0)
+		if (thread == 0)
+			printf("", outbuf[7]);
+#endif
 		if (outbuf[7] <= pTarget[7]) {
 			atomicMin(nonceRes, nonce); // init val is UINT32_MAX
 		}
@@ -555,7 +736,7 @@ void neoscrypt_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, bool have_stratum, int order)
+uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, int have_stratum, int order)
 {
 	uint32_t result[MAX_GPUS];
 	memset(result, 0xff, sizeof(result));
@@ -565,11 +746,11 @@ uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounc
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	neoscrypt_gpu_hash_k0  <<< grid, block >>>(threads, startNounce, have_stratum);
+	neoscrypt_gpu_hash_k0  <<< grid, block >>>(threads, startNounce, (bool) have_stratum);
 	neoscrypt_gpu_hash_k01 <<< grid, block >>>(threads, startNounce);
 	neoscrypt_gpu_hash_k2  <<< grid, block >>>(threads, startNounce);
 	neoscrypt_gpu_hash_k3  <<< grid, block >>>(threads, startNounce);
-	neoscrypt_gpu_hash_k4  <<< grid, block >>>(threads, startNounce, d_NNonce[thr_id], have_stratum);
+	neoscrypt_gpu_hash_k4  <<< grid, block >>>(threads, startNounce, d_NNonce[thr_id], (bool) have_stratum);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(&result[thr_id], d_NNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);

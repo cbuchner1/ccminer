@@ -4,7 +4,7 @@
 
 extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
 extern void neoscrypt_cpu_init(int thr_id, uint32_t threads);
-extern uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, bool have_stratum, int order);
+extern uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, int have_stratum, int order);
 
 static bool init[MAX_GPUS] = { 0 };
 
