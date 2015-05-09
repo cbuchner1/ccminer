@@ -599,7 +599,7 @@ static __device__ __forceinline__ void neoscrypt_salsa(uint16 *XV)
 #define SHIFT 130
 
 __global__ __launch_bounds__(128, 1)
-void neoscrypt_gpu_hash_k0(uint32_t threads, uint32_t startNonce, bool stratum)
+void neoscrypt_gpu_hash_k0(uint32_t threads, uint32_t startNonce, int stratum)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 //	if (thread < threads)
@@ -686,7 +686,7 @@ void neoscrypt_gpu_hash_k3(uint32_t threads, uint32_t startNonce)
 }
 
 __global__ __launch_bounds__(128, 1)
-void neoscrypt_gpu_hash_k4(uint32_t threads, uint32_t startNonce, uint32_t *nonceRes, bool stratum)
+void neoscrypt_gpu_hash_k4(uint32_t threads, uint32_t startNonce, uint32_t *nonceRes, int stratum)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -746,11 +746,11 @@ uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounc
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	neoscrypt_gpu_hash_k0  <<< grid, block >>>(threads, startNounce, (bool) have_stratum);
+	neoscrypt_gpu_hash_k0  <<< grid, block >>>(threads, startNounce, have_stratum);
 	neoscrypt_gpu_hash_k01 <<< grid, block >>>(threads, startNounce);
 	neoscrypt_gpu_hash_k2  <<< grid, block >>>(threads, startNounce);
 	neoscrypt_gpu_hash_k3  <<< grid, block >>>(threads, startNounce);
-	neoscrypt_gpu_hash_k4  <<< grid, block >>>(threads, startNounce, d_NNonce[thr_id], (bool) have_stratum);
+	neoscrypt_gpu_hash_k4  <<< grid, block >>>(threads, startNounce, d_NNonce[thr_id], have_stratum);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(&result[thr_id], d_NNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
