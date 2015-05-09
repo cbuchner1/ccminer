@@ -2,13 +2,9 @@
 #include "miner.h"
 #include "neoscrypt/neoscrypt.h"
 
-static uint32_t *d_hash[MAX_GPUS] ;
 extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
-extern void neoscrypt_cpu_init(int thr_id, uint32_t threads, uint32_t* hash);
-extern uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, uint32_t threads, uint32_t startNounce, int order);
-extern int cuda_get_arch(int thr_id);
-
-#define SHIFT 130
+extern void neoscrypt_cpu_init(int thr_id, uint32_t threads);
+extern uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, bool have_stratum, int order);
 
 static bool init[MAX_GPUS] = { 0 };
 
@@ -16,13 +12,13 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 {
 	const uint32_t first_nonce = pdata[19];
 
-	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
-
 	int intensity = is_windows() ? 18 : 19;
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
 	throughput = throughput / 32; /* set for max intensity ~= 20 */
 	throughput = min(throughput, max_nonce - first_nonce + 1);
+
+	if (opt_benchmark)
+		((uint32_t*)ptarget)[7] = 0x0000ff;
 
 	if (!init[thr_id])
 	{
@@ -30,29 +26,21 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 		cudaSetDevice(dev_id);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 
-		cuda_get_arch(thr_id);
 		if (device_sm[dev_id] <= 300) {
 			applog(LOG_ERR, "Sorry neoscrypt is not supported on SM 3.0 devices");
 			proper_exit(EXIT_CODE_CUDA_ERROR);
 		}
 
-		cudaMalloc(&d_hash[thr_id], 32 * SHIFT * sizeof(uint64_t) * throughput);
-		neoscrypt_cpu_init(thr_id, throughput, d_hash[thr_id]);
-
 		applog(LOG_INFO, "Using %d cuda threads", throughput);
-		if (cudaGetLastError() != cudaSuccess) {
-			cudaError_t err = cudaGetLastError();
-		        fprintf(stderr, "Cuda error in func '%s' at line %i : %s.\n",
-			                 __FUNCTION__, __LINE__, cudaGetErrorString(err) );
-			proper_exit(EXIT_FAILURE);
-		}
+		neoscrypt_cpu_init(thr_id, throughput);
+
 		init[thr_id] = true;
 	}
 
 	uint32_t endiandata[20];
 	if (have_stratum) {
 		for (int k = 0; k < 20; k++)
-			be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+			be32enc(&endiandata[k], pdata[k]);
 	} else {
 		for (int k = 0; k < 20; k++)
 			endiandata[k] = pdata[k];
@@ -61,7 +49,7 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 	neoscrypt_setBlockTarget(endiandata,ptarget);
 
 	do {
-		uint32_t foundNonce = neoscrypt_cpu_hash_k4((int)have_stratum, thr_id, throughput, pdata[19], 0);
+		uint32_t foundNonce = neoscrypt_cpu_hash_k4(thr_id, throughput, pdata[19], have_stratum, 0);
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash64[8];

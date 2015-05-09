@@ -4,9 +4,9 @@
 #include "cuda_helper.h"
 #include "cuda_vectors.h" /* NOT COMPATIBLE WITH SM 3.0 !!! */
 
- __device__ uint4* W;
-uint32_t *d_NNonce[MAX_GPUS];
-uint32_t *d_nnounce[MAX_GPUS];
+static uint32_t *d_buffer[MAX_GPUS];
+static uint32_t *d_NNonce[MAX_GPUS];
+__constant__ uint4* W;
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t key_init[16];
 __constant__ uint32_t input_init[16];
@@ -423,14 +423,14 @@ static __device__ __forceinline__ void neoscrypt_salsa(uint16 *XV)
 #define SHIFT 130
 
 __global__ __launch_bounds__(128, 1)
-void neoscrypt_gpu_hash_k0(int stratum, uint32_t threads, uint32_t startNonce)
+void neoscrypt_gpu_hash_k0(uint32_t threads, uint32_t startNonce, bool stratum)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	uint32_t shift = SHIFT * 16 * thread;
 //	if (thread < threads)
 	{
 		uint32_t data[80];
 		uint16 X[4];
+		uint32_t shift = thread * SHIFT * 16;
 		const uint32_t nonce = startNonce + thread;
 
 		for (int i = 0; i<20; i++) {
@@ -451,10 +451,10 @@ __global__ __launch_bounds__(128, 1)
 void neoscrypt_gpu_hash_k01(uint32_t threads, uint32_t startNonce)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	uint32_t shift = SHIFT * 16 * thread;
 //	if (thread < threads)
 	{
 		uint16 X[4];
+		uint32_t shift = thread * SHIFT * 16;
 		((uintx64 *)X)[0]= ldg256(&(W + shift)[0]);
 
 		//#pragma unroll
@@ -471,10 +471,10 @@ __global__ __launch_bounds__(128, 1)
 void neoscrypt_gpu_hash_k2(uint32_t threads, uint32_t startNonce)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	uint32_t shift = SHIFT * 16 * thread;
 //	if (thread < threads)
 	{
 		uint16 X[4];
+		uint32_t shift = thread * SHIFT * 16;
 		((uintx64 *)X)[0] = ldg256(&(W + shift)[2048]);
 
 		for (int t = 0; t < 128; t++)
@@ -495,7 +495,7 @@ void neoscrypt_gpu_hash_k3(uint32_t threads, uint32_t startNonce)
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 //	if (thread < threads)
 	{
-		uint32_t shift = SHIFT * 16 * thread;
+		uint32_t shift = thread * SHIFT * 16;
 		uint16 Z[4];
 
 		((uintx64*)Z)[0] = ldg256(&(W + shift)[0]);
@@ -510,14 +510,14 @@ void neoscrypt_gpu_hash_k3(uint32_t threads, uint32_t startNonce)
 }
 
 __global__ __launch_bounds__(128, 1)
-void neoscrypt_gpu_hash_k4(int stratum, uint32_t threads, uint32_t startNonce, uint32_t *nonceVector)
+void neoscrypt_gpu_hash_k4(uint32_t threads, uint32_t startNonce, uint32_t *nonceRes, bool stratum)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-//	if (thread < threads)
+	if (thread < threads)
 	{
 		const uint32_t nonce = startNonce + thread;
 
-		uint32_t shift = SHIFT * 16 * thread;
+		uint32_t shift = thread * SHIFT * 16;
 		uint16 Z[4];
 		uint32_t outbuf[8];
 		uint32_t data[80];
@@ -539,33 +539,37 @@ void neoscrypt_gpu_hash_k4(int stratum, uint32_t threads, uint32_t startNonce, u
 		((uintx64 *)Z)[0] ^= ldg256(&(W + shift)[2064]);
 		fastkdf32(data, (uint32_t*)Z, outbuf);
 		if (outbuf[7] <= pTarget[7]) {
-			uint32_t tmp = atomicExch(&nonceVector[0], nonce);
+			atomicMin(nonceRes, nonce); // init val is UINT32_MAX
 		}
 	}
 }
 
-void neoscrypt_cpu_init(int thr_id, uint32_t threads, uint32_t *hash)
+__host__
+void neoscrypt_cpu_init(int thr_id, uint32_t threads)
 {
-	cudaMemcpyToSymbol(BLAKE2S_SIGMA, BLAKE2S_SIGMA_host, sizeof(BLAKE2S_SIGMA_host), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(W, &hash, sizeof(hash), 0, cudaMemcpyHostToDevice);
+	cuda_get_arch(thr_id);
 	cudaMalloc(&d_NNonce[thr_id], sizeof(uint32_t));
+	CUDA_SAFE_CALL(cudaMalloc(&d_buffer[thr_id], threads * 256 * SHIFT));
+	cudaMemcpyToSymbol(W, &d_buffer[thr_id], sizeof(uint4*), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BLAKE2S_SIGMA, BLAKE2S_SIGMA_host, sizeof(BLAKE2S_SIGMA_host), 0, cudaMemcpyHostToDevice);
 }
 
 __host__
-uint32_t neoscrypt_cpu_hash_k4(int stratum, int thr_id, uint32_t threads, uint32_t startNounce, int order)
+uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, bool have_stratum, int order)
 {
-	uint32_t result[MAX_GPUS] = { 0xffffffff };
+	uint32_t result[MAX_GPUS];
+	memset(result, 0xff, sizeof(result));
 	cudaMemset(d_NNonce[thr_id], 0xff, sizeof(uint32_t));
 
 	const uint32_t threadsperblock = 128;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	neoscrypt_gpu_hash_k0  <<< grid, block >>>(stratum, threads, startNounce);
+	neoscrypt_gpu_hash_k0  <<< grid, block >>>(threads, startNounce, have_stratum);
 	neoscrypt_gpu_hash_k01 <<< grid, block >>>(threads, startNounce);
 	neoscrypt_gpu_hash_k2  <<< grid, block >>>(threads, startNounce);
 	neoscrypt_gpu_hash_k3  <<< grid, block >>>(threads, startNounce);
-	neoscrypt_gpu_hash_k4  <<< grid, block >>>(stratum, threads, startNounce, d_NNonce[thr_id]);
+	neoscrypt_gpu_hash_k4  <<< grid, block >>>(threads, startNounce, d_NNonce[thr_id], have_stratum);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 	cudaMemcpy(&result[thr_id], d_NNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
@@ -578,6 +582,7 @@ void neoscrypt_setBlockTarget(uint32_t* pdata, const void *target)
 {
 	unsigned char PaddedMessage[80*4]; //bring balance to the force
 	uint32_t input[16], key[16] = { 0 };
+
 	memcpy(PaddedMessage,     pdata, 80);
 	memcpy(PaddedMessage + 80, pdata, 80);
 	memcpy(PaddedMessage + 160, pdata, 80);

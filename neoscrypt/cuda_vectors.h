@@ -478,23 +478,25 @@ static __forceinline__ __device__ uint32_t rotateR(uint32_t vec4, uint32_t shift
 
 #if __CUDA_ARCH__ < 320
 
-// right shift a 64 bytes input (256-bits integer) by 0 8 16 24 bits
-static __forceinline__ __device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
+// right shift a 64-bytes integer (256-bits) by 0 8 16 24 bits
+// require a uint32_t[9] ret array
+// note: djm neoscrypt implementation is near the limits of gpu capabilities
+//       and weird behaviors can happen when tuning device functions code...
+__device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 {
 	uint8_t *v = (uint8_t*) &vec4.s0;
 	uint8_t *r = (uint8_t*) ret;
 	uint8_t bytes = (uint8_t) (shift >> 3);
-	for (uint8_t i=0; i<bytes; i++)
-		r[i] = 0;
+	ret[0] = 0;
 	for (uint8_t i=bytes; i<32; i++)
 		r[i] = v[i-bytes];
-	ret[8] = vec4.s7 >> (32 - shift); // shuffled part required ?
-	//printf("A %02u %08x %08x > %08x %08x\n", shift, vec4.s6, vec4.s7, ret[7], ret[8]);
+	ret[8] = vec4.s7 >> (32 - shift); // shuffled part required
 }
+
 #else
 
-// right shift a 32 bytes input (256-bits integer) by 0 8 16 24 bits
-static __forceinline__ __device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
+// same for SM 3.5+, really faster ?
+__device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 {
 	uint32_t truc = 0, truc2 = cuda_swab32(vec4.s7), truc3 = 0;
 	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift));
@@ -522,7 +524,6 @@ static __forceinline__ __device__ void shift256R(uint32_t* ret, const uint8 &vec
 	ret[1] = cuda_swab32(truc);
 	asm("shr.b32        %0, %1, %2;" : "=r"(truc) : "r"(truc3), "r"(shift));
 	ret[0] = cuda_swab32(truc);
-	//printf("B %02u %08x %08x > %08x %08x\n", shift, vec4.s6, vec4.s7, ret[7], ret[8]);
 }
 #endif
 
