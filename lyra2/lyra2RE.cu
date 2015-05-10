@@ -9,7 +9,7 @@ extern "C" {
 #include "miner.h"
 #include "cuda_helper.h"
 
-static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
+static uint64_t* d_hash[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
@@ -21,9 +21,10 @@ extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
 extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 
+extern void groestl256_cpu_init(int thr_id, uint32_t threads);
 extern void groestl256_setTarget(const void *ptarget);
 extern uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
-extern void groestl256_cpu_init(int thr_id, uint32_t threads);
+extern uint32_t groestl256_getSecNonce(int thr_id, int num);
 
 extern "C" void lyra2_hash(void *state, const void *input)
 {
@@ -99,18 +100,33 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		foundNonce = groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		if (foundNonce != UINT32_MAX)
 		{
+			uint32_t _ALIGN(64) vhash64[8];
 			const uint32_t Htarg = ptarget[7];
-			uint32_t vhash64[8];
+
 			be32enc(&endiandata[19], foundNonce);
 			lyra2_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				*hashes_done = pdata[19] - first_nonce + throughput;
+				int res = 1;
+				uint32_t secNonce = groestl256_getSecNonce(thr_id, 1);
+				if (secNonce != UINT32_MAX)
+				{
+					be32enc(&endiandata[19], secNonce);
+					lyra2_hash(vhash64, endiandata);
+					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
+						if (opt_debug)
+							applog(LOG_BLUE, "GPU #%d: found second nonce %08x", device_map[thr_id], secNonce);
+						pdata[21] = secNonce;
+						res++;
+					}
+				}
 				pdata[19] = foundNonce;
-				return 1;
+				return res;
 			} else {
 				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
