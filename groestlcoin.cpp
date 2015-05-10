@@ -9,89 +9,84 @@
 
 #include "miner.h"
 
-#define SWAP32(x) \
-    ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
-      (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
-
-// CPU-groestl
-extern "C" void groestlhash(void *state, const void *input)
+// CPU hash
+void groestlhash(void *state, const void *input)
 {
-    sph_groestl512_context ctx_groestl;
+	uint32_t _ALIGN(64) hash[16];
+	sph_groestl512_context ctx_groestl;
 
-    //these uint512 in the c++ source of the client are backed by an array of uint32
-    uint32_t hashA[16], hashB[16];
+	sph_groestl512_init(&ctx_groestl);
+	sph_groestl512(&ctx_groestl, input, 80);
+	sph_groestl512_close(&ctx_groestl, hash);
 
-    sph_groestl512_init(&ctx_groestl);
-    sph_groestl512 (&ctx_groestl, input, 80); //6
-    sph_groestl512_close(&ctx_groestl, hashA); //7
+	sph_groestl512_init(&ctx_groestl);
+	sph_groestl512(&ctx_groestl, hash, 64);
+	sph_groestl512_close(&ctx_groestl, hash);
 
-    sph_groestl512_init(&ctx_groestl);
-    sph_groestl512 (&ctx_groestl, hashA, 64); //6
-    sph_groestl512_close(&ctx_groestl, hashB); //7
-
-    memcpy(state, hashB, 32);
+	memcpy(state, hash, 32);
 }
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-    uint32_t max_nonce, unsigned long *hashes_done)
+int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+	uint32_t max_nonce, unsigned long *hashes_done)
 {
-    uint32_t start_nonce = pdata[19];
-    uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
-    throughput = min(throughput, max_nonce - start_nonce);
+	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t start_nonce = pdata[19];
+	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
+	throughput = min(throughput, max_nonce - start_nonce);
 
-    uint32_t *outputHash = (uint32_t*)malloc(throughput * 64);
+	uint32_t *outputHash = (uint32_t*)malloc(throughput * 64);
 
-    if (opt_benchmark)
-        ((uint32_t*)ptarget)[7] = 0x000000ff;
+	if (opt_benchmark)
+		((uint32_t*)ptarget)[7] = 0x000000ff;
 
-    // init
-    if(!init[thr_id])
-    {
-        cudaSetDevice(device_map[thr_id]);
-        groestlcoin_cpu_init(thr_id, throughput);
-        init[thr_id] = true;
-    }
+	if (!init[thr_id])
+	{
+		cudaSetDevice(device_map[thr_id]);
+		groestlcoin_cpu_init(thr_id, throughput);
+		init[thr_id] = true;
+	}
 
-    // Endian Drehung ist notwendig
-    uint32_t endiandata[32];
-    for (int kk=0; kk < 32; kk++)
-        be32enc(&endiandata[kk], pdata[kk]);
+	for (int k=0; k < 20; k++)
+		be32enc(&endiandata[k], pdata[k]);
 
-    // Context mit dem Endian gedrehten Blockheader vorbereiten (Nonce wird später ersetzt)
-    groestlcoin_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
+	groestlcoin_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
 
-    do {
-        // GPU
-        uint32_t foundNounce = UINT32_MAX;
+	do {
+		uint32_t foundNounce = UINT32_MAX;
 
-        *hashes_done = pdata[19] - start_nonce + throughput;
+		*hashes_done = pdata[19] - start_nonce + throughput;
 
-        groestlcoin_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
+		// GPU hash
+		groestlcoin_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
 
-        if(foundNounce < UINT32_MAX)
-        {
-            uint32_t _ALIGN(64) tmpHash[8];
-            endiandata[19] = SWAP32(foundNounce);
-            groestlhash(tmpHash, endiandata);
+		if (foundNounce < UINT32_MAX)
+		{
+			uint32_t _ALIGN(64) tmpHash[8];
+			endiandata[19] = swab32(foundNounce);
+			groestlhash(tmpHash, endiandata);
 
-            if (tmpHash[7] <= ptarget[7] && fulltest(tmpHash, ptarget)) {
-                pdata[19] = foundNounce;
-                free(outputHash);
-                return true;
-            } else {
-                applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNounce);
-            }
-        }
+			if (tmpHash[7] <= ptarget[7] && fulltest(tmpHash, ptarget)) {
+				pdata[19] = foundNounce;
+				free(outputHash);
+				return true;
+			} else {
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!",
+					device_map[thr_id], foundNounce);
+			}
+		}
 
-        if (pdata[19] + throughput < pdata[19])
-            pdata[19] = max_nonce;
-        else pdata[19] += throughput;
+		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+			pdata[19] = max_nonce;
+			*hashes_done = max_nonce - start_nonce + 1;
+			break;
+		}
+		pdata[19] += throughput;
 
-    } while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-    free(outputHash);
-    return 0;
+	free(outputHash);
+	return 0;
 }
 
