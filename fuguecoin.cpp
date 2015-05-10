@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdint.h>
+#include <cuda_runtime.h>
 
 #include "uint256.h"
 #include "sph/sph_fugue.h"
@@ -22,7 +23,7 @@ extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n,
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t start_nonce = pdata[19]++;
@@ -36,6 +37,8 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 	// init
 	if(!init[thr_id])
 	{
+		cudaSetDevice(device_map[thr_id]);
+
 		fugue256_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
@@ -50,10 +53,10 @@ extern "C" int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *pt
 
 	do {
 		// GPU
-		uint32_t foundNounce = 0xFFFFFFFF;
+		uint32_t foundNounce = UINT32_MAX;
 		fugue256_cpu_hash(thr_id, throughput, pdata[19], NULL, &foundNounce);
 
-		if(foundNounce < 0xffffffff)
+		if (foundNounce < UINT32_MAX)
 		{
 			uint32_t hash[8];
 			const uint32_t Htarg = ptarget[7];

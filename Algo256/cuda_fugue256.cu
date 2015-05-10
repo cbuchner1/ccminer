@@ -9,7 +9,7 @@
 #define USE_SHARED 1
 
 uint32_t *d_fugue256_hashoutput[MAX_GPUS];
-uint32_t *d_resultNonce[MAX_GPUS];
+static uint32_t *d_resultNonce[MAX_GPUS];
 
 __constant__ uint32_t GPUstate[30]; // Single GPU
 __constant__ uint32_t pTarget[8]; // Single GPU
@@ -718,10 +718,9 @@ fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outp
 	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
 
 
+__host__
 void fugue256_cpu_init(int thr_id, uint32_t threads)
 {
-	cudaSetDevice(device_map[thr_id]);
-
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
 	texDef(mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
@@ -733,25 +732,23 @@ void fugue256_cpu_init(int thr_id, uint32_t threads)
 	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t));
 }
 
-__host__ void fugue256_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
+__host__
+void fugue256_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
 	// CPU-Vorbereitungen treffen
 	sph_fugue256_context ctx_fugue_const;
 	sph_fugue256_init(&ctx_fugue_const);
 	sph_fugue256 (&ctx_fugue_const, data, 80);	// State speichern
 
-	cudaMemcpyToSymbol(	GPUstate,
-						ctx_fugue_const.S,
-						sizeof(uint32_t) * 30 );
+	cudaMemcpyToSymbol(GPUstate, ctx_fugue_const.S, sizeof(uint32_t) * 30);
 
-	cudaMemcpyToSymbol(	pTarget,
-						pTargetIn,
-						sizeof(uint32_t) * 8 );
+	cudaMemcpyToSymbol(pTarget, pTargetIn, sizeof(uint32_t) * 8);
 
 	cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
 }
 
-__host__ void fugue256_cpu_hash(int thr_id, uint32_t threads, int startNounce, void *outputHashes, uint32_t *nounce)
+__host__
+void fugue256_cpu_hash(int thr_id, uint32_t threads, int startNounce, void *outputHashes, uint32_t *nounce)
 {
 #if USE_SHARED
 	const uint32_t threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN

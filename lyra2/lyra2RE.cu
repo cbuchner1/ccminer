@@ -79,7 +79,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		skein256_cpu_init(thr_id, throughput);
 		groestl256_cpu_init(thr_id, throughput);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
 
 		init[thr_id] = true;
 	}
@@ -95,23 +95,22 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		int order = 0;
 		uint32_t foundNonce;
 
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
-		*hashes_done = pdata[19] - first_nonce + throughput;
-
 		foundNonce = groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash64[8];
-			const uint32_t Htarg = ptarget[7];
 
 			be32enc(&endiandata[19], foundNonce);
 			lyra2_hash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = groestl256_getSecNonce(thr_id, 1);
 				if (secNonce != UINT32_MAX)
@@ -136,6 +135,5 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }

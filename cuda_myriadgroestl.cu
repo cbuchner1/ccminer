@@ -14,7 +14,7 @@
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
 uint32_t *d_outputHashes[MAX_GPUS];
-extern uint32_t *d_resultNonce[MAX_GPUS];
+static uint32_t *d_resultNonce[MAX_GPUS];
 
 __constant__ uint32_t myriadgroestl_gpu_msg[32];
 
@@ -299,11 +299,10 @@ __global__ void
 #endif
 }
 
-// Setup-Funktionen
-__host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
+// Setup Function
+__host__
+void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 {
-    cudaSetDevice(device_map[thr_id]);
-
     cudaMemcpyToSymbol( myr_sha256_gpu_hashTable,
                         myr_sha256_cpu_hashTable,
                         sizeof(uint32_t) * 8 );
@@ -328,7 +327,8 @@ __host__ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
     cudaMalloc(&d_outputHashes[thr_id], 16*sizeof(uint32_t)*threads);
 }
 
-__host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
+__host__
+void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
     // Nachricht expandieren und setzen
     uint32_t msgBlock[32];
@@ -355,7 +355,8 @@ __host__ void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn
                         sizeof(uint32_t) * 8 );
 }
 
-__host__ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
+__host__
+void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
 {
     uint32_t threadsperblock = 256;
 

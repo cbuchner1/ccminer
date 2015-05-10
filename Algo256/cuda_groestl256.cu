@@ -280,8 +280,8 @@ void groestl256_cpu_init(int thr_id, uint32_t threads)
 __host__
 uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
-	uint32_t result = 0xffffffff;
-	cudaMemset(d_GNonces[thr_id], 0xff, sizeof(uint32_t));
+	uint32_t result = UINT32_MAX;
+	cudaMemset(d_GNonces[thr_id], 0xff, 2*sizeof(uint32_t));
 	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
@@ -308,7 +308,10 @@ __host__
 uint32_t groestl256_getSecNonce(int thr_id, int num)
 {
 	uint32_t results[2];
+	memset(results, 0xFF, sizeof(results));
 	cudaMemcpy(results, d_GNonces[thr_id], sizeof(results), cudaMemcpyDeviceToHost);
+	if (results[1] == results[0])
+		return UINT32_MAX;
 	return results[num];
 }
 
