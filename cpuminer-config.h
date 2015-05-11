@@ -181,15 +181,6 @@
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
-/* Define to 1 if AVX assembly is available. */
-/* #undef USE_AVX */
-
-/* Define to 1 if AVX2 assembly is available. */
-/* #undef USE_AVX2 */
-
-/* Define to 1 if XOP assembly is available. */
-/* undef USE_XOP */
-
 /* Version number of package */
 #define VERSION "1.6.3-git"
 
