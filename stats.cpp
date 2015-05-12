@@ -25,8 +25,7 @@ extern int opt_statsavg;
  */
 void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found, uint32_t height)
 {
-	const uint8_t  gpu = (uint8_t) device_map[thr_id];
-	const uint64_t key = ((uid++ % UINT32_MAX) << 32) + gpu;
+	const uint64_t key = uid++;
 	stats_data data;
 	// to enough hashes to give right stats
 	if (hashcount < 1000 || hashrate < 0.01)
@@ -38,7 +37,7 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 
 	memset(&data, 0, sizeof(data));
 	data.uid = (uint32_t) uid;
-	data.gpu_id = gpu;
+	data.gpu_id = device_map[thr_id];
 	data.thr_id = (uint8_t)thr_id;
 	data.tm_stat = (uint32_t) time(NULL);
 	data.height = height;
@@ -61,15 +60,13 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
  */
 double stats_get_speed(int thr_id, double def_speed)
 {
-	const uint64_t gpu = device_map[thr_id];
-	const uint64_t keymsk = 0xffULL; // last u8 is the gpu
 	double speed = 0.0;
 	int records = 0;
 
 	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
 	while (i != tlastscans.rend() && records < opt_statsavg) {
 		if (!i->second.ignored)
-		if (thr_id == -1 || (keymsk & i->first) == gpu) {
+		if (thr_id == -1 || i->second.thr_id == thr_id) {
 			if (i->second.hashcount > 1000) {
 				speed += i->second.hashrate;
 				records++;
@@ -91,18 +88,36 @@ double stats_get_speed(int thr_id, double def_speed)
 }
 
 /**
+ * Get the gpu average speed
+ * @param gpu_id int (-1 for all threads)
+ */
+double stats_get_gpu_speed(int gpu_id)
+{
+	double speed = 0.0;
+	double speeds[MAX_GPUS] = { 0 };
+	int records[MAX_GPUS] = { 0 };
+	int count = 0;
+
+	for (int thr_id=0; thr_id<opt_n_threads; thr_id++) {
+		int dev_id = device_map[thr_id];
+		if (gpu_id == -1 || dev_id == gpu_id)
+			speed += stats_get_speed(thr_id, 0.0);
+	}
+
+	return speed;
+}
+
+/**
  * Export data for api calls
  */
 int stats_get_history(int thr_id, struct stats_data *data, int max_records)
 {
-	const uint64_t gpu = device_map[thr_id];
-	const uint64_t keymsk = 0xffULL; // last u8 is the gpu
 	int records = 0;
 
 	std::map<uint64_t, stats_data>::reverse_iterator i = tlastscans.rbegin();
 	while (i != tlastscans.rend() && records < max_records) {
 		if (!i->second.ignored)
-			if (thr_id == -1 || (keymsk & i->first) == gpu) {
+			if (thr_id == -1 || i->second.thr_id == thr_id) {
 				memcpy(&data[records], &(i->second), sizeof(struct stats_data));
 				records++;
 			}

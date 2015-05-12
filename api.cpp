@@ -130,7 +130,7 @@ static void gpustatus(int thr_id)
 		cgpu->accepted = accepted_count;
 		cgpu->rejected = rejected_count;
 
-		cgpu->khashes = stats_get_speed(cgpu->gpu_id, 0.0) / 1000.0;
+		cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
 
 		card = device_name[gpuid];
 

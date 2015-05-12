@@ -635,6 +635,7 @@ void hashlog_getmeminfo(uint64_t *mem, uint32_t *records);
 
 void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8_t found, uint32_t height);
 double stats_get_speed(int thr_id, double def_speed);
+double stats_get_gpu_speed(int gpu_id);
 int  stats_get_history(int thr_id, struct stats_data *data, int max_records);
 void stats_purge_old(void);
 void stats_purge_all(void);
