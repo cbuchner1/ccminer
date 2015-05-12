@@ -17,15 +17,15 @@ static uint32_t* d_resNonces[MAX_GPUS];
 __host__
 void cuda_check_cpu_init(int thr_id, uint32_t threads)
 {
-    CUDA_CALL_OR_RET(cudaMallocHost(&h_resNonces[thr_id], 8*sizeof(uint32_t)));
-    CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 8*sizeof(uint32_t)));
+    CUDA_CALL_OR_RET(cudaMallocHost(&h_resNonces[thr_id], 32));
+    CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 32));
 }
 
 // Target Difficulty
 __host__
 void cuda_check_cpu_setTarget(const void *ptarget)
 {
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 8*sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(pTarget, ptarget, 32, 0, cudaMemcpyHostToDevice));
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -177,10 +177,10 @@ void cuda_check_hash_branch_64(uint32_t threads, uint32_t startNounce, uint32_t 
 __host__
 uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order)
 {
-	uint32_t result = 0xffffffff;
-	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
-
 	const uint32_t threadsperblock = 256;
+
+	uint32_t result = UINT32_MAX;
+	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -199,9 +199,9 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 
 /* Function to get the compiled Shader Model version */
 int cuda_arch[MAX_GPUS] = { 0 };
-__global__
-void nvcc_get_arch(int *d_version)
+__global__ void nvcc_get_arch(int *d_version)
 {
+	*d_version = 0;
 #ifdef __CUDA_ARCH__
 	*d_version = __CUDA_ARCH__;
 #endif

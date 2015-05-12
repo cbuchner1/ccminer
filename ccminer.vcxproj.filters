@@ -240,6 +240,9 @@
     <ClCompile Include="neoscrypt\neoscrypt-cpu.c">
       <Filter>Source Files\neoscrypt</Filter>
     </ClCompile>
+    <ClCompile Include="skein2.cpp">
+      <Filter>Source Files\CUDA</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -599,9 +602,6 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="skein.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="skein2.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="scrypt\blake.cu">

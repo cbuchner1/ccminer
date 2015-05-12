@@ -42,7 +42,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  quark/quarkcoin.cu quark/animecoin.cu \
 			  quark/cuda_quark_compactionTest.cu  \
 			  neoscrypt/neoscrypt.cpp neoscrypt/neoscrypt-cpu.c neoscrypt/cuda_neoscrypt.cu \
-			  cuda_nist5.cu pentablake.cu skein.cu skein2.cu zr5.cu \
+			  cuda_nist5.cu pentablake.cu skein.cu skein2.cpp zr5.cu \
 			  sph/bmw.c sph/blake.c sph/groestl.c sph/jh.c sph/keccak.c sph/skein.c \
 			  sph/cubehash.c sph/echo.c sph/luffa.c sph/sha2.c sph/shavite.c sph/simd.c \
 			  sph/hamsi.c sph/hamsi_helper.c sph/sph_hamsi.h \

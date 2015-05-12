@@ -396,12 +396,13 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 				int res = 1;
 				uint8_t num = res;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
-				while (secNonce != 0 && res < 6)
+				while (secNonce != 0 && res < 2) /* todo: up to 6 */
 				{
 					endiandata[19] = swab32_if(secNonce, swap);
 					skeincoinhash(vhash64, endiandata);
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-						pdata[19+res] = swab32_if(secNonce, !swap);
+						// todo: use 19 20 21... zr5 pok to adapt...
+						pdata[19+res*2] = swab32_if(secNonce, !swap);
 						res++;
 					}
 					num++;
@@ -416,10 +417,16 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
+
+		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+			*hashes_done = pdata[19] - first_nonce;
+			pdata[19] = max_nonce;
+			break;
+		}
+
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }

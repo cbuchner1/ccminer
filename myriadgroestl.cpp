@@ -35,7 +35,7 @@ int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(64) endiandata[32];
-	uint32_t start_nonce = pdata[19]++;
+	uint32_t start_nonce = pdata[19];
 	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 17);
 	throughput = min(throughput, max_nonce - start_nonce);
 
@@ -82,8 +82,8 @@ int scanhash_myriad(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 		}
 
 		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+			*hashes_done = pdata[19] - start_nonce;
 			pdata[19] = max_nonce;
-			*hashes_done = max_nonce - start_nonce + 1;
 			break;
 		}
 		pdata[19] += throughput;

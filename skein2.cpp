@@ -2,6 +2,7 @@
  * SKEIN512 80 + SKEIN512 64 (Woodcoin)
  * by tpruvot@github - 2015
  */
+#include <string.h>
 
 #include "sph/sph_skein.h"
 
@@ -17,7 +18,7 @@ extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNou
 
 extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern "C" void skein2hash(void *output, const void *input)
+void skein2hash(void *output, const void *input)
 {
 	uint32_t _ALIGN(64) hash[16];
 	sph_skein512_context ctx_skein;
@@ -30,12 +31,12 @@ extern "C" void skein2hash(void *output, const void *input)
 	sph_skein512(&ctx_skein, hash, 64);
 	sph_skein512_close(&ctx_skein, hash);
 
-	memcpy(output, hash, 32);
+	memcpy(output, (void*) hash, 32);
 }
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	const uint32_t first_nonce = pdata[19];
@@ -100,7 +101,9 @@ extern "C" int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptar
 			}
 		}
 
-		if (((uint64_t) throughput + pdata[19]) > max_nonce) {
+		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+			*hashes_done = pdata[19] - first_nonce;
+			pdata[19] = max_nonce;
 			break;
 		}
 

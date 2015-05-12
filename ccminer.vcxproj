@@ -270,6 +270,7 @@
     <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />
     <ClInclude Include="neoscrypt\cuda_vectors.h" />
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
+    <ClCompile Include="skein2.cpp" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />
     <ClCompile Include="sph\bmw.c" />
@@ -462,9 +463,6 @@
     <CudaCompile Include="lyra2\lyra2RE.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="skein.cu">
-      <MaxRegCount>64</MaxRegCount>
-    </CudaCompile>
-    <CudaCompile Include="skein2.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_aes.cu">

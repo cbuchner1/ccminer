@@ -78,8 +78,8 @@ int scanhash_groestlcoin(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 		}
 
 		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+			*hashes_done = pdata[19] - start_nonce + 1;
 			pdata[19] = max_nonce;
-			*hashes_done = max_nonce - start_nonce + 1;
 			break;
 		}
 		pdata[19] += throughput;
