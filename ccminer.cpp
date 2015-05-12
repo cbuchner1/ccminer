@@ -335,11 +335,8 @@ Options:\n\
   -S, --syslog          use system log for output messages\n\
       --syslog-prefix=... allow to change syslog tool name\n"
 #endif
-#ifndef WIN32
 "\
-  -B, --background      run the miner in the background\n"
-#endif
-"\
+  -B, --background      run the miner in the background\n\
       --benchmark       run in offline benchmark mode\n\
       --cputest         debug hashes from cpu algorithms\n\
   -c, --config=FILE     load a JSON-format configuration file\n\
@@ -348,21 +345,16 @@ Options:\n\
 ";
 
 static char const short_options[] =
-#ifndef WIN32
-	"B"
-#endif
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:c:i:Dhp:Px:mnqr:R:s:t:T:o:u:O:Vd:f:v:N:b:l:L:";
+	"a:Bc:i:Dhp:Px:mnqr:R:s:t:T:o:u:O:Vd:f:v:N:b:l:L:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
 	{ "api-bind", 1, NULL, 'b' },
 	{ "api-remote", 0, NULL, 1030 },
-#ifndef WIN32
 	{ "background", 0, NULL, 'B' },
-#endif
 	{ "benchmark", 0, NULL, 1005 },
 	{ "cert", 1, NULL, 1001 },
 	{ "config", 1, NULL, 'c' },
@@ -2664,8 +2656,8 @@ int main(int argc, char *argv[])
 		return EXIT_CODE_SW_INIT_ERROR;
 	}
 
-#ifndef WIN32
 	if (opt_background) {
+#ifndef WIN32
 		i = fork();
 		if (i < 0) proper_exit(EXIT_CODE_SW_INIT_ERROR);
 		if (i > 0) proper_exit(EXIT_CODE_OK);
@@ -2677,7 +2669,20 @@ int main(int argc, char *argv[])
 			applog(LOG_ERR, "chdir() failed (errno = %d)", errno);
 		signal(SIGHUP, signal_handler);
 		signal(SIGTERM, signal_handler);
+#else
+		HWND hcon = GetConsoleWindow();
+		if (hcon) {
+			// this method also hide parent command line window
+			ShowWindow(hcon, SW_HIDE);
+		} else {
+			HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+			CloseHandle(h);
+			FreeConsole();
+		}
+#endif
 	}
+
+#ifndef WIN32
 	/* Always catch Ctrl+C */
 	signal(SIGINT, signal_handler);
 #else
