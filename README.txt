@@ -214,7 +214,10 @@ features.
 >>> RELEASE HISTORY <<<
 
   Not released!!  v1.6.3
-                  Import Neoscrypt from djm34 work
+                  Import and adapt Neoscrypt from djm34 work (SM 5+ only)
+                  background option implementation for windows too
+                  "Multithreaded" devices (-d 0,0) intensity and stats changes
+                  SM5+ Optimisation of skein based on sp/klaus method (+20%)
 
   Apr. 21th 2015  v1.6.2
                   Import Scrypt, Scrypt:N and Scrypt-jane from Cudaminer
