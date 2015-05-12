@@ -367,7 +367,7 @@ void qubit_luffa512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 		for (int i=0; i < 16; ++i) buff.buf64[i] = c_PaddedMessage80[i];
 
 		// die Nounce durch die thread-spezifische ersetzen
-		buff.buf64[9] = REPLACE_HIWORD(buff.buf64[9], cuda_swab32(nounce));
+		buff.buf64[9] = REPLACE_HIDWORD(buff.buf64[9], cuda_swab32(nounce));
 
 
 		hashState state;
@@ -398,7 +398,7 @@ void qubit_luffa512_gpu_finalhash_80(uint32_t threads, uint32_t startNounce, voi
 		for (int i=0; i < 16; ++i) buff.buf64[i] = c_PaddedMessage80[i];
 
 		// Tested nonce
-		buff.buf64[9] = REPLACE_HIWORD(buff.buf64[9], cuda_swab32(nounce));
+		buff.buf64[9] = REPLACE_HIDWORD(buff.buf64[9], cuda_swab32(nounce));
 
 		hashState state;
 		#pragma unroll 40

@@ -166,8 +166,8 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		uint32_t *outHash = (uint32_t*)&g_hash[hashPosition * 8U];
 		#pragma unroll 8
 		for (int i=0; i < 8; i++) {
-			outHash[2*i+0] = cuda_swab32( _HIWORD(h[i]) );
-			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
+			outHash[2*i+0] = cuda_swab32( _HIDWORD(h[i]) );
+			outHash[2*i+1] = cuda_swab32( _LODWORD(h[i]) );
 		}
 #else
 		uint64_t *outHash = &g_hash[hashPosition * 8U];
@@ -210,8 +210,8 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 		uint32_t *outHash = (uint32_t*)outputHash + (thread * 16U);
 		#pragma unroll 8
 		for (uint32_t i=0; i < 8; i++) {
-			outHash[2*i]   = cuda_swab32( _HIWORD(h[i]) );
-			outHash[2*i+1] = cuda_swab32( _LOWORD(h[i]) );
+			outHash[2*i]   = cuda_swab32( _HIDWORD(h[i]) );
+			outHash[2*i+1] = cuda_swab32( _LODWORD(h[i]) );
 		}
 #else
 		uint64_t *outHash = (uint64_t*)outputHash + (thread * 8U);

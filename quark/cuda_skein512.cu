@@ -613,7 +613,7 @@ void skein512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *outp
 		t2 = vectorize(c_PaddedMessage80[18]);
 
 		uint32_t nonce = swap ? cuda_swab32(startNounce + thread) : startNounce + thread;
-		uint2 nonce2 = make_uint2(_LOWORD(c_PaddedMessage80[9]), nonce);
+		uint2 nonce2 = make_uint2(_LODWORD(c_PaddedMessage80[9]), nonce);
 
 		uint2 p[8];
 		p[0] = vectorize(c_PaddedMessage80[8]);
@@ -714,7 +714,7 @@ void skein512_gpu_hash_80_sm3(uint32_t threads, uint32_t startNounce, uint64_t *
 		h7 = c_PaddedMessage80[7] ^ p[7];
 
 		uint32_t nonce = swap ? cuda_swab32(startNounce + thread) : startNounce + thread;
-		uint64_t nonce64 = MAKE_ULONGLONG(_LOWORD(c_PaddedMessage80[9]), nonce);
+		uint64_t nonce64 = MAKE_ULONGLONG(_LODWORD(c_PaddedMessage80[9]), nonce);
 
 		// skein_big_close -> etype = 0x160, ptr = 16, bcount = 1, extra = 16
 		p[0] = c_PaddedMessage80[8];

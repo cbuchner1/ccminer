@@ -421,7 +421,7 @@ void whirlpoolx_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *resNo
 		uint64_t tmp[8];
 		uint32_t nounce = startNounce + thread;
 
-		n[1] = xor1(REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)),c_xtra[0]);
+		n[1] = xor1(REPLACE_HIDWORD(c_PaddedMessage80[9], cuda_swab32(nounce)),c_xtra[0]);
 
 		uint32_t* n32 = (uint32_t*)&n[0];
 		n[0]=sharedMemory[__byte_perm(n32[3], 0, 0x4443) + 1792];

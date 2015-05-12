@@ -12,7 +12,7 @@ extern "C" {
 #include <memory.h>
 
 static __device__ uint64_t cuda_swab32ll(uint64_t x) {
-	return MAKE_ULONGLONG(cuda_swab32(_LOWORD(x)), cuda_swab32(_HIWORD(x)));
+	return MAKE_ULONGLONG(cuda_swab32(_LODWORD(x)), cuda_swab32(_HIDWORD(x)));
 }
 
 __constant__ static uint32_t  c_data[20];

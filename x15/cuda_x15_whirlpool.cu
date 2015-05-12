@@ -2337,7 +2337,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 		/// round 2 ///////
 		//////////////////////////////////
 		n[0] = c_PaddedMessage80[8];    //read data
-		n[1] = REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)); //whirlpool
+		n[1] = REPLACE_HIDWORD(c_PaddedMessage80[9], cuda_swab32(nounce)); //whirlpool
 		n[2] = 0x0000000000000080; //whirlpool
 		n[3] = 0;
 		n[4] = 0;
@@ -2359,7 +2359,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 		}
 
 		state[0] = xor3(state[0], n[0], c_PaddedMessage80[8]);
-		state[1] = xor3(state[1], n[1], REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce)) );
+		state[1] = xor3(state[1], n[1], REPLACE_HIDWORD(c_PaddedMessage80[9], cuda_swab32(nounce)) );
 		state[2] = xor3(state[2], n[2], 0x0000000000000080);
 		state[3] = xor1(state[3], n[3]);
 		state[4] = xor1(state[4], n[4]);

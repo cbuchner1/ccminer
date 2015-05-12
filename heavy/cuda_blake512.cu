@@ -149,20 +149,20 @@ template <int BLOCKSIZE> __global__ void blake512_gpu_hash(uint32_t threads, uin
 		for (int i=0; i < 16; ++i) buf[i] = c_PaddedMessage[i];
 
 		// die Nounce durch die thread-spezifische ersetzen
-		buf[9] = REPLACE_HIWORD(buf[9], nounce);
+		buf[9] = REPLACE_HIDWORD(buf[9], nounce);
 
 		uint32_t *hefty = heftyHashes + 8 * hashPosition;
 		if (BLOCKSIZE == 84) {
 			// den thread-spezifischen Hefty1 hash einsetzen
 			// aufwändig, weil das nicht mit uint64_t Wörtern aligned ist.
-			buf[10] = REPLACE_HIWORD(buf[10], hefty[0]);
-			buf[11] = REPLACE_LOWORD(buf[11], hefty[1]);
-			buf[11] = REPLACE_HIWORD(buf[11], hefty[2]);
-			buf[12] = REPLACE_LOWORD(buf[12], hefty[3]);
-			buf[12] = REPLACE_HIWORD(buf[12], hefty[4]);
-			buf[13] = REPLACE_LOWORD(buf[13], hefty[5]);
-			buf[13] = REPLACE_HIWORD(buf[13], hefty[6]);
-			buf[14] = REPLACE_LOWORD(buf[14], hefty[7]);
+			buf[10] = REPLACE_HIDWORD(buf[10], hefty[0]);
+			buf[11] = REPLACE_LODWORD(buf[11], hefty[1]);
+			buf[11] = REPLACE_HIDWORD(buf[11], hefty[2]);
+			buf[12] = REPLACE_LODWORD(buf[12], hefty[3]);
+			buf[12] = REPLACE_HIDWORD(buf[12], hefty[4]);
+			buf[13] = REPLACE_LODWORD(buf[13], hefty[5]);
+			buf[13] = REPLACE_HIDWORD(buf[13], hefty[6]);
+			buf[14] = REPLACE_LODWORD(buf[14], hefty[7]);
 		}
 		else if (BLOCKSIZE == 80) {
 			buf[10] = MAKE_ULONGLONG(hefty[0], hefty[1]);

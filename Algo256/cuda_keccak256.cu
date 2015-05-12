@@ -199,7 +199,7 @@ void keccak256_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputH
 			if (i<9) keccak_gpu_state[i] = c_PaddedMessage80[i];
 			else     keccak_gpu_state[i] = 0;
 		}
-		keccak_gpu_state[9]  = REPLACE_HIWORD(c_PaddedMessage80[9], cuda_swab32(nounce));
+		keccak_gpu_state[9]  = REPLACE_HIDWORD(c_PaddedMessage80[9], cuda_swab32(nounce));
 		keccak_gpu_state[10] = 0x0000000000000001;
 		keccak_gpu_state[16] = 0x8000000000000000;
 

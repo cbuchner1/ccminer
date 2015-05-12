@@ -232,7 +232,7 @@ void quark_bmw512_gpu_hash_80_30(uint32_t threads, uint32_t startNounce, uint64_
 		for(int i=0;i<16;i++)
 			message[i] = c_PaddedMessage80[i];
 
-		message[9] = REPLACE_HIWORD(message[9], cuda_swab32(nounce));
+		message[9] = REPLACE_HIDWORD(message[9], cuda_swab32(nounce));
 
 		// Compression 1
 		Compression512_30(message, h);

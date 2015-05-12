@@ -81,12 +81,12 @@ __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 }
 
 // das Hi Word in einem 64 Bit Typen ersetzen
-__device__ __forceinline__ uint64_t REPLACE_HIWORD(const uint64_t &x, const uint32_t &y) {
+__device__ __forceinline__ uint64_t REPLACE_HIDWORD(const uint64_t &x, const uint32_t &y) {
 	return (x & 0xFFFFFFFFULL) | (((uint64_t)y) << 32U);
 }
 
 // das Lo Word in einem 64 Bit Typen ersetzen
-__device__ __forceinline__ uint64_t REPLACE_LOWORD(const uint64_t &x, const uint32_t &y) {
+__device__ __forceinline__ uint64_t REPLACE_LODWORD(const uint64_t &x, const uint32_t &y) {
 	return (x & 0xFFFFFFFF00000000ULL) | ((uint64_t)y);
 }
 
@@ -105,7 +105,7 @@ __device__ __forceinline__ uint32_t cuda_swab32(uint32_t x)
 #endif
 
 // das Lo Word aus einem 64 Bit Typen extrahieren
-__device__ __forceinline__ uint32_t _LOWORD(const uint64_t &x) {
+__device__ __forceinline__ uint32_t _LODWORD(const uint64_t &x) {
 #if __CUDA_ARCH__ >= 130
 	return (uint32_t)__double2loint(__longlong_as_double(x));
 #else
@@ -114,7 +114,7 @@ __device__ __forceinline__ uint32_t _LOWORD(const uint64_t &x) {
 }
 
 // das Hi Word aus einem 64 Bit Typen extrahieren
-__device__ __forceinline__ uint32_t _HIWORD(const uint64_t &x) {
+__device__ __forceinline__ uint32_t _HIDWORD(const uint64_t &x) {
 #if __CUDA_ARCH__ >= 130
 	return (uint32_t)__double2hiint(__longlong_as_double(x));
 #else
@@ -128,7 +128,7 @@ __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 	// Input:       77665544 33221100
 	// Output:      00112233 44556677
 	uint64_t result = __byte_perm((uint32_t) x, 0, 0x0123);
-	return (result << 32) | __byte_perm(_HIWORD(x), 0, 0x0123);
+	return (result << 32) | __byte_perm(_HIDWORD(x), 0, 0x0123);
 }
 #else
 	/* host */
@@ -483,8 +483,8 @@ void LOHI(uint32_t &lo, uint32_t &hi, uint64_t x) {
 	asm("mov.b64 {%0,%1},%2; \n\t"
 		: "=r"(lo), "=r"(hi) : "l"(x));
 #else
-	lo = _LOWORD(x);
-	hi = _HIWORD(x);
+	lo = _LODWORD(x);
+	hi = _HIDWORD(x);
 #endif
 }
 
