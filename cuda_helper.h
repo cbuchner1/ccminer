@@ -13,6 +13,11 @@
 
 #include <stdint.h>
 
+#ifndef UINT32_MAX
+/* slackware need that */
+#define UINT32_MAX UINT_MAX
+#endif
+
 #ifndef MAX_GPUS
 #define MAX_GPUS 16
 #endif

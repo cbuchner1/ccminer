@@ -23,10 +23,6 @@
 
 #include "cuda_helper.h"
 
-#ifndef UINT32_MAX
-#define UINT32_MAX UINT_MAX
-#endif
-
 typedef unsigned char BitSequence;
 
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
