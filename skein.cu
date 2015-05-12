@@ -13,9 +13,12 @@
 static uint32_t *d_hash[MAX_GPUS];
 
 extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
-
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
+
+extern void skeincoin_init(int thr_id);
+extern void skeincoin_setBlock_80(int thr_id, void *pdata);
+extern uint32_t skeincoin_hash_sm5(int thr_id, uint32_t threads, uint32_t startNounce, int swap, uint64_t target64, uint32_t *secNonce);
 
 static __device__ __constant__ uint32_t sha256_hashTable[] = {
 	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
@@ -351,22 +354,29 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 	const uint32_t first_nonce = pdata[19];
 	const int swap = 1;
 
-	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
+	bool sm5 = (device_sm[device_map[thr_id]] >= 500);
+
+	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 20);
 	throughput = min(throughput, (max_nonce - first_nonce));
 
+	uint32_t foundNonce, secNonce = 0;
+	uint64_t target64;
+
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x07;
+		((uint32_t*)ptarget)[7] = 0x03;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		cudaMalloc(&d_hash[thr_id], throughput * 64U);
-
-		quark_skein512_cpu_init(thr_id, throughput);
-		cuda_check_cpu_init(thr_id, throughput);
-
-		CUDA_SAFE_CALL(cudaDeviceSynchronize());
+		if (sm5) {
+			skeincoin_init(thr_id);
+		} else {
+			cudaMalloc(&d_hash[thr_id], throughput * 64U);
+			quark_skein512_cpu_init(thr_id, throughput);
+			cuda_check_cpu_init(thr_id, throughput);
+			CUDA_SAFE_CALL(cudaDeviceSynchronize());
+		}
 
 		init[thr_id] = true;
 	}
@@ -374,17 +384,28 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 	for (int k=0; k < 19; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
-	skein512_cpu_setBlock_80((void*)endiandata);
-	cuda_check_cpu_setTarget(ptarget);
+	if (sm5) {
+		skeincoin_setBlock_80(thr_id, (void*)endiandata);
+		target64 = ((uint64_t*)ptarget)[3];
+	} else {
+		skein512_cpu_setBlock_80((void*)endiandata);
+		cuda_check_cpu_setTarget(ptarget);
+	}
 
 	do {
 		// Hash with CUDA
-		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], swap);
-		sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
-
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (sm5) {
+			/* cuda_skeincoin.cu */
+			foundNonce = skeincoin_hash_sm5(thr_id, throughput, pdata[19], swap, target64, &secNonce);
+		} else {
+			/* quark/cuda_skein512.cu */
+			skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], swap);
+			sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+			foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		}
+
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash64[8];
@@ -395,7 +416,9 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint8_t num = res;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
+				if (!sm5) {
+					secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
+				}
 				while (secNonce != 0 && res < 2) /* todo: up to 6 */
 				{
 					endiandata[19] = swab32_if(secNonce, swap);

@@ -604,6 +604,9 @@
     <CudaCompile Include="skein.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="cuda_skeincoin.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
     <CudaCompile Include="scrypt\blake.cu">
       <Filter>Source Files\CUDA\scrypt</Filter>
     </CudaCompile>

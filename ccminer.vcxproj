@@ -465,6 +465,9 @@
     <CudaCompile Include="skein.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
+    <CudaCompile Include="cuda_skeincoin.cu">
+      <MaxRegCount>48</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_aes.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </CudaCompile>
