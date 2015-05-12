@@ -2130,20 +2130,8 @@ void parse_arg(int key, char *arg)
 		{
 			int n = 0;
 			int ngpus = cuda_num_devices();
+			uint32_t last = 0;
 			char * pch = strtok(arg,",");
-			if (!pch || pch == arg) {
-				// single value, set intensity for all cards
-				uint32_t adds = 0;
-				if ((d - v) > 0.0) {
-					adds = (uint32_t)floor((d - v) * (1 << (v - 8))) * 256;
-				}
-				for (n=0; n < ngpus; n++)
-					gpus_intensity[n] = (1 << v) + adds;
-				if (opt_algo != ALGO_PLUCK && opt_algo != ALGO_NEOSCRYPT)
-					applog(LOG_INFO, "Intensity set to %.1f, %u cuda threads",
-						d, gpus_intensity[0]);
-				break;
-			}
 			while (pch != NULL) {
 				d = atof(pch);
 				v = (uint32_t) d;
@@ -2160,9 +2148,12 @@ void parse_arg(int key, char *arg)
 							v, gpus_intensity[n]);
 					}
 				}
+				last = gpus_intensity[n];
 				n++;
 				pch = strtok(NULL, ",");
 			}
+			while (n < MAX_GPUS)
+				gpus_intensity[n++] = last;
 		}
 		break;
 	case 'D':
