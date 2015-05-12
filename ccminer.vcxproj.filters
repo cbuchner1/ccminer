@@ -114,15 +114,6 @@
     <ClCompile Include="crc32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="hefty1.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="fuguecoin.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="groestlcoin.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="sph\aes_helper.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
@@ -167,9 +158,6 @@
     </ClCompile>
     <ClCompile Include="sph\skein.c">
       <Filter>Source Files\sph</Filter>
-    </ClCompile>
-    <ClCompile Include="myriadgroestl.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="sph\hamsi.c">
       <Filter>Source Files\sph</Filter>
@@ -243,6 +231,18 @@
     <ClCompile Include="skein2.cpp">
       <Filter>Source Files\CUDA</Filter>
     </ClCompile>
+    <ClCompile Include="fuguecoin.cpp">
+      <Filter>Source Files\CUDA</Filter>
+    </ClCompile>
+    <ClCompile Include="groestlcoin.cpp">
+      <Filter>Source Files\CUDA</Filter>
+    </ClCompile>
+    <ClCompile Include="myriadgroestl.cpp">
+      <Filter>Source Files\CUDA</Filter>
+    </ClCompile>
+    <ClCompile Include="hefty1.c">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -270,9 +270,6 @@
       <Filter>Header Files\compat</Filter>
     </ClInclude>
     <ClInclude Include="cpuminer-config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="hefty1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="uint256.h">
@@ -403,6 +400,9 @@
     </ClInclude>
     <ClInclude Include="neoscrypt\cuda_vectors.h">
       <Filter>Source Files\neoscrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="hefty1.h">
+      <Filter>Source Files\CUDA\heavy</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
