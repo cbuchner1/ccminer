@@ -37,8 +37,8 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 
 	memset(&data, 0, sizeof(data));
 	data.uid = (uint32_t) uid;
-	data.gpu_id = device_map[thr_id];
-	data.thr_id = (uint8_t)thr_id;
+	data.gpu_id = (uint8_t) device_map[thr_id];
+	data.thr_id = (uint8_t) thr_id;
 	data.tm_stat = (uint32_t) time(NULL);
 	data.height = height;
 	data.hashcount = hashcount;

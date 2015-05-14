@@ -207,21 +207,20 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			quark_jh512_cpu_hash_64(thr_id, nrm2, pdata[19], d_branch2Nonces[thr_id], d_hash[thr_id], order++);
 		}
 
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 		if  (foundNonce != 0xffffffff)
 		{
-			unsigned int rounds;
 			uint32_t vhash64[8];
-			uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], foundNonce);
 
 			// diese jackpothash Funktion gibt die Zahl der Runden zurück
-			rounds = jackpothash(vhash64, endiandata);
+			jackpothash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (secNonce != 0) {
 					pdata[21] = secNonce;
 					res++;
@@ -234,7 +233,8 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
+		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+			*hashes_done = pdata[19] - first_nonce;
 			pdata[19] = max_nonce;
 			break;
 		}
@@ -243,6 +243,5 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
