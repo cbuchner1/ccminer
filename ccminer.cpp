@@ -1318,7 +1318,6 @@ static void *miner_thread(void *userdata)
 	struct thr_info *mythr = (struct thr_info *)userdata;
 	int thr_id = mythr->id;
 	struct work work;
-	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
 	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) - (thr_id + 1);
 	time_t firstwork_time = 0;
@@ -1473,6 +1472,12 @@ static void *miner_thread(void *userdata)
 		/* conditional mining */
 		if (!wanna_mine(thr_id)) {
 			sleep(5);
+			continue;
+		}
+
+		/* prevent gpu scans before a job is received */
+		if (have_stratum && !firstwork_time && work.data[0] == 0) {
+			sleep(1);
 			continue;
 		}
 
@@ -1743,9 +1748,6 @@ static void *miner_thread(void *userdata)
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 
-		if (firstwork_time == 0)
-			firstwork_time = time(NULL);
-
 		if (rc && opt_debug)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[0], swab32(nonceptr[0])); // data[19]
 		if (rc > 1 && opt_debug)
@@ -1793,14 +1795,14 @@ static void *miner_thread(void *userdata)
 			hashlog_remember_scan_range(&work);
 
 		/* output */
-		if (!opt_quiet && loopcnt) {
+		if (!opt_quiet && firstwork_time) {
 			format_hashrate(thr_hashrates[thr_id], s);
 			applog(LOG_INFO, "GPU #%d: %s, %s",
 				device_map[thr_id], device_name[device_map[thr_id]], s);
 		}
 
-		/* loopcnt: ignore first loop hashrate */
-		if (loopcnt && thr_id == (opt_n_threads - 1)) {
+		/* ignore first loop hashrate */
+		if (firstwork_time && thr_id == (opt_n_threads - 1)) {
 			double hashrate = 0.;
 			pthread_mutex_lock(&stats_lock);
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
@@ -1814,6 +1816,9 @@ static void *miner_thread(void *userdata)
 			// X-Mining-Hashrate
 			global_hashrate = llround(hashrate);
 		}
+
+		if (firstwork_time == 0)
+			firstwork_time = time(NULL);
 
 		/* if nonce found, submit work */
 		if (rc && !opt_benchmark) {
@@ -1843,8 +1848,6 @@ static void *miner_thread(void *userdata)
 					break;
 			}
 		}
-
-		loopcnt++;
 	}
 
 out:
