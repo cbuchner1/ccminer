@@ -237,6 +237,11 @@ uint64_t global_hashrate = 0;
 double   global_diff = 0.0;
 uint64_t net_hashrate = 0;
 uint64_t net_blocks = 0;
+// conditional mining
+bool conditional_state = true;
+double opt_max_temp = 0.0;
+double opt_max_diff = 0.0;
+double opt_max_rate = 0.0;
 
 int opt_statsavg = 30;
 // strdup on char* to allow a common free() if used
@@ -329,7 +334,12 @@ Options:\n\
       --cpu-priority    set process priority (default: 3) 0 idle, 2 normal to 5 highest\n\
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n\
       --api-remote      Allow remote control\n"
-
+#ifdef ADVANCED_HELP
+"\
+      --max-temp=N      Only mine if gpu temp is less than specified value\n\
+      --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
+      --max-diff=N      Only mine if net difficulty is less than specified value\n"
+#endif
 #ifdef HAVE_SYSLOG_H
 "\
   -S, --syslog          use system log for output messages\n\
@@ -373,6 +383,9 @@ static struct option const options[] = {
 	{ "interactive", 1, NULL, 1050 },  // scrypt
 	{ "launch-config", 0, NULL, 'l' }, // scrypt
 	{ "lookup-gap", 0, NULL, 'L' },    // scrypt
+	{ "max-temp", 1, NULL, 1060 },
+	{ "max-diff", 1, NULL, 1061 },
+	{ "max-rate", 1, NULL, 1062 },
 	{ "pass", 1, NULL, 'p' },
 	{ "protocol-dump", 0, NULL, 'P' },
 	{ "proxy", 1, NULL, 'x' },
@@ -1266,6 +1279,39 @@ void restart_threads(void)
 		work_restart[i].restart = 1;
 }
 
+static bool wanna_mine(int thr_id)
+{
+	bool state = true;
+
+	if (opt_max_temp > 0.0) {
+#ifdef USE_WRAPNVML
+		struct cgpu_info * cgpu = &thr_info[thr_id].gpu;
+		float temp = gpu_temp(cgpu);
+		if (temp > opt_max_temp) {
+			if (conditional_state && !opt_quiet)
+				applog(LOG_INFO, "GPU #%d: temperature too high (%.0f°c), waiting...",
+					device_map[thr_id], temp);
+			state = false;
+		}
+#endif
+	}
+	if (opt_max_diff > 0.0 && global_diff > opt_max_diff) {
+		if (conditional_state && !opt_quiet)
+			applog(LOG_INFO, "network diff too high, waiting...");
+		state = false;
+	}
+	if (opt_max_rate > 0.0 && net_hashrate > opt_max_rate) {
+		if (conditional_state && !opt_quiet) {
+			char rate[32];
+			format_hashrate(opt_max_rate, rate);
+			applog(LOG_INFO, "network hashrate too high, waiting %s...", rate);
+		}
+		state = false;
+	}
+	conditional_state = state;
+	return state;
+}
+
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -1422,6 +1468,12 @@ static void *miner_thread(void *userdata)
 
 		work_restart[thr_id].restart = 0;
 		pthread_mutex_unlock(&g_work_lock);
+
+		/* conditional mining */
+		if (!wanna_mine(thr_id)) {
+			sleep(5);
+			continue;
+		}
 
 		/* adjust max_nonce to meet target scan time */
 		if (have_stratum)
@@ -2374,6 +2426,24 @@ void parse_arg(int key, char *arg)
 		if (v < 0 || v > 5)	/* sanity check */
 			show_usage_and_exit(1);
 		opt_priority = v;
+		break;
+	case 1060: // max-temp
+		d = atof(arg);
+		opt_max_temp = d;
+		break;
+	case 1061: // max-diff
+		d = atof(arg);
+		opt_max_diff = d;
+		break;
+	case 1062: // max-rate
+		d = atof(arg);
+		p = strstr(arg, "K");
+		if (p) d *= 1e3;
+		p = strstr(arg, "M");
+		if (p) d *= 1e6;
+		p = strstr(arg, "G");
+		if (p) d *= 1e9;
+		opt_max_rate = d;
 		break;
 	case 'd': // CB
 		{
