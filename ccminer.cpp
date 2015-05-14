@@ -184,6 +184,7 @@ int opt_n_threads = 0;
 int opt_affinity = -1;
 int opt_priority = 0;
 static double opt_difficulty = 1; // CH
+bool opt_extranonce = true;
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;

@@ -1125,6 +1125,8 @@ out:
 	return ret;
 }
 
+extern bool opt_extranonce;
+
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass)
 {
 	json_t *val = NULL, *res_val, *err_val;
@@ -1169,6 +1171,9 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 
 	sctx->tm_connected = time(NULL);
 	ret = true;
+
+	if (!opt_extranonce)
+		goto out;
 
 	// subscribe to extranonce (optional)
 	sprintf(s, "{\"id\": 3, \"method\": \"mining.extranonce.subscribe\", \"params\": []}");
