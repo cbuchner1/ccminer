@@ -893,6 +893,7 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 __host__
 static void skein512_precalc_80(uint64_t* message)
 {
+	uint64_t p[8];
 	uint64_t h0, h1, h2, h3, h4, h5, h6, h7, h8;
 	uint64_t t0, t1, t2;
 
@@ -904,15 +905,14 @@ static void skein512_precalc_80(uint64_t* message)
 	h5 = 0xEABE394CA9D5C3F4ull;
 	h6 = 0x991112C71A75B523ull;
 	h7 = 0xAE18A40B660FCC33ull;
-	h8 = h0 ^ h1 ^ h2 ^ h3 ^ h4 ^ h5 ^ h6 ^ h7 ^ SPH_C64(0x1BD11BDAA9FC1A22);
+	// h8 = h0 ^ h1 ^ h2 ^ h3 ^ h4 ^ h5 ^ h6 ^ h7 ^ SPH_C64(0x1BD11BDAA9FC1A22);
+	h8 = 0xcab2076d98173ec4ULL;
 
 	t0 = 64; // ptr
 	t1 = 0x7000000000000000ull;
 	t2 = 0x7000000000000040ull;
 
-	uint64_t p[8];
-	for (int i = 0; i<8; i++)
-		p[i] = message[i];
+	memcpy(&p[0], &message[0], 64);
 
 	TFBIG_4e_PRE(0);
 	TFBIG_4o_PRE(1);
