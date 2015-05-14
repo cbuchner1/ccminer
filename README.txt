@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.3-tpruvot (May 2015) - "Neoscrypt"
+ccMiner release 1.6.3-tpruvot (May 2015) - "Neoscrypt (SM5.0+)"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -130,6 +130,9 @@ its command line interface and options.
   -P, --protocol-dump   verbose dump of protocol-level activities
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)
       --api-remote      Allow remote control
+      --max-temp=N      Only mine if gpu temp is less than specified value
+      --max-rate=N[KMG] Only mine if net hashrate is less than specified value
+      --max-diff=N      Only mine if net difficulty is less than specified value
   -B, --background      run the miner in the background
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
@@ -213,8 +216,9 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Not released!!  v1.6.3
+  May 15th 2015   v1.6.3
                   Import and adapt Neoscrypt from djm34 work (SM 5+ only)
+                  Conditional mining options based on gpu temp, network diff and rate
                   background option implementation for windows too
                   "Multithreaded" devices (-d 0,0) intensity and stats changes
                   SM5+ Optimisation of skein based on sp/klaus method (+20%)

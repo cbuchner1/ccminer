@@ -262,6 +262,8 @@ struct option {
 };
 #endif
 
+#define ADVANCED_HELP
+
 static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
