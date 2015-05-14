@@ -2607,10 +2607,10 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
 		proper_exit(EXIT_CODE_KILLED);
 		break;
-	case CTRL_CLOSE_EVENT:
+/*	case CTRL_CLOSE_EVENT:
 		applog(LOG_INFO, "CTRL_CLOSE_EVENT received, exiting");
 		proper_exit(EXIT_CODE_KILLED);
-		break;
+		break;*/
 	case CTRL_LOGOFF_EVENT:
 		applog(LOG_INFO, "CTRL_LOGOFF_EVENT received, exiting");
 		proper_exit(EXIT_CODE_KILLED);
