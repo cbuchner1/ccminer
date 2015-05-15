@@ -1491,7 +1491,15 @@ static void *miner_thread(void *userdata)
 			if (remain < 0)  {
 				app_exit_code = EXIT_CODE_TIME_LIMIT;
 				abort_flag = true;
-				applog(LOG_NOTICE, "Mining timeout of %ds reached, exiting...", opt_time_limit);
+				if (opt_benchmark) {
+					char rate[32];
+					format_hashrate(global_hashrate, rate);
+	                                applog(LOG_NOTICE, "Benchmark: %s", rate);
+					usleep(200*1000);
+					fprintf(stderr, "%llu\n", (long long unsigned int) global_hashrate);
+				} else {
+					applog(LOG_NOTICE, "Mining timeout of %ds reached, exiting...", opt_time_limit);
+				}
 				workio_abort();
 				break;
 			}
@@ -2909,7 +2917,8 @@ int main(int argc, char *argv[])
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 
-	applog(LOG_INFO, "workio thread dead, exiting.");
+	if (opt_debug)
+		applog(LOG_DEBUG, "workio thread dead, exiting.");
 
 	proper_exit(EXIT_CODE_OK);
 
