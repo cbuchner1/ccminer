@@ -262,8 +262,6 @@ struct option {
 };
 #endif
 
-#define ADVANCED_HELP
-
 static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
@@ -336,13 +334,10 @@ Options:\n\
       --cpu-affinity    set process affinity to cpu core(s), mask 0x3 for cores 0 and 1\n\
       --cpu-priority    set process priority (default: 3) 0 idle, 2 normal to 5 highest\n\
   -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)\n\
-      --api-remote      Allow remote control\n"
-#ifdef ADVANCED_HELP
-"\
+      --api-remote      Allow remote control\n\
       --max-temp=N      Only mine if gpu temp is less than specified value\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n"
-#endif
 #ifdef HAVE_SYSLOG_H
 "\
   -S, --syslog          use system log for output messages\n\
@@ -649,7 +644,7 @@ static int share_result(int result, const char *reason)
 			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
 			return 0;
 		}
-		if (strncasecmp(reason, "duplicate", 9) == 0 && !check_dups) {
+		if (!check_dups && strncasecmp(reason, "duplicate", 9) == 0) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
 		}
@@ -2607,10 +2602,6 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 		applog(LOG_INFO, "CTRL_BREAK_EVENT received, exiting");
 		proper_exit(EXIT_CODE_KILLED);
 		break;
-/*	case CTRL_CLOSE_EVENT:
-		applog(LOG_INFO, "CTRL_CLOSE_EVENT received, exiting");
-		proper_exit(EXIT_CODE_KILLED);
-		break;*/
 	case CTRL_LOGOFF_EVENT:
 		applog(LOG_INFO, "CTRL_LOGOFF_EVENT received, exiting");
 		proper_exit(EXIT_CODE_KILLED);
