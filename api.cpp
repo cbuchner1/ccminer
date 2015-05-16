@@ -794,14 +794,29 @@ static void api()
 			binderror = strerror(errno);
 			if ((time(NULL) - bindstart) > 61)
 				break;
-			else {
+			else if (opt_api_listen == 4068) {
+				/* when port is default one, use first available */
+				if (opt_debug)
+					applog(LOG_DEBUG, "API bind to port %d failed, trying port %u",
+						port, (uint32_t) port+1);
+				port++;
+				serv.sin_port = htons(port);
+				sleep(1);
+			} else {
 				if (!opt_quiet || opt_debug)
-					applog(LOG_WARNING, "API bind to port %d failed - trying again in 20sec", port);
+					applog(LOG_WARNING, "API bind to port %u failed - trying again in 20sec",
+						(uint32_t) port);
 				sleep(20);
 			}
 		}
-		else
+		else {
 			bound = 1;
+			if (opt_api_listen != port) {
+				applog(LOG_WARNING, "API bind to port %d failed - using port %u",
+					opt_api_listen, (uint32_t) port);
+				opt_api_listen = port;
+			}
+		}
 	}
 
 	if (bound == 0) {
@@ -824,7 +839,8 @@ static void api()
 		counter++;
 
 		clisiz = sizeof(cli);
-		if (SOCKETFAIL(c = accept(*apisock, (struct sockaddr *)(&cli), &clisiz))) {
+		c = accept(*apisock, (struct sockaddr*) (&cli), &clisiz);
+		if (SOCKETFAIL(c)) {
 			applog(LOG_ERR, "API failed (%s)%s", strerror(errno), UNAVAILABLE);
 			CLOSESOCKET(*apisock);
 			free(apisock);
