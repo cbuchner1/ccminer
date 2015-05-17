@@ -12,36 +12,29 @@
 #include <map>
 #include <stdint.h>
 
-#include "cuda_runtime.h"
-#include "salsa_kernel.h"
 #include "miner.h"
+#include "salsa_kernel.h"
 
+#include "cuda_helper.h"
 typedef uint32_t sph_u32;
-#define SPH_C32(x) ((sph_u32)(x))
-#define SPH_T32(x) ((x) & SPH_C32(0xFFFFFFFF))
-#define SPH_ROTL32(x, n)   SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#define SPH_ROTR32(x, n)   SPH_ROTL32(x, (32 - (n)))
+#define SPH_ROTL32 ROTL32
+#define SPH_ROTR32 ROTR32
 
 __constant__ uint64_t ptarget64[4];
 __constant__ uint32_t pdata[20];
 
 // define some error checking macros
-#undef checkCudaErrors
-
-#if WIN32
 #define DELIMITER '/'
-#else
-#define DELIMITER '/'
-#endif
 #define __FILENAME__ ( strrchr(__FILE__, DELIMITER) != NULL ? strrchr(__FILE__, DELIMITER)+1 : __FILE__ )
 
+#undef checkCudaErrors
 #define checkCudaErrors(x) \
 { \
 	cudaGetLastError(); \
 	x; \
 	cudaError_t err = cudaGetLastError(); \
-	if (err != cudaSuccess) \
-		applog(LOG_ERR, "GPU #%d: cudaError %d (%s) calling '%s' (%s line %d)\n", device_map[thr_id], err, cudaGetErrorString(err), #x, __FILENAME__, __LINE__); \
+	if (err != cudaSuccess && !abort_flag) \
+		applog(LOG_ERR, "GPU #%d: cudaError %d (%s) (%s line %d)\n", device_map[thr_id], err, cudaGetErrorString(err), __FILENAME__, __LINE__); \
 }
 
 // from salsa_kernel.cu
@@ -54,12 +47,6 @@ extern std::map<int, uint32_t *> context_hash[2];
 #pragma warning (disable: 4146)
 #endif
 
-static __device__ sph_u32 cuda_sph_bswap32(sph_u32 x)
-{
-	return (((x << 24) & 0xff000000u) | ((x << 8) & 0x00ff0000u)
-		  | ((x >> 8) & 0x0000ff00u) | ((x >> 24) & 0x000000ffu));
-}
-
 /**
  * Encode a 32-bit value into the provided buffer (big endian convention).
  *
@@ -69,7 +56,7 @@ static __device__ sph_u32 cuda_sph_bswap32(sph_u32 x)
 static __device__ void
 cuda_sph_enc32be(void *dst, sph_u32 val)
 {
-	*(sph_u32 *)dst = cuda_sph_bswap32(val);
+	*(sph_u32 *)dst = cuda_swab32(val);
 }
 
 #define Z00   0
@@ -344,12 +331,13 @@ cuda_sph_enc32be(void *dst, sph_u32 val)
 		H7 ^= S3 ^ V7 ^ VF; \
 	} while (0)
 
-__global__ void cuda_blake256_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool validate )
+__global__
+void cuda_blake256_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool validate )
 {
 	uint32_t input[16];
 	uint64_t output[4];
 
-#pragma unroll 16
+	#pragma unroll
 	for (int i=0; i < 16; ++i) input[i] = pdata[i];
 
 	sph_u32 H0 = 0x6A09E667;
@@ -369,11 +357,11 @@ __global__ void cuda_blake256_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g
 	T0 = SPH_T32(T0 + 512);
 	COMPRESS32;
 
-#pragma unroll 3
+	#pragma unroll
 	for (int i=0; i < 3; ++i) input[i] = pdata[16+i];
 	input[3] = nonce + ((blockIdx.x * blockDim.x) + threadIdx.x);
 	input[4] = 0x80000000;
-#pragma unroll 8
+	#pragma unroll 8
 	for (int i=5; i < 13; ++i) input[i] = 0;
 	input[13] = 0x00000001;
 	input[14] = T1;
@@ -398,7 +386,7 @@ __global__ void cuda_blake256_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g
 	if (validate)
 	{
 		g_out += 4 * ((blockIdx.x * blockDim.x) + threadIdx.x);
-#pragma unroll 4
+		#pragma unroll
 		for (int i=0; i < 4; ++i) g_out[i] = output[i];
 	}
 

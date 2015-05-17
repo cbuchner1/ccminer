@@ -11,7 +11,7 @@
 
 #include <map>
 
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
 #include "miner.h"
 
 #include "salsa_kernel.h"

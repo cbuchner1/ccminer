@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
 #include "miner.h"
 
 #include "salsa_kernel.h"
@@ -14,21 +14,16 @@
 #include "sha256.h"
 
 // define some error checking macros
-#undef checkCudaErrors
-
-#if WIN32
 #define DELIMITER '/'
-#else
-#define DELIMITER '/'
-#endif
 #define __FILENAME__ ( strrchr(__FILE__, DELIMITER) != NULL ? strrchr(__FILE__, DELIMITER)+1 : __FILE__ )
 
+#undef checkCudaErrors
 #define checkCudaErrors(x) { \
 	cudaGetLastError(); \
 	x; \
 	cudaError_t err = cudaGetLastError(); \
-	if (err != cudaSuccess) \
-		applog(LOG_ERR, "GPU #%d: cudaError %d (%s) calling '%s' (%s line %d)\n", (int) device_map[thr_id], err, cudaGetErrorString(err), #x, __FILENAME__, __LINE__); \
+	if (err != cudaSuccess && !abort_flag) \
+		applog(LOG_ERR, "GPU #%d: cudaError %d (%s) (%s line %d)\n", (int) device_map[thr_id], err, cudaGetErrorString(err), __FILENAME__, __LINE__); \
 }
 
 // from salsa_kernel.cu

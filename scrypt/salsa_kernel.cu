@@ -12,26 +12,16 @@
 
 #include "salsa_kernel.h"
 
+#include "nv_kernel2.h"
 #include "titan_kernel.h"
+#include "nv_kernel.h"
+#include "kepler_kernel.h"
 #include "fermi_kernel.h"
 #include "test_kernel.h"
-#include "nv_kernel.h"
-#include "nv_kernel2.h"
-#include "kepler_kernel.h"
 
 #include "miner.h"
 
-#if WIN32
-#ifdef _WIN64
-#define _64BIT 1
-#endif
-#else
-#if __x86_64__
-#define _64BIT 1
-#endif
-#endif
-
-#if _64BIT
+#if defined(_WIN64) || defined(__x86_64__) || defined(__64BIT__)
 #define MAXMEM 0x300000000ULL  // 12 GB (the largest Kepler)
 #else
 #define MAXMEM  0xFFFFFFFFULL  // nearly 4 GB (32 bit limitations)
@@ -42,21 +32,16 @@
 #define DMIN 5
 
 // define some error checking macros
-#undef checkCudaErrors
-
-#if WIN32
 #define DELIMITER '/'
-#else
-#define DELIMITER '/'
-#endif
 #define __FILENAME__ ( strrchr(__FILE__, DELIMITER) != NULL ? strrchr(__FILE__, DELIMITER)+1 : __FILE__ )
 
+#undef checkCudaErrors
 #define checkCudaErrors(x) \
 { \
 	cudaGetLastError(); \
 	x; \
 	cudaError_t err = cudaGetLastError(); \
-	if (err != cudaSuccess) \
+	if (err != cudaSuccess && !abort_flag) \
 		applog(LOG_ERR, "GPU #%d: Err %d: %s (%s:%d)", device_map[thr_id], err, cudaGetErrorString(err), __FILENAME__, __LINE__); \
 }
 
@@ -78,7 +63,7 @@ KernelInterface *Best_Kernel_Heuristics(cudaDeviceProp *props)
 			kernel = new NV2Kernel(); // we don't want this for Keccak though
 		else if (props->major == 3 && props->minor == 0)
 			kernel = new NVKernel();
-		else if (props->major == 2 || props->major == 1)
+		else
 			kernel = new FermiKernel();
 	}
 	else
@@ -88,7 +73,7 @@ KernelInterface *Best_Kernel_Heuristics(cudaDeviceProp *props)
 			kernel = new TitanKernel();
 		else if (props->major == 3 && props->minor == 0)
 			kernel = new KeplerKernel();
-		else if (props->major == 2 || props->major == 1)
+		else
 			kernel = new TestKernel();
 	}
 	return kernel;
@@ -861,7 +846,8 @@ bool cuda_scrypt_sync(int thr_id, int stream)
 
 	if(err != cudaSuccess)
 	{
-		applog(LOG_ERR, "GPU #%d: CUDA error `%s` while executing the kernel.", device_map[thr_id], cudaGetErrorString(err));
+		if (!abort_flag)
+			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while executing the kernel.", device_map[thr_id], cudaGetErrorString(err));
 		return false;
 	}
 
