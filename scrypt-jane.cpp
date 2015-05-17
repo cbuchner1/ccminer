@@ -514,10 +514,10 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 			cuda_scrypt_done(thr_id, nxt);
 
 			cuda_scrypt_DtoH(thr_id, cuda_X[nxt], nxt, false);
-			cuda_scrypt_flush(thr_id, nxt);
 
-			if(!cuda_scrypt_sync(thr_id, cur)) {
-				return -1;
+			//cuda_scrypt_flush(thr_id, nxt);
+			if(!cuda_scrypt_sync(thr_id, nxt)) {
+				break;
 			}
 
 			memcpy(Xbuf[cur].ptr, cuda_X[cur], 128 * throughput);
@@ -562,51 +562,49 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 			cuda_scrypt_serialize(thr_id, nxt);
 			pre_keccak512(thr_id, nxt, nonce[nxt], throughput);
 			cuda_scrypt_core(thr_id, nxt, N);
-			cuda_scrypt_flush(thr_id, nxt); // required
+			//cuda_scrypt_flush(thr_id, nxt);
+			if (!cuda_scrypt_sync(thr_id, nxt)) {
+				break;
+			}
 
 			post_keccak512(thr_id, nxt, nonce[nxt], throughput);
 			cuda_scrypt_done(thr_id, nxt);
 
 			cuda_scrypt_DtoH(thr_id, hash[nxt], nxt, true);
-			cuda_scrypt_flush(thr_id, nxt); // seems required here
-
-			if (!cuda_scrypt_sync(thr_id, cur)) {
-				return -1;
+			//cuda_scrypt_flush(thr_id, nxt); // made by cuda_scrypt_sync
+			if (!cuda_scrypt_sync(thr_id, nxt)) {
+				break;
 			}
 		}
 
-		if(iteration > 0)
+		for (int i=0; iteration > 0 && i<throughput; i++)
 		{
-			for(int i=0;i<throughput;++i) {
-				volatile unsigned char *hashc = (unsigned char *)(&hash[cur][8*i]);
+			if (hash[cur][8*i+7] <= Htarg && fulltest(&hash[cur][8*i], ptarget))
+			{
+				uint32_t _ALIGN(64) thash[8], tdata[20];
+				uint32_t tmp_nonce = nonce[cur] + i;
 
-				if (hash[cur][8*i+7] <= Htarg && fulltest(&hash[cur][8*i], ptarget))
+				for(int z=0;z<19;z++)
+					tdata[z] = bswap_32x4(pdata[z]);
+				tdata[19] = bswap_32x4(tmp_nonce);
+
+				scrypt_pbkdf2_1((unsigned char *)tdata, 80, (unsigned char *)tdata, 80, Xbuf[cur].ptr + 128 * i, 128);
+				scrypt_ROMix_1((scrypt_mix_word_t *)(Xbuf[cur].ptr + 128 * i), (scrypt_mix_word_t *)(Ybuf.ptr), (scrypt_mix_word_t *)(Vbuf.ptr), N);
+				scrypt_pbkdf2_1((unsigned char *)tdata, 80, Xbuf[cur].ptr + 128 * i, 128, (unsigned char *)thash, 32);
+
+				if (memcmp(thash, &hash[cur][8*i], 32) == 0)
 				{
-					uint32_t _ALIGN(64) thash[8], tdata[20];
-					uint32_t tmp_nonce = nonce[cur] + i;
-
-					for(int z=0;z<20;z++)
-						tdata[z] = bswap_32x4(pdata[z]);
-					tdata[19] = bswap_32x4(tmp_nonce);
-
-					scrypt_pbkdf2_1((unsigned char *)tdata, 80, (unsigned char *)tdata, 80, Xbuf[cur].ptr + 128 * i, 128);
-					scrypt_ROMix_1((scrypt_mix_word_t *)(Xbuf[cur].ptr + 128 * i), (scrypt_mix_word_t *)(Ybuf.ptr), (scrypt_mix_word_t *)(Vbuf.ptr), N);
-					scrypt_pbkdf2_1((unsigned char *)tdata, 80, Xbuf[cur].ptr + 128 * i, 128, (unsigned char *)thash, 32);
-
-					if (memcmp(thash, &hash[cur][8*i], 32) == 0)
-					{
-						*hashes_done = n - pdata[19];
-						pdata[19] = tmp_nonce;
-						scrypt_free(&Vbuf);
-						scrypt_free(&Ybuf);
-						scrypt_free(&Xbuf[0]); scrypt_free(&Xbuf[1]);
-						delete[] data[0]; delete[] data[1];
-						gettimeofday(tv_end, NULL);
-						return 1;
-					} else {
-						applog(LOG_WARNING, "GPU #%d: %s result does not validate on CPU! (i=%d, s=%d)",
-							device_map[thr_id], device_name[thr_id], i, cur);
-					}
+					*hashes_done = n - pdata[19];
+					pdata[19] = tmp_nonce;
+					scrypt_free(&Vbuf);
+					scrypt_free(&Ybuf);
+					scrypt_free(&Xbuf[0]); scrypt_free(&Xbuf[1]);
+					delete[] data[0]; delete[] data[1];
+					gettimeofday(tv_end, NULL);
+					return 1;
+				} else {
+					applog(LOG_WARNING, "GPU #%d: %s result does not validate on CPU! (i=%d, s=%d)",
+						device_map[thr_id], device_name[thr_id], i, cur);
 				}
 			}
 		}
@@ -615,7 +613,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 		nxt = (nxt+1)&1;
 		++iteration;
 	} while (n <= max_nonce && !work_restart[thr_id].restart);
-
+out:
 	scrypt_free(&Vbuf);
 	scrypt_free(&Ybuf);
 	scrypt_free(&Xbuf[0]); scrypt_free(&Xbuf[1]);

@@ -802,9 +802,8 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsign
 			cuda_scrypt_done(thr_id, nxt);
 
 			cuda_scrypt_DtoH(thr_id, X[nxt], nxt, false);
-			cuda_scrypt_flush(thr_id, nxt);
-
-			if(!cuda_scrypt_sync(thr_id, cur))
+			//cuda_scrypt_flush(thr_id, nxt);
+			if(!cuda_scrypt_sync(thr_id, nxt))
 			{
 				result = -1;
 				break;
@@ -858,15 +857,19 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsign
 			pre_sha256(thr_id, nxt, nonce[nxt], throughput);
 
 			cuda_scrypt_core(thr_id, nxt, N);
-			cuda_scrypt_flush(thr_id, nxt); // required here ?
+			// cuda_scrypt_flush(thr_id, nxt);
+			if (!cuda_scrypt_sync(thr_id, nxt)) {
+				printf("error\n");
+				result = -1;
+				break;
+			}
 
 			post_sha256(thr_id, nxt, throughput);
 			cuda_scrypt_done(thr_id, nxt);
 
 			cuda_scrypt_DtoH(thr_id, hash[nxt], nxt, true);
-			cuda_scrypt_flush(thr_id, nxt); // required here ?
-
-			if (!cuda_scrypt_sync(thr_id, cur)) {
+			// cuda_scrypt_flush(thr_id, nxt);
+			if (!cuda_scrypt_sync(thr_id, nxt)) {
 				printf("error\n");
 				result = -1;
 				break;

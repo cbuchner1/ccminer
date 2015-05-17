@@ -819,8 +819,9 @@ void cuda_scrypt_DtoH(int thr_id, uint32_t *X, int stream, bool postSHA)
 bool cuda_scrypt_sync(int thr_id, int stream)
 {
 	cudaError_t err;
+	uint32_t wait_us = 0;
 
-	if(device_interactive[thr_id] && !opt_benchmark)
+	if (device_interactive[thr_id] && !opt_benchmark)
 	{
 		// For devices that also do desktop rendering or compositing, we want to free up some time slots.
 		// That requires making a pause in work submission when there is no active task on the GPU,
@@ -830,26 +831,29 @@ bool cuda_scrypt_sync(int thr_id, int stream)
 		//err = cudaDeviceSynchronize();
 
 		while((err = cudaStreamQuery(context_streams[0][thr_id])) == cudaErrorNotReady ||
-			  (err == cudaSuccess && (err = cudaStreamQuery(context_streams[1][thr_id])) == cudaErrorNotReady))
-			usleep(1000);
+			  (err == cudaSuccess && (err = cudaStreamQuery(context_streams[1][thr_id])) == cudaErrorNotReady)) {
+			usleep(50); wait_us+=50;
+		}
 
-		usleep(1000);
-	}
-	else
-	{
+		usleep(50); wait_us+=50;
+	} else {
 		// this call was replaced by the loop below to workaround the high CPU usage issue
 		//err = cudaStreamSynchronize(context_streams[stream][thr_id]);
 
-		while((err = cudaStreamQuery(context_streams[stream][thr_id])) == cudaErrorNotReady)
-			usleep(1000);
+		while((err = cudaStreamQuery(context_streams[stream][thr_id])) == cudaErrorNotReady) {
+			usleep(50); wait_us+=50;
+		}
 	}
 
-	if(err != cudaSuccess)
-	{
+	if (err != cudaSuccess) {
 		if (!abort_flag)
-			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while executing the kernel.", device_map[thr_id], cudaGetErrorString(err));
+			applog(LOG_ERR, "GPU #%d: CUDA error `%s` while waiting the kernel.", device_map[thr_id], cudaGetErrorString(err));
 		return false;
 	}
+
+	//if (opt_debug) {
+	//	applog(LOG_DEBUG, "GPU #%d: %s %u us", device_map[thr_id], __FUNCTION__, wait_us);
+	//}
 
 	return true;
 }

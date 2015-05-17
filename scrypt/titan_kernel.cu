@@ -676,6 +676,8 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int t
 	uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache)
 {
 	bool success = true;
+	bool scrypt = IS_SCRYPT();
+	bool chacha = IS_SCRYPT_JANE();
 
 	// make some constants available to kernel, update only initially and when changing
 	static uint32_t prev_N[MAX_GPUS] = { 0 };
@@ -703,11 +705,11 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int t
 	unsigned int pos = 0;
 	do {
 		if (LOOKUP_GAP == 1) {
-			if (IS_SCRYPT())      titan_scrypt_core_kernelA<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
-			if (IS_SCRYPT_JANE()) titan_scrypt_core_kernelA<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
+			if (scrypt) titan_scrypt_core_kernelA<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
+			if (chacha) titan_scrypt_core_kernelA<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
 		} else {
-			if (IS_SCRYPT())      titan_scrypt_core_kernelA_LG<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
-			if (IS_SCRYPT_JANE()) titan_scrypt_core_kernelA_LG<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (scrypt) titan_scrypt_core_kernelA_LG<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (chacha) titan_scrypt_core_kernelA_LG<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
 		}
 		pos += batch;
 
@@ -718,11 +720,11 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int t
 	pos = 0;
 	do {
 		if (LOOKUP_GAP == 1)  {
-			if (IS_SCRYPT())      titan_scrypt_core_kernelB<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
-			if (IS_SCRYPT_JANE()) titan_scrypt_core_kernelB<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
+			if (scrypt) titan_scrypt_core_kernelB<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
+			if (chacha) titan_scrypt_core_kernelB<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
 		} else {
-			if (IS_SCRYPT())      titan_scrypt_core_kernelB_LG<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
-			if (IS_SCRYPT_JANE()) titan_scrypt_core_kernelB_LG<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (scrypt) titan_scrypt_core_kernelB_LG<A_SCRYPT,    ANDERSEN> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (chacha) titan_scrypt_core_kernelB_LG<A_SCRYPT_JANE, SIMPLE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
 		}
 		pos += batch;
 

@@ -54,6 +54,8 @@ void NV2Kernel::set_scratchbuf_constants(int MAXWARPS, uint32_t** h_V)
 bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr_id, cudaStream_t stream, uint32_t* d_idata, uint32_t* d_odata, unsigned int N, unsigned int LOOKUP_GAP, bool interactive, bool benchmark, int texture_cache)
 {
 	bool success = true;
+	bool scrypt = IS_SCRYPT();
+	bool chacha = IS_SCRYPT_JANE();
 
 	// make some constants available to kernel, update only initially and when changing
 	static uint32_t prev_N[MAX_GPUS] = { 0 };
@@ -77,11 +79,11 @@ bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr
 	do
 	{
 		if (LOOKUP_GAP == 1) {
-			if (IS_SCRYPT())      nv2_scrypt_core_kernelA<A_SCRYPT>     <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
-			if (IS_SCRYPT_JANE()) nv2_scrypt_core_kernelA<A_SCRYPT_JANE><<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
+			if (scrypt) nv2_scrypt_core_kernelA<A_SCRYPT>     <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
+			if (chacha) nv2_scrypt_core_kernelA<A_SCRYPT_JANE><<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N));
 		} else {
-			if (IS_SCRYPT())      nv2_scrypt_core_kernelA_LG<A_SCRYPT>     <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
-			if (IS_SCRYPT_JANE()) nv2_scrypt_core_kernelA_LG<A_SCRYPT_JANE><<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (scrypt) nv2_scrypt_core_kernelA_LG<A_SCRYPT>     <<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (chacha) nv2_scrypt_core_kernelA_LG<A_SCRYPT_JANE><<< grid, threads, 0, stream >>>(d_idata, pos, min(pos+batch, N), LOOKUP_GAP);
 		}
 		pos += batch;
 	} while (pos < N);
@@ -91,11 +93,11 @@ bool NV2Kernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int thr
 	do
 	{
 		if (LOOKUP_GAP == 1) {
-			if (IS_SCRYPT())      nv2_scrypt_core_kernelB<A_SCRYPT     > <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
-			if (IS_SCRYPT_JANE()) nv2_scrypt_core_kernelB<A_SCRYPT_JANE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
+			if (scrypt) nv2_scrypt_core_kernelB<A_SCRYPT     > <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
+			if (chacha) nv2_scrypt_core_kernelB<A_SCRYPT_JANE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N));
 		} else {
-			if (IS_SCRYPT())      nv2_scrypt_core_kernelB_LG<A_SCRYPT     > <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
-			if (IS_SCRYPT_JANE()) nv2_scrypt_core_kernelB_LG<A_SCRYPT_JANE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (scrypt) nv2_scrypt_core_kernelB_LG<A_SCRYPT     > <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
+			if (chacha) nv2_scrypt_core_kernelB_LG<A_SCRYPT_JANE> <<< grid, threads, 0, stream >>>(d_odata, pos, min(pos+batch, N), LOOKUP_GAP);
 		}
 
 		pos += batch;
