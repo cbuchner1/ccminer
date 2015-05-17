@@ -133,7 +133,7 @@ void stats_purge_old(void)
 {
 	int deleted = 0;
 	uint32_t now = (uint32_t) time(NULL);
-	uint32_t sz = tlastscans.size();
+	uint32_t sz = (uint32_t) tlastscans.size();
 	std::map<uint64_t, stats_data>::iterator i = tlastscans.begin();
 	while (i != tlastscans.end()) {
 		if (i->second.ignored || (now - i->second.tm_stat) > STATS_PURGE_TIMEOUT) {
@@ -160,6 +160,6 @@ void stats_purge_all(void)
  */
 void stats_getmeminfo(uint64_t *mem, uint32_t *records)
 {
-	(*records) = tlastscans.size();
+	(*records) = (uint32_t) tlastscans.size();
 	(*mem) = (*records) * sizeof(stats_data);
 }

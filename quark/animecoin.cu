@@ -40,11 +40,11 @@ extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t start
 
 extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
 extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
-											uint32_t *d_nonces1, size_t *nrm1,
-											uint32_t *d_nonces2, size_t *nrm2,
+											uint32_t *d_nonces1, uint32_t *nrm1,
+											uint32_t *d_nonces2, uint32_t *nrm2,
 											int order);
 extern void quark_compactTest_single_false_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
-											uint32_t *d_nonces1, size_t *nrm1,
+											uint32_t *d_nonces1, uint32_t *nrm1,
 											int order);
 
 extern uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
@@ -203,7 +203,7 @@ extern "C" int scanhash_anime(int thr_id, uint32_t *pdata,
 
 	do {
 		int order = 0;
-		size_t nrm1=0, nrm2=0, nrm3=0;
+		uint32_t nrm1=0, nrm2=0, nrm3=0;
 
 		// erstes BMW512 Hash mit CUDA
 		quark_bmw512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);

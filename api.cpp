@@ -452,7 +452,7 @@ static int send_result(SOCKETTYPE c, char *result)
 		n = send(c, "", 1, 0);
 	} else {
 		// ignore failure - it's closed immediately anyway
-		n = send(c, result, strlen(result) + 1, 0);
+		n = send(c, result, (int) strlen(result) + 1, 0);
 	}
 	return n;
 }
@@ -595,7 +595,7 @@ static int websocket_handshake(SOCKETTYPE c, char *result, char *clientkey)
 		// WebSocket Frame - Header + Data
 		memcpy(p, hd, frames);
 		memcpy(p + frames, result, (size_t)datalen);
-		send(c, (const char*)data, strlen(answer) + frames + (size_t)datalen + 1, 0);
+		send(c, (const char*)data, (int) (strlen(answer) + frames + datalen + 1), 0);
 		free(data);
 	}
 	return 0;
@@ -724,7 +724,7 @@ static void api()
 	const char *addr = opt_api_allow;
 	unsigned short port = (unsigned short) opt_api_listen; // 4068
 	char buf[MYBUFSIZ];
-	int c, n, bound;
+	int n, bound;
 	char *connectaddr;
 	char *binderror;
 	char group;
@@ -738,6 +738,7 @@ static void api()
 	char *params;
 	int i;
 
+	SOCKETTYPE c;
 	SOCKETTYPE *apisock;
 	if (!opt_api_listen && opt_debug) {
 		applog(LOG_DEBUG, "API disabled");

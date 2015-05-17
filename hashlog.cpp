@@ -194,7 +194,7 @@ void hashlog_purge_job(char* jobid)
 	int deleted = 0;
 	uint64_t njobid = hextouint(jobid);
 	uint64_t keypfx = (njobid << 32);
-	uint32_t sz = tlastshares.size();
+	uint32_t sz = (uint32_t) tlastshares.size();
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
 		if ((keypfx & i->first) == keypfx) {
@@ -215,7 +215,7 @@ void hashlog_purge_old(void)
 {
 	int deleted = 0;
 	uint32_t now = (uint32_t) time(NULL);
-	uint32_t sz = tlastshares.size();
+	uint32_t sz = (uint32_t) tlastshares.size();
 	std::map<uint64_t, hashlog_data>::iterator i = tlastshares.begin();
 	while (i != tlastshares.end()) {
 		if ((now - i->second.tm_sent) > LOG_PURGE_TIMEOUT) {
@@ -242,7 +242,7 @@ void hashlog_purge_all(void)
  */
 void hashlog_getmeminfo(uint64_t *mem, uint32_t *records)
 {
-	(*records) = tlastshares.size();
+	(*records) = (uint32_t) tlastshares.size();
 	(*mem) = (*records) * sizeof(hashlog_data);
 }
 

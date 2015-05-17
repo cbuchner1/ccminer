@@ -30,8 +30,8 @@ extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 extern void jackpot_compactTest_cpu_init(int thr_id, uint32_t threads);
 extern void jackpot_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable, 
-											uint32_t *d_nonces1, size_t *nrm1,
-											uint32_t *d_nonces2, size_t *nrm2,
+											uint32_t *d_nonces1, uint32_t *nrm1,
+											uint32_t *d_nonces2, uint32_t *nrm2,
 											int order);
 
 extern uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
@@ -136,7 +136,7 @@ extern "C" int scanhash_jackpot(int thr_id, uint32_t *pdata,
 		// erstes Keccak512 Hash mit CUDA
 		jackpot_keccak512_cpu_hash(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
-		size_t nrm1, nrm2, nrm3;
+		uint32_t nrm1, nrm2, nrm3;
 
 		// Runde 1 (ohne Gröstl)
 

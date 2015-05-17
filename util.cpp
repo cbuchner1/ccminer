@@ -977,7 +977,7 @@ static const char *get_stratum_session_id(json_t *val)
 	arr_val = json_array_get(val, 0);
 	if (!arr_val || !json_is_array(arr_val))
 		return NULL;
-	n = json_array_size(arr_val);
+	n = (int) json_array_size(arr_val);
 	for (i = 0; i < n; i++) {
 		const char *notify;
 		json_t *arr = json_array_get(arr_val, i);
@@ -1264,7 +1264,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	merkle_arr = json_array_get(params, 4);
 	if (!merkle_arr || !json_is_array(merkle_arr))
 		goto out;
-	merkle_count = json_array_size(merkle_arr);
+	merkle_count = (int) json_array_size(merkle_arr);
 	version = json_string_value(json_array_get(params, 5));
 	nbits = json_string_value(json_array_get(params, 6));
 	stime = json_string_value(json_array_get(params, 7));
