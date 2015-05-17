@@ -90,7 +90,7 @@ void write_keys_direct(const uint4 &b, const uint4 &bx, uint32_t start)
 {
 	uint32_t *scratch = c_V[(blockIdx.x*blockDim.x + threadIdx.x)/32];
 	if (SCHEME == ANDERSEN) {
-		int target_thread = (threadIdx.x + 4)%32;
+		int target_thread = (threadIdx.x + 4)&31;
 		uint4 t=b, t2=__shfl(bx, target_thread);
 		int t2_start = __shfl((int)start, target_thread) + 4;
 		bool c = (threadIdx.x & 0x4);
@@ -107,12 +107,12 @@ void read_keys_direct(uint4 &b, uint4 &bx, uint32_t start)
 {
 	uint32_t *scratch = c_V[(blockIdx.x*blockDim.x + threadIdx.x)/32];
 	if (SCHEME == ANDERSEN) {
-		int t2_start = __shfl((int)start, (threadIdx.x + 4)%32) + 4;
+		int t2_start = __shfl((int)start, (threadIdx.x + 4)&31) + 4;
 		bool c = (threadIdx.x & 0x4);
 		b  = __ldg((uint4 *)(&scratch[c ? t2_start : start]));
 		bx = __ldg((uint4 *)(&scratch[c ? start : t2_start]));
 		uint4 tmp = b; b = (c ? bx : b); bx = (c ? tmp : bx);
-		bx = __shfl(bx, (threadIdx.x + 28)%32);
+		bx = __shfl(bx, (threadIdx.x + 28)&31);
 	} else {
 		b = *((uint4 *)(&scratch[start]));
 		bx = *((uint4 *)(&scratch[start+16]));
@@ -122,9 +122,9 @@ void read_keys_direct(uint4 &b, uint4 &bx, uint32_t start)
 __device__  __forceinline__
 void primary_order_shuffle(uint32_t b[4], uint32_t bx[4]) {
 	/* Inner loop shuffle targets */
-	int x1 = (threadIdx.x & 0xfc) + (((threadIdx.x & 0x03)+1)&0x3);
-	int x2 = (threadIdx.x & 0xfc) + (((threadIdx.x & 0x03)+2)&0x3);
-	int x3 = (threadIdx.x & 0xfc) + (((threadIdx.x & 0x03)+3)&0x3);
+	int x1 = (threadIdx.x & 0xfc) + (((threadIdx.x & 3)+1)&3);
+	int x2 = (threadIdx.x & 0xfc) + (((threadIdx.x & 3)+2)&3);
+	int x3 = (threadIdx.x & 0xfc) + (((threadIdx.x & 3)+3)&3);
 
 	b[3] = __shfl((int)b[3], x1);
 	b[2] = __shfl((int)b[2], x2);
@@ -140,9 +140,9 @@ void primary_order_shuffle(uint32_t b[4], uint32_t bx[4]) {
 __device__  __forceinline__
 void primary_order_shuffle(uint4 &b, uint4 &bx) {
 	/* Inner loop shuffle targets */
-	int x1 = (threadIdx.x & 0x1c) + (((threadIdx.x & 0x03)+1)&0x3);
-	int x2 = (threadIdx.x & 0x1c) + (((threadIdx.x & 0x03)+2)&0x3);
-	int x3 = (threadIdx.x & 0x1c) + (((threadIdx.x & 0x03)+3)&0x3);
+	int x1 = (threadIdx.x & 0x1c) + (((threadIdx.x & 3)+1)&3);
+	int x2 = (threadIdx.x & 0x1c) + (((threadIdx.x & 3)+2)&3);
+	int x3 = (threadIdx.x & 0x1c) + (((threadIdx.x & 3)+3)&3);
 
 	b.w = __shfl((int)b.w, x1);
 	b.z = __shfl((int)b.z, x2);
@@ -161,23 +161,24 @@ void primary_order_shuffle(uint4 &b, uint4 &bx) {
  * After loading, each thread has its four b and four bx keys stored
  * in internal processing order.
  */
-
 __device__  __forceinline__
 void load_key_salsa(const uint32_t *B, uint4 &b, uint4 &bx)
 {
-	int scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
-	int key_offset = scrypt_block * 32;
-	uint32_t thread_in_block = threadIdx.x % 4;
+	uint32_t scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
+	uint32_t thread_in_block = threadIdx.x & 3U;
+	uint32_t key_offset = scrypt_block * 32 + (thread_in_block*4);
 
 	// Read in permuted order. Key loads are not our bottleneck right now.
-	b.x = B[key_offset + 4*thread_in_block + (thread_in_block+0)%4];
-	b.y = B[key_offset + 4*thread_in_block + (thread_in_block+1)%4];
-	b.z = B[key_offset + 4*thread_in_block + (thread_in_block+2)%4];
-	b.w = B[key_offset + 4*thread_in_block + (thread_in_block+3)%4];
-	bx.x = B[key_offset + 4*thread_in_block + (thread_in_block+0)%4 + 16];
-	bx.y = B[key_offset + 4*thread_in_block + (thread_in_block+1)%4 + 16];
-	bx.z = B[key_offset + 4*thread_in_block + (thread_in_block+2)%4 + 16];
-	bx.w = B[key_offset + 4*thread_in_block + (thread_in_block+3)%4 + 16];
+	b.x  = B[key_offset + (thread_in_block+0) & 3U];
+	b.y  = B[key_offset + (thread_in_block+1) & 3U];
+	b.z  = B[key_offset + (thread_in_block+2) & 3U];
+	b.w  = B[key_offset + (thread_in_block+3) & 3U];
+
+	key_offset += 16;
+	bx.x = B[key_offset + (thread_in_block+0) & 3U];
+	bx.y = B[key_offset + (thread_in_block+1) & 3U];
+	bx.z = B[key_offset + (thread_in_block+2) & 3U];
+	bx.w = B[key_offset + (thread_in_block+3) & 3U];
 
 	primary_order_shuffle(b, bx);
 }
@@ -187,24 +188,25 @@ void load_key_salsa(const uint32_t *B, uint4 &b, uint4 &bx)
  * internally-ordered b and bx and storing them into a contiguous
  * region of B in external order.
  */
-
 __device__  __forceinline__
 void store_key_salsa(uint32_t *B, uint4 &b, uint4 &bx)
 {
-	int scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
-	int key_offset = scrypt_block * 32;
-	uint32_t thread_in_block = threadIdx.x % 4;
+	uint32_t scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
+	uint32_t thread_in_block = threadIdx.x & 3U;
+	uint32_t key_offset = scrypt_block * 32 + (thread_in_block*4);
 
 	primary_order_shuffle(b, bx);
 
-	B[key_offset + 4*thread_in_block + (thread_in_block+0)%4] = b.x;
-	B[key_offset + 4*thread_in_block + (thread_in_block+1)%4] = b.y;
-	B[key_offset + 4*thread_in_block + (thread_in_block+2)%4] = b.z;
-	B[key_offset + 4*thread_in_block + (thread_in_block+3)%4] = b.w;
-	B[key_offset + 4*thread_in_block + (thread_in_block+0)%4 + 16] = bx.x;
-	B[key_offset + 4*thread_in_block + (thread_in_block+1)%4 + 16] = bx.y;
-	B[key_offset + 4*thread_in_block + (thread_in_block+2)%4 + 16] = bx.z;
-	B[key_offset + 4*thread_in_block + (thread_in_block+3)%4 + 16] = bx.w;
+	B[key_offset + (thread_in_block+0) & 3U] = b.x;
+	B[key_offset + (thread_in_block+1) & 3U] = b.y;
+	B[key_offset + (thread_in_block+2) & 3U] = b.z;
+	B[key_offset + (thread_in_block+3) & 3U] = b.w;
+
+	key_offset += 16;
+	B[key_offset + (thread_in_block+0) & 3U] = bx.x;
+	B[key_offset + (thread_in_block+1) & 3U] = bx.y;
+	B[key_offset + (thread_in_block+2) & 3U] = bx.z;
+	B[key_offset + (thread_in_block+3) & 3U] = bx.w;
 }
 
 
@@ -214,23 +216,24 @@ void store_key_salsa(uint32_t *B, uint4 &b, uint4 &bx)
  * After loading, each thread has its four b and four bx keys stored
  * in internal processing order.
  */
-
 __device__  __forceinline__
 void load_key_chacha(const uint32_t *B, uint4 &b, uint4 &bx)
 {
-	int scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
-	int key_offset = scrypt_block * 32;
-	uint32_t thread_in_block = threadIdx.x % 4;
+	uint32_t scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
+	uint32_t thread_in_block = threadIdx.x & 3U;
+	uint32_t key_offset = scrypt_block * 32 + thread_in_block;
 
 	// Read in permuted order. Key loads are not our bottleneck right now.
-	b.x = B[key_offset + 4*0 + thread_in_block%4];
-	b.y = B[key_offset + 4*1 + thread_in_block%4];
-	b.z = B[key_offset + 4*2 + thread_in_block%4];
-	b.w = B[key_offset + 4*3 + thread_in_block%4];
-	bx.x = B[key_offset + 4*0 + thread_in_block%4 + 16];
-	bx.y = B[key_offset + 4*1 + thread_in_block%4 + 16];
-	bx.z = B[key_offset + 4*2 + thread_in_block%4 + 16];
-	bx.w = B[key_offset + 4*3 + thread_in_block%4 + 16];
+	b.x  = B[key_offset      ];
+	b.y  = B[key_offset + 4*1];
+	b.z  = B[key_offset + 4*2];
+	b.w  = B[key_offset + 4*3];
+
+	key_offset += 16;
+	bx.x = B[key_offset      ];
+	bx.y = B[key_offset + 4  ];
+	bx.z = B[key_offset + 4*2];
+	bx.w = B[key_offset + 4*3];
 }
 
 /*
@@ -238,22 +241,23 @@ void load_key_chacha(const uint32_t *B, uint4 &b, uint4 &bx)
  * internally-ordered b and bx and storing them into a contiguous
  * region of B in external order.
  */
-
 __device__  __forceinline__
 void store_key_chacha(uint32_t *B, const uint4 &b, const uint4 &bx)
 {
-	int scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
-	int key_offset = scrypt_block * 32;
-	uint32_t thread_in_block = threadIdx.x % 4;
+	uint32_t scrypt_block = (blockIdx.x*blockDim.x + threadIdx.x)/THREADS_PER_WU;
+	uint32_t thread_in_block = threadIdx.x & 3U;
+	uint32_t key_offset = scrypt_block * 32U + thread_in_block;
 
-	B[key_offset + 4*0 + thread_in_block%4] = b.x;
-	B[key_offset + 4*1 + thread_in_block%4] = b.y;
-	B[key_offset + 4*2 + thread_in_block%4] = b.z;
-	B[key_offset + 4*3 + thread_in_block%4] = b.w;
-	B[key_offset + 4*0 + thread_in_block%4 + 16] = bx.x;
-	B[key_offset + 4*1 + thread_in_block%4 + 16] = bx.y;
-	B[key_offset + 4*2 + thread_in_block%4 + 16] = bx.z;
-	B[key_offset + 4*3 + thread_in_block%4 + 16] = bx.w;
+	B[key_offset      ] = b.x;
+	B[key_offset + 4  ] = b.y;
+	B[key_offset + 4*2] = b.z;
+	B[key_offset + 4*3] = b.w;
+
+	key_offset += 16;
+	B[key_offset      ] = bx.x;
+	B[key_offset + 4  ] = bx.y;
+	B[key_offset + 4*2] = bx.z;
+	B[key_offset + 4*3] = bx.w;
 }
 
 
@@ -399,17 +403,17 @@ void salsa_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int x
 __device__  __forceinline__
 void chacha_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int x3)
 {
-	uint4 x;
+	uint4 x = b ^= bx;
 
-	b ^= bx;
-	x = b;
+	//b ^= bx;
+	//x = b;
 
 	// Enter in "column" mode (t0 has 0, 4,  8, 12)
 	//                        (t1 has 1, 5,  9, 13)
 	//                        (t2 has 2, 6, 10, 14)
 	//                        (t3 has 3, 7, 11, 15)
 
-#pragma unroll 4
+	//#pragma unroll
 	for (int j = 0; j < 4; j++) {
 
 		// Column Mixing phase of chacha
@@ -438,7 +442,7 @@ void chacha_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int 
 	bx ^= b;
 	x = bx;
 
-	#pragma unroll
+	//#pragma unroll
 	for (int j = 0; j < 4; j++) 
 	{
 
