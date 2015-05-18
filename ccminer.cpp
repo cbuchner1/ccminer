@@ -235,7 +235,8 @@ uint32_t accepted_count = 0L;
 uint32_t rejected_count = 0L;
 static double thr_hashrates[MAX_GPUS] = { 0 };
 uint64_t global_hashrate = 0;
-double   global_diff = 0.0;
+double   stratum_diff = 0.0;
+double   net_diff = 0;
 uint64_t net_hashrate = 0;
 uint64_t net_blocks = 0;
 // conditional mining
@@ -537,6 +538,48 @@ static bool jobj_binary(const json_t *obj, const char *key,
 	return true;
 }
 
+/* compute nbits to get the network diff */
+static void calc_network_diff(struct work *work)
+{
+	// sample for diff 43.281 : 1c05ea29
+	const uint64_t diffone = 0xFFFF000000000000ull;
+	uint64_t *data64, d64;
+	uint32_t nbits = have_stratum ? swab32(work->data[18]) : work->data[18];
+	uint32_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
+	uint32_t bits = (nbits & 0xffffff);
+	uchar rtarget[48] = { 0 };
+
+	switch (opt_algo) {
+		case ALGO_NEOSCRYPT:
+		case ALGO_SCRYPT:
+		case ALGO_SCRYPT_JANE: /* bad value - 1.16 should be 0.01206 */
+			// todo/check...
+			if (opt_debug)
+				applog(LOG_DEBUG, "diff shift: %08x -> %u %08x -> %.3f", nbits, shift, bits, net_diff);
+			net_diff = 0.;
+			return;
+	}
+
+	if (shift >= 3 && shift < sizeof(rtarget)-3) {
+		memcpy(&rtarget[shift - 3], &bits, 3); // 0029ea05 00000000
+	}
+	swab256(rtarget, rtarget);
+
+	switch (opt_algo) {
+		case ALGO_HEAVY:
+			data64 = (uint64_t *)(rtarget + 2);
+			break;
+		default:
+			data64 = (uint64_t *)(rtarget + 4);
+	}
+
+	d64 = swab64(*data64);
+	if (!d64)
+		d64 = 1;
+	net_diff = (double)diffone / d64; // 43.281
+	//applog(LOG_DEBUG, "diff shift: %08x -> %u %08x -> %.3f", nbits, shift, bits, net_diff);
+}
+
 static bool work_decode(const json_t *val, struct work *work)
 {
 	int data_size = sizeof(work->data), target_size = sizeof(work->target);
@@ -567,6 +610,9 @@ static bool work_decode(const json_t *val, struct work *work)
 	for (i = 0; i < atarget_sz; i++)
 		work->target[i] = le32dec(work->target + i);
 
+	if (opt_max_diff > 0. && !allow_mininginfo)
+		calc_network_diff(work);
+
 	json_t *jr = json_object_get(val, "noncerange");
 	if (jr) {
 		const char * hexstr = json_string_value(jr);
@@ -586,9 +632,9 @@ static bool work_decode(const json_t *val, struct work *work)
 
 /**
  * Calculate the work difficulty as double
- * Not sure it works with pools
+ * TODO: merge common code with calc_network_diff
  */
-static void calc_diff(struct work *work, int known)
+static void calc_target_diff(struct work *work)
 {
 	// sample for diff 32.53 : 00000007de5f0000
 	const uint64_t diffone = 0xFFFF000000000000ull;
@@ -596,10 +642,19 @@ static void calc_diff(struct work *work, int known)
 	char rtarget[32];
 
 	swab256(rtarget, work->target);
-	data64 = (uint64_t *)(rtarget + 3); /* todo: index (3) can be tuned here */
 
-	if (opt_algo == ALGO_HEAVY) {
-		data64 = (uint64_t *)(rtarget + 2);
+	switch (opt_algo) {
+		case ALGO_NEOSCRYPT:
+		//case ALGO_SCRYPT:
+		//case ALGO_SCRYPT_JANE:
+			// todo/check...
+			work->difficulty = 0.;
+			return;
+		case ALGO_HEAVY:
+			data64 = (uint64_t*)(rtarget + 2);
+			break;
+		default:
+			data64 = (uint64_t*)(rtarget + 3); /* index (3) can be tuned here */
 	}
 
 	d64 = swab64(*data64);
@@ -687,7 +742,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_WARNING, "stale work detected, discarding");
 		return true;
 	}
-	calc_diff(work, 0);
+	calc_target_diff(work);
 
 	if (have_stratum) {
 		uint32_t sent = 0;
@@ -815,10 +870,10 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 		if (key && json_is_integer(key)) {
 			work->height = (uint32_t) json_integer_value(key);
 			if (!opt_quiet && work->height > g_work.height) {
-				if (!have_stratum && allow_mininginfo && global_diff > 0) {
+				if (net_diff > 0.) {
 					char netinfo[64] = { 0 };
 					char srate[32] = { 0 };
-					sprintf(netinfo, "diff %.2f", global_diff);
+					sprintf(netinfo, "diff %.2f", net_diff);
 					if (net_hashrate) {
 						format_hashrate((double) net_hashrate, srate);
 						strcat(netinfo, ", net ");
@@ -896,7 +951,7 @@ static bool get_mininginfo(CURL *curl, struct work *work)
 		if (res) {
 			json_t *key = json_object_get(res, "difficulty");
 			if (key && json_is_real(key)) {
-				global_diff = json_real_value(key);
+				net_diff = json_real_value(key);
 			}
 			key = json_object_get(res, "networkhashps");
 			if (key && json_is_integer(key)) {
@@ -1209,6 +1264,9 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	work->data[17] = le32dec(sctx->job.ntime);
 	work->data[18] = le32dec(sctx->job.nbits);
 
+	if (opt_max_diff > 0.)
+		calc_network_diff(work);
+
 	switch (opt_algo) {
 	case ALGO_MJOLLNIR:
 	case ALGO_HEAVY:
@@ -1237,7 +1295,9 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	pthread_mutex_unlock(&sctx->work_lock);
 
 	if (opt_debug) {
-		char *tm = atime2str(swab32(work->data[17]) - sctx->srvtime_diff);
+		uint32_t utm = work->data[17];
+		if (opt_algo != ALGO_ZR5) utm = swab32(utm);
+		char *tm = atime2str(utm - sctx->srvtime_diff);
 		char *xnonce2str = bin2hex(work->xnonce2, sctx->xnonce2_size);
 		applog(LOG_DEBUG, "DEBUG: job_id=%s xnonce2=%s time=%s",
 		       work->job_id, xnonce2str, tm);
@@ -1293,7 +1353,7 @@ static bool wanna_mine(int thr_id)
 		}
 #endif
 	}
-	if (opt_max_diff > 0.0 && global_diff > opt_max_diff) {
+	if (opt_max_diff > 0.0 && net_diff > opt_max_diff) {
 		if (conditional_state && !opt_quiet)
 			applog(LOG_INFO, "network diff too high, waiting...");
 		state = false;
@@ -1422,9 +1482,7 @@ static void *miner_thread(void *userdata)
 
 		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
 		{
-			calc_diff(&g_work, 0);
-			if (!have_stratum && !allow_mininginfo)
-				global_diff = g_work.difficulty;
+			calc_target_diff(&g_work);
 			if (opt_debug) {
 				uint64_t target64 = g_work.target[7] * 0x100000000ULL + g_work.target[6];
 				applog(LOG_DEBUG, "job %s target change: %llx (%.1f)", g_work.job_id, target64, g_work.difficulty);
@@ -1917,8 +1975,13 @@ start:
 			pthread_mutex_lock(&g_work_lock);
 			if (work_decode(json_object_get(val, "result"), &g_work)) {
 				restart_threads();
-				if (!opt_quiet)
-					applog(LOG_BLUE, "%s detected new block", short_url);
+				if (!opt_quiet) {
+					char netinfo[64] = { 0 };
+					if (net_diff > 0.) {
+						sprintf(netinfo, ", diff %.2f", net_diff);
+					}
+					applog(LOG_BLUE, "%s detected new block%s", short_url, netinfo);
+				}
 				g_work_time = time(NULL);
 			}
 			pthread_mutex_unlock(&g_work_lock);
@@ -2041,9 +2104,14 @@ static void *stratum_thread(void *userdata)
 			stratum_gen_work(&stratum, &g_work);
 			g_work_time = time(NULL);
 			if (stratum.job.clean) {
-				if (!opt_quiet)
-					applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
-						stratum.job.height);
+				if (!opt_quiet) {
+					if (net_diff > 0.)
+						applog(LOG_BLUE, "%s block %d, diff %.2f", algo_names[opt_algo],
+							stratum.job.height, net_diff);
+					else
+						applog(LOG_BLUE, "%s %s block %d", short_url, algo_names[opt_algo],
+							stratum.job.height);
+				}
 				restart_threads();
 				if (check_dups)
 					hashlog_purge_old();

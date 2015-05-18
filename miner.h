@@ -461,8 +461,9 @@ struct thr_info {
 };
 
 struct work_restart {
-	volatile unsigned long	restart;
-	char			padding[128 - sizeof(unsigned long)];
+	/* volatile to modify accross threads (vstudio thing) */
+	volatile uint32_t restart;
+	char padding[128 - sizeof(uint32_t)];
 };
 
 extern bool opt_benchmark;
@@ -492,7 +493,9 @@ extern bool opt_trust_pool;
 extern uint16_t opt_vote;
 
 extern uint64_t global_hashrate;
-extern double   global_diff;
+extern uint64_t net_hashrate;
+extern double net_diff;
+extern double stratum_diff;
 
 #define MAX_GPUS 16
 extern char* device_name[MAX_GPUS];

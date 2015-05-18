@@ -44,7 +44,7 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 	data.hashcount = hashcount;
 	data.hashfound = found;
 	data.hashrate = hashrate;
-	data.difficulty = global_diff;
+	data.difficulty = net_diff ? net_diff : stratum_diff;
 	if (opt_n_threads == 1 && global_hashrate && uid > 10) {
 		// prevent stats on too high vardiff (erroneous rates)
 		double ratio = (hashrate / (1.0 * global_hashrate));

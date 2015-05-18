@@ -177,7 +177,7 @@ static char *getsummary(char *params)
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
 		algo, active_gpus, (double)global_hashrate / 1000.0,
 		accepted_count, rejected_count,
-		accps, global_diff, uptime, (uint32_t) ts);
+		accps, net_diff > 0. ? net_diff : stratum_diff, uptime, (uint32_t) ts);
 	return buffer;
 }
 
