@@ -94,9 +94,6 @@ double stats_get_speed(int thr_id, double def_speed)
 double stats_get_gpu_speed(int gpu_id)
 {
 	double speed = 0.0;
-	double speeds[MAX_GPUS] = { 0 };
-	int records[MAX_GPUS] = { 0 };
-	int count = 0;
 
 	for (int thr_id=0; thr_id<opt_n_threads; thr_id++) {
 		int dev_id = device_map[thr_id];
