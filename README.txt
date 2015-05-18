@@ -89,7 +89,6 @@ its command line interface and options.
                           s3          use to mine 1coin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
-                          whirlpoolx  use to mine Vanillacoin
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
@@ -215,6 +214,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+                  Try to compute network difficulty on pools too
+                  Drop Whirlpool and whirpoolx algos, no more used...
 
   May 15th 2015   v1.6.3
                   Import and adapt Neoscrypt from djm34 work (SM 5+ only)

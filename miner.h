@@ -352,10 +352,6 @@ extern int scanhash_s3(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
-extern int scanhash_whc(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done);
-
 extern int scanhash_x11(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -373,10 +369,6 @@ extern int scanhash_x15(int thr_id, uint32_t *pdata,
 	unsigned long *hashes_done);
 
 extern int scanhash_x17(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done);
-
-extern int scanhash_whirlpoolx(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
@@ -696,7 +688,6 @@ void scryptjane_hash(void* output, const void* input);
 void skeincoinhash(void *output, const void *input);
 void skein2hash(void *output, const void *input);
 void s3hash(void *output, const void *input);
-void whirlxHash(void *state, const void *input);
 void x11hash(void *output, const void *input);
 void x13hash(void *output, const void *input);
 void x14hash(void *output, const void *input);

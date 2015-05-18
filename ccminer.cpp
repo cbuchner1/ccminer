@@ -109,8 +109,6 @@ enum sha_algos {
 	ALGO_SKEIN,
 	ALGO_SKEIN2,
 	ALGO_S3,
-	ALGO_WHIRLCOIN,
-	ALGO_WHIRLPOOLX,
 	ALGO_X11,
 	ALGO_X13,
 	ALGO_X14,
@@ -147,8 +145,6 @@ static const char *algo_names[] = {
 	"skein",
 	"skein2",
 	"s3",
-	"whirl",
-	"whirlpoolx",
 	"x11",
 	"x13",
 	"x14",
@@ -1250,7 +1246,6 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_GROESTL:
 		case ALGO_KECCAK:
 		case ALGO_BLAKECOIN:
-		case ALGO_WHIRLCOIN:
 			SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
 			break;
 		default:
@@ -1586,7 +1581,6 @@ static void *miner_thread(void *userdata)
 			switch (opt_algo) {
 			case ALGO_BLAKECOIN:
 			case ALGO_BLAKE:
-			case ALGO_WHIRLPOOLX:
 				minmax = 0x80000000U;
 				break;
 			case ALGO_KECCAK:
@@ -1773,17 +1767,6 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_S3:
 			rc = scanhash_s3(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		/* to be deleted */
-		case ALGO_WHIRLCOIN:
-			rc = scanhash_whc(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_WHIRLPOOLX:
-			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
@@ -2777,12 +2760,6 @@ int main(int argc, char *argv[])
 			parse_arg('c', defconfig);
 			parse_cmdline(argc, argv);
 		}
-	}
-
-	// extra credits..
-	if (opt_algo == ALGO_WHIRLPOOLX) {
-		printf("  Whirlpoolx support by Alexis Provos.\n");
-		printf("VNL donation address: Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W\n\n");
 	}
 
 	if (!opt_benchmark && !strlen(rpc_url)) {
