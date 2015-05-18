@@ -542,20 +542,30 @@ static bool jobj_binary(const json_t *obj, const char *key,
 static void calc_network_diff(struct work *work)
 {
 	// sample for diff 43.281 : 1c05ea29
-	const uint64_t diffone = 0xFFFF000000000000ull;
+	uchar rtarget[48] = { 0 };
+	uint64_t diffone = 0xFFFF000000000000ull; //swab64(0xFFFFull);
 	uint64_t *data64, d64;
 	uint32_t nbits = have_stratum ? swab32(work->data[18]) : work->data[18];
 	uint32_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 	uint32_t bits = (nbits & 0xffffff);
-	uchar rtarget[48] = { 0 };
+	int shfb = 8 * (26 - (shift - 3));
 
 	switch (opt_algo) {
-		case ALGO_NEOSCRYPT:
+		case ALGO_ANIME:
+		case ALGO_QUARK:
+			diffone = 0xFFFFFF0000000000ull;
+			break;
+		case ALGO_PLUCK:
 		case ALGO_SCRYPT:
-		case ALGO_SCRYPT_JANE: /* bad value - 1.16 should be 0.01206 */
-			// todo/check...
+		case ALGO_SCRYPT_JANE:
+			// cant get the right value on these 3 algos...
+			diffone = 0xFFFFFFFF00000000ull;
+			net_diff = 0.;
+			break;
+		case ALGO_NEOSCRYPT:
+			// todo/check... (neoscrypt data is reversed)
 			if (opt_debug)
-				applog(LOG_DEBUG, "diff shift: %08x -> %u %08x -> %.3f", nbits, shift, bits, net_diff);
+				applog(LOG_DEBUG, "diff: %08x -> shift %u, bits %08x, shfb %d", nbits, shift, bits, shfb);
 			net_diff = 0.;
 			return;
 	}
@@ -565,19 +575,24 @@ static void calc_network_diff(struct work *work)
 	}
 	swab256(rtarget, rtarget);
 
+	data64 = (uint64_t*)(rtarget + 4);
+
 	switch (opt_algo) {
 		case ALGO_HEAVY:
-			data64 = (uint64_t *)(rtarget + 2);
+			data64 = (uint64_t*)(rtarget + 2);
 			break;
-		default:
-			data64 = (uint64_t *)(rtarget + 4);
+		case ALGO_ANIME:
+		case ALGO_QUARK:
+			data64 = (uint64_t*)(rtarget + 3);
+			break;
 	}
 
 	d64 = swab64(*data64);
 	if (!d64)
 		d64 = 1;
 	net_diff = (double)diffone / d64; // 43.281
-	//applog(LOG_DEBUG, "diff shift: %08x -> %u %08x -> %.3f", nbits, shift, bits, net_diff);
+	if (opt_debug)
+		applog(LOG_DEBUG, "diff: %08x -> shift %u, bits %08x, shfb %d -> %.5f", nbits, shift, bits, shfb, net_diff);
 }
 
 static bool work_decode(const json_t *val, struct work *work)
@@ -632,19 +647,20 @@ static bool work_decode(const json_t *val, struct work *work)
 
 /**
  * Calculate the work difficulty as double
- * TODO: merge common code with calc_network_diff
  */
 static void calc_target_diff(struct work *work)
 {
 	// sample for diff 32.53 : 00000007de5f0000
-	const uint64_t diffone = 0xFFFF000000000000ull;
-	uint64_t *data64, d64;
 	char rtarget[32];
+	uint64_t diffone = 0xFFFF000000000000ull;
+	uint64_t *data64, d64;
 
 	swab256(rtarget, work->target);
 
+	data64 = (uint64_t*)(rtarget + 3);
+
 	switch (opt_algo) {
-		case ALGO_NEOSCRYPT:
+		case ALGO_NEOSCRYPT: /* diffone in work->target[7] ? */
 		//case ALGO_SCRYPT:
 		//case ALGO_SCRYPT_JANE:
 			// todo/check...
@@ -653,8 +669,6 @@ static void calc_target_diff(struct work *work)
 		case ALGO_HEAVY:
 			data64 = (uint64_t*)(rtarget + 2);
 			break;
-		default:
-			data64 = (uint64_t*)(rtarget + 3); /* index (3) can be tuned here */
 	}
 
 	d64 = swab64(*data64);
