@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.3-tpruvot (May 2015) - "Neoscrypt (SM5.0+)"
+ccMiner release 1.6.4-tpruvot (May 2015) - "Multi-pools config"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -215,7 +215,12 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-                  Try to compute network difficulty on pools too
+  May 21th 2015   v1.6.4
+                  Implement multi-pool support (failover and time rotate)
+                    try "ccminer -c pools.conf" to test the sample config
+                  Update the API to allow remote pool switching and pool stats
+                  Auto bind the api port to the first available when using default
+                  Try to compute network difficulty on pools too (for most algos)
                   Drop Whirlpool and whirpoolx algos, no more used...
 
   May 15th 2015   v1.6.3
