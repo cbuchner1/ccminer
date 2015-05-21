@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.4"
+#define APIVERSION "1.5"
 
 #ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -92,13 +92,12 @@ static int bye = 0;
 extern char *opt_api_allow;
 extern int opt_api_listen; /* port */
 extern int opt_api_remote;
-extern uint32_t accepted_count;
-extern uint32_t rejected_count;
-extern int num_cpus;
+
+// current stratum...
 extern struct stratum_ctx stratum;
-extern char* rpc_user;
 
 // sysinfos.cpp
+extern int num_cpus;
 extern float cpu_temp(int);
 extern uint32_t cpu_clock(int);
 // cuda.cpp
@@ -111,6 +110,8 @@ char driver_version[32] = { 0 };
 
 static void gpustatus(int thr_id)
 {
+	struct pool_infos *p = &pools[cur_pooln];
+
 	if (thr_id >= 0 && thr_id < opt_n_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 		int gpuid = cgpu->gpu_id;
@@ -127,8 +128,8 @@ static void gpustatus(int thr_id)
 		cuda_gpu_clocks(cgpu);
 
 		// todo: per gpu
-		cgpu->accepted = accepted_count;
-		cgpu->rejected = rejected_count;
+		cgpu->accepted = p->accepted_count;
+		cgpu->rejected = p->rejected_count;
 
 		cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
 
@@ -165,19 +166,27 @@ static char *getsummary(char *params)
 {
 	char algo[64]; *algo = '\0';
 	time_t ts = time(NULL);
-	double uptime = difftime(ts, startup);
-	double accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
+	double accps, uptime = difftime(ts, startup);
+	uint32_t wait_time = 0, accepted_count = 0, rejected_count = 0;
+	for (int p = 0; p < num_pools; p++) {
+		wait_time += pools[cur_pooln].wait_time;
+		accepted_count += pools[cur_pooln].accepted_count;
+		rejected_count += pools[cur_pooln].rejected_count;
+	}
+	accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
 
 	get_currentalgo(algo, sizeof(algo));
 
 	*buffer = '\0';
 	sprintf(buffer, "NAME=%s;VER=%s;API=%s;"
 		"ALGO=%s;GPUS=%d;KHS=%.2f;ACC=%d;REJ=%d;"
-		"ACCMN=%.3f;DIFF=%.6f;UPTIME=%.0f;TS=%u|",
+		"ACCMN=%.3f;DIFF=%.6f;NETKHS=%.2f;"
+		"POOLS=%u;WAIT=%u;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
-		algo, active_gpus, (double)global_hashrate / 1000.0,
+		algo, active_gpus, (double)global_hashrate / 1000.,
 		accepted_count, rejected_count,
-		accps, net_diff > 0. ? net_diff : stratum_diff, uptime, (uint32_t) ts);
+		accps, net_diff > 0. ? net_diff : stratum_diff, (double)net_hashrate / 1000.,
+		num_pools, wait_time, uptime, (uint32_t) ts);
 	return buffer;
 }
 
@@ -186,31 +195,30 @@ static char *getsummary(char *params)
  */
 static char *getpoolnfo(char *params)
 {
-	char *p = buffer;
+	char *s = buffer;
 	char jobid[128] = { 0 };
 	char nonce[128] = { 0 };
-	*p = '\0';
+	struct pool_infos *p = &pools[cur_pooln];
 
-	if (!stratum.url) {
-		sprintf(p, "|");
-		return p;
-	}
+	*s = '\0';
 
 	if (stratum.job.job_id)
 		strncpy(jobid, stratum.job.job_id, sizeof(stratum.job.job_id));
-
 	if (stratum.job.xnonce2) {
 		/* used temporary to be sure all is ok */
-		cbin2hex(nonce, (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
+		sprintf(nonce, "0x");
+		cbin2hex(&nonce[2], (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
 	}
 
-	snprintf(p, MYBUFSIZ, "URL=%s;USER=%s;H=%u;JOB=%s;DIFF=%.6f;N2SZ=%d;N2=0x%s;PING=%u;DISCO=%u;UPTIME=%u|",
-		stratum.url, rpc_user ? rpc_user : "",
-		stratum.job.height, jobid, stratum.job.diff,
+	snprintf(s, MYBUFSIZ, "URL=%s;USER=%s;ACC=%d;REJ=%d;H=%u;JOB=%s;DIFF=%.6f;"
+		"N2SZ=%d;N2=%s;PING=%u;DISCO=%u;WAIT=%u;UPTIME=%u|",
+		p->url, p->type & POOL_STRATUM ? p->user : "",
+		p->accepted_count, p->rejected_count,
+		stratum.job.height, jobid, stratum_diff,
 		(int) stratum.xnonce2_size, nonce, stratum.answer_msec,
-		stratum.disconnects, (uint32_t) (time(NULL) - stratum.tm_connected));
+		p->disconnects, p->wait_time, p->work_time);
 
-	return p;
+	return s;
 }
 
 /*****************************************************************************/
@@ -342,9 +350,9 @@ static char *getscanlog(char *params)
 	*buffer = '\0';
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_upd;
-		p += sprintf(p, "H=%u;JOB=%u;N=%u;FROM=0x%x;SCANTO=0x%x;"
+		p += sprintf(p, "H=%u;P=%u;JOB=%u;N=%u;FROM=0x%x;SCANTO=0x%x;"
 				"COUNT=0x%x;FOUND=%u;TS=%u|",
-			data[i].height, data[i].njobid, data[i].nonce, data[i].scanned_from, data[i].scanned_to,
+			data[i].height, data[i].npool, data[i].njobid, data[i].nonce, data[i].scanned_from, data[i].scanned_to,
 			(data[i].scanned_to - data[i].scanned_from), data[i].tm_sent ? 1 : 0, (uint32_t)ts);
 	}
 	return buffer;
@@ -381,18 +389,46 @@ static bool check_remote_access(void)
 }
 
 /**
- * Change pool url (see --url parameter)
- * seturl|stratum+tcp://Danila.1:X@pool.ipominer.com:3335|
+ * Set pool by index (pools array in json config)
+ * switchpool|1|
  */
-extern bool stratum_need_reset;
-static char *remote_seturl(char *params)
+static char *remote_switchpool(char *params)
 {
+	bool ret = false;
 	*buffer = '\0';
 	if (!check_remote_access())
 		return buffer;
-	parse_arg('o', params);
-	stratum_need_reset = true;
-	sprintf(buffer, "%s", "ok|");
+	if (!params || strlen(params) == 0) {
+		// rotate pool test
+		ret = pool_switch_next();
+	} else {
+		int n = atoi(params);
+		if (n == cur_pooln)
+			ret = true;
+		else if (n < num_pools)
+			ret = pool_switch(n);
+	}
+	sprintf(buffer, "%s|", ret ? "ok" : "fail");
+	return buffer;
+}
+
+/**
+ * Change pool url (see --url parameter)
+ * seturl|stratum+tcp://<user>:<pass>@mine.xpool.ca:1131|
+ */
+static char *remote_seturl(char *params)
+{
+	bool ret;
+	*buffer = '\0';
+	if (!check_remote_access())
+		return buffer;
+	if (!params || strlen(params) == 0) {
+		// rotate pool test
+		ret = pool_switch_next();
+	} else {
+		ret = pool_switch_url(params);
+	}
+	sprintf(buffer, "%s|", ret ? "ok" : "fail");
 	return buffer;
 }
 
@@ -425,7 +461,8 @@ struct CMDS {
 	{ "scanlog", getscanlog },
 
 	/* remote functions */
-	{ "seturl",  remote_seturl },
+	{ "seturl",  remote_seturl }, /* prefer switchpool, deprecated */
+	{ "switchpool", remote_switchpool },
 	{ "quit",    remote_quit },
 
 	/* keep it the last */

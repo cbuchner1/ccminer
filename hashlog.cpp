@@ -18,13 +18,17 @@
 
 /* from miner.h
 struct hashlog_data {
-	uint32_t tm_sent;
+	uint8_t npool;
+	uint8_t pool_type;
 	uint32_t height;
+	uint32_t njobid;
+	uint32_t nonce;
 	uint32_t scanned_from;
 	uint32_t scanned_to;
 	uint32_t last_from;
 	uint32_t tm_add;
 	uint32_t tm_upd;
+	uint32_t tm_sent;
 };
 */
 
@@ -75,6 +79,8 @@ void hashlog_remember_submit(struct work* work, uint32_t nonce)
 	data.height = work->height;
 	data.njobid = (uint32_t) njobid;
 	data.tm_add = data.tm_upd = data.tm_sent = (uint32_t) time(NULL);
+	data.npool = (uint8_t) cur_pooln;
+	data.pool_type = pools[cur_pooln].type;
 	tlastshares[key] = data;
 }
 

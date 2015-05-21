@@ -41,6 +41,8 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 	data.thr_id = (uint8_t) thr_id;
 	data.tm_stat = (uint32_t) time(NULL);
 	data.height = height;
+	data.npool = (uint8_t) cur_pooln;
+	data.pool_type = pools[cur_pooln].type;
 	data.hashcount = hashcount;
 	data.hashfound = found;
 	data.hashrate = hashrate;

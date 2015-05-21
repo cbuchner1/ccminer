@@ -423,16 +423,25 @@ struct stats_data {
 	uint32_t tm_stat;
 	uint32_t hashcount;
 	uint32_t height;
+
 	double difficulty;
 	double hashrate;
+
 	uint8_t thr_id;
 	uint8_t gpu_id;
 	uint8_t hashfound;
 	uint8_t ignored;
+
+	uint8_t npool;
+	uint8_t pool_type;
+	uint16_t align;
 };
 
 struct hashlog_data {
-	uint32_t tm_sent;
+	uint8_t npool;
+	uint8_t pool_type;
+	uint16_t align;
+
 	uint32_t height;
 	uint32_t njobid;
 	uint32_t nonce;
@@ -441,6 +450,7 @@ struct hashlog_data {
 	uint32_t last_from;
 	uint32_t tm_add;
 	uint32_t tm_upd;
+	uint32_t tm_sent;
 };
 
 /* end of api */
@@ -529,8 +539,6 @@ extern uint32_t gpus_intensity[MAX_GPUS];
 extern void format_hashrate(double hashrate, char *output);
 extern void applog(int prio, const char *fmt, ...);
 void get_defconfig_path(char *out, size_t bufsize, char *argv0);
-extern json_t *json_rpc_call(CURL *curl, const char *url, const char *userpass,
-	const char *rpc_req, bool, bool, int *);
 extern void cbin2hex(char *out, const char *in, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);
 extern bool hex2bin(unsigned char *p, const char *hexstr, size_t len);
@@ -567,7 +575,6 @@ struct stratum_ctx {
 	curl_socket_t sock;
 	size_t sockbuf_size;
 	char *sockbuf;
-	pthread_mutex_t sock_lock;
 
 	double next_diff;
 
@@ -576,11 +583,10 @@ struct stratum_ctx {
 	unsigned char *xnonce1;
 	size_t xnonce2_size;
 	struct stratum_job job;
-	pthread_mutex_t work_lock;
 
 	struct timeval tv_submit;
 	uint32_t answer_msec;
-	uint32_t disconnects;
+	int pooln;
 	time_t tm_connected;
 
 	int srvtime_diff;
@@ -602,10 +608,67 @@ struct work {
 
 	double difficulty;
 	uint32_t height;
+	uint8_t  pooln;
 
 	uint32_t scanned_from;
 	uint32_t scanned_to;
 };
+
+#define MAX_POOLS 8
+struct pool_infos {
+	uint8_t id;
+#define POOL_UNUSED   0
+#define POOL_GETWORK  1
+#define POOL_STRATUM  2
+#define POOL_LONGPOLL 4
+	uint8_t type;
+#define POOL_ST_DEFINED 1
+#define POOL_ST_VALID 2
+#define POOL_ST_DISABLED 4
+#define POOL_ST_REMOVED 8
+	uint16_t status;
+	char name[64];
+	// credentials
+	char url[256];
+	char short_url[64];
+	char user[64];
+	char pass[64];
+	// config options
+	double max_diff;
+	double max_rate;
+	int time_limit;
+	int scantime;
+	// connection
+	struct stratum_ctx stratum;
+	uint8_t allow_gbt;
+	uint8_t allow_mininginfo;
+	uint16_t check_dups; // 16_t for align
+	int retries;
+	int fail_pause;
+	int timeout;
+	// stats
+	uint32_t work_time;
+	uint32_t wait_time;
+	uint32_t accepted_count;
+	uint32_t rejected_count;
+	uint32_t disconnects;
+};
+
+extern struct pool_infos pools[MAX_POOLS];
+extern int num_pools;
+extern volatile int cur_pooln;
+
+int pool_get_first_valid(int startfrom);
+void pool_set_creds(int pooln);
+void pool_set_attr(int pooln, const char* key, char* arg);
+bool pool_switch_url(char *params);
+bool pool_switch(int pooln);
+bool pool_switch_next(void);
+
+json_t * json_rpc_call_pool(CURL *curl, struct pool_infos*,
+	const char *req, bool lp_scan, bool lp, int *err);
+json_t * json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos*,
+	const char *req, int *err);
 
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
 bool stratum_send_line(struct stratum_ctx *sctx, char *s);
@@ -615,6 +678,7 @@ void stratum_disconnect(struct stratum_ctx *sctx);
 bool stratum_subscribe(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
+void stratum_free_job(struct stratum_ctx *sctx);
 
 void hashlog_remember_submit(struct work* work, uint32_t nonce);
 void hashlog_remember_scan_range(struct work* work);
