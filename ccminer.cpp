@@ -256,8 +256,8 @@ uint64_t net_blocks = 0;
 // conditional mining
 uint8_t conditional_state[MAX_GPUS] = { 0 };
 double opt_max_temp = 0.0;
-double opt_max_diff = 0.0;
-double opt_max_rate = 0.0;
+double opt_max_diff = -1.;
+double opt_max_rate = -1.;
 
 int opt_statsavg = 30;
 // strdup on char* to allow a common free() if used
@@ -2447,8 +2447,11 @@ bool pool_switch(int pooln)
 
 	opt_scantime = p->scantime;
 
-	opt_max_diff = p->max_diff;
-	opt_max_rate = p->max_rate;
+	if (p->max_diff > -1.)
+		opt_max_diff = p->max_diff;
+	if (p->max_rate > -1.)
+		opt_max_rate = p->max_rate;
+
 	opt_time_limit = p->time_limit;
 
 	want_stratum = have_stratum = (p->type & POOL_STRATUM) != 0;
@@ -2591,7 +2594,7 @@ void parse_arg(int key, char *arg)
 	double d;
 
 	switch(key) {
-	case 'a':
+	case 'a': /* --algo */
 		p = strstr(arg, ":"); // optional factor
 		if (p) *p = '\0';
 		for (i = 0; i < ARRAY_SIZE(algo_names); i++) {
@@ -2599,6 +2602,15 @@ void parse_arg(int key, char *arg)
 				opt_algo = (enum sha_algos)i;
 				break;
 			}
+		}
+		if (i == ARRAY_SIZE(algo_names)) {
+			// some aliases...
+			if (!strcasecmp("diamond", arg))
+				i = opt_algo = ALGO_DMD_GR;
+			else if (!strcasecmp("ziftr", arg))
+				i = opt_algo = ALGO_ZR5;
+			else
+				applog(LOG_ERR, "Unknown algo parameter '%s'", arg);
 		}
 		if (i == ARRAY_SIZE(algo_names))
 			show_usage_and_exit(1);
