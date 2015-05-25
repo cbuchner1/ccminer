@@ -465,7 +465,7 @@ struct opt_config_array {
 };
 
 struct work _ALIGN(64) g_work;
-time_t g_work_time;
+volatile time_t g_work_time;
 pthread_mutex_t g_work_lock;
 
 
@@ -759,6 +759,7 @@ static int share_result(int result, int pooln, const char *reason)
 		if (!check_dups && strncasecmp(reason, "duplicate", 9) == 0) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
+			g_work_time = 0;
 		}
 	}
 	return 1;
@@ -1303,14 +1304,14 @@ err_out:
 	return false;
 }
 
-static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
+static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
 	uchar merkle_root[64];
 	int i;
 
 	if (!sctx->job.job_id) {
 		// applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
-		return;
+		return false;
 	}
 
 	pthread_mutex_lock(&stratum_work_lock);
@@ -1425,6 +1426,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		default:
 			diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 	}
+	return true;
 }
 
 void restart_threads(void)
@@ -1567,7 +1569,8 @@ static void *miner_thread(void *userdata)
 			if (nonceptr[0] >= end_nonce || extrajob) {
 				work_done = false;
 				extrajob = false;
-				stratum_gen_work(&stratum, &g_work);
+				if (stratum_gen_work(&stratum, &g_work))
+					g_work_time = time(NULL);
 			}
 		} else {
 			pthread_mutex_lock(&g_work_lock);
@@ -1596,11 +1599,6 @@ static void *miner_thread(void *userdata)
 			work.difficulty = g_work.difficulty;
 			work.height = g_work.height;
 			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
-			/* on new target, ignoring nonce, clear sent data (hashlog) */
-			if (memcmp(work.target, g_work.target, sizeof(work.target))) {
-				if (check_dups)
-					hashlog_purge_job(work.job_id);
-			}
 		}
 
 		if (opt_algo == ALGO_ZR5) {
@@ -2284,8 +2282,8 @@ wait_stratum_url:
 		if (stratum.job.job_id &&
 		    (!g_work_time || strncmp(stratum.job.job_id, g_work.job_id + 8, 120))) {
 			pthread_mutex_lock(&g_work_lock);
-			stratum_gen_work(&stratum, &g_work);
-			g_work_time = time(NULL);
+			if (stratum_gen_work(&stratum, &g_work))
+				g_work_time = time(NULL);
 			if (stratum.job.clean) {
 				if (!opt_quiet) {
 					if (net_diff > 0.)
