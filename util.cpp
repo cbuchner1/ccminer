@@ -590,7 +590,7 @@ json_t *json_rpc_call_pool(CURL *curl, struct pool_infos *pool, const char *req,
 	return json_rpc_call(curl, pool->url, userpass, req, longpoll_scan, false, false, curl_err);
 }
 
-/* called only from longpoll thread */
+/* called only from longpoll thread, we have the lp_url */
 json_t *json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos *pool, const char *req, int *curl_err)
 {
 	char userpass[256];
@@ -600,7 +600,7 @@ json_t *json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos *pool, con
 	// on pool rotate by time-limit, this keepalive can be a problem
 	bool keepalive = pool->time_limit == 0 || pool->time_limit > opt_timeout*4;
 
-	return json_rpc_call(curl, lp_url, userpass, req, want_longpoll, have_longpoll, keepalive, curl_err);
+	return json_rpc_call(curl, lp_url, userpass, req, false, true, keepalive, curl_err);
 }
 
 /**
