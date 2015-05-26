@@ -215,7 +215,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  May 21th 2015   v1.6.4
+  May 26th 2015   v1.6.4
                   Implement multi-pool support (failover and time rotate)
                     try "ccminer -c pools.conf" to test the sample config
                   Update the API to allow remote pool switching and pool stats
