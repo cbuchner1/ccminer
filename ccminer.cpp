@@ -1213,15 +1213,11 @@ static void *workio_thread(void *userdata)
 			break;
 		}
 
-		if (!ok && pool_is_switching) {
-			if (opt_debug_threads)
-				applog(LOG_DEBUG, "%s died during switch, recovering", __func__);
-			ok = true;
-		}
-		if (!ok && num_pools > 1) {
+		if (!ok && num_pools > 1 && opt_pool_failover) {
 			if (opt_debug_threads)
 				applog(LOG_DEBUG, "%s died, failover", __func__);
-			ok = true;
+			ok = pool_switch_next();
+			tq_push(wc->thr->q, NULL); // get_work() will return false
 		}
 
 		workio_cmd_free(wc);
@@ -1481,6 +1477,7 @@ static bool wanna_mine(int thr_id)
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
+	int switchn = pool_switch_count;
 	int thr_id = mythr->id;
 	struct work work;
 	uint32_t max_nonce;
@@ -1581,8 +1578,13 @@ static void *miner_thread(void *userdata)
 				/* obtain new work from internal workio thread */
 				if (unlikely(!get_work(mythr, &g_work))) {
 					pthread_mutex_unlock(&g_work_lock);
-					applog(LOG_ERR, "work retrieval failed, exiting mining thread %d", mythr->id);
-					goto out;
+					if (switchn != pool_switch_count) {
+						switchn = pool_switch_count;
+						continue;
+					} else {
+						applog(LOG_ERR, "work retrieval failed, exiting mining thread %d", mythr->id);
+						goto out;
+					}
 				}
 				g_work_time = time(NULL);
 			}
@@ -2435,7 +2437,7 @@ bool pool_switch(int pooln)
 	prev->allow_gbt = allow_gbt;
 	prev->check_dups = check_dups;
 
-	pthread_mutex_lock(&g_work_lock);
+	pthread_mutex_lock(&stratum_work_lock);
 
 	free(rpc_user); rpc_user = strdup(p->user);
 	free(rpc_pass); rpc_pass = strdup(p->pass);
@@ -2454,7 +2456,7 @@ bool pool_switch(int pooln)
 
 	want_stratum = have_stratum = (p->type & POOL_STRATUM) != 0;
 
-	pthread_mutex_unlock(&g_work_lock);
+	pthread_mutex_unlock(&stratum_work_lock);
 
 	if (prevn != cur_pooln) {
 
@@ -2490,11 +2492,11 @@ bool pool_switch(int pooln)
 		// will unlock the longpoll thread on /LP url receive
 		want_longpoll = (p->type & POOL_LONGPOLL) || !(p->type & POOL_STRATUM);
 		if (want_longpoll) {
-			pthread_mutex_lock(&g_work_lock);
+			pthread_mutex_lock(&stratum_work_lock);
 			// will issue a lp_url request to unlock the longpoll thread
 			have_longpoll = false;
 			get_work(&thr_info[0], &g_work);
-			pthread_mutex_unlock(&g_work_lock);
+			pthread_mutex_unlock(&stratum_work_lock);
 		}
 
 	}
