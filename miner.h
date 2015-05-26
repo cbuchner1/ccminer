@@ -632,7 +632,7 @@ struct pool_infos {
 	char url[256];
 	char short_url[64];
 	char user[64];
-	char pass[64];
+	char pass[128];
 	// config options
 	double max_diff;
 	double max_rate;
