@@ -196,6 +196,8 @@ char * device_name[MAX_GPUS];
 short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
+uint32_t device_gpu_clocks[MAX_GPUS] = { 0 };
+uint32_t device_mem_clocks[MAX_GPUS] = { 0 };
 
 // un-linked to cmdline scrypt options (useless)
 int device_batchsize[MAX_GPUS] = { 0 };
@@ -352,6 +354,11 @@ Options:\n\
       --max-temp=N      Only mine if gpu temp is less than specified value\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n"
+#if defined(USE_WRAPNVML) && defined(__linux)
+"\
+      --gpu-clock=1150  Set device application clock\n\
+      --mem-clock=3505  Set the gpu memory clock (require 346.72 linux driver)\n"
+#endif
 #ifdef HAVE_SYSLOG_H
 "\
   -S, --syslog          use system log for output messages\n\
@@ -412,6 +419,8 @@ static struct option const options[] = {
 	{ "retry-pause", 1, NULL, 'R' },
 	{ "scantime", 1, NULL, 's' },
 	{ "statsavg", 1, NULL, 'N' },
+	{ "gpu-clock", 1, NULL, 1070 },
+	{ "mem-clock", 1, NULL, 1071 },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
 	{ "syslog-prefix", 1, NULL, 1018 },
@@ -2895,6 +2904,30 @@ void parse_arg(int key, char *arg)
 				device_interactive[n++] = last;
 		}
 		break;
+	case 1070: /* --gpu-clock */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0, last = atoi(arg);
+			while (pch != NULL) {
+				device_gpu_clocks[n++] = last = atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+			//while (n < MAX_GPUS)
+			//	device_gpu_clocks[n++] = last;
+		}
+		break;
+	case 1071: /* --mem-clock */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0, last = atoi(arg);
+			while (pch != NULL) {
+				device_mem_clocks[n++] = last = atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+			//while (n < MAX_GPUS)
+			//	device_gpu_clocks[n++] = last;
+		}
+		break;
 	case 1005:
 		opt_benchmark = true;
 		want_longpoll = false;
@@ -3448,8 +3481,12 @@ int main(int argc, char *argv[])
 #ifndef WIN32
 	/* nvml is currently not the best choice on Windows (only in x64) */
 	hnvml = nvml_create();
-	if (hnvml)
+	if (hnvml) {
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
+		for (int n=0; n < opt_n_threads; n++) {
+			nvml_set_clocks(hnvml, device_map[n]);
+		}
+	}
 #else
 	if (nvapi_init() == 0)
 		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");

@@ -33,6 +33,11 @@ extern char driver_version[32];
 
 static uint32_t device_bus_ids[MAX_GPUS] = { 0 };
 
+extern uint32_t device_gpu_clocks[MAX_GPUS];
+extern uint32_t device_mem_clocks[MAX_GPUS];
+
+uint8_t gpu_clocks_changed[MAX_GPUS] = { 0 };
+
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
  */
@@ -218,21 +223,6 @@ nvml_handle * nvml_create()
 		if (nvmlh->nvmlDeviceGetAPIRestriction) {
 			nvmlh->nvmlDeviceGetAPIRestriction(nvmlh->devs[i], NVML_RESTRICTED_API_SET_APPLICATION_CLOCKS,
 				&nvmlh->app_clocks[i]);
-			if (nvmlh->app_clocks[i] == NVML_FEATURE_ENABLED && opt_debug) {
-				applog(LOG_DEBUG, "NVML application clock feature is allowed");
-#if 0
-				uint32_t mem;
-				nvmlReturn_t rc;
-				rc = nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[i], NVML_CLOCK_MEM, &mem);
-				if (rc == NVML_SUCCESS)
-					applog(LOG_DEBUG, "nvmlDeviceGetDefaultApplicationsClock: mem %u", mem);
-				else
-					applog(LOG_DEBUG, "nvmlDeviceGetDefaultApplicationsClock: %s", nvmlh->nvmlErrorString(rc));
-				rc = nvmlh->nvmlDeviceSetApplicationsClocks(nvmlh->devs[i], mem, 1228000);
-				if (rc != NVML_SUCCESS)
-					applog(LOG_DEBUG, "nvmlDeviceSetApplicationsClocks: %s", nvmlh->nvmlErrorString(rc));
-#endif
-			}
 		}
 	}
 
@@ -251,7 +241,7 @@ nvml_handle * nvml_create()
 				    (nvmlh->nvml_pci_bus_id[j]    == (uint32_t) props.pciBusID) &&
 				    (nvmlh->nvml_pci_device_id[j] == (uint32_t) props.pciDeviceID)) {
 					if (opt_debug)
-						applog(LOG_DEBUG, "CUDA GPU#%d matches NVML GPU %d by busId %u",
+						applog(LOG_DEBUG, "CUDA GPU %d matches NVML GPU %d by busId %u",
 							i, j, (uint32_t) props.pciBusID);
 					nvmlh->nvml_cuda_device_id[j] = i;
 					nvmlh->cuda_nvml_device_id[i] = j;
@@ -261,6 +251,56 @@ nvml_handle * nvml_create()
 	}
 
 	return nvmlh;
+}
+
+/* apply config clocks to an used device */
+int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
+{
+	nvmlReturn_t rc;
+	uint32_t gpu_clk = 0, mem_clk = 0;
+	int n = nvmlh->cuda_nvml_device_id[dev_id];
+	if (n < 0 || n >= nvmlh->nvml_gpucount)
+		return -1;
+
+	// prevent double operations on the same gpu... to enhance
+	if (gpu_clocks_changed[dev_id])
+		return 0;
+
+	int c = nvmlh->nvml_cuda_device_id[n];
+	if (!device_gpu_clocks[c] && !device_mem_clocks[c])
+		return 0; // nothing to do
+
+	// applog(LOG_DEBUG, "device %d cuda %d nvml %d", dev_id, c, n);
+	if (nvmlh->app_clocks[n] != NVML_FEATURE_ENABLED) {
+		applog(LOG_WARNING, "GPU #%d: NVML application clock feature is not allowed!", c);
+		return -1;
+	}
+
+	if (opt_debug)
+		applog(LOG_DEBUG, "GPU #%d: NVML application clock feature is allowed", c);
+
+	nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_MEM, &mem_clk);
+	rc = nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_GRAPHICS, &gpu_clk);
+	if (rc != NVML_SUCCESS)
+		return -1;
+
+	if (opt_debug)
+		applog(LOG_DEBUG, "GPU #%d: default clocks are %u/%u", c, mem_clk, gpu_clk);
+
+	// get application config values
+	if (device_mem_clocks[c]) mem_clk = device_mem_clocks[c];
+	if (device_gpu_clocks[c]) gpu_clk = device_gpu_clocks[c];
+
+	rc = nvmlh->nvmlDeviceSetApplicationsClocks(nvmlh->devs[n], mem_clk, gpu_clk);
+	if (rc == NVML_SUCCESS)
+		applog(LOG_INFO, "GPU #%d: application clocks set to %u/%u", c, mem_clk, gpu_clk);
+	else {
+		applog(LOG_ERR, "GPU #%d: %u/%u - %s", c, mem_clk, gpu_clk, nvmlh->nvmlErrorString(rc));
+		return -1;
+	}
+
+	gpu_clocks_changed[dev_id] = 1;
+	return 0;
 }
 
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount)

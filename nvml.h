@@ -156,6 +156,8 @@ int nvml_get_power_usage(nvml_handle *nvmlh,
                               int gpuindex,
                               unsigned int *milliwatts);
 
+int nvml_set_clocks(nvml_handle *nvmlh, int dev_id);
+
 /* api functions */
 
 unsigned int gpu_fanpercent(struct cgpu_info *gpu);
