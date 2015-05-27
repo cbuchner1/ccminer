@@ -94,6 +94,8 @@ typedef struct {
 	nvmlReturn_t (*nvmlDeviceGetDefaultApplicationsClock)(nvmlDevice_t, nvmlClockType_t, unsigned int *);
 	nvmlReturn_t (*nvmlDeviceGetApplicationsClock)(nvmlDevice_t, nvmlClockType_t, unsigned int *);
 	nvmlReturn_t (*nvmlDeviceSetApplicationsClocks)(nvmlDevice_t, unsigned int, unsigned int);
+	nvmlReturn_t (*nvmlDeviceResetApplicationsClocks)(nvmlDevice_t);
+	nvmlReturn_t (*nvmlDeviceGetSupportedGraphicsClocks)(nvmlDevice_t, uint32_t mem, uint32_t *num, uint32_t *arr);
 	nvmlReturn_t (*nvmlDeviceGetClockInfo)(nvmlDevice_t, nvmlClockType_t, unsigned int *);
 	nvmlReturn_t (*nvmlDeviceGetPciInfo)(nvmlDevice_t, nvmlPciInfo_t *);
 	nvmlReturn_t (*nvmlDeviceGetName)(nvmlDevice_t, char *, int);
