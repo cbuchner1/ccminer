@@ -157,6 +157,7 @@ int nvml_get_power_usage(nvml_handle *nvmlh,
                               unsigned int *milliwatts);
 
 int nvml_set_clocks(nvml_handle *nvmlh, int dev_id);
+int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id);
 
 /* api functions */
 

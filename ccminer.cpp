@@ -555,8 +555,12 @@ void proper_exit(int reason)
 	timeEndPeriod(1); // else never executed
 #endif
 #ifdef USE_WRAPNVML
-	if (hnvml)
+	if (hnvml) {
+		for (int n=0; n < opt_n_threads; n++) {
+			nvml_reset_clocks(hnvml, device_map[n]);
+		}
 		nvml_destroy(hnvml);
+	}
 #endif
 	free(opt_syslog_pfx);
 	free(opt_api_allow);

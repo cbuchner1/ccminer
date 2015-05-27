@@ -276,13 +276,12 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 		return -1;
 	}
 
-	if (opt_debug)
-		applog(LOG_DEBUG, "GPU #%d: NVML application clock feature is allowed", c);
-
 	nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_MEM, &mem_clk);
 	rc = nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_GRAPHICS, &gpu_clk);
-	if (rc != NVML_SUCCESS)
+	if (rc != NVML_SUCCESS) {
+		applog(LOG_WARNING, "GPU #%d: unable to query application clocks", c);
 		return -1;
+	}
 
 	if (opt_debug)
 		applog(LOG_DEBUG, "GPU #%d: default clocks are %u/%u", c, mem_clk, gpu_clk);
@@ -301,6 +300,37 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 
 	gpu_clocks_changed[dev_id] = 1;
 	return 0;
+}
+
+/* reset default app clocks to an used device */
+int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
+{
+	nvmlReturn_t rc;
+	uint32_t gpu_clk = 0, mem_clk = 0;
+	int n = nvmlh->cuda_nvml_device_id[dev_id];
+	if (n < 0 || n >= nvmlh->nvml_gpucount)
+		return -1;
+
+	if (!gpu_clocks_changed[dev_id])
+		return 0; // nothing to do
+
+	int c = nvmlh->nvml_cuda_device_id[n];
+	nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_MEM, &mem_clk);
+	rc = nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_GRAPHICS, &gpu_clk);
+	if (rc != NVML_SUCCESS) {
+		applog(LOG_WARNING, "GPU #%d: unable to query application clocks", c);
+		return -1;
+	}
+
+	rc = nvmlh->nvmlDeviceSetApplicationsClocks(nvmlh->devs[n], mem_clk, gpu_clk);
+	if (rc == NVML_SUCCESS)
+		applog(LOG_INFO, "GPU #%d: application clocks reset to %u/%u", c, mem_clk, gpu_clk);
+	else {
+		applog(LOG_ERR, "GPU #%d: %u/%u - %s", c, mem_clk, gpu_clk, nvmlh->nvmlErrorString(rc));
+		return -1;
+	}
+
+	gpu_clocks_changed[dev_id] = 0;
 }
 
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount)
