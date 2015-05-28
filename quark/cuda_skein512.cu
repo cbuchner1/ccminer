@@ -880,7 +880,7 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 	int dev_id = device_map[thr_id];
 
 	// uint2 uint64 variants for SM 3.2+
-	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
+	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300 && CUDA_VERSION < 7000)
 		quark_skein512_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	else
 		quark_skein512_gpu_hash_64_sm3 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
