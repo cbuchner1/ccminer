@@ -137,6 +137,13 @@ nvml_handle * nvml_create()
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceResetApplicationsClocks");
 	nvmlh->nvmlDeviceGetSupportedGraphicsClocks = (nvmlReturn_t (*)(nvmlDevice_t, uint32_t mem, uint32_t *num, uint32_t *))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetSupportedGraphicsClocks");
+	nvmlh->nvmlDeviceGetSupportedMemoryClocks = (nvmlReturn_t (*)(nvmlDevice_t, unsigned int *count, unsigned int *clocksMHz))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetSupportedMemoryClocks");
+	/* NVML_ERROR_NOT_SUPPORTED
+	nvmlh->nvmlDeviceGetAutoBoostedClocksEnabled = (nvmlReturn_t (*)(nvmlDevice_t, nvmlEnableState_t *isEnabled, nvmlEnableState_t *defaultIsEnabled))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetAutoBoostedClocksEnabled");
+	nvmlh->nvmlDeviceSetAutoBoostedClocksEnabled = (nvmlReturn_t (*)(nvmlDevice_t, nvmlEnableState_t enabled))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceSetAutoBoostedClocksEnabled"); */
 	nvmlh->nvmlDeviceGetClockInfo = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, unsigned int *clock))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetClockInfo");
 	nvmlh->nvmlDeviceGetPciInfo = (nvmlReturn_t (*)(nvmlDevice_t, nvmlPciInfo_t *))
@@ -161,6 +168,14 @@ nvml_handle * nvml_create()
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlErrorString");
 	nvmlh->nvmlShutdown = (nvmlReturn_t (*)())
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlShutdown");
+
+/*
+	nvmlDeviceGetBrand(nvmlDevice_t device, nvmlBrandType_t *type)
+	nvmlDeviceGetMaxPcieLinkWidth(nvmlDevice_t device, unsigned int *maxLinkWidth)
+	nvmlDeviceGetMaxPcieLinkGeneration(nvmlDevice_t device, unsigned int *maxLinkGen)
+	nvmlDeviceGetCurrPcieLinkWidth(nvmlDevice_t device, unsigned int *currLinkWidth)
+	nvmlDeviceGetCurrPcieLinkGeneration(nvmlDevice_t device, unsigned int *currLinkGen)
+*/
 
 	if (nvmlh->nvmlInit == NULL ||
 			nvmlh->nvmlShutdown == NULL ||
@@ -293,11 +308,24 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	if (device_mem_clocks[dev_id]) mem_clk = device_mem_clocks[dev_id];
 	if (device_gpu_clocks[dev_id]) gpu_clk = device_gpu_clocks[dev_id];
 
-	uint32_t nclocks, clocks[128] = { 0 };
+	// these functions works for the 960 and the 970 (346.72+), not for the 750 Ti
+	uint32_t nclocks = 0, clocks[128] = { 0 };
+	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, NULL);
+	nclocks = min(nclocks, 128);
+	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
+	for (uint8_t u=0; u < nclocks; u++) {
+		// ordered desc, so get first
+		if (clocks[u] <= mem_clk) {
+			mem_clk = clocks[u];
+			break;
+		}
+	}
+
+	nclocks = 0;
 	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, NULL);
 	nclocks = min(nclocks, 128);
 	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, clocks);
-	for (unsigned int u=0; u < nclocks; u++) {
+	for (uint8_t u=0; u < nclocks; u++) {
 		// ordered desc, so get first
 		if (clocks[u] <= gpu_clk) {
 			gpu_clk = clocks[u];

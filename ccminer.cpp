@@ -2911,25 +2911,23 @@ void parse_arg(int key, char *arg)
 	case 1070: /* --gpu-clock */
 		{
 			char *pch = strtok(arg,",");
-			int n = 0, last = atoi(arg);
-			while (pch != NULL) {
-				device_gpu_clocks[n++] = last = atoi(pch);
+			int n = 0;
+			while (pch != NULL && n < MAX_GPUS) {
+				int dev_id = device_map[n++];
+				device_gpu_clocks[dev_id] = atoi(pch);
 				pch = strtok(NULL, ",");
 			}
-			//while (n < MAX_GPUS)
-			//	device_gpu_clocks[n++] = last;
 		}
 		break;
 	case 1071: /* --mem-clock */
 		{
 			char *pch = strtok(arg,",");
-			int n = 0, last = atoi(arg);
-			while (pch != NULL) {
-				device_mem_clocks[n++] = last = atoi(pch);
+			int n = 0;
+			while (pch != NULL && n < MAX_GPUS) {
+				int dev_id = device_map[n++];
+				device_mem_clocks[dev_id] = atoi(pch);
 				pch = strtok(NULL, ",");
 			}
-			//while (n < MAX_GPUS)
-			//	device_gpu_clocks[n++] = last;
 		}
 		break;
 	case 1005:
