@@ -58,6 +58,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 // from cuda.cpp
 int cuda_num_devices();
 void cuda_devicenames();
+void cuda_reset_device(int thr_id, bool *init);
 void cuda_shutdown();
 int cuda_finddevice(char *name);
 void cuda_print_devices();
@@ -211,7 +212,6 @@ int device_lookup_gap[MAX_GPUS] = { 0 };
 int device_interactive[MAX_GPUS] = { 0 };
 int opt_nfactor = 0;
 bool opt_autotune = true;
-bool abort_flag = false;
 char *jane_params = NULL;
 
 // pools (failover/getwork infos)
@@ -243,6 +243,7 @@ int longpoll_thr_id = -1;
 int stratum_thr_id = -1;
 int api_thr_id = -1;
 bool stratum_need_reset = false;
+volatile bool abort_flag = false;
 struct work_restart *work_restart = NULL;
 static int app_exit_code = EXIT_CODE_OK;
 uint32_t zr5_pok = 0;
@@ -1947,7 +1948,7 @@ static void *miner_thread(void *userdata)
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 
-		if (rc && opt_debug)
+		if (rc > 0 && opt_debug)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[0], swab32(nonceptr[0])); // data[19]
 		if (rc > 1 && opt_debug)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[2], swab32(nonceptr[2])); // data[21]
@@ -1979,7 +1980,7 @@ static void *miner_thread(void *userdata)
 
 		if (rc > 1)
 			work.scanned_to = nonceptr[2];
-		else if (rc)
+		else if (rc > 0)
 			work.scanned_to = nonceptr[0];
 		else {
 			work.scanned_to = max_nonce;
@@ -1989,6 +1990,9 @@ static void *miner_thread(void *userdata)
 					nonceptr[0], (nonceptr[0] - start_nonce));
 			}
 		}
+
+		if (abort_flag)
+			break; // time to leave the mining loop...
 
 		if (check_dups)
 			hashlog_remember_scan_range(&work);
@@ -2023,7 +2027,7 @@ static void *miner_thread(void *userdata)
 			firstwork_time = time(NULL);
 
 		/* if nonce found, submit work */
-		if (rc && !opt_benchmark) {
+		if (rc > 0 && !opt_benchmark) {
 			if (!submit_work(mythr, &work))
 				break;
 
@@ -3486,7 +3490,8 @@ int main(int argc, char *argv[])
 	if (hnvml) {
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
 		for (int n=0; n < opt_n_threads; n++) {
-			nvml_set_clocks(hnvml, device_map[n]);
+			if (nvml_set_clocks(hnvml, device_map[n]) == 1)
+				cuda_reset_device(n, NULL);
 		}
 	}
 #else

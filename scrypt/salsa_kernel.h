@@ -23,7 +23,6 @@ extern char *device_name[MAX_GPUS];
 extern bool opt_autotune;
 extern int opt_nfactor;
 extern char *jane_params;
-extern bool abort_flag;
 extern int parallel;
 
 extern void get_currentalgo(char* buf, int sz);

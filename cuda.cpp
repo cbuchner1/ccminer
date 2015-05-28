@@ -1,6 +1,7 @@
 ﻿#include <stdio.h>
 #include <memory.h>
 #include <string.h>
+#include <unistd.h>
 #include <map>
 
 #ifndef _WIN32
@@ -60,6 +61,7 @@ void cuda_devicenames()
 		exit(1);
 	}
 
+	GPU_N = min(MAX_GPUS, GPU_N);
 	for (int i=0; i < GPU_N; i++)
 	{
 		cudaDeviceProp props;
@@ -177,13 +179,20 @@ int cuda_gpu_clocks(struct cgpu_info *gpu)
 void cuda_reset_device(int thr_id, bool *init)
 {
 	int dev_id = device_map[thr_id];
-	for (int i=0; i < MAX_GPUS; i++) {
-		if (device_map[i] == dev_id) {
-			init[i] = false;
+	cudaSetDevice(dev_id);
+	if (init != NULL) {
+		// with init array, its meant to be used in algo's scan code...
+		for (int i=0; i < MAX_GPUS; i++) {
+			if (device_map[i] == dev_id) {
+				init[i] = false;
+			}
 		}
+		// force exit from algo's scan loops/function
+		restart_threads();
+		cudaDeviceSynchronize();
+		while (cudaStreamQuery(NULL) == cudaErrorNotReady)
+			usleep(1000);
 	}
-	restart_threads();
-	cudaDeviceSynchronize();
 	cudaDeviceReset();
 }
 

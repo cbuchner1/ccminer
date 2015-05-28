@@ -342,7 +342,7 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	}
 
 	gpu_clocks_changed[dev_id] = 1;
-	return 0;
+	return 1;
 }
 
 /* reset default app clocks to an used device */
