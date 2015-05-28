@@ -2274,7 +2274,7 @@ wait_stratum_url:
 			{
 				stratum_disconnect(&stratum);
 				if (opt_retries >= 0 && ++failures > opt_retries) {
-					if (opt_pool_failover) {
+					if (num_pools > 1 && opt_pool_failover) {
 						applog(LOG_WARNING, "Stratum connect timeout, failover...");
 						pool_switch_next();
 					} else {
