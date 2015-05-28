@@ -246,7 +246,7 @@ static void gpuhwinfos(int gpu_id)
 	cgpu->gpu_temp = gpu_temp(cgpu);
 	cgpu->gpu_fan = (uint16_t) gpu_fanpercent(cgpu);
 	cgpu->gpu_fan_rpm = (uint16_t) gpu_fanrpm(cgpu);
-	cgpu->gpu_pstate = gpu_pstate(cgpu);
+	cgpu->gpu_pstate = (int16_t) gpu_pstate(cgpu);
 	gpu_info(cgpu);
 #endif
 
@@ -254,7 +254,7 @@ static void gpuhwinfos(int gpu_id)
 
 	memset(pstate, 0, sizeof(pstate));
 	if (cgpu->gpu_pstate != -1)
-		snprintf(pstate, sizeof(pstate), "P%hu", cgpu->gpu_pstate);
+		snprintf(pstate, sizeof(pstate), "P%d", (int) cgpu->gpu_pstate);
 
 	card = device_name[gpu_id];
 
