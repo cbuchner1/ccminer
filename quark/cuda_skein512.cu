@@ -418,13 +418,19 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		h7 = vectorize(0xAE18A40B660FCC33ull);
 
 		uint2 p[8];
-		// 1. Runde -> etype = 480, ptr = 64, bcount = 0, data = msg
+		// 1st Round -> etype = 480, ptr = 64, bcount = 0, data = msg
 		#pragma unroll 8
 		for (int i = 0; i < 8; i++)
 			p[i] = vectorize(inpHash[i]);
 
 		t0 = vectorize(64); // ptr
-		t1 = vectorize(480ull << 55); // etype
+		// t1 = vectorize(480ull << 55); // etype
+		t1 = vectorize(0xf000000000000000ULL);
+
+//#if CUDA_VERSION >= 7000
+		// doesnt really affect x11 perfs.
+		__threadfence();
+//#endif
 		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 		TFBIG_4e_UI2(0);
 		TFBIG_4o_UI2(1);
@@ -458,10 +464,12 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		// 2. Runde -> etype = 510, ptr = 8, bcount = 0, data = 0
 		#pragma unroll 8
 		for(int i=0; i<8; i++)
-			p[i] = vectorize(0ull);
+			p[i] = vectorize(0);
 
 		t0 = vectorize(8); // ptr
-		t1 = vectorize(510ull << 55); // etype
+		//t1 = vectorize(510ull << 55); // etype
+		t1 = vectorize(0xff00000000000000ULL);
+
 		TFBIG_KINIT_UI2(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 		TFBIG_4e_UI2(0);
 		TFBIG_4o_UI2(1);
@@ -523,7 +531,9 @@ void quark_skein512_gpu_hash_64_sm3(uint32_t threads, uint32_t startNounce, uint
 			p[i] = inpHash[i];
 
 		t0 = 64; // ptr
-		t1 = 480ull << 55; // etype
+		// t1 = 480ull << 55; // etype
+		t1 = 0xf000000000000000ULL;
+
 		TFBIG_KINIT(h0, h1, h2, h3, h4, h5, h6, h7, h8, t0, t1, t2);
 		TFBIG_4e(0);
 		TFBIG_4o(1);
@@ -880,7 +890,7 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 	int dev_id = device_map[thr_id];
 
 	// uint2 uint64 variants for SM 3.2+
-	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300 && CUDA_VERSION < 7000)
+	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
 		quark_skein512_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	else
 		quark_skein512_gpu_hash_64_sm3 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
