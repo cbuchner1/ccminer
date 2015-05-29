@@ -363,6 +363,7 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 		return -1;
 	}
 	gpu_clocks_changed[dev_id] = 0;
+	return 1;
 }
 
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount)
