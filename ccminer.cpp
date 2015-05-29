@@ -177,7 +177,7 @@ static bool opt_background = false;
 bool opt_quiet = false;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
-static int opt_time_limit = 0;
+static int opt_time_limit = -1;
 static time_t firstwork_time = 0;
 int opt_timeout = 60; // curl
 static int opt_scantime = 10;
@@ -1677,11 +1677,11 @@ static void *miner_thread(void *userdata)
 			max64 = max(1, scan_time + g_work_time - time(NULL));
 
 		/* time limit */
-		if (opt_time_limit && firstwork_time) {
+		if (opt_time_limit > 0 && firstwork_time) {
 			int passed = (int)(time(NULL) - firstwork_time);
 			int remain = (int)(opt_time_limit - passed);
 			if (remain < 0)  {
-				if (num_pools > 1 && pools[cur_pooln].time_limit) {
+				if (num_pools > 1 && pools[cur_pooln].time_limit > 0) {
 					if (!pool_is_switching) {
 						if (!opt_quiet)
 							applog(LOG_INFO, "Pool mining timeout of %ds reached, rotate...", opt_time_limit);
@@ -2366,21 +2366,27 @@ void pool_set_creds(int pooln)
 {
 	struct pool_infos *p = &pools[pooln];
 
-	p->id = pooln;
-	// default flags not 0
-	p->allow_mininginfo = allow_mininginfo;
-	p->allow_gbt = allow_gbt;
-	p->check_dups = check_dups;
-
 	snprintf(p->url, sizeof(p->url), "%s", rpc_url);
 	snprintf(p->short_url, sizeof(p->short_url), "%s", short_url);
 	snprintf(p->user, sizeof(p->user), "%s", rpc_user);
 	snprintf(p->pass, sizeof(p->pass), "%s", rpc_pass);
 
-	// init pools options with cmdline ones (if set before -c)
-	p->max_diff = opt_max_diff;
-	p->max_rate = opt_max_rate;
-	p->scantime = opt_scantime;
+	if (!(p->status & POOL_ST_DEFINED)) {
+		p->id = pooln;
+		p->status |= POOL_ST_DEFINED;
+		// init pool options as "unset"
+		// until cmdline is not fully parsed...
+		p->max_diff = -1.;
+		p->max_rate = -1.;
+		p->scantime = -1;
+		p->time_limit = -1;
+
+		p->allow_mininginfo = allow_mininginfo;
+		p->allow_gbt = allow_gbt;
+		p->check_dups = check_dups;
+
+		p->status |= POOL_ST_DEFINED;
+	}
 
 	if (strlen(rpc_url)) {
 		if (!strncasecmp(rpc_url, "stratum", 7))
@@ -2389,7 +2395,19 @@ void pool_set_creds(int pooln)
 			p->type = POOL_GETWORK; // todo: or longpoll
 		p->status |= POOL_ST_VALID;
 	}
-	p->status |= POOL_ST_DEFINED;
+}
+
+// fill the unset pools options with cmdline ones
+void pool_init_defaults()
+{
+	struct pool_infos *p;
+	for (int i=0; i<num_pools; i++) {
+		p = &pools[i];
+		if (p->max_diff <= -1.) p->max_diff = opt_max_diff;
+		if (p->max_rate <= -1.) p->max_rate = opt_max_rate;
+		if (p->scantime == -1) p->scantime = opt_scantime;
+		if (p->time_limit == -1) p->time_limit = opt_time_limit;
+	}
 }
 
 // attributes only set by a json pools config
@@ -2463,12 +2481,8 @@ bool pool_switch(int pooln)
 	short_url = p->short_url; // just a pointer, no alloc
 
 	opt_scantime = p->scantime;
-
-	if (p->max_diff > -1.)
-		opt_max_diff = p->max_diff;
-	if (p->max_rate > -1.)
-		opt_max_rate = p->max_rate;
-
+	opt_max_diff = p->max_diff;
+	opt_max_rate = p->max_rate;
 	opt_time_limit = p->time_limit;
 
 	want_stratum = have_stratum = (p->type & POOL_STRATUM) != 0;
@@ -3334,9 +3348,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!opt_benchmark && !strlen(rpc_url)) {
-		fprintf(stderr, "%s: no URL supplied\n", argv[0]);
-		show_usage_and_exit(1);
+	if (!strlen(rpc_url)) {
+		if (!opt_benchmark) {
+			fprintf(stderr, "%s: no URL supplied\n", argv[0]);
+			show_usage_and_exit(1);
+		}
+		// ensure a pool is set with default params...
+		pool_set_creds(0);
 	}
 
 	/* init stratum data.. */
@@ -3346,6 +3364,9 @@ int main(int argc, char *argv[])
 
 	pthread_mutex_init(&stats_lock, NULL);
 	pthread_mutex_init(&g_work_lock, NULL);
+
+	// ensure default params are set
+	pool_init_defaults();
 
 	if (opt_debug)
 		pool_dump_infos();
