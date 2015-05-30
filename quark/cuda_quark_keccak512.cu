@@ -101,8 +101,8 @@ void quark_keccak512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
-		uint64_t *inpHash = &g_hash[8 * hashPosition];
+		off_t hashPosition = nounce - startNounce;
+		uint64_t *inpHash = &g_hash[hashPosition * 8];
 		uint2 keccak_gpu_state[25];
 
 		for (int i = 0; i<8; i++) {
@@ -200,8 +200,8 @@ void quark_keccak512_gpu_hash_64_v30(uint32_t threads, uint32_t startNounce, uin
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
-		uint32_t *inpHash = (uint32_t*)&g_hash[8 * hashPosition];
+		off_t hashPosition = nounce - startNounce;
+		uint32_t *inpHash = (uint32_t*)&g_hash[hashPosition * 8];
 
 		uint32_t message[18];
 		#pragma unroll 16
@@ -224,7 +224,7 @@ void quark_keccak512_gpu_hash_64_v30(uint32_t threads, uint32_t startNounce, uin
 			U64TO32_LE((&hash[i/4]), keccak_gpu_state[i / 8]);
 		}
 
-		uint32_t *outpHash = (uint32_t*)&g_hash[8 * hashPosition];
+		uint32_t *outpHash = (uint32_t*)&g_hash[hashPosition * 8];
 		#pragma unroll 16
 		for(int i=0; i<16; i++)
 			outpHash[i] = hash[i];

@@ -229,7 +229,6 @@ static __device__ __forceinline__ void E8(uint32_t x[8][4])
 	}
 }
 
-// Die Hash-Funktion
 __global__ __launch_bounds__(256, 4)
 void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *const __restrict__ g_hash, const uint32_t *const __restrict__ g_nonceVector)
 {
@@ -237,8 +236,8 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *c
 	if (thread < threads)
 	{
 		const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-		const uint32_t hashPosition = nounce - startNounce;
-		uint32_t *const Hash = &g_hash[hashPosition * 16U];
+		uint32_t hashPosition = nounce - startNounce;
+		uint32_t *Hash = &g_hash[hashPosition * 16U];
 		uint32_t x[8][4] = {
 			{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
 			{ 0x8d5e228a, 0x0bef970c, 0x591234e9, 0x61c3b3f2 },

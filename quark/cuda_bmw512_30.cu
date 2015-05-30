@@ -151,8 +151,8 @@ void quark_bmw512_gpu_hash_64_30(uint32_t threads, uint32_t startNounce, uint64_
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
-		uint64_t *inpHash = &g_hash[8 * hashPosition];
+		uint32_t hashPosition = nounce - startNounce;
+		uint64_t *inpHash = &g_hash[hashPosition * 8];
 
 		// Init
 		uint64_t h[16];
@@ -205,7 +205,7 @@ void quark_bmw512_gpu_hash_64_30(uint32_t threads, uint32_t startNounce, uint64_
 
 		Compression512_30(h, message);
 
-		uint64_t *outpHash = &g_hash[8 * hashPosition];
+		uint64_t *outpHash = &g_hash[hashPosition * 8];
 
 		#pragma unroll 8
 		for(int i=0;i<8;i++)

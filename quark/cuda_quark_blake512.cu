@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <memory.h>
 
 #include "cuda_helper.h"
@@ -119,12 +119,8 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 #if USE_SHUFFLE
-	const int warpID = threadIdx.x & 0x0F; // 16 warps
-	const int warpBlockID = (thread + 15)>>4; // aufrunden auf volle Warp-Bl�cke
-	const int maxHashPosition = thread<<3;
-#endif
+	const uint32_t warpBlockID = (thread + 15)>>4; // aufrunden auf volle Warp-Blöcke
 
-#if USE_SHUFFLE
 	if (warpBlockID < ( (threads+15)>>4 ))
 #else
 	if (thread < threads)
@@ -132,7 +128,7 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 	{
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
+		off_t hashPosition = nounce - startNounce;
 		uint64_t *inpHash = &g_hash[hashPosition<<3]; // hashPosition * 8
 
 		// 128 Bytes

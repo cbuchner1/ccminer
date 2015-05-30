@@ -512,7 +512,7 @@ void quark_skein512_gpu_hash_64_sm3(uint32_t threads, uint32_t startNounce, uint
 
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
+		uint32_t hashPosition = nounce - startNounce;
 		uint64_t *inpHash = &g_hash[hashPosition * 8];
 
 		// Init

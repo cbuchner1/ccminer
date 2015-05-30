@@ -230,8 +230,8 @@ void quark_groestl512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32
 
 		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		int hashPosition = nounce - startNounce;
-		uint32_t *inpHash = &g_hash[16 * hashPosition];
+		off_t hashPosition = nounce - startNounce;
+		uint32_t *inpHash = &g_hash[hashPosition * 16];
 
 		#pragma unroll 16
 		for(int k=0; k<16; k++)
@@ -266,7 +266,7 @@ void quark_groestl512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32
 		for(int u=0;u<32;u++) state[u] ^= message[u];
 
 		// Erzeugten Hash rausschreiben
-		uint32_t *outpHash = &g_hash[16 * hashPosition];
+		uint32_t *outpHash = &g_hash[hashPosition * 16];
 
 		#pragma unroll 16
 		for(int k=0;k<16;k++) outpHash[k] = state[k+16];

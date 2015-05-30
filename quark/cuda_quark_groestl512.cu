@@ -28,19 +28,19 @@ void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, u
         uint32_t state[8];
 
         uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
-        int hashPosition = nounce - startNounce;
-        uint32_t *inpHash = &g_hash[hashPosition << 4];
+        off_t hashPosition = nounce - startNounce;
+        uint32_t *pHash = &g_hash[hashPosition << 4];
 
-        const uint16_t thr = threadIdx.x % THF;
+        const uint32_t thr = threadIdx.x % THF;
 
         #pragma unroll
-        for(int k=0;k<4;k++) message[k] = inpHash[(k * THF) + thr];
+        for(int k=0;k<4;k++) message[k] = pHash[thr + (k * THF)];
 
         #pragma unroll
         for(int k=4;k<8;k++) message[k] = 0;
 
-        if (thr == 0) message[4] = 0x80;
-        if (thr == 3) message[7] = 0x01000000;
+        if (thr == 0) message[4] = 0x80U;
+        if (thr == 3) message[7] = 0x01000000U;
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(message, msgBitsliced);
@@ -48,15 +48,13 @@ void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, u
         groestl512_progressMessage_quad(state, msgBitsliced);
 
         // Nur der erste von jeweils 4 Threads bekommt das Ergebns-Hash
-        uint32_t *outpHash = inpHash;
         uint32_t hash[16];
         from_bitslice_quad(state, hash);
-
 
         // uint4 = 4x4 uint32_t = 16 bytes
         if (thr == 0) {
             uint4 *phash = (uint4*) hash;
-            uint4 *outpt = (uint4*) outpHash; /* var kept for hash align */
+            uint4 *outpt = (uint4*) pHash;
             outpt[0] = phash[0];
             outpt[1] = phash[1];
             outpt[2] = phash[2];
@@ -85,7 +83,7 @@ __global__ void __launch_bounds__(TPB, THF)
 
         uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
 
-        int hashPosition = nounce - startNounce;
+        off_t hashPosition = nounce - startNounce;
         uint32_t * inpHash = &g_hash[hashPosition<<4];
         const uint16_t thr = threadIdx.x % THF;
 
