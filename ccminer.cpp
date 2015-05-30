@@ -1585,11 +1585,12 @@ static void *miner_thread(void *userdata)
 					g_work_time = time(NULL);
 			}
 		} else {
+			uint32_t secs = 0;
 			pthread_mutex_lock(&g_work_lock);
-			if ((time(NULL) - g_work_time) >= scan_time || nonceptr[0] >= (end_nonce - 0x100)) {
+			secs = (uint32_t) (time(NULL) - g_work_time);
+			if (secs >= scan_time || nonceptr[0] >= (end_nonce - 0x100)) {
 				if (opt_debug && g_work_time && !opt_quiet)
-					applog(LOG_DEBUG, "work time %u/%us nonce %x/%x", (time(NULL) - g_work_time),
-						scan_time, nonceptr[0], end_nonce);
+					applog(LOG_DEBUG, "work time %u/%us nonce %x/%x", secs, scan_time, nonceptr[0], end_nonce);
 				/* obtain new work from internal workio thread */
 				if (unlikely(!get_work(mythr, &g_work))) {
 					pthread_mutex_unlock(&g_work_lock);
@@ -1676,7 +1677,7 @@ static void *miner_thread(void *userdata)
 		if (have_stratum)
 			max64 = LP_SCANTIME;
 		else
-			max64 = max(1, scan_time + g_work_time - time(NULL));
+			max64 = max(1, (int64_t) scan_time + g_work_time - time(NULL));
 
 		/* time limit */
 		if (opt_time_limit > 0 && firstwork_time) {
@@ -3293,7 +3294,7 @@ int main(int argc, char *argv[])
 #else
 	printf("    Built with the nVidia CUDA Toolkit %d.%d\n\n",
 #endif
-		CUDART_VERSION/1000, (CUDART_VERSION%100)/10);
+		CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10);
 	printf("  Originally based on Christian Buchner and Christian H. project\n");
 	printf("  Include some of the work of djm34, sp, tsiv and klausT.\n\n");
 	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
