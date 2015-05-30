@@ -1614,7 +1614,7 @@ static void *miner_thread(void *userdata)
 			memcpy(work.target, g_work.target, sizeof(work.target));
 			work.difficulty = g_work.difficulty;
 			work.height = g_work.height;
-			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
+			//nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 		}
 
 		if (opt_algo == ALGO_ZR5) {
@@ -1640,8 +1640,13 @@ static void *miner_thread(void *userdata)
 		} else
 			nonceptr[0]++; //??
 
-		work_restart[thr_id].restart = 0;
 		pthread_mutex_unlock(&g_work_lock);
+
+		/* prevent gpu scans before a job is received */
+		if (have_stratum && work.data[0] == 0) {
+			sleep(1); pools[cur_pooln].wait_time += 1;
+			continue;
+		}
 
 		/* conditional mining */
 		if (!wanna_mine(thr_id)) {
@@ -1664,11 +1669,7 @@ static void *miner_thread(void *userdata)
 			continue;
 		}
 
-		/* prevent gpu scans before a job is received */
-		if (have_stratum && work.data[0] == 0) {
-			sleep(1); pools[cur_pooln].wait_time += 1;
-			continue;
-		}
+		work_restart[thr_id].restart = 0;
 
 		/* adjust max_nonce to meet target scan time */
 		if (have_stratum)
@@ -1945,6 +1946,12 @@ static void *miner_thread(void *userdata)
 			goto out;
 		}
 
+		if (abort_flag)
+			break; // time to leave the mining loop...
+
+		if (work_restart[thr_id].restart)
+			continue;
+
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 
@@ -1990,9 +1997,6 @@ static void *miner_thread(void *userdata)
 					nonceptr[0], (nonceptr[0] - start_nonce));
 			}
 		}
-
-		if (abort_flag)
-			break; // time to leave the mining loop...
 
 		if (check_dups)
 			hashlog_remember_scan_range(&work);
