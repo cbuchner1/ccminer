@@ -42,6 +42,7 @@
 #endif
 
 #include "miner.h"
+#include <cuda_runtime.h>
 
 #ifdef WIN32
 #include <Mmsystem.h>
@@ -3288,10 +3289,11 @@ int main(int argc, char *argv[])
 
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by tpruvot@github ***\n");
 #ifdef _MSC_VER
-	printf("    Built with VC++ 2013 and nVidia CUDA SDK 6.5\n\n");
+	printf("    Built with VC++ 2013 and nVidia CUDA SDK %d.%d\n\n",
 #else
-	printf("    Built with the nVidia CUDA SDK 6.5\n\n");
+	printf("    Built with the nVidia CUDA Toolkit %d.%d\n\n",
 #endif
+		CUDART_VERSION/1000, (CUDART_VERSION%100)/10);
 	printf("  Originally based on Christian Buchner and Christian H. project\n");
 	printf("  Include some of the work of djm34, sp, tsiv and klausT.\n\n");
 	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
