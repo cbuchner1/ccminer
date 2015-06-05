@@ -441,7 +441,8 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > max_nonce) {
+		if ((uint64_t) throughput + pdata[19] > max_nonce) {
+			//applog(LOG_DEBUG, "done... max=%u", max_nonce);
 			*hashes_done = pdata[19] - first_nonce;
 			pdata[19] = max_nonce;
 			break;
