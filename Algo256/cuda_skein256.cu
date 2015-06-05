@@ -20,20 +20,16 @@ static __constant__ uint2 vSKEIN_IV512_256[8] = {
 	{ 0x33EDFC13, 0x3EEDBA18 }
 };
 
-static __constant__ int ROT256[8][4] =
-{
-	46,36, 19, 37,
-	33,27, 14, 42,
-	17,49, 36, 39,
-	44, 9, 54, 56,
-	39,30, 34, 24,
-	13,50, 10, 17,
-	25,29, 39, 43,
-	8, 35, 56, 22,
+static __constant__ uint8_t ROT256[8][4] = {
+	46, 36, 19, 37,
+	33, 27, 14, 42,
+	17, 49, 36, 39,
+	44,  9, 54, 56,
+	39, 30, 34, 24,
+	13, 50, 10, 17,
+	25, 29, 39, 43,
+	8,  35, 56, 22,
 };
-
-static __constant__ uint2 skein_ks_parity = { 0xA9FC1A22,0x1BD11BDA};
-static __constant__ uint64_t skein_ks_parity64 = 0x1BD11BDAA9FC1A22ull;
 
 static __constant__ uint2 t12[6] = {
 	{ 0x20,	0 },
@@ -44,24 +40,18 @@ static __constant__ uint2 t12[6] = {
 	{ 0x08,	0xff000000 }
 };
 
-static __constant__ uint64_t t12_30[6] = {
-	0x20,
-	0xf000000000000000,
-	0xf000000000000020,
-	0x08,
-	0xff00000000000000,
-	0xff00000000000008
-};
+static __constant__ uint2 skein_ks_parity = { 0xA9FC1A22, 0x1BD11BDA };
+static __constant__ uint64_t skein_ks_parity64 = 0x1BD11BDAA9FC1A22ull;
+
 
 static __forceinline__ __device__
 void Round512v35(uint2 &p0, uint2 &p1, uint2 &p2, uint2 &p3, uint2 &p4, uint2 &p5, uint2 &p6, uint2 &p7, int ROT)
 {
-	p0 += p1; p1 = ROL2(p1, ROT256[ROT][0]);  p1 ^= p0;
-	p2 += p3; p3 = ROL2(p3, ROT256[ROT][1]);  p3 ^= p2;
-	p4 += p5; p5 = ROL2(p5, ROT256[ROT][2]);  p5 ^= p4;
-	p6 += p7; p7 = ROL2(p7, ROT256[ROT][3]);  p7 ^= p6;
+	p0 += p1; p1 = ROL2(p1, ROT256[ROT][0]) ^ p0;
+	p2 += p3; p3 = ROL2(p3, ROT256[ROT][1]) ^ p2;
+	p4 += p5; p5 = ROL2(p5, ROT256[ROT][2]) ^ p4;
+	p6 += p7; p7 = ROL2(p7, ROT256[ROT][3]) ^ p6;
 }
-
 
 static __forceinline__ __device__
 void Round_8_512v35(uint2 *ks, uint2 *ts,
@@ -72,39 +62,36 @@ void Round_8_512v35(uint2 *ks, uint2 *ts,
 	Round512v35(p2, p1, p4, p7, p6, p5, p0, p3, 1);
 	Round512v35(p4, p1, p6, p3, p0, p5, p2, p7, 2);
 	Round512v35(p6, p1, p0, p7, p2, p5, p4, p3, 3);
-	p0 += ks[((R)+0) % 9];   /* inject the key schedule value */
-	p1 += ks[((R)+1) % 9];
-	p2 += ks[((R)+2) % 9];
-	p3 += ks[((R)+3) % 9];
-	p4 += ks[((R)+4) % 9];
-	p5 += ks[((R)+5) % 9] + ts[((R)+0) % 3];
-	p6 += ks[((R)+6) % 9] + ts[((R)+1) % 3];
-	p7 += ks[((R)+7) % 9] + make_uint2((R),0);
+	p0 += ks[(R+0) % 9];   /* inject the key schedule value */
+	p1 += ks[(R+1) % 9];
+	p2 += ks[(R+2) % 9];
+	p3 += ks[(R+3) % 9];
+	p4 += ks[(R+4) % 9];
+	p5 += ks[(R+5) % 9] + ts[(R+0) % 3];
+	p6 += ks[(R+6) % 9] + ts[(R+1) % 3];
+	p7 += ks[(R+7) % 9] + make_uint2((R),0);
 	Round512v35(p0, p1, p2, p3, p4, p5, p6, p7, 4);
 	Round512v35(p2, p1, p4, p7, p6, p5, p0, p3, 5);
 	Round512v35(p4, p1, p6, p3, p0, p5, p2, p7, 6);
 	Round512v35(p6, p1, p0, p7, p2, p5, p4, p3, 7);
-	p0 += ks[((R)+1) % 9];   /* inject the key schedule value */
-	p1 += ks[((R)+2) % 9];
-	p2 += ks[((R)+3) % 9];
-	p3 += ks[((R)+4) % 9];
-	p4 += ks[((R)+5) % 9];
-	p5 += ks[((R)+6) % 9] + ts[((R)+1) % 3];
-	p6 += ks[((R)+7) % 9] + ts[((R)+2) % 3];
-	p7 += ks[((R)+8) % 9] + make_uint2((R)+1, 0);
+	p0 += ks[(R+1) % 9];   /* inject the key schedule value */
+	p1 += ks[(R+2) % 9];
+	p2 += ks[(R+3) % 9];
+	p3 += ks[(R+4) % 9];
+	p4 += ks[(R+5) % 9];
+	p5 += ks[(R+6) % 9] + ts[(R+1) % 3];
+	p6 += ks[(R+7) % 9] + ts[(R+2) % 3];
+	p7 += ks[(R+8) % 9] + make_uint2(R+1, 0);
 }
 
 
 __global__ __launch_bounds__(256,3)
 void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint2 h[9];
-		uint2 t[3];
-		uint2 dt0,dt1,dt2,dt3;
-		uint2 p0, p1, p2, p3, p4, p5, p6, p7;
+		uint2 h[9], t[3] = { t12[0], t12[1], t12[2] };
 
 		h[8] = skein_ks_parity;
 		for (int i = 0; i<8; i++) {
@@ -112,27 +99,23 @@ void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outp
 			h[8] ^= h[i];
 		}
 
-		t[0]=t12[0];
-		t[1]=t12[1];
-		t[2]=t12[2];
+		uint2 dt0 = vectorize(outputHash[thread]);
+		uint2 dt1 = vectorize(outputHash[threads   + thread]);
+		uint2 dt2 = vectorize(outputHash[threads*2 + thread]);
+		uint2 dt3 = vectorize(outputHash[threads*3 + thread]);
 
-		LOHI(dt0.x,dt0.y,outputHash[thread]);
-		LOHI(dt1.x,dt1.y,outputHash[threads+thread]);
-		LOHI(dt2.x,dt2.y,outputHash[2*threads+thread]);
-		LOHI(dt3.x,dt3.y,outputHash[3*threads+thread]);
+		uint2 p0 = h[0] + dt0;
+		uint2 p1 = h[1] + dt1;
+		uint2 p2 = h[2] + dt2;
+		uint2 p3 = h[3] + dt3;
+		uint2 p4 = h[4];
+		uint2 p5 = h[5] + t[0];
+		uint2 p6 = h[6] + t[1];
+		uint2 p7 = h[7];
 
-		p0 = h[0] + dt0;
-		p1 = h[1] + dt1;
-		p2 = h[2] + dt2;
-		p3 = h[3] + dt3;
-		p4 = h[4];
-		p5 = h[5] + t[0];
-		p6 = h[6] + t[1];
-		p7 = h[7];
-
-		#pragma unroll
+		#pragma unroll 9
 		for (int i = 1; i<19; i+=2) {
-			Round_8_512v35(h,t,p0,p1,p2,p3,p4,p5,p6,p7,i);
+			Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, i);
 		}
 
 		p0 ^= dt0;
@@ -158,18 +141,19 @@ void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outp
 		t[0] = t12[3];
 		t[1] = t12[4];
 		t[2] = t12[5];
-		p5 += t[0];  //p5 already equal h[5]
+
+		p5 += t[0];
 		p6 += t[1];
 
-		#pragma unroll
+		#pragma unroll 9
 		for (int i = 1; i<19; i+=2) {
 			Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, i);
 		}
 
-		outputHash[thread]           = devectorize(p0);
-		outputHash[threads+thread]   = devectorize(p1);
-		outputHash[2*threads+thread] = devectorize(p2);
-		outputHash[3*threads+thread] = devectorize(p3);
+		outputHash[thread]             = devectorize(p0);
+		outputHash[threads   + thread] = devectorize(p1);
+		outputHash[threads*2 + thread] = devectorize(p2);
+		outputHash[threads*3 + thread] = devectorize(p3);
 	}
 }
 
@@ -177,10 +161,10 @@ static __forceinline__ __device__
 void Round512v30(uint64_t &p0, uint64_t &p1, uint64_t &p2, uint64_t &p3,
 	uint64_t &p4, uint64_t &p5, uint64_t &p6, uint64_t &p7, int ROT)
 {
-	p0 += p1; p1 = ROTL64(p1, ROT256[ROT][0]);  p1 ^= p0;
-	p2 += p3; p3 = ROTL64(p3, ROT256[ROT][1]);  p3 ^= p2;
-	p4 += p5; p5 = ROTL64(p5, ROT256[ROT][2]);  p5 ^= p4;
-	p6 += p7; p7 = ROTL64(p7, ROT256[ROT][3]);  p7 ^= p6;
+	p0 += p1; p1 = ROTL64(p1, ROT256[ROT][0]) ^ p0;
+	p2 += p3; p3 = ROTL64(p3, ROT256[ROT][1]) ^ p2;
+	p4 += p5; p5 = ROTL64(p5, ROT256[ROT][2]) ^ p4;
+	p6 += p7; p7 = ROTL64(p7, ROT256[ROT][3]) ^ p6;
 }
 
 static __forceinline__ __device__
@@ -191,38 +175,36 @@ void Round_8_512v30(uint64_t *ks, uint64_t *ts, uint64_t &p0, uint64_t &p1, uint
 	Round512v30(p2, p1, p4, p7, p6, p5, p0, p3, 1);
 	Round512v30(p4, p1, p6, p3, p0, p5, p2, p7, 2);
 	Round512v30(p6, p1, p0, p7, p2, p5, p4, p3, 3);
-	p0 += ks[((R)+0) % 9];   /* inject the key schedule value */
-	p1 += ks[((R)+1) % 9];
-	p2 += ks[((R)+2) % 9];
-	p3 += ks[((R)+3) % 9];
-	p4 += ks[((R)+4) % 9];
-	p5 += ks[((R)+5) % 9] + ts[((R)+0) % 3];
-	p6 += ks[((R)+6) % 9] + ts[((R)+1) % 3];
-	p7 += ks[((R)+7) % 9] + R;
+	p0 += ks[(R+0) % 9];   /* inject the key schedule value */
+	p1 += ks[(R+1) % 9];
+	p2 += ks[(R+2) % 9];
+	p3 += ks[(R+3) % 9];
+	p4 += ks[(R+4) % 9];
+	p5 += ks[(R+5) % 9] + ts[(R+0) % 3];
+	p6 += ks[(R+6) % 9] + ts[(R+1) % 3];
+	p7 += ks[(R+7) % 9] + R;
 	Round512v30(p0, p1, p2, p3, p4, p5, p6, p7, 4);
 	Round512v30(p2, p1, p4, p7, p6, p5, p0, p3, 5);
 	Round512v30(p4, p1, p6, p3, p0, p5, p2, p7, 6);
 	Round512v30(p6, p1, p0, p7, p2, p5, p4, p3, 7);
-	p0 += ks[((R)+1) % 9];   /* inject the key schedule value */
-	p1 += ks[((R)+2) % 9];
-	p2 += ks[((R)+3) % 9];
-	p3 += ks[((R)+4) % 9];
-	p4 += ks[((R)+5) % 9];
-	p5 += ks[((R)+6) % 9] + ts[((R)+1) % 3];
-	p6 += ks[((R)+7) % 9] + ts[((R)+2) % 3];
-	p7 += ks[((R)+8) % 9] + (R)+1;
+	p0 += ks[(R+1) % 9];   /* inject the key schedule value */
+	p1 += ks[(R+2) % 9];
+	p2 += ks[(R+3) % 9];
+	p3 += ks[(R+4) % 9];
+	p4 += ks[(R+5) % 9];
+	p5 += ks[(R+6) % 9] + ts[(R+1) % 3];
+	p6 += ks[(R+7) % 9] + ts[(R+2) % 3];
+	p7 += ks[(R+8) % 9] + R+1;
 }
 
 __global__  __launch_bounds__(256, 3)
 void skein256_gpu_hash_32_v30(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint64_t h[9];
-		uint64_t t[3];
-		uint64_t dt0, dt1, dt2, dt3;
-		uint64_t p0, p1, p2, p3, p4, p5, p6, p7;
+		uint64_t h[9], t[3];
+
 		h[8] = skein_ks_parity64;
 		for (int i = 0; i<8; i++) {
 			h[i] = SKEIN_IV512_256[i];
@@ -233,21 +215,21 @@ void skein256_gpu_hash_32_v30(uint32_t threads, uint32_t startNounce, uint64_t *
 		t[1] = devectorize(t12[1]);
 		t[2] = devectorize(t12[2]);
 
-		dt0 = outputHash[thread];
-		dt1 = outputHash[threads+thread];
-		dt2 = outputHash[2*threads+thread];
-		dt3 = outputHash[3*threads+thread];
+		uint64_t dt0 = outputHash[thread];
+		uint64_t dt1 = outputHash[threads   + thread];
+		uint64_t dt2 = outputHash[threads*2 + thread];
+		uint64_t dt3 = outputHash[threads*3 + thread];
 
-		p0 = h[0] + dt0;
-		p1 = h[1] + dt1;
-		p2 = h[2] + dt2;
-		p3 = h[3] + dt3;
-		p4 = h[4];
-		p5 = h[5] + t[0];
-		p6 = h[6] + t[1];
-		p7 = h[7];
+		uint64_t p0 = h[0] + dt0;
+		uint64_t p1 = h[1] + dt1;
+		uint64_t p2 = h[2] + dt2;
+		uint64_t p3 = h[3] + dt3;
+		uint64_t p4 = h[4];
+		uint64_t p5 = h[5] + t[0];
+		uint64_t p6 = h[6] + t[1];
+		uint64_t p7 = h[7];
 
-		#pragma unroll
+		#pragma unroll 9
 		for (int i = 1; i<19; i += 2) {
 			Round_8_512v30(h, t, p0, p1, p2, p3, p4, p5, p6, p7, i);
 		}
@@ -272,22 +254,22 @@ void skein256_gpu_hash_32_v30(uint32_t threads, uint32_t startNounce, uint64_t *
 			h[8] ^= h[i];
 		}
 
-		t[0] = t12_30[3];
-		t[1] = t12_30[4];
-		t[2] = t12_30[5];
+		t[0] = devectorize(t12[3]);
+		t[1] = devectorize(t12[4]);
+		t[2] = devectorize(t12[5]);
 
 		p5 += t[0];  //p5 already equal h[5]
 		p6 += t[1];
 
-		#pragma unroll
+		#pragma unroll 9
 		for (int i = 1; i<19; i += 2) {
 			Round_8_512v30(h, t, p0, p1, p2, p3, p4, p5, p6, p7, i);
 		}
 
 		outputHash[thread] = p0;
-		outputHash[threads + thread] = p1;
-		outputHash[2 * threads + thread] = p2;
-		outputHash[3 * threads + thread] = p3;
+		outputHash[threads   + thread] = p1;
+		outputHash[threads*2 + thread] = p2;
+		outputHash[threads*3 + thread] = p3;
 
 	} //thread
 }
@@ -306,6 +288,7 @@ void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, ui
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
+	// only 1kH/s perf change between kernels on a 960...
 	if (device_sm[device_map[thr_id]] > 300 && cuda_arch[device_map[thr_id]] > 300)
 		skein256_gpu_hash_32<<<grid, block>>>(threads, startNounce, d_outputHash);
 	else
