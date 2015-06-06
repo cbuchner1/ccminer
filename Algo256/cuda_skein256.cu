@@ -20,7 +20,7 @@ static __constant__ uint2 vSKEIN_IV512_256[8] = {
 	{ 0x33EDFC13, 0x3EEDBA18 }
 };
 
-static __constant__ uint8_t ROT256[8][4] = {
+static __constant__ int8_t ROT256[8][4] = {
 	46, 36, 19, 37,
 	33, 27, 14, 42,
 	17, 49, 36, 39,
