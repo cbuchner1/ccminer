@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <memory.h>
+#include <sys/types.h> // off_t
 
 #include "cuda_helper.h"
 
