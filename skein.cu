@@ -355,6 +355,7 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 	const int swap = 1;
 
 	bool sm5 = (device_sm[device_map[thr_id]] >= 500);
+	bool checkSecnonce = (have_stratum || have_longpoll) && !sm5;
 
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 20);
 	throughput = min(throughput, (max_nonce - first_nonce));
@@ -416,10 +417,10 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint8_t num = res;
-				if (!sm5) {
+				if (checkSecnonce) {
 					secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
 				}
-				while (secNonce != 0 && res < 2) /* todo: up to 6 */
+				while (checkSecnonce && secNonce != 0 && res < 2) /* todo: up to 6 */
 				{
 					endiandata[19] = swab32_if(secNonce, swap);
 					skeincoinhash(vhash64, endiandata);
