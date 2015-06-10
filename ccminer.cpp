@@ -628,10 +628,7 @@ static void calc_network_diff(struct work *work)
 			return;
 	}
 
-	if (shift >= 3 && shift < sizeof(rtarget)-3) {
-		memcpy(&rtarget[shift - 3], &bits, 3); // 0029ea05 00000000
-	}
-	swab256(rtarget, rtarget);
+	bn_nbits_to_uchar(nbits, rtarget);
 
 	data64 = (uint64_t*)(rtarget + 4);
 

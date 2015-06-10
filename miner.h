@@ -550,6 +550,10 @@ extern void diff_to_target(uint32_t *target, double diff);
 extern void get_currentalgo(char* buf, int sz);
 extern uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
 
+// bignum
+double bn_convert_nbits(const uint32_t nbits);
+void bn_nbits_to_uchar(const uint32_t nBits, uchar *target);
+
 struct stratum_job {
 	char *job_id;
 	unsigned char prevhash[32];

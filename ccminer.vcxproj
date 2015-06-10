@@ -229,6 +229,7 @@
     <ClCompile Include="scrypt-jane.cpp" />
     <ClCompile Include="scrypt.cpp" />
     <ClCompile Include="util.cpp" />
+    <ClCompile Include="bitnum.cpp" />
     <ClCompile Include="fuguecoin.cpp" />
     <ClCompile Include="groestlcoin.cpp" />
     <ClCompile Include="hashlog.cpp" />
