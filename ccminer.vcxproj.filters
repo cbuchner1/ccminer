@@ -243,6 +243,9 @@
     <ClCompile Include="hefty1.c">
       <Filter>Source Files\CUDA\heavy</Filter>
     </ClCompile>
+    <ClCompile Include="bignum.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compat.h">
@@ -403,6 +406,9 @@
     </ClInclude>
     <ClInclude Include="hefty1.h">
       <Filter>Source Files\CUDA\heavy</Filter>
+    </ClInclude>
+    <ClInclude Include="bignum.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
