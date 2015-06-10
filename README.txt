@@ -102,8 +102,10 @@ its command line interface and options.
 
   -i, --intensity=N[,N] GPU threads per call 8-25 (2^N + F, default: 0=auto)
                         Decimals and multiple values are allowed for fine tuning
-  -f, --diff            Divide difficulty by this factor (std is 1)
-  -v, --vote            Heavycoin block vote (default: 512)
+  -f, --diff-factor     Divide difficulty by this factor (default 1.0)
+  -m, --diff-multiplier Multiply difficulty by this value (default 1.0)
+      --vote=VOTE       block reward vote (for HeavyCoin)
+      --trust-pool      trust the max block reward vote (maxvote) sent by the pool
   -o, --url=URL         URL of mining server
   -O, --userpass=U:P    username:password pair for mining server
   -u, --user=USERNAME   username for mining server
@@ -214,6 +216,13 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+      June 2015   v1.6.5
+                  Remove -v and -m short params specific to heavycoin
+                  Add --diff-multiplier (-m) and rename --diff to --diff-factor (-f)
+                  Some fixes for default pool params values (multipool)
+                  First steps to handle nvml application clocks and P0 on the GTX9xx
+                  Optimize qubit, deep and doom
 
   May 26th 2015   v1.6.4
                   Implement multi-pool support (failover and time rotate)

@@ -188,7 +188,8 @@ static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
 int opt_affinity = -1;
 int opt_priority = 0;
-static double opt_difficulty = 1; // CH
+static double opt_diff_factor = 1.;
+static double opt_diff_multiplier = 1.;
 bool opt_extranonce = true;
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
@@ -323,9 +324,10 @@ Options:\n\
                         (matching 2nd gt640 in the PC)\n\
   -i  --intensity=N[,N] GPU intensity 8.0-25.0 (default: auto) \n\
                         Decimals are allowed for fine tuning \n\
-  -f, --diff            Divide difficulty by this factor (std is 1) \n\
-  -v, --vote=VOTE       block reward vote (for HeavyCoin)\n\
-  -m, --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
+  -f, --diff-factor     Divide difficulty by this factor (default 1.0) \n\
+  -m, --diff-multiplier Multiply difficulty by this value (default 1.0) \n\
+      --vote=VOTE       block reward vote (for HeavyCoin)\n\
+      --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
   -o, --url=URL         URL of mining server\n\
   -O, --userpass=U:P    username:password pair for mining server\n\
   -u, --user=USERNAME   username for mining server\n\
@@ -379,7 +381,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:Bc:i:Dhp:Px:mnqr:R:s:t:T:o:u:O:Vd:f:v:N:b:l:L:";
+	"a:Bc:i:Dhp:Px:f:m:nqr:R:s:t:T:o:u:O:Vd:N:b:l:L:";
 
 static struct option const options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -429,15 +431,17 @@ static struct option const options[] = {
 #endif
 	{ "time-limit", 1, NULL, 1008 },
 	{ "threads", 1, NULL, 't' },
-	{ "vote", 1, NULL, 'v' },
-	{ "trust-pool", 0, NULL, 'm' },
+	{ "vote", 1, NULL, 1022 },
+	{ "trust-pool", 0, NULL, 1023 },
 	{ "timeout", 1, NULL, 'T' },
 	{ "url", 1, NULL, 'o' },
 	{ "user", 1, NULL, 'u' },
 	{ "userpass", 1, NULL, 'O' },
 	{ "version", 0, NULL, 'V' },
 	{ "devices", 1, NULL, 'd' },
-	{ "diff", 1, NULL, 'f' },
+	{ "diff-multiplier", 1, NULL, 'm' },
+	{ "diff-factor", 1, NULL, 'f' },
+	{ "diff", 1, NULL, 'f' }, // compat
 	{ 0, 0, 0, 0 }
 };
 
@@ -732,9 +736,9 @@ static void calc_target_diff(struct work *work)
 	if (unlikely(!d64))
 		d64 = 1;
 	work->difficulty = (double)diffone / d64;
-	if (opt_difficulty > 0.) {
-		work->difficulty /= opt_difficulty;
-	}
+	if (opt_diff_factor > 0.)
+		work->difficulty /= opt_diff_factor;
+	work->difficulty *= opt_diff_multiplier;
 }
 
 static int share_result(int result, int pooln, const char *reason)
@@ -767,8 +771,8 @@ static int share_result(int result, int pooln, const char *reason)
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		/* if (strncasecmp(reason, "low difficulty", 14) == 0) {
-			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
-			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_difficulty);
+			opt_diff_factor = (opt_diff_factor * 2.0) / 3.0;
+			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_diff_factor);
 			return 0;
 		} */
 		if (!check_dups && strncasecmp(reason, "duplicate", 9) == 0) {
@@ -1318,6 +1322,7 @@ err_out:
 static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
 	uchar merkle_root[64];
+	double diff_factor = opt_diff_factor;
 	int i;
 
 	if (!sctx->job.job_id) {
@@ -1381,13 +1386,9 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	switch (opt_algo) {
 	case ALGO_MJOLLNIR:
 	case ALGO_HEAVY:
-		// todo: check if 19 is enough
-		for (i = 0; i < 20; i++)
-			work->data[i] = be32dec((uint32_t *)&work->data[i]);
-		break;
 	case ALGO_ZR5:
-		for (i = 0; i < 19; i++)
-			work->data[i] = be32dec((uint32_t *)&work->data[i]);
+		for (i = 0; i < 20; i++)
+			work->data[i] = swab32(work->data[i]);
 		break;
 	}
 
@@ -1416,26 +1417,31 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
+	if (opt_diff_multiplier > 0.)
+		diff_factor /= opt_diff_multiplier;
+	if (diff_factor == 0.)
+		diff_factor = 1.;
+
 	switch (opt_algo) {
 		case ALGO_JACKPOT:
 		case ALGO_NEOSCRYPT:
 		case ALGO_PLUCK:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
-			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
+			diff_to_target(work->target, sctx->job.diff / (65536.0 * diff_factor));
 			break;
 		case ALGO_DMD_GR:
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
-			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+			diff_to_target(work->target, sctx->job.diff / (256.0 * diff_factor));
 			break;
 		case ALGO_KECCAK:
 		case ALGO_LYRA2:
-			diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));
+			diff_to_target(work->target, sctx->job.diff / (128.0 * diff_factor));
 			break;
 		default:
-			diff_to_target(work->target, sctx->job.diff / opt_difficulty);
+			diff_to_target(work->target, sctx->job.diff / diff_factor);
 	}
 	return true;
 }
@@ -2801,13 +2807,13 @@ void parse_arg(int key, char *arg)
 			show_usage_and_exit(1);
 		opt_n_threads = v;
 		break;
-	case 'v':
+	case 1022: // --vote
 		v = atoi(arg);
 		if (v < 0 || v > 8192)	/* sanity check */
 			show_usage_and_exit(1);
 		opt_vote = (uint16_t)v;
 		break;
-	case 'm':
+	case 1023: // --trust-pool
 		opt_trust_pool = true;
 		break;
 	case 'u':
@@ -3052,11 +3058,18 @@ void parse_arg(int key, char *arg)
 			}
 		}
 		break;
-	case 'f': // CH - Divisor for Difficulty
+
+	case 'f': // --diff-factor
 		d = atof(arg);
-		if (d == 0)	/* sanity check */
+		if (d <= 0.)
 			show_usage_and_exit(1);
-		opt_difficulty = d;
+		opt_diff_factor = d;
+		break;
+	case 'm': // --diff-multiplier
+		d = atof(arg);
+		if (d <= 0.)
+			show_usage_and_exit(1);
+		opt_diff_multiplier = d;
 		break;
 
 	/* PER POOL CONFIG OPTIONS */
