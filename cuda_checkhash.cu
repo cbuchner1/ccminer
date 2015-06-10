@@ -13,12 +13,14 @@ __constant__ uint32_t pTarget[8]; // 32 bytes
 // store MAX_GPUS device arrays of 8 nonces
 static uint32_t* h_resNonces[MAX_GPUS];
 static uint32_t* d_resNonces[MAX_GPUS];
+static bool init_done = false;
 
 __host__
 void cuda_check_cpu_init(int thr_id, uint32_t threads)
 {
     CUDA_CALL_OR_RET(cudaMallocHost(&h_resNonces[thr_id], 32));
     CUDA_CALL_OR_RET(cudaMalloc(&d_resNonces[thr_id], 32));
+    init_done = true;
 }
 
 // Target Difficulty
@@ -97,6 +99,11 @@ uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
+	if (!init_done) {
+		applog(LOG_ERR, "missing call to cuda_check_cpu_init");
+		return UINT32_MAX;
+	}
+
 	cuda_checkhash_64 <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNonces[thr_id]);
 	cudaThreadSynchronize();
 
@@ -129,6 +136,11 @@ uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounc
 	const uint32_t threadsperblock = 512;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
+
+	if (!init_done) {
+		applog(LOG_ERR, "missing call to cuda_check_cpu_init");
+		return 0;
+	}
 
 	// first element stores the count of found nonces
 	cudaMemset(d_resNonces[thr_id], 0, sizeof(uint32_t));
@@ -180,6 +192,12 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 	const uint32_t threadsperblock = 256;
 
 	uint32_t result = UINT32_MAX;
+
+	if (!init_done) {
+		applog(LOG_ERR, "missing call to cuda_check_cpu_init");
+		return UINT32_MAX;
+	}
+
 	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);

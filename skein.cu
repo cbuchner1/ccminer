@@ -420,7 +420,7 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 				if (checkSecnonce) {
 					secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
 				}
-				while (checkSecnonce && secNonce != 0 && res < 2) /* todo: up to 6 */
+				while (secNonce != 0 && res < 2) /* todo: up to 6 */
 				{
 					endiandata[19] = swab32_if(secNonce, swap);
 					skeincoinhash(vhash64, endiandata);
@@ -430,7 +430,10 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 						res++;
 					}
 					num++;
-					secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
+					//if (checkSecnonce)
+					//	secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
+					//else
+						break; // only one secNonce...
 				}
 				if (res > 1 && opt_debug)
 					applog(LOG_BLUE, "GPU #%d: %d/%d valid nonces !!!", device_map[thr_id], res, (int)num);
