@@ -1835,7 +1835,7 @@ void print_hash_tests(void)
 	keccak256_hash(&hash[0], &buf[0]);
 	printpfx("keccak", hash);
 
-	doomhash(&hash[0], &buf[0]);
+	luffa_hash(&hash[0], &buf[0]);
 	printpfx("luffa", hash);
 
 	lyra2_hash(&hash[0], &buf[0]);

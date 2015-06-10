@@ -90,14 +90,13 @@ enum sha_algos {
 	ALGO_BLAKECOIN,
 	ALGO_DEEP,
 	ALGO_DMD_GR,
-	ALGO_DOOM,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
-	ALGO_LUFFA_DOOM,
+	ALGO_LUFFA,
 	ALGO_LYRA2,
 	ALGO_MJOLLNIR,		/* Hefty hash */
 	ALGO_MYR_GR,
@@ -126,7 +125,6 @@ static const char *algo_names[] = {
 	"blakecoin",
 	"deep",
 	"dmd-gr",
-	"doom", /* is luffa */
 	"fresh",
 	"fugue256",
 	"groestl",
@@ -297,7 +295,7 @@ Options:\n\
 			heavy       Heavycoin\n\
 			jackpot     Jackpot\n\
 			keccak      Keccak-256 (Maxcoin)\n\
-			luffa       Doomcoin\n\
+			luffa       Joincoin\n\
 			lyra2       VertCoin\n\
 			mjollnir    Mjollnircoin\n\
 			myr-gr      Myriad-Groestl\n\
@@ -1741,9 +1739,8 @@ static void *miner_thread(void *userdata)
 			case ALGO_KECCAK:
 				minmax = 0x40000000U;
 				break;
-			case ALGO_DOOM:
 			case ALGO_JACKPOT:
-			case ALGO_LUFFA_DOOM:
+			case ALGO_LUFFA:
 				minmax = 0x2000000;
 				break;
 			case ALGO_S3:
@@ -1818,9 +1815,8 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
-		case ALGO_DOOM:
-		case ALGO_LUFFA_DOOM:
-			rc = scanhash_doom(thr_id, work.data, work.target,
+		case ALGO_LUFFA:
+			rc = scanhash_luffa(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
@@ -2656,6 +2652,8 @@ void parse_arg(int key, char *arg)
 			// some aliases...
 			if (!strcasecmp("diamond", arg))
 				i = opt_algo = ALGO_DMD_GR;
+			if (!strcasecmp("doom", arg))
+				i = opt_algo = ALGO_LUFFA;
 			else if (!strcasecmp("ziftr", arg))
 				i = opt_algo = ALGO_ZR5;
 			else

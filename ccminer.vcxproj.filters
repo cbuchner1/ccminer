@@ -481,7 +481,7 @@
     <CudaCompile Include="qubit\deep.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
     </CudaCompile>
-    <CudaCompile Include="qubit\doom.cu">
+    <CudaCompile Include="qubit\luffa.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
     </CudaCompile>
     <CudaCompile Include="qubit\qubit.cu">

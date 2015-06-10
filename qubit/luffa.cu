@@ -1,6 +1,5 @@
 /*
- * qubit algorithm
- *
+ * luffa 80 algo (Introduced by Doomcoin)
  */
 extern "C" {
 #include "sph/sph_luffa.h"
@@ -16,7 +15,7 @@ extern void qubit_luffa512_cpu_init(int thr_id, uint32_t threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
 extern void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
-extern "C" void doomhash(void *state, const void *input)
+extern "C" void luffa_hash(void *state, const void *input)
 {
 	uint8_t _ALIGN(64) hash[64];
 
@@ -31,7 +30,7 @@ extern "C" void doomhash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_doom(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+extern "C" int scanhash_luffa(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(64) endiandata[20];
@@ -71,7 +70,7 @@ extern "C" int scanhash_doom(int thr_id, uint32_t *pdata, const uint32_t *ptarge
 		{
 			uint32_t _ALIGN(64) vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
-			doomhash(vhash64, endiandata);
+			luffa_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				//*hashes_done = min(max_nonce - first_nonce, (uint64_t) pdata[19] - first_nonce + throughput);

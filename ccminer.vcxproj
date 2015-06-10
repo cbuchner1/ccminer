@@ -430,7 +430,7 @@
     </CudaCompile>
     <CudaCompile Include="qubit\deep.cu">
     </CudaCompile>
-    <CudaCompile Include="qubit\doom.cu">
+    <CudaCompile Include="qubit\luffa.cu">
     </CudaCompile>
     <CudaCompile Include="qubit\qubit.cu">
     </CudaCompile>

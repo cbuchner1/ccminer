@@ -33,7 +33,8 @@ TalkCoin
 DarkCoin and other X11 coins
 Saffroncoin blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
-Deep, Doom and Qubit
+Qubit (Digibyte, ...)
+Luffa (Joincoin)
 Keccak (Maxcoin)
 Pentablake (Blake 512 x5)
 1Coin Triple S
@@ -73,7 +74,7 @@ its command line interface and options.
                           heavy       use to mine Heavycoin
                           jackpot     use to mine Jackpotcoin
                           keccak      use to mine Maxcoin
-                          luffa       use to mine Doomcoin
+                          luffa       use to mine Joincoin
                           lyra2       use to mine Vertcoin
                           mjollnir    use to mine Mjollnircoin
                           myr-gr      use to mine Myriad-Groest
@@ -222,7 +223,7 @@ features.
                   Add --diff-multiplier (-m) and rename --diff to --diff-factor (-f)
                   Some fixes for default pool params values (multipool)
                   First steps to handle nvml application clocks and P0 on the GTX9xx
-                  Optimize qubit, deep and doom
+                  Optimize qubit, deep and luffa algos
 
   May 26th 2015   v1.6.4
                   Implement multi-pool support (failover and time rotate)
