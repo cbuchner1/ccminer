@@ -19,8 +19,6 @@ static uint32_t *d_hash[MAX_GPUS];
 extern void qubit_luffa512_cpu_init(int thr_id, uint32_t threads);
 extern void qubit_luffa512_cpu_setBlock_80(void *pdata);
 extern void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern void qubit_luffa512_cpufinal_setBlock_80(void *pdata, const void *ptarget);
-extern uint32_t qubit_luffa512_cpu_finalhash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 extern void x11_cubehash512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -30,12 +28,12 @@ extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t start
 
 extern "C" void deephash(void *state, const void *input)
 {
-	// luffa1-cubehash2-shavite3-simd4-echo5
+	uint8_t _ALIGN(64) hash[64];
+
+	// luffa-80 cubehash-64 echo-64
 	sph_luffa512_context ctx_luffa;
 	sph_cubehash512_context ctx_cubehash;
 	sph_echo512_context ctx_echo;
-
-	uint8_t hash[64];
 
 	sph_luffa512_init(&ctx_luffa);
 	sph_luffa512 (&ctx_luffa, input, 80);
@@ -54,14 +52,13 @@ extern "C" void deephash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_deep(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done)
+extern "C" int scanhash_deep(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+	uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t _ALIGN(64) endiandata[20];
 	const uint32_t first_nonce = pdata[19];
-	uint32_t endiandata[20];
 	uint32_t throughput =  device_intensity(thr_id, __func__, 1U << 19); // 256*256*8
-	throughput = min(throughput,  (max_nonce - first_nonce));
+	throughput = min(throughput, (max_nonce - first_nonce));
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000f;
@@ -69,7 +66,8 @@ extern "C" int scanhash_deep(int thr_id, uint32_t *pdata,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
 
 		qubit_luffa512_cpu_init(thr_id, throughput);
 		x11_cubehash512_cpu_init(thr_id, throughput);
@@ -80,10 +78,10 @@ extern "C" int scanhash_deep(int thr_id, uint32_t *pdata,
 		init[thr_id] = true;
 	}
 
-	for (int k=0; k < 20; k++)
+	for (int k=0; k < 19; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
-	qubit_luffa512_cpufinal_setBlock_80((void*)endiandata,ptarget);
+	qubit_luffa512_cpu_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
@@ -96,12 +94,11 @@ extern "C" int scanhash_deep(int thr_id, uint32_t *pdata,
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
-			const uint32_t Htarg = ptarget[7];
-			uint32_t vhash64[8];
+			uint32_t _ALIGN(64) vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			deephash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				*hashes_done = pdata[19] - first_nonce + throughput;
