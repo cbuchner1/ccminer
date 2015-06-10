@@ -3,7 +3,6 @@
 #include <cuda_runtime.h>
 #include <openssl/sha.h>
 
-#include "uint256.h"
 #include "sph/sph_groestl.h"
 #include "cuda_groestlcoin.h"
 

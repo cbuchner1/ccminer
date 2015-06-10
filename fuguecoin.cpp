@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <cuda_runtime.h>
 
-#include "uint256.h"
 #include "sph/sph_fugue.h"
 
 #include "miner.h"

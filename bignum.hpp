@@ -5,13 +5,17 @@
 #ifndef BITCOIN_BIGNUM_H
 #define BITCOIN_BIGNUM_H
 
-#define PROTOCOL_VERSION 1
+#ifndef PROTOCOL_VERSION
+#define PROTOCOL_VERSION 70001
+#endif
 
 #include <map>
 #include <limits>
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
+
+#include "uint256.h"
 
 #include <openssl/bn.h>
 
