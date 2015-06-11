@@ -169,9 +169,9 @@ static char *getsummary(char *params)
 	double accps, uptime = difftime(ts, startup);
 	uint32_t wait_time = 0, accepted_count = 0, rejected_count = 0;
 	for (int p = 0; p < num_pools; p++) {
-		wait_time += pools[cur_pooln].wait_time;
-		accepted_count += pools[cur_pooln].accepted_count;
-		rejected_count += pools[cur_pooln].rejected_count;
+		wait_time += pools[p].wait_time;
+		accepted_count += pools[p].accepted_count;
+		rejected_count += pools[p].rejected_count;
 	}
 	accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
 
@@ -180,12 +180,12 @@ static char *getsummary(char *params)
 	*buffer = '\0';
 	sprintf(buffer, "NAME=%s;VER=%s;API=%s;"
 		"ALGO=%s;GPUS=%d;KHS=%.2f;ACC=%d;REJ=%d;"
-		"ACCMN=%.3f;DIFF=%.6f;NETKHS=%.2f;"
+		"ACCMN=%.3f;DIFF=%.6f;NETKHS=%.0f;"
 		"POOLS=%u;WAIT=%u;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
 		algo, active_gpus, (double)global_hashrate / 1000.,
 		accepted_count, rejected_count,
-		accps, net_diff > 0. ? net_diff : stratum_diff, (double)net_hashrate / 1000.,
+		accps, net_diff > 1e-6 ? net_diff : stratum_diff, (double)net_hashrate / 1000.,
 		num_pools, wait_time, uptime, (uint32_t) ts);
 	return buffer;
 }
@@ -198,7 +198,8 @@ static char *getpoolnfo(char *params)
 	char *s = buffer;
 	char jobid[128] = { 0 };
 	char nonce[128] = { 0 };
-	struct pool_infos *p = &pools[cur_pooln];
+	int pooln = params ? atoi(params) % num_pools : cur_pooln;
+	struct pool_infos *p = &pools[pooln];
 
 	*s = '\0';
 
