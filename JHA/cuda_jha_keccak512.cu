@@ -2,15 +2,13 @@
 #include <memory.h>
 
 #include "cuda_helper.h"
+#include "miner.h"
 
 // ZR5
 __constant__ uint32_t d_OriginalData[20];
 
 __constant__ uint32_t c_PaddedMessage[18];
 __constant__ uint64_t c_State[25];
-
-#define POK_DATA_MASK 0xFFFF0000
-#define POK_VERSION 0x1
 
 #define U32TO64_LE(p) \
 	(((uint64_t)(*p)) | (((uint64_t)(*(p + 1))) << 32))
@@ -657,7 +655,7 @@ __host__
 void zr5_keccak512_cpu_hash_pok(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t* pdata, uint32_t *d_hash, uint16_t *d_poks)
 {
 	const uint32_t threadsperblock = 256;
-	const uint32_t version = pdata[0] & (~POK_DATA_MASK);
+	const uint32_t version = (pdata[0] & (~POK_DATA_MASK)) | (usepok ? POK_BOOL_MASK : 0);
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

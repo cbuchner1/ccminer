@@ -258,6 +258,8 @@ void sha256d(unsigned char *hash, const unsigned char *data, int len);
 #define HAVE_SHA256_4WAY 0
 #define HAVE_SHA256_8WAY 0
 
+struct work;
+
 extern int scanhash_sha256d(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done);
 
@@ -372,8 +374,7 @@ extern int scanhash_x17(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
-extern int scanhash_zr5(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
+extern int scanhash_zr5(int thr_id, struct work *work, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
 /* api related */
@@ -485,6 +486,7 @@ extern char *opt_proxy;
 extern long opt_proxy_type;
 extern bool use_syslog;
 extern bool use_colors;
+extern int usepok;
 extern pthread_mutex_t applog_lock;
 extern struct thr_info *thr_info;
 extern int longpoll_thr_id;
@@ -597,6 +599,13 @@ struct stratum_ctx {
 	int srvtime_diff;
 };
 
+#define POK_MAX_TXS   8
+#define POK_MAX_TX_SZ 8192U
+struct tx {
+	uint8_t data[POK_MAX_TX_SZ];
+	uint32_t len;
+};
+
 struct work {
 	uint32_t data[32];
 	uint32_t target[8];
@@ -617,7 +626,15 @@ struct work {
 
 	uint32_t scanned_from;
 	uint32_t scanned_to;
+
+	/* pok getwork txs */
+	uint32_t tx_count;
+	struct tx txs[POK_MAX_TXS];
 };
+
+#define POK_BOOL_MASK 0x00008000
+#define POK_DATA_MASK 0xFFFF0000
+
 
 #define MAX_POOLS 8
 struct pool_infos {

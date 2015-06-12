@@ -246,7 +246,7 @@ bool stratum_need_reset = false;
 volatile bool abort_flag = false;
 struct work_restart *work_restart = NULL;
 static int app_exit_code = EXIT_CODE_OK;
-uint32_t zr5_pok = 0;
+int usepok = 0;
 
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
@@ -683,6 +683,37 @@ static bool work_decode(const json_t *val, struct work *work)
 
 	if (opt_max_diff > 0. && !allow_mininginfo)
 		calc_network_diff(work);
+
+
+	work->tx_count = usepok = 0;
+	if (work->data[0] & POK_BOOL_MASK) {
+		usepok = 1;
+		json_t *txs = json_object_get(val, "txs");
+		if (txs && json_is_array(txs)) {
+			size_t idx, totlen = 0;
+			json_t *p;
+
+			json_array_foreach(txs, idx, p) {
+				const int tx = work->tx_count % POK_MAX_TXS;
+				const char* hexstr = json_string_value(p);
+				size_t txlen = strlen(hexstr)/2;
+				work->tx_count++;
+				if (work->tx_count > POK_MAX_TXS || txlen >= POK_MAX_TX_SZ) {
+					// when tx is too big, just reset usepok for the bloc
+					usepok = 0;
+					applog(LOG_WARNING, "large bloc ignored, txs > %d, len: %u",
+						POK_MAX_TXS, txlen);
+					work->tx_count = 0;
+					break;
+				}
+				hex2bin((uchar*)work->txs[tx].data, hexstr, min(txlen, POK_MAX_TX_SZ));
+				work->txs[tx].len = txlen;
+				totlen += txlen;
+			}
+			if (opt_debug)
+				applog(LOG_DEBUG, "bloc txs: %u, total len: %u", work->tx_count, totlen);
+		}
+	}
 
 	json_t *jr = json_object_get(val, "noncerange");
 	if (jr) {
@@ -1943,11 +1974,10 @@ static void *miner_thread(void *userdata)
 				              max_nonce, &hashes_done);
 			break;
 
-		case ALGO_ZR5: {
-			rc = scanhash_zr5(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+		case ALGO_ZR5:
+			rc = scanhash_zr5(thr_id, &work, max_nonce, &hashes_done);
 			break;
-		}
+
 		default:
 			/* should never happen */
 			goto out;

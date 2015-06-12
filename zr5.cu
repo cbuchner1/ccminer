@@ -33,6 +33,9 @@ static uint32_t* d_groes[MAX_GPUS];
 static uint32_t* d_jh512[MAX_GPUS];
 static uint32_t* d_skein[MAX_GPUS];
 
+static uint8_t*  d_txs[MAX_GPUS];
+__constant__ uint16_t c_txlens[POK_MAX_TXS];
+
 __constant__ uint8_t c_permut[24][4];
 static const uint8_t permut[24][4] = {
 	{0, 1, 2, 3},
@@ -112,8 +115,8 @@ extern "C" void zr5hash(void *output, const void *input)
 
 extern "C" void zr5hash_pok(void *output, uint32_t *pdata)
 {
-	const uint32_t version = pdata[0] & (~POK_DATA_MASK);
 	uint32_t _ALIGN(64) hash[8];
+	const uint32_t version = (pdata[0] & (~POK_DATA_MASK)) | (usepok ? POK_BOOL_MASK : 0);
 
 	pdata[0] = version;
 	zr5hash(hash, pdata);
@@ -208,7 +211,7 @@ void zr5_move_data_to_hash(int thr_id, uint32_t threads, int rnd)
 
 
 __global__ __launch_bounds__(128, 8)
-void zr5_get_poks_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* const d_permut, uint32_t *d_hash, uint16_t *d_poks)
+void zr5_get_poks_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* const d_permut, uint16_t *d_poks)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -223,14 +226,54 @@ void zr5_get_poks_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* con
 	}
 }
 
+__global__ __launch_bounds__(128, 6)
+void zr5_get_poks_xor_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* d_permut, uint16_t* d_poks, uint8_t* d_txs, uint8_t txs)
+{
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		const uint8_t norder = d_permut[thread];
+		const uint8_t algo = c_permut[norder][3];
+		const uint8_t ntx = norder % txs; // generally 0 on testnet...
+		const uint32_t offset = thread * 16U; // 64 / 4;
+		uint32_t* hash = (uint32_t*) (d_buffers[algo] + offset);
+		uint32_t randNdx = hash[1] % c_txlens[ntx];
+		uint8_t* ptx = &d_txs[POK_MAX_TX_SZ*ntx] + randNdx;
+		uint32_t x = 0x100UL * ptx[3] + ptx[2];
+
+		d_poks[thread] = x ^ (hash[2] >> 16);
+	}
+}
+
 __host__
-void zr5_get_poks(int thr_id, uint32_t threads, uint16_t* d_poks)
+void zr5_get_poks(int thr_id, uint32_t threads, uint16_t* d_poks, struct work* work)
 {
 	const uint32_t threadsperblock = 128;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	zr5_get_poks_gpu <<<grid, block>>> (threads, d_buffers[thr_id], d_permut[thr_id], d_hash[thr_id], d_poks);
+	uint8_t txs = (uint8_t) work->tx_count;
+
+	if (txs && usepok)
+	{
+		uint32_t txlens[POK_MAX_TXS];
+		uint8_t* txdata = (uint8_t*) calloc(POK_MAX_TXS, POK_MAX_TX_SZ);
+		if (!txdata) {
+			applog(LOG_ERR, "%s: error, memory alloc failure", __func__);
+			return;
+		}
+		// create blocs to copy on device
+		for (uint8_t tx=0; tx < txs; tx++) {
+			txlens[tx] = (uint32_t) (work->txs[tx].len - 3U);
+			memcpy(&txdata[POK_MAX_TX_SZ*tx], work->txs[tx].data, min(POK_MAX_TX_SZ, txlens[tx]+3U));
+		}
+		cudaMemcpy(d_txs[thr_id], txdata, txs * POK_MAX_TX_SZ, cudaMemcpyHostToDevice);
+		CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_txlens, txlens, txs * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));
+		zr5_get_poks_xor_gpu <<<grid, block>>> (threads, d_buffers[thr_id], d_permut[thr_id], d_poks, d_txs[thr_id], txs);
+		free(txdata);
+	} else {
+		zr5_get_poks_gpu <<<grid, block>>> (threads, d_buffers[thr_id], d_permut[thr_id], d_poks);
+	}
 }
 
 
@@ -285,18 +328,21 @@ extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+extern "C" int scanhash_zr5(int thr_id, struct work *work,
 	uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(64) tmpdata[20];
-	const uint32_t version = pdata[0] & (~POK_DATA_MASK);
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
+	const uint32_t oldp0 = pdata[0];
+	const uint32_t version = (oldp0 & (~POK_DATA_MASK)) | (usepok ? POK_BOOL_MASK : 0);
 	const uint32_t first_nonce = pdata[19];
 	uint32_t throughput =  device_intensity(thr_id, __func__, 1U << 18);
 	throughput = min(throughput, (1U << 20)-1024);
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		ptarget[7] = 0x0000ff;
 
 	memcpy(tmpdata, pdata, 80);
 
@@ -318,6 +364,8 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 		cudaMalloc(&d_groes[thr_id], 64 * throughput);
 		cudaMalloc(&d_jh512[thr_id], 64 * throughput);
 		cudaMalloc(&d_skein[thr_id], 64 * throughput);
+
+		cudaMalloc(&d_txs[thr_id], POK_MAX_TXS * POK_MAX_TX_SZ);
 
 		jackpot_keccak512_cpu_init(thr_id, throughput);
 
@@ -354,7 +402,7 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 		}
 
 		// store on device d_poks all hash[0] prefixes
-		zr5_get_poks(thr_id, throughput, d_poks[thr_id]);
+		zr5_get_poks(thr_id, throughput, d_poks[thr_id], work);
 
 		// Keccak512 with pok
 		zr5_keccak512_cpu_hash_pok(thr_id, throughput, pdata[19], pdata, d_hash[thr_id], d_poks[thr_id]);
@@ -374,7 +422,6 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhash64[8];
-			uint32_t oldp0 = pdata[0];
 			uint32_t oldp19 = pdata[19];
 			uint32_t offset = foundNonce - pdata[19];
 			uint32_t pok = 0;
@@ -406,9 +453,6 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 			} else {
 				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 
-				// reinit the card.. segfault so no
-				// cuda_reset_device(thr_id, init);
-
 				pdata[19]++;
 				pdata[0] = oldp0;
 			}
@@ -416,6 +460,8 @@ extern "C" int scanhash_zr5(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 			pdata[19] += throughput;
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+
+	pdata[0] = oldp0;
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
