@@ -89,6 +89,9 @@ static void round_lyra(uint2 *s)
 __device__ __forceinline__
 void reduceDuplexRowSetup(const int rowIn, const int rowInOut, const int rowOut, uint2 state[16], uint2 Matrix[96][8])
 {
+#if __CUDA_ARCH__ > 500
+	#pragma unroll
+#endif
 	for (int i = 0; i < 8; i++)
 	{
 		#pragma unroll
