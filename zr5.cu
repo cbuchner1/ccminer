@@ -226,7 +226,7 @@ void zr5_get_poks_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* con
 	}
 }
 
-__global__ __launch_bounds__(128, 6)
+__global__ __launch_bounds__(128, 4)
 void zr5_get_poks_xor_gpu(uint32_t threads, uint32_t** const d_buffers, uint8_t* d_permut, uint16_t* d_poks, uint8_t* d_txs, uint8_t txs)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
