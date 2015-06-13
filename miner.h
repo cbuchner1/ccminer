@@ -486,7 +486,7 @@ extern char *opt_proxy;
 extern long opt_proxy_type;
 extern bool use_syslog;
 extern bool use_colors;
-extern int usepok;
+extern int use_pok;
 extern pthread_mutex_t applog_lock;
 extern struct thr_info *thr_info;
 extern int longpoll_thr_id;
@@ -599,8 +599,8 @@ struct stratum_ctx {
 	int srvtime_diff;
 };
 
-#define POK_MAX_TXS   8
-#define POK_MAX_TX_SZ 8192U
+#define POK_MAX_TXS   4
+#define POK_MAX_TX_SZ 16384U
 struct tx {
 	uint8_t data[POK_MAX_TX_SZ];
 	uint32_t len;

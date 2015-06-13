@@ -116,7 +116,7 @@ extern "C" void zr5hash(void *output, const void *input)
 extern "C" void zr5hash_pok(void *output, uint32_t *pdata)
 {
 	uint32_t _ALIGN(64) hash[8];
-	const uint32_t version = (pdata[0] & (~POK_DATA_MASK)) | (usepok ? POK_BOOL_MASK : 0);
+	const uint32_t version = (pdata[0] & (~POK_DATA_MASK)) | (use_pok ? POK_BOOL_MASK : 0);
 
 	pdata[0] = version;
 	zr5hash(hash, pdata);
@@ -254,7 +254,7 @@ void zr5_get_poks(int thr_id, uint32_t threads, uint16_t* d_poks, struct work* w
 
 	uint8_t txs = (uint8_t) work->tx_count;
 
-	if (txs && usepok)
+	if (txs && use_pok)
 	{
 		uint32_t txlens[POK_MAX_TXS];
 		uint8_t* txdata = (uint8_t*) calloc(POK_MAX_TXS, POK_MAX_TX_SZ);
@@ -335,7 +335,7 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t oldp0 = pdata[0];
-	const uint32_t version = (oldp0 & (~POK_DATA_MASK)) | (usepok ? POK_BOOL_MASK : 0);
+	const uint32_t version = (oldp0 & (~POK_DATA_MASK)) | (use_pok ? POK_BOOL_MASK : 0);
 	const uint32_t first_nonce = pdata[19];
 	uint32_t throughput =  device_intensity(thr_id, __func__, 1U << 18);
 	throughput = min(throughput, (1U << 20)-1024);

@@ -655,7 +655,7 @@ __host__
 void zr5_keccak512_cpu_hash_pok(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t* pdata, uint32_t *d_hash, uint16_t *d_poks)
 {
 	const uint32_t threadsperblock = 256;
-	const uint32_t version = (pdata[0] & (~POK_DATA_MASK)) | (usepok ? POK_BOOL_MASK : 0);
+	const uint32_t version = (pdata[0] & (~POK_DATA_MASK)) | (use_pok ? POK_BOOL_MASK : 0);
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);

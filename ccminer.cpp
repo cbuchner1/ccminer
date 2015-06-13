@@ -172,6 +172,7 @@ bool check_dups = false;
 static bool submit_old = false;
 bool use_syslog = false;
 bool use_colors = true;
+int use_pok = 0;
 static bool opt_background = false;
 bool opt_quiet = false;
 static int opt_retries = -1;
@@ -246,7 +247,6 @@ bool stratum_need_reset = false;
 volatile bool abort_flag = false;
 struct work_restart *work_restart = NULL;
 static int app_exit_code = EXIT_CODE_OK;
-int usepok = 0;
 
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
@@ -685,9 +685,9 @@ static bool work_decode(const json_t *val, struct work *work)
 		calc_network_diff(work);
 
 
-	work->tx_count = usepok = 0;
+	work->tx_count = use_pok = 0;
 	if (work->data[0] & POK_BOOL_MASK) {
-		usepok = 1;
+		use_pok = 1;
 		json_t *txs = json_object_get(val, "txs");
 		if (txs && json_is_array(txs)) {
 			size_t idx, totlen = 0;
@@ -699,10 +699,10 @@ static bool work_decode(const json_t *val, struct work *work)
 				size_t txlen = strlen(hexstr)/2;
 				work->tx_count++;
 				if (work->tx_count > POK_MAX_TXS || txlen >= POK_MAX_TX_SZ) {
-					// when tx is too big, just reset usepok for the bloc
-					usepok = 0;
-					applog(LOG_WARNING, "large bloc ignored, txs > %d, len: %u",
-						POK_MAX_TXS, txlen);
+					// when tx is too big, just reset use_pok for the bloc
+					use_pok = 0;
+					if (opt_debug) applog(LOG_WARNING,
+						"pok: large bloc ignored, tx len: %u", txlen);
 					work->tx_count = 0;
 					break;
 				}
