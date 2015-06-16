@@ -148,6 +148,13 @@ __device__ __forceinline__ uint64_t cuda_swab64(uint64_t x)
 			(((uint64_t)(x) & 0x00000000000000ffULL) << 56)))
 #endif
 
+// swap two uint32_t without extra registers
+__device__ __host__ __forceinline__ void xchg(uint32_t &x, uint32_t &y) {
+	x ^= y; y = x ^ y; x ^= y;
+}
+// for other types...
+#define XCHG(x, y) { x ^= y; y = x ^ y; x ^= y; }
+
 /*********************************************************************/
 // Macros to catch CUDA errors in CUDA runtime calls
 
