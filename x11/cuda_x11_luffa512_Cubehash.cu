@@ -1,15 +1,8 @@
 /*
- * Merged LUFFA512 64 + CUBE512 64
+ * Merged LUFFA512 64 + CUBE512 64 - from sp
  */
 
 #include "cuda_helper.h"
-
-typedef unsigned char BitSequence;
-
-typedef struct {
-	uint32_t buffer[8]; /* Buffer to be hashed */
-	uint32_t chainv[40];   /* Chaining values */
-} hashState;
 
 #define MULT0(a) {\
 	tmp = a[7]; \
@@ -204,7 +197,7 @@ static void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 		chainv[i] = statechainv[i];
 	}
 
-	#pragma unroll
+	#pragma unroll 1
 	for(i=0;i<8;i++) {
 		STEP(c_CNS[(2*i)],c_CNS[(2*i)+1]);
 	}
@@ -217,7 +210,7 @@ static void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],1);
 
-	#pragma unroll
+	#pragma unroll 1
 	for(i=0;i<8;i++) {
 		STEP(c_CNS[(2*i)+16],c_CNS[(2*i)+16+1]);
 	}
@@ -230,7 +223,7 @@ static void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],2);
 
-	#pragma unroll
+	#pragma unroll 1
 	for(i=0;i<8;i++) {
 		STEP(c_CNS[(2*i)+32],c_CNS[(2*i)+32+1]);
 	}
@@ -243,7 +236,7 @@ static void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],3);
 
-	#pragma unroll
+	#pragma unroll 1
 	for(i=0;i<8;i++) {
 		STEP(c_CNS[(2*i)+48],c_CNS[(2*i)+48+1]);
 	}
@@ -256,7 +249,7 @@ static void rnd512(uint32_t *statebuffer, uint32_t *statechainv)
 
 	TWEAK(chainv[4],chainv[5],chainv[6],chainv[7],4);
 
-	#pragma unroll
+	#pragma unroll 1
 	for(i=0;i<8;i++) {
 		STEP(c_CNS[(2*i)+64],c_CNS[(2*i)+64+1]);
 	}
@@ -287,7 +280,7 @@ static void rnd512_first(uint32_t state[40], uint32_t buffer[8])
 	for (i = 0; i<8; i++)
 		chainv[i] = state[i];
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i)], c_CNS[(2 * i) + 1]);
 	}
@@ -300,7 +293,7 @@ static void rnd512_first(uint32_t state[40], uint32_t buffer[8])
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
 	}
@@ -313,7 +306,7 @@ static void rnd512_first(uint32_t state[40], uint32_t buffer[8])
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
 	}
@@ -326,7 +319,7 @@ static void rnd512_first(uint32_t state[40], uint32_t buffer[8])
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
 	}
@@ -339,7 +332,7 @@ static void rnd512_first(uint32_t state[40], uint32_t buffer[8])
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
 	}
@@ -419,7 +412,7 @@ static void rnd512_nullhash(uint32_t *state)
 	for (i = 0; i<8; i++)
 		chainv[i] = state[i];
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i)], c_CNS[(2 * i) + 1]);
 	}
@@ -432,7 +425,7 @@ static void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 1);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 16], c_CNS[(2 * i) + 16 + 1]);
 	}
@@ -445,7 +438,7 @@ static void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 2);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 32], c_CNS[(2 * i) + 32 + 1]);
 	}
@@ -458,7 +451,7 @@ static void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 3);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 48], c_CNS[(2 * i) + 48 + 1]);
 	}
@@ -471,7 +464,7 @@ static void rnd512_nullhash(uint32_t *state)
 
 	TWEAK(chainv[4], chainv[5], chainv[6], chainv[7], 4);
 
-	#pragma unroll
+	#pragma unroll 1
 	for (i = 0; i<8; i++) {
 		STEP(c_CNS[(2 * i) + 64], c_CNS[(2 * i) + 64 + 1]);
 	}
@@ -736,6 +729,11 @@ static void finalization512(uint32_t *statebuffer, uint32_t *statechainv, uint32
 	}
 
 __global__
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(256, 4)
+#else
+__launch_bounds__(256, 3)
+#endif
 void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
