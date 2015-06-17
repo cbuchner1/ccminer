@@ -731,8 +731,6 @@ static void finalization512(uint32_t *statebuffer, uint32_t *statechainv, uint32
 __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(256, 4)
-#else
-__launch_bounds__(256, 3)
 #endif
 void x11_luffaCubehash512_gpu_hash_64(uint32_t threads, uint32_t *g_hash)
 {
