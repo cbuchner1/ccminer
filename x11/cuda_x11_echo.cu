@@ -261,38 +261,18 @@ void cuda_echo_round(
 		hash[i] ^= W[i];
 }
 
-__device__ __forceinline__
-void echo_gpu_init(uint32_t *const __restrict__ sharedMemory)
+__global__ __launch_bounds__(128, 6) /* 128,7 force 72 registers */
+void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash)
 {
-	/* each thread startup will fill a uint32 */
-	if (threadIdx.x < 128) {
-		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
-		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
-		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
-		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
-
-		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
-		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
-	}
-}
-
-__global__ __launch_bounds__(128, 7) /* will force 72 registers */
-void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
-{
-	__shared__ uint32_t sharedMemory[1024];
-
-	echo_gpu_init(sharedMemory);
-
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+		// fill shared mem
+		__shared__ uint32_t sharedMemory[1024];
+		const uint16_t idx = thread & 0x3FF; // % 1024
+		sharedMemory[idx] = c_AES[idx];
 
-		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
-
+		uint32_t *Hash = &g_hash[thread<<4];
 		cuda_echo_round(sharedMemory, Hash);
 	}
 }
@@ -307,10 +287,11 @@ __host__
 void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = 128;
+	threads = max(threads, 1024U);
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x11_echo512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	x11_echo512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_hash);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
