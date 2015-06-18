@@ -186,8 +186,7 @@ static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
 int opt_affinity = -1;
 int opt_priority = 0;
-static double opt_diff_factor = 1.;
-static double opt_diff_multiplier = 1.;
+static double opt_difficulty = 1.;
 bool opt_extranonce = true;
 bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
@@ -737,9 +736,8 @@ static void calc_target_diff(struct work *work)
 	if (unlikely(!d64))
 		d64 = 1;
 	work->difficulty = (double)diffone / d64;
-	if (opt_diff_factor > 0.)
-		work->difficulty /= opt_diff_factor;
-	work->difficulty *= opt_diff_multiplier;
+	if (opt_difficulty > 0.)
+		work->difficulty /= opt_difficulty;
 }
 
 static int share_result(int result, int pooln, const char *reason)
@@ -772,8 +770,8 @@ static int share_result(int result, int pooln, const char *reason)
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		/* if (strncasecmp(reason, "low difficulty", 14) == 0) {
-			opt_diff_factor = (opt_diff_factor * 2.0) / 3.0;
-			applog(LOG_WARNING, "factor reduced to : %0.2f", opt_diff_factor);
+			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
+			applog(LOG_WARNING, "difficulty factor reduced to : %0.2f", opt_difficulty);
 			return 0;
 		} */
 		if (!check_dups && strncasecmp(reason, "duplicate", 9) == 0) {
@@ -1323,7 +1321,6 @@ err_out:
 static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
 	uchar merkle_root[64];
-	double diff_factor = opt_diff_factor;
 	int i;
 
 	if (!sctx->job.job_id) {
@@ -1418,10 +1415,8 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
-	if (opt_diff_multiplier > 0.)
-		diff_factor /= opt_diff_multiplier;
-	if (diff_factor == 0.)
-		diff_factor = 1.;
+	if (opt_difficulty == 0.)
+		opt_difficulty = 1.;
 
 	switch (opt_algo) {
 		case ALGO_JACKPOT:
@@ -1429,20 +1424,20 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_PLUCK:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
-			diff_to_target(work->target, sctx->job.diff / (65536.0 * diff_factor));
+			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
 			break;
 		case ALGO_DMD_GR:
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
-			diff_to_target(work->target, sctx->job.diff / (256.0 * diff_factor));
+			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
 		case ALGO_LYRA2:
-			diff_to_target(work->target, sctx->job.diff / (128.0 * diff_factor));
+			diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));
 			break;
 		default:
-			diff_to_target(work->target, sctx->job.diff / diff_factor);
+			diff_to_target(work->target, sctx->job.diff / opt_difficulty);
 	}
 	return true;
 }
@@ -2833,13 +2828,13 @@ void parse_arg(int key, char *arg)
 		d = atof(arg);
 		if (d <= 0.)
 			show_usage_and_exit(1);
-		opt_diff_factor = d;
+		opt_difficulty = d;
 		break;
 	case 'm': // --diff-multiplier
 		d = atof(arg);
 		if (d <= 0.)
 			show_usage_and_exit(1);
-		opt_diff_multiplier = d;
+		opt_difficulty = 1.0/d;
 		break;
 
 	/* PER POOL CONFIG OPTIONS */
