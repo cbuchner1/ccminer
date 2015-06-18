@@ -227,8 +227,7 @@
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
     </ClCompile>
-    <ClCompile Include="scrypt-jane.cpp" />
-    <ClCompile Include="scrypt.cpp" />
+    <ClCompile Include="pools.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="bignum.cpp" />
     <ClInclude Include="bignum.hpp" />
@@ -249,6 +248,8 @@
     <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />
     <ClInclude Include="neoscrypt\cuda_vectors.h" />
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
+    <ClCompile Include="scrypt-jane.cpp" />
+    <ClCompile Include="scrypt.cpp" />
     <ClCompile Include="skein2.cpp" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />

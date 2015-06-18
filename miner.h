@@ -469,6 +469,18 @@ struct work_restart {
 	char padding[128 - sizeof(uint32_t)];
 };
 
+#ifdef HAVE_GETOPT_LONG
+#include <getopt.h>
+#else
+struct option {
+	const char *name;
+	int has_arg;
+	int *flag;
+	int val;
+};
+#endif
+extern int options_count();
+
 extern bool opt_benchmark;
 extern bool opt_debug;
 extern bool opt_quiet;
@@ -680,12 +692,15 @@ extern struct pool_infos pools[MAX_POOLS];
 extern int num_pools;
 extern volatile int cur_pooln;
 
-int pool_get_first_valid(int startfrom);
+void pool_init_defaults(void);
 void pool_set_creds(int pooln);
 void pool_set_attr(int pooln, const char* key, char* arg);
 bool pool_switch_url(char *params);
 bool pool_switch(int pooln);
 bool pool_switch_next(void);
+int pool_get_first_valid(int startfrom);
+bool parse_pool_array(json_t *obj);
+void pool_dump_infos(void);
 
 json_t * json_rpc_call_pool(CURL *curl, struct pool_infos*,
 	const char *req, bool lp_scan, bool lp, int *err);
