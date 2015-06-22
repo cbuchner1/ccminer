@@ -909,6 +909,7 @@ static int linux_gpu_vendor(uint8_t pci_bus_id, char* vendorname, uint16_t &pid)
 		{ 0x10DE, "NVIDIA" },
 		{ 0x1458, "Gigabyte" },
 		{ 0x1462, "MSI" },
+		{ 0x3842, "EVGA" },
 		{ 0, "" }
 	};
 

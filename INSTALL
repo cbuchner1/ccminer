@@ -13,7 +13,7 @@ but some distros may have a different default location)
 
 # Step 1: gcc and dependencies
 dnf install gcc gcc-c++ automake
-dnf install jansson-devel openssl-devel libcurl-devel
+dnf install jansson-devel openssl-devel libcurl-devel zlib-devel pciutils-devel
 
 # Step 2: nvidia drivers (Download common linux drivers from nvidia site)
 dnf install kernel-devel
