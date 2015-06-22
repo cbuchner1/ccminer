@@ -176,6 +176,8 @@ int gpu_busid(struct cgpu_info *gpu);
 
 /* pid/vid, sn and bios rev */
 int gpu_info(struct cgpu_info *gpu);
+int gpu_vendor(uint8_t pci_bus_id, char *vendorname);
+
 
 /* nvapi functions */
 #ifdef WIN32

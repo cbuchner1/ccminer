@@ -19,6 +19,7 @@
 #endif
 
 #include "miner.h"
+#include "nvml.h"
 
 #include "cuda_runtime.h"
 
@@ -64,23 +65,39 @@ void cuda_devicenames()
 	GPU_N = min(MAX_GPUS, GPU_N);
 	for (int i=0; i < GPU_N; i++)
 	{
+		char vendorname[32] = { 0 };
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, device_map[i]);
 
-		device_name[i] = strdup(props.name);
 		device_sm[i] = (props.major * 100 + props.minor * 10);
+
+		if (device_name[i]) {
+			free(device_name[i]);
+			device_name[i] = NULL;
+		}
+
+		if (gpu_vendor(props.pciBusID, vendorname) > 0 && strlen(vendorname)) {
+			device_name[i] = (char*) calloc(1, strlen(vendorname) + strlen(props.name) + 2);
+			if (!strncmp(props.name, "GeForce ", 8))
+				sprintf(device_name[i], "%s %s", vendorname, &props.name[8]);
+			else
+				sprintf(device_name[i], "%s %s", vendorname, props.name);
+		} else
+			device_name[i] = strdup(props.name);
 	}
 }
 
 void cuda_print_devices()
 {
 	int ngpus = cuda_num_devices();
+	cuda_devicenames();
 	for (int n=0; n < ngpus; n++) {
 		int m = device_map[n];
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, m);
-		if (!opt_n_threads || n < opt_n_threads)
-			fprintf(stderr, "GPU #%d: SM %d.%d %s\n", m, props.major, props.minor, props.name);
+		if (!opt_n_threads || n < opt_n_threads) {
+			fprintf(stderr, "GPU #%d: SM %d.%d %s\n", m, props.major, props.minor, device_name[n]);
+		}
 	}
 }
 

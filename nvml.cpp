@@ -512,7 +512,7 @@ int nvml_get_bios(nvml_handle *nvmlh, int cudaindex, char *desc, int maxlen)
 	return 0;
 }
 
-int nvml_get_info(nvml_handle *nvmlh, int cudaindex, uint16_t *vid, uint16_t *pid)
+int nvml_get_info(nvml_handle *nvmlh, int cudaindex, uint16_t &vid, uint16_t &pid)
 {
 	uint32_t subids = 0;
 	int gpuindex = nvmlh->cuda_nvml_device_id[cudaindex];
@@ -520,8 +520,8 @@ int nvml_get_info(nvml_handle *nvmlh, int cudaindex, uint16_t *vid, uint16_t *pi
 		return -1;
 
 	subids = nvmlh->nvml_pci_subsys_id[gpuindex];
-	(*pid) = subids >> 16;
-	(*vid) = subids & 0xFFFF;
+	pid = subids >> 16;
+	vid = subids & 0xFFFF;
 	return 0;
 }
 
@@ -651,7 +651,7 @@ int nvapi_getusage(unsigned int devNum, unsigned int *pct)
 	return 0;
 }
 
-int nvapi_getinfo(unsigned int devNum, uint16_t *vid, uint16_t *pid)
+int nvapi_getinfo(unsigned int devNum, uint16_t &vid, uint16_t &pid)
 {
 	NvAPI_Status ret;
 	NvU32 pDeviceId, pSubSystemId, pRevisionId, pExtDeviceId;
@@ -668,8 +668,8 @@ int nvapi_getinfo(unsigned int devNum, uint16_t *vid, uint16_t *pid)
 		return -1;
 	}
 
-	(*pid) = pDeviceId >> 16;
-	(*vid) = pDeviceId & 0xFFFF;
+	pid = pDeviceId >> 16;
+	vid = pDeviceId & 0xFFFF;
 
 	return 0;
 }
@@ -888,9 +888,82 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 	return mw;
 }
 
+#ifdef HAVE_PCIDEV
+extern "C" {
+#include <errno.h>
+#include <pci/pci.h>
+}
+static int linux_gpu_vendor(uint8_t pci_bus_id, char* vendorname, uint16_t &pid)
+{
+	uint16_t subvendor = 0;
+	struct pci_access *pci;
+	struct pci_dev *dev;
+	uint16_t subdevice;
+
+	struct VENDORS {
+		const uint16_t vid;
+		const char *name;
+	} vendors[] = {
+		{ 0x1043, "ASUS" },
+		{ 0x10B0, "Gainward" },
+		{ 0x10DE, "NVIDIA" },
+		{ 0x1458, "Gigabyte" },
+		{ 0x1462, "MSI" },
+		{ 0, "" }
+	};
+
+	if (!vendorname)
+		return -EINVAL;
+
+	pci = pci_alloc();
+	if (!pci)
+		return -ENODEV;
+
+	pci_init(pci);
+	pci_scan_bus(pci);
+
+	for(dev = pci->devices; dev; dev = dev->next)
+	{
+		if (dev->device_class == PCI_CLASS_DISPLAY_VGA && dev->bus == pci_bus_id)
+		{
+			bool identified = false;
+			subvendor = pci_read_word(dev, PCI_SUBSYSTEM_VENDOR_ID);
+			subdevice = pci_read_word(dev, PCI_SUBSYSTEM_ID); // model
+
+			for(int v=0; v < ARRAY_SIZE(vendors); v++) {
+				if (subvendor == vendors[v].vid) {
+					strcpy(vendorname, vendors[v].name);
+					identified = true;
+					pid = subdevice;
+					break;
+				}
+			}
+
+			if (!identified && !opt_quiet)
+				applog(LOG_DEBUG, "%04x:%04x (Unknown vendor)\n",
+					subvendor, subdevice);
+		}
+	}
+	pci_cleanup(pci);
+	return (int) subvendor;
+}
+#endif
+
+int gpu_vendor(uint8_t pci_bus_id, char *vendorname)
+{
+#ifdef HAVE_PCIDEV
+	uint16_t pid = 0;
+	return linux_gpu_vendor(pci_bus_id, vendorname, pid);
+#else
+	return 0;
+#endif
+}
+
 int gpu_info(struct cgpu_info *gpu)
 {
+	char vendorname[32] = { 0 };
 	int id = gpu->gpu_id;
+	uint8_t bus_id = 0;
 
 	gpu->nvml_id = -1;
 	gpu->nvapi_id = -1;
@@ -900,13 +973,19 @@ int gpu_info(struct cgpu_info *gpu)
 
 	if (hnvml) {
 		gpu->nvml_id = (int8_t) hnvml->cuda_nvml_device_id[id];
-		nvml_get_info(hnvml, id, &gpu->gpu_vid, &gpu->gpu_pid);
+#ifdef HAVE_PCIDEV
+		gpu->gpu_vid = linux_gpu_vendor(hnvml->nvml_pci_bus_id[id], vendorname, gpu->gpu_pid);
+		if (!gpu->gpu_vid || !gpu->gpu_pid)
+			nvml_get_info(hnvml, id, gpu->gpu_vid, gpu->gpu_pid);
+#else
+		nvml_get_info(hnvml, id, gpu->gpu_vid, gpu->gpu_pid);
+#endif
 		nvml_get_serial(hnvml, id, gpu->gpu_sn, sizeof(gpu->gpu_sn));
 		nvml_get_bios(hnvml, id, gpu->gpu_desc, sizeof(gpu->gpu_desc));
 	}
 #ifdef WIN32
 	gpu->nvapi_id = (int8_t) nvapi_dev_map[id];
-	nvapi_getinfo(nvapi_dev_map[id], &gpu->gpu_vid, &gpu->gpu_pid);
+	nvapi_getinfo(nvapi_dev_map[id], gpu->gpu_vid, gpu->gpu_pid);
 	nvapi_getserial(nvapi_dev_map[id], gpu->gpu_sn, sizeof(gpu->gpu_sn));
 	nvapi_getbios(nvapi_dev_map[id], gpu->gpu_desc, sizeof(gpu->gpu_desc));
 #endif
