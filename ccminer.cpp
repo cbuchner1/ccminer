@@ -3227,7 +3227,7 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef USE_WRAPNVML
-#ifndef WIN32
+#if defined(__linux__) || defined(_WIN64)
 	/* nvml is currently not the best choice on Windows (only in x64) */
 	hnvml = nvml_create();
 	if (hnvml) {
@@ -3237,11 +3237,12 @@ int main(int argc, char *argv[])
 				cuda_reset_device(n, NULL);
 		}
 	}
-#else
-	if (nvapi_init() == 0)
+#endif
+#ifdef WIN32
+	if (!hnvml && nvapi_init() == 0)
 		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
 #endif
-	else
+	else if (!hnvml)
 		applog(LOG_INFO, "GPU monitoring is not available.");
 #endif
 
