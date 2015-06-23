@@ -1322,25 +1322,56 @@ static void c512(const uint32_t* sharedMemory, uint32_t *state, uint32_t *msg, c
 	state[0xF] ^= p7;
 }
 
+__device__ __forceinline__
+void shavite_gpu_init(uint32_t *sharedMemory)
+{
+	/* each thread startup will fill a uint32 */
+	if (threadIdx.x < 128) {
+		sharedMemory[threadIdx.x] = d_AES0[threadIdx.x];
+		sharedMemory[threadIdx.x + 256] = d_AES1[threadIdx.x];
+		sharedMemory[threadIdx.x + 512] = d_AES2[threadIdx.x];
+		sharedMemory[threadIdx.x + 768] = d_AES3[threadIdx.x];
+
+		sharedMemory[threadIdx.x + 64 * 2] = d_AES0[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 256] = d_AES1[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 512] = d_AES2[threadIdx.x + 64 * 2];
+		sharedMemory[threadIdx.x + 64 * 2 + 768] = d_AES3[threadIdx.x + 64 * 2];
+	}
+}
+
 // GPU Hash
 __global__ __launch_bounds__(TPB, 7) /* 64 registers with 128,8 - 72 regs with 128,7 */
-void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNonce, uint32_t *g_hash)
+void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
+	__shared__ uint32_t sharedMemory[1024];
+
+	shavite_gpu_init(sharedMemory);
+
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t *Hash = &g_hash[thread * 16U];
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-		// fill shared mem (aes constants)
-		__shared__ uint32_t sharedMemory[1024];
-		thread &= 0x3ff; sharedMemory[thread] = c_AES[thread];
+		int hashPosition = nounce - startNounce;
+		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
 
+		// kopiere init-state
+		uint32_t state[16] = {
+			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
+			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
+			SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
+			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
+		};
+
+		// nachricht laden
 		uint32_t msg[32];
 
+		// fülle die Nachricht mit 64-byte (vorheriger Hash)
 		#pragma unroll 16
 		for(int i=0;i<16;i++)
 			msg[i] = Hash[i];
 
+		// Nachrichtenende
 		msg[16] = 0x80;
 		#pragma unroll 10
 		for(int i=17;i<27;i++)
@@ -1352,14 +1383,6 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNonce, uint32_t 
 		msg[30] = 0;
 		msg[31] = 0x02000000;
 
-		// init-state
-		uint32_t state[16] = {
-			0x72FCCDD8, 0x79CA4727, 0x128A077B, 0x40D55AEC,
-			0xD1901A06, 0x430AE307, 0xB29F5CD1, 0xDF07FBFC,
-			0x8E45D73D, 0x681AB538, 0xBDE86578, 0xDD577E47,
-			0xE275EADE, 0x502D9FCD, 0xB9357178, 0x022A4B9A
-		};
-
 		c512(sharedMemory, state, msg, 512);
 
 		#pragma unroll 16
@@ -1368,18 +1391,25 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNonce, uint32_t 
 	}
 }
 
-__global__ __launch_bounds__(TPB, 5)
-void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint32_t *outputHash)
+__global__ __launch_bounds__(TPB, 7)
+void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
+	__shared__ uint32_t sharedMemory[1024];
+
+	shavite_gpu_init(sharedMemory);
+
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		const uint32_t nonce = startNonce + thread;
-		uint32_t *outHash = &outputHash[thread * 16U];
+		const uint32_t nounce = startNounce + thread;
 
-		// fill shared mem (aes constants)
-		__shared__ uint32_t sharedMemory[1024];
-		thread &= 0x3ff; sharedMemory[thread] = c_AES[thread];
+		// kopiere init-state
+		uint32_t state[16] = {
+			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
+			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
+			SPH_C32(0x8E45D73D), SPH_C32(0x681AB538), SPH_C32(0xBDE86578), SPH_C32(0xDD577E47),
+			SPH_C32(0xE275EADE), SPH_C32(0x502D9FCD), SPH_C32(0xB9357178), SPH_C32(0x022A4B9A)
+		};
 
 		uint32_t msg[32];
 
@@ -1387,34 +1417,31 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNonce, uint32_t 
 		for(int i=0;i<32;i++) {
 			msg[i] = c_PaddedMessage80[i];
 		}
-		msg[19] = cuda_swab32(nonce);
-
-		// init-state
-		uint32_t state[16] = {
-			0x72FCCDD8, 0x79CA4727, 0x128A077B, 0x40D55AEC,
-			0xD1901A06, 0x430AE307, 0xB29F5CD1, 0xDF07FBFC,
-			0x8E45D73D, 0x681AB538, 0xBDE86578, 0xDD577E47,
-			0xE275EADE, 0x502D9FCD, 0xB9357178, 0x022A4B9A
-		};
+		msg[19] = cuda_swab32(nounce);
+		msg[20] = 0x80;
+		msg[27] = 0x2800000;
+		msg[31] = 0x2000000;
 
 		c512(sharedMemory, state, msg, 640);
+
+		uint32_t *outHash = (uint32_t *)outputHash + 16 * thread;
 
 		#pragma unroll 16
 		for(int i=0;i<16;i++)
 			outHash[i] = state[i];
-	}
+
+	} //thread < threads
 }
 
 __host__
 void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = TPB;
-	threads = max(threads, 1024U);
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_hash);
+	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
@@ -1422,7 +1449,6 @@ __host__
 void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
 	const uint32_t threadsperblock = TPB;
-	threads = max(threads, 1024U);
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
@@ -1439,13 +1465,11 @@ void x11_shavite512_cpu_init(int thr_id, uint32_t threads)
 __host__
 void x11_shavite512_setBlock_80(void *pdata)
 {
-	uint32_t PaddedMessage[32];
-
+	// Message mit Padding bereitstellen
+	// lediglich die korrekte Nonce ist noch ab Byte 76 einzusetzen.
+	unsigned char PaddedMessage[128];
 	memcpy(PaddedMessage, pdata, 80);
-	memset(&PaddedMessage[20], 0, 48);
-	PaddedMessage[20] = 0x80;
-	PaddedMessage[27] = 0x2800000;
-	PaddedMessage[31] = 0x2000000;
+	memset(PaddedMessage+80, 0, 48);
 
-	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, sizeof(PaddedMessage), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_PaddedMessage80, PaddedMessage, 32*sizeof(uint32_t), 0, cudaMemcpyHostToDevice);
 }
