@@ -232,7 +232,7 @@ nvml_handle * nvml_create()
 		nvmlh->nvml_pci_domain_id[i] = pciinfo.domain;
 		nvmlh->nvml_pci_bus_id[i]    = pciinfo.bus;
 		nvmlh->nvml_pci_device_id[i] = pciinfo.device;
-		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_device_id;
+		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_device_id; /* pci_subsystem_id broken (0xccccccccc) */
 
 		nvmlh->app_clocks[i] = NVML_FEATURE_UNKNOWN;
 		if (nvmlh->nvmlDeviceSetAPIRestriction) {
@@ -779,7 +779,7 @@ int nvapi_init()
 	NvAPI_ShortString str;
 	ret = NvAPI_SYS_GetDriverAndBranchVersion(&udv, str);
 	if (ret == NVAPI_OK) {
-		sprintf(driver_version,"%d.%d", udv/100, udv % 100);
+		sprintf(driver_version,"%d.%02d", udv / 100, udv % 100);
 	}
 
 	return 0;
@@ -888,6 +888,37 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 	return mw;
 }
 
+static int translate_vendor_id(uint16_t vid, char *vendorname)
+{
+	bool identified = false;
+
+	if (!vendorname)
+		return -EINVAL;
+
+	struct VENDORS {
+		const uint16_t vid;
+		const char *name;
+	} vendors[] = {
+		{ 0x1043, "ASUS" },
+		{ 0x10B0, "Gainward" },
+		// { 0x10DE, "NVIDIA" },
+		{ 0x1458, "Gigabyte" },
+		{ 0x1462, "MSI" },
+		{ 0x3842, "EVGA" },
+		{ 0, "" }
+	};
+
+	for(int v=0; v < ARRAY_SIZE(vendors); v++) {
+		if (vid == vendors[v].vid) {
+			strcpy(vendorname, vendors[v].name);
+			return vid;
+		}
+	}
+	if (!identified && opt_debug)
+		applog(LOG_DEBUG, "nvml: Unknown vendor %04x\n", vid);
+	return 0;
+}
+
 #ifdef HAVE_PCIDEV
 extern "C" {
 #include <errno.h>
@@ -899,19 +930,6 @@ static int linux_gpu_vendor(uint8_t pci_bus_id, char* vendorname, uint16_t &pid)
 	struct pci_access *pci;
 	struct pci_dev *dev;
 	uint16_t subdevice;
-
-	struct VENDORS {
-		const uint16_t vid;
-		const char *name;
-	} vendors[] = {
-		{ 0x1043, "ASUS" },
-		{ 0x10B0, "Gainward" },
-		{ 0x10DE, "NVIDIA" },
-		{ 0x1458, "Gigabyte" },
-		{ 0x1462, "MSI" },
-		{ 0x3842, "EVGA" },
-		{ 0, "" }
-	};
 
 	if (!vendorname)
 		return -EINVAL;
@@ -925,24 +943,16 @@ static int linux_gpu_vendor(uint8_t pci_bus_id, char* vendorname, uint16_t &pid)
 
 	for(dev = pci->devices; dev; dev = dev->next)
 	{
-		if (dev->device_class == PCI_CLASS_DISPLAY_VGA && dev->bus == pci_bus_id)
+		if (dev->bus == pci_bus_id  && dev->vendor_id == 0x10DE)
 		{
-			bool identified = false;
+			if (!(dev->known_fields & PCI_FILL_CLASS))
+				pci_fill_info(dev, PCI_FILL_CLASS);
+			if (dev->device_class != PCI_CLASS_DISPLAY_VGA)
+				continue;
 			subvendor = pci_read_word(dev, PCI_SUBSYSTEM_VENDOR_ID);
 			subdevice = pci_read_word(dev, PCI_SUBSYSTEM_ID); // model
 
-			for(int v=0; v < ARRAY_SIZE(vendors); v++) {
-				if (subvendor == vendors[v].vid) {
-					strcpy(vendorname, vendors[v].name);
-					identified = true;
-					pid = subdevice;
-					break;
-				}
-			}
-
-			if (!identified && !opt_quiet)
-				applog(LOG_DEBUG, "%04x:%04x (Unknown vendor)\n",
-					subvendor, subdevice);
+			translate_vendor_id(subvendor, vendorname);
 		}
 	}
 	pci_cleanup(pci);
@@ -956,7 +966,15 @@ int gpu_vendor(uint8_t pci_bus_id, char *vendorname)
 	uint16_t pid = 0;
 	return linux_gpu_vendor(pci_bus_id, vendorname, pid);
 #else
-	return 0;
+	uint16_t vid = 0, pid = 0;
+	if (hnvml) { // may not be initialized on start...
+		for (int id=0; id < hnvml->nvml_gpucount; id++) {
+			if (hnvml->nvml_pci_bus_id[id] == pci_bus_id) {
+				nvml_get_info(hnvml, id, vid, pid);
+			}
+		}
+	}
+	return translate_vendor_id(vid, vendorname);
 #endif
 }
 

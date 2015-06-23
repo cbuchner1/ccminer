@@ -231,6 +231,7 @@ extern "C" int scanhash_x11(int thr_id, uint32_t *pdata,
 				return res;
 			} else {
 				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				pdata[19] = foundNonce + 1;
 			}
 		}
 
