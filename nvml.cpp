@@ -147,7 +147,7 @@ nvml_handle * nvml_create()
 	nvmlh->nvmlDeviceGetClockInfo = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t, unsigned int *clock))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetClockInfo");
 	nvmlh->nvmlDeviceGetPciInfo = (nvmlReturn_t (*)(nvmlDevice_t, nvmlPciInfo_t *))
-		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPciInfo");
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPciInfo_v2");
 	nvmlh->nvmlDeviceGetName = (nvmlReturn_t (*)(nvmlDevice_t, char *, int))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetName");
 	nvmlh->nvmlDeviceGetTemperature = (nvmlReturn_t (*)(nvmlDevice_t, int, unsigned int *))
@@ -232,7 +232,7 @@ nvml_handle * nvml_create()
 		nvmlh->nvml_pci_domain_id[i] = pciinfo.domain;
 		nvmlh->nvml_pci_bus_id[i]    = pciinfo.bus;
 		nvmlh->nvml_pci_device_id[i] = pciinfo.device;
-		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_device_id; /* pci_subsystem_id broken (0xccccccccc) */
+		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_subsystem_id;
 
 		nvmlh->app_clocks[i] = NVML_FEATURE_UNKNOWN;
 		if (nvmlh->nvmlDeviceSetAPIRestriction) {
@@ -890,11 +890,6 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 
 static int translate_vendor_id(uint16_t vid, char *vendorname)
 {
-	bool identified = false;
-
-	if (!vendorname)
-		return -EINVAL;
-
 	struct VENDORS {
 		const uint16_t vid;
 		const char *name;
@@ -908,13 +903,16 @@ static int translate_vendor_id(uint16_t vid, char *vendorname)
 		{ 0, "" }
 	};
 
+	if (!vendorname)
+		return -EINVAL;
+
 	for(int v=0; v < ARRAY_SIZE(vendors); v++) {
 		if (vid == vendors[v].vid) {
 			strcpy(vendorname, vendors[v].name);
 			return vid;
 		}
 	}
-	if (!identified && opt_debug)
+	if (opt_debug)
 		applog(LOG_DEBUG, "nvml: Unknown vendor %04x\n", vid);
 	return 0;
 }

@@ -3231,6 +3231,7 @@ int main(int argc, char *argv[])
 	/* nvml is currently not the best choice on Windows (only in x64) */
 	hnvml = nvml_create();
 	if (hnvml) {
+		cuda_devicenames(); // refresh gpu vendor name
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
 		for (int n=0; n < opt_n_threads; n++) {
 			if (nvml_set_clocks(hnvml, device_map[n]) == 1)
