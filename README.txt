@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.4-tpruvot (May 2015) - "Multi-pools config"
+ccMiner release 1.6.5-tpruvot (Jun 2015) "PoK, clocks & Cuda 7"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -218,12 +218,15 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-      June 2015   v1.6.5
+  June 23th 2015  v1.6.5
+                  Handle Ziftrcoin PoK solo mining
+                  Basic compatibility with CUDA 7.0 (generally slower hashrate)
+                  Show gpus vendor names on linux (windows test branch is pciutils)
                   Remove -v and -m short params specific to heavycoin
                   Add --diff-multiplier (-m) and rename --diff to --diff-factor (-f)
-                  Some fixes for default pool params values (multipool)
                   First steps to handle nvml application clocks and P0 on the GTX9xx
-                  Optimize qubit, deep and luffa algos
+                  Various improvements on multipool and cmdline parameters
+                  Optimize a bit qubit, deep, luffa, x11 and quark algos
 
   May 26th 2015   v1.6.4
                   Implement multi-pool support (failover and time rotate)

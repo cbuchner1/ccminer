@@ -343,10 +343,10 @@ Options:\n\
       --max-temp=N      Only mine if gpu temp is less than specified value\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n"
-#if defined(USE_WRAPNVML) && defined(__linux)
+#if defined(USE_WRAPNVML) && (defined(__linux) || defined(_WIN64))
 "\
       --gpu-clock=1150  Set device application clock\n\
-      --mem-clock=3505  Set the gpu memory clock (require 346.72 linux driver)\n"
+      --mem-clock=3505  Set the gpu memory clock (require 346.72+ driver)\n"
 #endif
 #ifdef HAVE_SYSLOG_H
 "\
