@@ -41,6 +41,7 @@ extern uint32_t device_plimit[MAX_GPUS];
 extern int8_t device_pstate[MAX_GPUS];
 
 uint8_t gpu_clocks_changed[MAX_GPUS] = { 0 };
+uint8_t gpu_limits_changed[MAX_GPUS] = { 0 };
 
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
@@ -373,16 +374,26 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 	if (n < 0 || n >= nvmlh->nvml_gpucount)
 		return -ENODEV;
 
-	if (!gpu_clocks_changed[dev_id])
-		return 0; // nothing to do
-
-	rc = nvmlh->nvmlDeviceResetApplicationsClocks(nvmlh->devs[n]);
-	if (rc != NVML_SUCCESS) {
-		applog(LOG_WARNING, "GPU #%d: unable to reset application clocks", dev_id);
-		return -1;
+	if (gpu_clocks_changed[dev_id]) {
+		rc = nvmlh->nvmlDeviceResetApplicationsClocks(nvmlh->devs[n]);
+		if (rc != NVML_SUCCESS) {
+			applog(LOG_WARNING, "GPU #%d: unable to reset application clocks", dev_id);
+			return -1;
+		}
+		gpu_clocks_changed[dev_id] = 0;
 	}
-	gpu_clocks_changed[dev_id] = 0;
-	return 1;
+
+	if (gpu_limits_changed[dev_id]) {
+		uint32_t plimit = 0;
+		if (nvmlh->nvmlDeviceGetPowerManagementDefaultLimit) {
+			rc = nvmlh->nvmlDeviceGetPowerManagementDefaultLimit(nvmlh->devs[n], &plimit);
+			if (rc == NVML_SUCCESS)
+				nvmlh->nvmlDeviceSetPowerManagementLimit(nvmlh->devs[n], plimit);
+		}
+		gpu_limits_changed[dev_id] = 0;
+		return 1;
+	}
+	return 0;
 }
 
 
@@ -453,7 +464,7 @@ int nvml_set_pstate(nvml_handle *nvmlh, int dev_id)
 		return -1;
 	}
 
-	if (opt_debug)
+	if (!opt_quiet)
 		applog(LOG_INFO, "GPU #%d: app clocks set to P%d (%u/%u)", dev_id, (int) wanted_pstate, mem_clk, gpu_clk);
 
 	gpu_clocks_changed[dev_id] = 1;
@@ -494,10 +505,12 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 		return -1;
 	}
 
-	if (opt_debug) {
+	if (!opt_quiet) {
 		applog(LOG_INFO, "GPU #%d: power limit set to %uW (allowed range is %u-%u)",
 			dev_id, plimit/1000U, pmin/1000U, pmax/1000U);
 	}
+
+	gpu_limits_changed[dev_id] = 1;
 
 	return 0;
 }
