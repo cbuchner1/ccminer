@@ -62,6 +62,7 @@ function translateField($key)
 	$intl['TEMP'] = 'T°c';
 	$intl['FAN'] = 'Fan %';
 	$intl['FREQ'] = 'Freq.';
+	$intl['POWER'] = 'Power';
 	$intl['PST'] = 'P-State';
 
 	// pool infos
@@ -95,6 +96,9 @@ function translateValue($key,$val,$data=array())
 			break;
 		case 'FREQ':
 			$val = sprintf("%d MHz", round(floatval($val)/1000.0));
+			break;
+		case 'POWER':
+			$val = sprintf("%d W", round(floatval($val)/1000.0));
 			break;
 		case 'TS':
 			$val = strftime("%H:%M:%S", (int) $val);
