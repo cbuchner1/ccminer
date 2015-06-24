@@ -153,43 +153,8 @@ int nvml_destroy(nvml_handle *nvmlh);
  */
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount);
 
-/*
- * Query the number of GPUs seen by CUDA
- */
-int cuda_get_gpucount(nvml_handle *nvmlh, int *gpucount);
-
-
-/*
- * query the name of the GPU model from the CUDA device ID
- *
- */
-int nvml_get_gpu_name(nvml_handle *nvmlh,
-                           int gpuindex,
-                           char *namebuf,
-                           int bufsize);
-
-/*
- * Query the current GPU temperature (Celsius), from the CUDA device ID
- */
-int nvml_get_tempC(nvml_handle *nvmlh,
-                        int gpuindex, unsigned int *tempC);
-
-/*
- * Query the current GPU fan speed (percent) from the CUDA device ID
- */
-int nvml_get_fanpcnt(nvml_handle *nvmlh,
-                          int gpuindex, unsigned int *fanpcnt);
-
-/*
- * Query the current GPU power usage in millwatts from the CUDA device ID
- *
- * This feature is only available on recent GPU generations and may be
- * limited in some cases only to Tesla series GPUs.
- * If the query is run on an unsupported GPU, this routine will return -1.
- */
-int nvml_get_power_usage(nvml_handle *nvmlh,
-                              int gpuindex,
-                              unsigned int *milliwatts);
+int nvml_set_plimit(nvml_handle *nvmlh, int dev_id);
+int nvml_set_pstate(nvml_handle *nvmlh, int dev_id);
 
 int nvml_set_clocks(nvml_handle *nvmlh, int dev_id);
 int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id);

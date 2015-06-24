@@ -198,6 +198,8 @@ long  device_sm[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 uint32_t device_gpu_clocks[MAX_GPUS] = { 0 };
 uint32_t device_mem_clocks[MAX_GPUS] = { 0 };
+uint32_t device_plimit[MAX_GPUS] = { 0 };
+int8_t device_pstate[MAX_GPUS] = { -1 };
 
 // un-linked to cmdline scrypt options (useless)
 int device_batchsize[MAX_GPUS] = { 0 };
@@ -343,10 +345,12 @@ Options:\n\
       --max-temp=N      Only mine if gpu temp is less than specified value\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n"
-#if defined(USE_WRAPNVML) && (defined(__linux) || defined(_WIN64))
+#if defined(USE_WRAPNVML) && (defined(__linux) || defined(_WIN64)) /* via nvml */
 "\
-      --gpu-clock=1150  Set device application clock\n\
-      --mem-clock=3505  Set the gpu memory clock (require 346.72+ driver)\n"
+      --mem-clock=3505  Set the gpu memory max clock (346.72+ driver)\n\
+      --gpu-clock=1150  Set the gpu engine max clock (346.72+ driver)\n\
+      --pstate=0[,2]    Set the gpu power state (352.21+ driver)\n\
+      --plimit=100W     Set the gpu power limit (352.21+ driver)\n"
 #endif
 #ifdef HAVE_SYSLOG_H
 "\
@@ -410,6 +414,8 @@ struct option options[] = {
 	{ "statsavg", 1, NULL, 'N' },
 	{ "gpu-clock", 1, NULL, 1070 },
 	{ "mem-clock", 1, NULL, 1071 },
+	{ "pstate", 1, NULL, 1072 },
+	{ "plimit", 1, NULL, 1073 },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
 	{ "syslog-prefix", 1, NULL, 1018 },
@@ -2731,6 +2737,28 @@ void parse_arg(int key, char *arg)
 			}
 		}
 		break;
+	case 1072: /* --pstate */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0;
+			while (pch != NULL && n < MAX_GPUS) {
+				int dev_id = device_map[n++];
+				device_pstate[dev_id] = (int8_t) atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+		}
+		break;
+	case 1073: /* --plimit */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0;
+			while (pch != NULL && n < MAX_GPUS) {
+				int dev_id = device_map[n++];
+				device_plimit[dev_id] = atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+		}
+		break;
 	case 1005:
 		opt_benchmark = true;
 		want_longpoll = false;
@@ -3049,6 +3077,7 @@ int main(int argc, char *argv[])
 		device_interactive[i] = -1;
 		device_texturecache[i] = -1;
 		device_singlememory[i] = -1;
+		device_pstate[i] = -1;
 	}
 
 	// number of gpus
@@ -3231,10 +3260,17 @@ int main(int argc, char *argv[])
 	/* nvml is currently not the best choice on Windows (only in x64) */
 	hnvml = nvml_create();
 	if (hnvml) {
+		bool gpu_reinit = false;
 		cuda_devicenames(); // refresh gpu vendor name
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
 		for (int n=0; n < opt_n_threads; n++) {
+			if (nvml_set_pstate(hnvml, device_map[n]) == 1)
+				gpu_reinit = true;
+			if (nvml_set_plimit(hnvml, device_map[n]) == 1)
+				gpu_reinit = true;
 			if (nvml_set_clocks(hnvml, device_map[n]) == 1)
+				gpu_reinit = true;
+			if (gpu_reinit)
 				cuda_reset_device(n, NULL);
 		}
 	}

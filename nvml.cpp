@@ -37,6 +37,8 @@ static uint32_t device_bus_ids[MAX_GPUS] = { 0 };
 
 extern uint32_t device_gpu_clocks[MAX_GPUS];
 extern uint32_t device_mem_clocks[MAX_GPUS];
+extern uint32_t device_plimit[MAX_GPUS];
+extern int8_t device_pstate[MAX_GPUS];
 
 uint8_t gpu_clocks_changed[MAX_GPUS] = { 0 };
 
@@ -326,12 +328,12 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	if (device_gpu_clocks[dev_id]) gpu_clk = device_gpu_clocks[dev_id];
 
 	// these functions works for the 960 and the 970 (346.72+), not for the 750 Ti
-	uint32_t nclocks = 0, clocks[128] = { 0 };
+	uint32_t nclocks = 0, clocks[127] = { 0 };
 	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, NULL);
-	nclocks = min(nclocks, 128);
+	nclocks = min(nclocks, 127);
 	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
-	for (uint8_t u=0; u < nclocks; u++) {
-		// ordered desc, so get first
+	for (int8_t u=0; u < nclocks; u++) {
+		// ordered by pstate (so highest is first memory clock - P0)
 		if (clocks[u] <= mem_clk) {
 			mem_clk = clocks[u];
 			break;
@@ -340,7 +342,7 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 
 	nclocks = 0;
 	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, NULL);
-	nclocks = min(nclocks, 128);
+	nclocks = min(nclocks, 127);
 	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, clocks);
 	for (uint8_t u=0; u < nclocks; u++) {
 		// ordered desc, so get first
@@ -354,7 +356,7 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	if (rc == NVML_SUCCESS)
 		applog(LOG_INFO, "GPU #%d: application clocks set to %u/%u", dev_id, mem_clk, gpu_clk);
 	else {
-		applog(LOG_ERR, "GPU #%d: %u/%u - %s", dev_id, mem_clk, gpu_clk, nvmlh->nvmlErrorString(rc));
+		applog(LOG_WARNING, "GPU #%d: %u/%u - %s", dev_id, mem_clk, gpu_clk, nvmlh->nvmlErrorString(rc));
 		return -1;
 	}
 
@@ -381,6 +383,123 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 	}
 	gpu_clocks_changed[dev_id] = 0;
 	return 1;
+}
+
+
+/**
+ * Set power state of a device (9xx)
+ * Code is similar as clocks one, which allow the change of the pstate
+ */
+int nvml_set_pstate(nvml_handle *nvmlh, int dev_id)
+{
+	nvmlReturn_t rc;
+	uint32_t gpu_clk = 0, mem_clk = 0;
+	int n = nvmlh->cuda_nvml_device_id[dev_id];
+	if (n < 0 || n >= nvmlh->nvml_gpucount)
+		return -ENODEV;
+
+	if (device_pstate[dev_id] < 0)
+		return 0;
+
+	// prevent double operations on the same gpu... to enhance
+	if (gpu_clocks_changed[dev_id])
+		return 0;
+
+	if (nvmlh->app_clocks[n] != NVML_FEATURE_ENABLED) {
+		applog(LOG_WARNING, "GPU #%d: NVML app. clock feature is not allowed!", dev_id);
+		return -EPERM;
+	}
+
+	nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_MEM, &mem_clk);
+	rc = nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_GRAPHICS, &gpu_clk);
+	if (rc != NVML_SUCCESS) {
+		applog(LOG_WARNING, "GPU #%d: unable to query application clocks", dev_id);
+		return -EINVAL;
+	}
+
+	// get application config values
+	if (device_mem_clocks[dev_id]) mem_clk = device_mem_clocks[dev_id];
+	if (device_gpu_clocks[dev_id]) gpu_clk = device_gpu_clocks[dev_id];
+
+	// these functions works for the 960 and the 970 (346.72+), not for the 750 Ti
+	uint32_t nclocks = 0, clocks[127] = { 0 };
+	int8_t wanted_pstate = device_pstate[dev_id];
+	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, NULL);
+	nclocks = min(nclocks, 127);
+	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
+	for (uint8_t u=0; u < nclocks; u++) {
+		// ordered by pstate (so high first)
+		if (u == wanted_pstate) {
+			mem_clk = clocks[u];
+			break;
+		}
+	}
+
+	nclocks = 0;
+	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, NULL);
+	nclocks = min(nclocks, 127);
+	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, clocks);
+	for (uint8_t u=0; u < nclocks; u++) {
+		// ordered desc, so get first
+		if (clocks[u] <= gpu_clk) {
+			gpu_clk = clocks[u];
+			break;
+		}
+	}
+
+	rc = nvmlh->nvmlDeviceSetApplicationsClocks(nvmlh->devs[n], mem_clk, gpu_clk);
+	if (rc != NVML_SUCCESS) {
+		applog(LOG_WARNING, "GPU #%d: pstate %s", dev_id, nvmlh->nvmlErrorString(rc));
+		return -1;
+	}
+
+	if (opt_debug)
+		applog(LOG_INFO, "GPU #%d: app clocks set to P%d (%u/%u)", dev_id, (int) wanted_pstate, mem_clk, gpu_clk);
+
+	gpu_clocks_changed[dev_id] = 1;
+	return 1;
+}
+
+int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
+{
+	nvmlReturn_t rc = NVML_ERROR_UNKNOWN;
+	uint32_t gpu_clk = 0, mem_clk = 0;
+	int n = nvmlh->cuda_nvml_device_id[dev_id];
+	if (n < 0 || n >= nvmlh->nvml_gpucount)
+		return -ENODEV;
+
+	if (!device_plimit[dev_id])
+		return 0; // nothing to do
+
+	if (!nvmlh->nvmlDeviceSetPowerManagementLimit)
+		return -ENOSYS;
+
+	uint32_t plimit = device_plimit[dev_id] * 1000U;
+	uint32_t pmin = 1000, pmax = 0;
+	if (nvmlh->nvmlDeviceGetPowerManagementLimitConstraints)
+		rc = nvmlh->nvmlDeviceGetPowerManagementLimitConstraints(nvmlh->devs[n], &pmin, &pmax);
+
+	if (rc != NVML_SUCCESS) {
+		if (!nvmlh->nvmlDeviceGetPowerManagementLimit)
+			return -ENOSYS;
+		pmax = 100 * 1000; // should not happen...
+		nvmlh->nvmlDeviceGetPowerManagementLimit(nvmlh->devs[n], &pmax);
+	}
+
+	plimit = min(plimit, pmax);
+	plimit = max(plimit, pmin);
+	rc = nvmlh->nvmlDeviceSetPowerManagementLimit(nvmlh->devs[n], plimit);
+	if (rc != NVML_SUCCESS) {
+		applog(LOG_WARNING, "GPU #%d: plimit %s", dev_id, nvmlh->nvmlErrorString(rc));
+		return -1;
+	}
+
+	if (opt_debug) {
+		applog(LOG_INFO, "GPU #%d: power limit set to %uW (allowed range is %u-%u)",
+			dev_id, plimit/1000U, pmin/1000U, pmax/1000U);
+	}
+
+	return 0;
 }
 
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount)
