@@ -397,7 +397,7 @@ struct cgpu_info {
 	int gpu_clock;
 	int gpu_memclock;
 	size_t gpu_mem;
-	uint32_t gpu_usage;
+	uint32_t gpu_power;
 	double gpu_vddc;
 	int16_t gpu_pstate;
 	int16_t gpu_bus;

@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.5"
+#define APIVERSION "1.6"
 
 #ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -124,6 +124,7 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = (uint16_t) gpu_fanpercent(cgpu);
 		cgpu->gpu_fan_rpm = (uint16_t) gpu_fanrpm(cgpu);
+		cgpu->gpu_power = gpu_power(cgpu);
 #endif
 		cuda_gpu_clocks(cgpu);
 
@@ -135,10 +136,11 @@ static void gpustatus(int thr_id)
 
 		card = device_name[gpuid];
 
-		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;"
-			"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%.1f;THR=%u|",
-			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp, cgpu->gpu_fan,
-			cgpu->gpu_fan_rpm, cgpu->gpu_clock, cgpu->khashes,
+		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;TEMP=%.1f;"
+			"POWER=%u;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%.1f;THR=%u|",
+			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp,
+			cgpu->gpu_power, cgpu->gpu_fan, cgpu->gpu_fan_rpm,
+			cgpu->gpu_clock, cgpu->khashes,
 			cgpu->hw_errors, cgpu->intensity, cgpu->throughput);
 
 		// append to buffer for multi gpus
@@ -248,6 +250,7 @@ static void gpuhwinfos(int gpu_id)
 	cgpu->gpu_fan = (uint16_t) gpu_fanpercent(cgpu);
 	cgpu->gpu_fan_rpm = (uint16_t) gpu_fanrpm(cgpu);
 	cgpu->gpu_pstate = (int16_t) gpu_pstate(cgpu);
+	cgpu->gpu_power = gpu_power(cgpu);
 	gpu_info(cgpu);
 #endif
 
@@ -260,12 +263,13 @@ static void gpuhwinfos(int gpu_id)
 	card = device_name[gpu_id];
 
 	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%u;MEM=%lu;"
-		"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;MEMFREQ=%d;PST=%s;"
+		"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;MEMFREQ=%d;PST=%s;POWER=%u;"
 		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;SN=%s;BIOS=%s|",
 		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_arch, cgpu->gpu_mem,
 		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_fan_rpm,
 		cgpu->gpu_clock, cgpu->gpu_memclock,
-		pstate, cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id,
+		pstate, cgpu->gpu_power,
+		cgpu->gpu_vid, cgpu->gpu_pid, cgpu->nvml_id, cgpu->nvapi_id,
 		cgpu->gpu_sn, cgpu->gpu_desc);
 
 	strcat(buffer, buf);
