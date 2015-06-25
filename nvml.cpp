@@ -365,9 +365,10 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	return 1;
 }
 
-/* reset default app clocks to an used device */
+/* reset default app clocks and limits on exit */
 int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 {
+	int ret = 0;
 	nvmlReturn_t rc;
 	uint32_t gpu_clk = 0, mem_clk = 0;
 	int n = nvmlh->cuda_nvml_device_id[dev_id];
@@ -378,9 +379,9 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 		rc = nvmlh->nvmlDeviceResetApplicationsClocks(nvmlh->devs[n]);
 		if (rc != NVML_SUCCESS) {
 			applog(LOG_WARNING, "GPU #%d: unable to reset application clocks", dev_id);
-			return -1;
 		}
 		gpu_clocks_changed[dev_id] = 0;
+		ret = 1;
 	}
 
 	if (gpu_limits_changed[dev_id]) {
@@ -391,9 +392,9 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 				nvmlh->nvmlDeviceSetPowerManagementLimit(nvmlh->devs[n], plimit);
 		}
 		gpu_limits_changed[dev_id] = 0;
-		return 1;
+		ret = 1;
 	}
-	return 0;
+	return ret;
 }
 
 
@@ -511,8 +512,7 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 	}
 
 	gpu_limits_changed[dev_id] = 1;
-
-	return 0;
+	return 1;
 }
 
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount)
@@ -1066,12 +1066,20 @@ static int translate_vendor_id(uint16_t vid, char *vendorname)
 		const char *name;
 	} vendors[] = {
 		{ 0x1043, "ASUS" },
+		{ 0x107D, "Leadtek" },
 		{ 0x10B0, "Gainward" },
 		// { 0x10DE, "NVIDIA" },
 		{ 0x1458, "Gigabyte" },
 		{ 0x1462, "MSI" },
+		{ 0x154B, "PNY" },
+		{ 0x1682, "XFX" },
+		{ 0x196D, "Club3D" },
 		{ 0x19DA, "Zotac" },
+		{ 0x19F1, "BFG" },
+		{ 0x1ACC, "PoV" },
+		{ 0x1B4C, "KFA2" },
 		{ 0x3842, "EVGA" },
+		{ 0x7377, "Colorful" },
 		{ 0, "" }
 	};
 

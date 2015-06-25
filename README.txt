@@ -135,6 +135,9 @@ its command line interface and options.
       --max-temp=N      Only mine if gpu temp is less than specified value
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value
       --max-diff=N      Only mine if net difficulty is less than specified value
+      --pstate=0        will force the Geforce 9xx to run in P0 P-State
+      --plimit=150W     set the gpu power limit, allow multiple values for N cards
+      --keep-clocks     prevent reset clocks and/or power limit on exit
   -B, --background      run the miner in the background
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms

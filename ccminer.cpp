@@ -200,6 +200,7 @@ uint32_t device_gpu_clocks[MAX_GPUS] = { 0 };
 uint32_t device_mem_clocks[MAX_GPUS] = { 0 };
 uint32_t device_plimit[MAX_GPUS] = { 0 };
 int8_t device_pstate[MAX_GPUS] = { -1 };
+static bool opt_keep_clocks = false;
 
 // un-linked to cmdline scrypt options (useless)
 int device_batchsize[MAX_GPUS] = { 0 };
@@ -416,6 +417,7 @@ struct option options[] = {
 	{ "mem-clock", 1, NULL, 1071 },
 	{ "pstate", 1, NULL, 1072 },
 	{ "plimit", 1, NULL, 1073 },
+	{ "keep-clocks", 0, NULL, 1074 },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
 	{ "syslog-prefix", 1, NULL, 1018 },
@@ -539,7 +541,7 @@ void proper_exit(int reason)
 	timeEndPeriod(1); // else never executed
 #endif
 #ifdef USE_WRAPNVML
-	if (hnvml) {
+	if (hnvml && !opt_keep_clocks) {
 		for (int n=0; n < opt_n_threads; n++) {
 			nvml_reset_clocks(hnvml, device_map[n]);
 		}
@@ -2758,6 +2760,9 @@ void parse_arg(int key, char *arg)
 				pch = strtok(NULL, ",");
 			}
 		}
+		break;
+	case 1074: /* --keep-clocks */
+		opt_keep_clocks = true;
 		break;
 	case 1005:
 		opt_benchmark = true;
