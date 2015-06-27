@@ -75,14 +75,15 @@ void cuda_devicenames()
 			free(device_name[i]);
 			device_name[i] = NULL;
 		}
-
-		if (gpu_vendor(props.pciBusID, vendorname) > 0 && strlen(vendorname)) {
+#ifdef USE_WRAPNVML
+		if (gpu_vendor((uint8_t)props.pciBusID, vendorname) > 0 && strlen(vendorname)) {
 			device_name[i] = (char*) calloc(1, strlen(vendorname) + strlen(props.name) + 2);
 			if (!strncmp(props.name, "GeForce ", 8))
 				sprintf(device_name[i], "%s %s", vendorname, &props.name[8]);
 			else
 				sprintf(device_name[i], "%s %s", vendorname, props.name);
 		} else
+#endif
 			device_name[i] = strdup(props.name);
 	}
 }
