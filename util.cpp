@@ -1853,9 +1853,6 @@ void print_hash_tests(void)
 	pentablakehash(&hash[0], &buf[0]);
 	printpfx("pentablake", hash);
 
-	pluckhash((uint32_t*)&hash[0], (uint32_t*)&buf[0], scratchbuf, 128);
-	printpfx("pluck", hash);
-
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
 

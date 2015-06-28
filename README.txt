@@ -81,7 +81,6 @@ its command line interface and options.
                           neoscrypt   use to mine FeatherCoin
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
-                          pluck       use to mine Supcoin
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit
                           scrypt      use to mine Scrypt coins
@@ -220,6 +219,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  July 2015...
+                  Nvml api power limits
+                  Remove pluck algo
 
   June 23th 2015  v1.6.5
                   Handle Ziftrcoin PoK solo mining

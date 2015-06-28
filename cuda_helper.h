@@ -309,7 +309,6 @@ uint64_t shr_t64(uint64_t x, uint32_t n)
 #endif
 }
 
-// device asm for ?
 __device__ __forceinline__
 uint64_t shl_t64(uint64_t x, uint32_t n)
 {
@@ -321,40 +320,6 @@ uint64_t shl_t64(uint64_t x, uint32_t n)
 	return result;
 #else
 	return x << n;
-#endif
-}
-
-// device asm 32 for pluck
-__device__ __forceinline__
-uint32_t andor32(uint32_t a, uint32_t b, uint32_t c) {
-#ifdef __CUDA_ARCH__
-	uint32_t result;
-	asm("{ .reg .u32 m,n,o;\n\t"
-		"and.b32 m,  %1, %2;\n\t"
-		" or.b32 n,  %1, %2;\n\t"
-		"and.b32 o,   n, %3;\n\t"
-		" or.b32 %0,  m, o ;\n\t"
-		"}\n\t"
-		: "=r"(result) : "r"(a), "r"(b), "r"(c));
-	return result;
-#else
-	// unused on host...
-	return 0;
-#endif
-}
-
-__device__ __forceinline__
-uint32_t xor3b(uint32_t a, uint32_t b, uint32_t c) {
-#ifdef __CUDA_ARCH__
-	uint32_t result;
-	asm("{ .reg .u32 t1;\n\t"
-		"xor.b32 t1, %2, %3;\n\t"
-		"xor.b32 %0, %1, t1;\n\t"
-		"}"
-		: "=r"(result) : "r"(a) ,"r"(b),"r"(c));
-	return result;
-#else
-	return a^b^c;
 #endif
 }
 

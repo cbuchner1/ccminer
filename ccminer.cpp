@@ -102,7 +102,6 @@ enum sha_algos {
 	ALGO_NEOSCRYPT,
 	ALGO_NIST5,
 	ALGO_PENTABLAKE,
-	ALGO_PLUCK,
 	ALGO_QUARK,
 	ALGO_QUBIT,
 	ALGO_SCRYPT,
@@ -137,7 +136,6 @@ static const char *algo_names[] = {
 	"neoscrypt",
 	"nist5",
 	"penta",
-	"pluck",
 	"quark",
 	"qubit",
 	"scrypt",
@@ -292,7 +290,6 @@ Options:\n\
 			neoscrypt   FeatherCoin, Phoenix, UFO...\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
-			pluck       SupCoin\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
 			scrypt      Scrypt\n\
@@ -595,7 +592,6 @@ static void calc_network_diff(struct work *work)
 		case ALGO_QUARK:
 			diffone = 0xFFFFFF0000000000ull;
 			break;
-		case ALGO_PLUCK:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
 			// cant get the right value on these 3 algos...
@@ -1429,7 +1425,6 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	switch (opt_algo) {
 		case ALGO_JACKPOT:
 		case ALGO_NEOSCRYPT:
-		case ALGO_PLUCK:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
 			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
@@ -1760,9 +1755,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_SCRYPT_JANE:
 				minmax = 0x100000;
 				break;
-			case ALGO_PLUCK:
-				minmax = 0x2000;
-				break;
 			}
 			max64 = max(minmax-1, max64);
 		}
@@ -1894,11 +1886,6 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_PENTABLAKE:
 			rc = scanhash_pentablake(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_PLUCK:
-			rc = scanhash_pluck(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
