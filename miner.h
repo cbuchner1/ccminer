@@ -307,6 +307,10 @@ extern int scanhash_blake256(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done, int8_t blakerounds);
 
+extern int scanhash_c11(int thr_id, uint32_t *pdata,
+	const uint32_t *ptarget, uint32_t max_nonce,
+	unsigned long *hashes_done);
+
 extern int scanhash_fresh(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce,
 	unsigned long *hashes_done);
@@ -764,6 +768,7 @@ void applog_compare_hash(unsigned char *hash, unsigned char *hash2);
 void print_hash_tests(void);
 void animehash(void *state, const void *input);
 void blake256hash(void *output, const void *input, int8_t rounds);
+void c11hash(void *output, const void *input);
 void deephash(void *state, const void *input);
 void luffa_hash(void *state, const void *input);
 void fresh_hash(void *state, const void *input);

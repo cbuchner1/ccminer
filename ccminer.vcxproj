@@ -462,8 +462,8 @@
     <CudaCompile Include="x11\cuda_x11_simd512.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="x11\fresh.cu">
-    </CudaCompile>
+    <CudaCompile Include="x11\c11.cu" />
+    <CudaCompile Include="x11\fresh.cu" />
     <CudaCompile Include="x11\s3.cu" />
     <CudaCompile Include="x11\simd_functions.cu">
       <ExcludedFromBuild>true</ExcludedFromBuild>

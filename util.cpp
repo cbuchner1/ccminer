@@ -1814,6 +1814,9 @@ void print_hash_tests(void)
 	blake256hash(&hash[0], &buf[0], 14);
 	printpfx("blake", hash);
 
+	c11hash(&hash[0], &buf[0]);
+	printpfx("c11", hash);
+
 	deephash(&hash[0], &buf[0]);
 	printpfx("deep", hash);
 
