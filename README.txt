@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.5-tpruvot (Jun 2015) "PoK, clocks & Cuda 7"
+ccMiner release 1.6.5-C11 (Jul 2015) "Special for Chaincoin C11"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -222,7 +222,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  July 2015...
+  July 06th 2015  v1.6.5-C11
                   Nvml api power limits
                   Add chaincoin c11 algo (used by Flaxscript too)
                   Remove pluck algo
