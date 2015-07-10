@@ -269,29 +269,29 @@ void hefty_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *outputHash
 
 // Progress W2 (Bytes 64...127) then W3 (Bytes 128...191) ...
 
-#pragma unroll 3
+
         for(int k=0;k<3;k++)
         {
-    #pragma unroll 2
+
             for(int j=0;j<2;j++)
                 W2[j] = s1(W1[14+j]) + W1[9+j] + s0(W1[1+j]) + W1[j];
-    #pragma unroll 5
+
             for(int j=2;j<7;j++)
                 W2[j] = s1(W2[j-2]) + W1[9+j] + s0(W1[1+j]) + W1[j];
 
-    #pragma unroll 8
+
             for(int j=7;j<15;j++)
                 W2[j] = s1(W2[j-2]) + W2[j-7] + s0(W1[1+j]) + W1[j];
 
             W2[15] = s1(W2[13]) + W2[8] + s0(W2[0]) + W1[15];
 
-    #pragma unroll 16
+
             for(int j=0;j<16;j++)
             {
                 Absorb(sponge, regs[3] + regs[7]);
                 hefty_gpu_round(regs, W2[j], heftyLookUp(j + ((k+1)<<4)), sponge);
             }
-    #pragma unroll 16
+
             for(int j=0;j<16;j++)
                 W1[j] = W2[j];
         }
