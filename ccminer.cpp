@@ -1038,14 +1038,22 @@ static bool get_mininginfo(CURL *curl, struct work *work)
 		// "blocks": 491493 (= current work height - 1)
 		// "difficulty": 0.99607860999999998
 		// "networkhashps": 56475980
+		// "netmhashps": 351.74414726
 		if (res) {
 			json_t *key = json_object_get(res, "difficulty");
-			if (key && json_is_real(key)) {
-				net_diff = json_real_value(key);
+			if (key) {
+				if (!json_is_real(key))
+					key = json_object_get(key, "proof-of-work");
+				if (json_is_real(key))
+					net_diff = json_real_value(key);
 			}
 			key = json_object_get(res, "networkhashps");
 			if (key && json_is_integer(key)) {
 				net_hashrate = json_integer_value(key);
+			}
+			key = json_object_get(res, "netmhashps");
+			if (key && json_is_real(key)) {
+				net_hashrate = (json_real_value(key) * 1e6);
 			}
 			key = json_object_get(res, "blocks");
 			if (key && json_is_integer(key)) {
