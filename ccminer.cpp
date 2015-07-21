@@ -337,6 +337,7 @@ Options:\n\
       --no-gbt          disable getblocktemplate support (height check in solo)\n\
       --no-longpoll     disable X-Long-Polling support\n\
       --no-stratum      disable X-Stratum support\n\
+      --no-extranonce   disable extranonce subscribe on stratum\n\
   -q, --quiet           disable per-thread hashmeter output\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
@@ -391,6 +392,7 @@ struct option options[] = {
 	{ "intensity", 1, NULL, 'i' },
 	{ "ndevs", 0, NULL, 'n' },
 	{ "no-color", 0, NULL, 1002 },
+	{ "no-extranonce", 0, NULL, 1012 },
 	{ "no-gbt", 0, NULL, 1011 },
 	{ "no-longpoll", 0, NULL, 1003 },
 	{ "no-stratum", 0, NULL, 1007 },
@@ -2787,12 +2789,16 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1007:
 		want_stratum = false;
+		opt_extranonce = false;
 		break;
 	case 1008:
 		opt_time_limit = atoi(arg);
 		break;
 	case 1011:
 		allow_gbt = false;
+		break;
+	case 1012:
+		opt_extranonce = false;
 		break;
 	case 'S':
 	case 1018:
