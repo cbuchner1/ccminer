@@ -40,8 +40,9 @@ extern uint32_t device_mem_clocks[MAX_GPUS];
 extern uint32_t device_plimit[MAX_GPUS];
 extern int8_t device_pstate[MAX_GPUS];
 
-uint8_t gpu_clocks_changed[MAX_GPUS] = { 0 };
-uint8_t gpu_limits_changed[MAX_GPUS] = { 0 };
+uint32_t clock_prev[MAX_GPUS] = { 0 };
+uint32_t clock_prev_mem[MAX_GPUS] = { 0 };
+uint32_t limit_prev[MAX_GPUS] = { 0 };
 
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
@@ -302,10 +303,6 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	if (n < 0 || n >= nvmlh->nvml_gpucount)
 		return -ENODEV;
 
-	// prevent double operations on the same gpu... to enhance
-	if (gpu_clocks_changed[dev_id])
-		return 0;
-
 	if (!device_gpu_clocks[dev_id] && !device_mem_clocks[dev_id])
 		return 0; // nothing to do
 
@@ -313,6 +310,13 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 		applog(LOG_WARNING, "GPU #%d: NVML application clock feature is not allowed!", dev_id);
 		return -EPERM;
 	}
+
+	uint32_t mem_prev = clock_prev_mem[dev_id];
+	if (!mem_prev)
+		nvmlh->nvmlDeviceGetApplicationsClock(nvmlh->devs[n], NVML_CLOCK_MEM, &mem_prev);
+	uint32_t gpu_prev = clock_prev[dev_id];
+	if (!gpu_prev)
+		nvmlh->nvmlDeviceGetApplicationsClock(nvmlh->devs[n], NVML_CLOCK_GRAPHICS, &gpu_prev);
 
 	nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_MEM, &mem_clk);
 	rc = nvmlh->nvmlDeviceGetDefaultApplicationsClock(nvmlh->devs[n], NVML_CLOCK_GRAPHICS, &gpu_clk);
@@ -332,7 +336,8 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	uint32_t nclocks = 0, clocks[127] = { 0 };
 	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, NULL);
 	nclocks = min(nclocks, 127);
-	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
+	if (nclocks)
+		nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
 	for (int8_t u=0; u < nclocks; u++) {
 		// ordered by pstate (so highest is first memory clock - P0)
 		if (clocks[u] <= mem_clk) {
@@ -344,7 +349,8 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	nclocks = 0;
 	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, NULL);
 	nclocks = min(nclocks, 127);
-	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, clocks);
+	if (nclocks)
+		nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, clocks);
 	for (uint8_t u=0; u < nclocks; u++) {
 		// ordered desc, so get first
 		if (clocks[u] <= gpu_clk) {
@@ -361,7 +367,9 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 		return -1;
 	}
 
-	gpu_clocks_changed[dev_id] = 1;
+	// store previous clocks for reset on exit (or during wait...)
+	clock_prev[dev_id] = gpu_prev;
+	clock_prev_mem[dev_id] = mem_prev;
 	return 1;
 }
 
@@ -375,23 +383,24 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 	if (n < 0 || n >= nvmlh->nvml_gpucount)
 		return -ENODEV;
 
-	if (gpu_clocks_changed[dev_id]) {
+	if (clock_prev[dev_id]) {
 		rc = nvmlh->nvmlDeviceResetApplicationsClocks(nvmlh->devs[n]);
 		if (rc != NVML_SUCCESS) {
 			applog(LOG_WARNING, "GPU #%d: unable to reset application clocks", dev_id);
 		}
-		gpu_clocks_changed[dev_id] = 0;
+		clock_prev[dev_id] = 0;
 		ret = 1;
 	}
 
-	if (gpu_limits_changed[dev_id]) {
-		uint32_t plimit = 0;
-		if (nvmlh->nvmlDeviceGetPowerManagementDefaultLimit) {
+	if (limit_prev[dev_id]) {
+		uint32_t plimit = limit_prev[dev_id];
+		if (nvmlh->nvmlDeviceGetPowerManagementDefaultLimit && !plimit) {
 			rc = nvmlh->nvmlDeviceGetPowerManagementDefaultLimit(nvmlh->devs[n], &plimit);
-			if (rc == NVML_SUCCESS)
-				nvmlh->nvmlDeviceSetPowerManagementLimit(nvmlh->devs[n], plimit);
+		} else if (plimit) {
+			rc = NVML_SUCCESS;
 		}
-		gpu_limits_changed[dev_id] = 0;
+		if (rc == NVML_SUCCESS)
+			nvmlh->nvmlDeviceSetPowerManagementLimit(nvmlh->devs[n], plimit);
 		ret = 1;
 	}
 	return ret;
@@ -411,10 +420,6 @@ int nvml_set_pstate(nvml_handle *nvmlh, int dev_id)
 		return -ENODEV;
 
 	if (device_pstate[dev_id] < 0)
-		return 0;
-
-	// prevent double operations on the same gpu... to enhance
-	if (gpu_clocks_changed[dev_id])
 		return 0;
 
 	if (nvmlh->app_clocks[n] != NVML_FEATURE_ENABLED) {
@@ -438,9 +443,10 @@ int nvml_set_pstate(nvml_handle *nvmlh, int dev_id)
 	int8_t wanted_pstate = device_pstate[dev_id];
 	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, NULL);
 	nclocks = min(nclocks, 127);
-	nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
+	if (nclocks)
+		nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
 	for (uint8_t u=0; u < nclocks; u++) {
-		// ordered by pstate (so high first)
+		// ordered by pstate (so highest P0 first)
 		if (u == wanted_pstate) {
 			mem_clk = clocks[u];
 			break;
@@ -450,7 +456,8 @@ int nvml_set_pstate(nvml_handle *nvmlh, int dev_id)
 	nclocks = 0;
 	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, NULL);
 	nclocks = min(nclocks, 127);
-	nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, clocks);
+	if (nclocks)
+		nvmlh->nvmlDeviceGetSupportedGraphicsClocks(nvmlh->devs[n], mem_clk, &nclocks, clocks);
 	for (uint8_t u=0; u < nclocks; u++) {
 		// ordered desc, so get first
 		if (clocks[u] <= gpu_clk) {
@@ -468,7 +475,7 @@ int nvml_set_pstate(nvml_handle *nvmlh, int dev_id)
 	if (!opt_quiet)
 		applog(LOG_INFO, "GPU #%d: app clocks set to P%d (%u/%u)", dev_id, (int) wanted_pstate, mem_clk, gpu_clk);
 
-	gpu_clocks_changed[dev_id] = 1;
+	clock_prev[dev_id] = 1;
 	return 1;
 }
 
@@ -486,17 +493,17 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 	if (!nvmlh->nvmlDeviceSetPowerManagementLimit)
 		return -ENOSYS;
 
-	uint32_t plimit = device_plimit[dev_id] * 1000U;
-	uint32_t pmin = 1000, pmax = 0;
+	uint32_t plimit = device_plimit[dev_id] * 1000;
+	uint32_t pmin = 1000, pmax = 0, prev_limit = 0;
 	if (nvmlh->nvmlDeviceGetPowerManagementLimitConstraints)
 		rc = nvmlh->nvmlDeviceGetPowerManagementLimitConstraints(nvmlh->devs[n], &pmin, &pmax);
 
 	if (rc != NVML_SUCCESS) {
 		if (!nvmlh->nvmlDeviceGetPowerManagementLimit)
 			return -ENOSYS;
-		pmax = 100 * 1000; // should not happen...
-		nvmlh->nvmlDeviceGetPowerManagementLimit(nvmlh->devs[n], &pmax);
 	}
+	nvmlh->nvmlDeviceGetPowerManagementLimit(nvmlh->devs[n], &prev_limit);
+	if (!pmax) pmax = prev_limit;
 
 	plimit = min(plimit, pmax);
 	plimit = max(plimit, pmin);
@@ -511,7 +518,7 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 			dev_id, plimit/1000U, pmin/1000U, pmax/1000U);
 	}
 
-	gpu_limits_changed[dev_id] = 1;
+	limit_prev[dev_id] = prev_limit;
 	return 1;
 }
 

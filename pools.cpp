@@ -35,6 +35,7 @@ extern time_t firstwork_time;
 extern volatile time_t g_work_time;
 extern volatile int pool_switch_count;
 extern volatile bool pool_is_switching;
+extern uint8_t conditional_state[MAX_GPUS];
 
 extern struct option options[];
 
@@ -197,6 +198,9 @@ bool pool_switch(int pooln)
 		// used to get the pool uptime
 		firstwork_time = time(NULL);
 		restart_threads();
+		// reset wait states
+		for (int n=0; n<opt_n_threads; n++)
+			conditional_state[n] = false;
 
 		// restore flags
 		allow_gbt = p->allow_gbt;
