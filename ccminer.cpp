@@ -507,7 +507,7 @@ static void affine_to_cpu_mask(int id, uint8_t mask) {
 	}
 	cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset_t), &set);
 }
-#else /* Windows */
+#elif defined(WIN32) /* Windows */
 static inline void drop_policy(void) { }
 static void affine_to_cpu_mask(int id, uint8_t mask) {
 	if (id == -1)
@@ -515,6 +515,9 @@ static void affine_to_cpu_mask(int id, uint8_t mask) {
 	else
 		SetThreadAffinityMask(GetCurrentThread(), mask);
 }
+#else /* Martians */
+static inline void drop_policy(void) { }
+static void affine_to_cpu_mask(int id, uint8_t mask) { }
 #endif
 
 static bool get_blocktemplate(CURL *curl, struct work *work);
