@@ -115,6 +115,7 @@ enum sha_algos {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
+	ALGO_WHIRLPOOLX,
 	ALGO_ZR5,
 	ALGO_COUNT
 };
@@ -151,6 +152,7 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
+	"whirlpoolx",
 	"zr5",
 	""
 };
@@ -307,6 +309,7 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17\n\
+			whirlpoolx  WhirlpoolX (VNL)\n\
 			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
@@ -1753,6 +1756,7 @@ static void *miner_thread(void *userdata)
 			switch (opt_algo) {
 			case ALGO_BLAKECOIN:
 			case ALGO_BLAKE:
+			case ALGO_WHIRLPOOLX:
 				minmax = 0x80000000U;
 				break;
 			case ALGO_KECCAK:
@@ -1935,6 +1939,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_S3:
 			rc = scanhash_s3(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_WHIRLPOOLX:
+			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
@@ -3108,6 +3117,12 @@ int main(int argc, char *argv[])
 
 	/* parse command line */
 	parse_cmdline(argc, argv);
+
+	// extra credits..
+	if (opt_algo == ALGO_WHIRLPOOLX) {
+		printf("  Whirlpoolx support by Alexis Provos.\n");
+		printf("VNL donation address: Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W\n\n");
+	}
 
 	if (!opt_benchmark && !strlen(rpc_url)) {
 		// try default config file (user then binary folder)

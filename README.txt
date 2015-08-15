@@ -95,6 +95,7 @@ its command line interface and options.
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
                           x17         use to mine X17
+                          whirlpoolx  use to mine Vanilla
                           zr5         use to mine ZiftrCoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
@@ -221,6 +222,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  August 2015...
+                  Restore WhirlpoolX algo
 
   July 06th 2015  v1.6.5-C11
                   Nvml api power limits

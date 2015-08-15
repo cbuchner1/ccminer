@@ -483,14 +483,20 @@
     </CudaCompile>
     <CudaCompile Include="x15\x15.cu">
     </CudaCompile>
-    <CudaCompile Include="x15\cuda_x15_whirlpool.cu">
-    </CudaCompile>
+    <CudaCompile Include="x15\cuda_whirlpoolx.cu" />
+    <CudaCompile Include="x15\whirlpoolx.cu" />
     <CudaCompile Include="x17\x17.cu">
     </CudaCompile>
     <CudaCompile Include="x17\cuda_x17_haval512.cu">
     </CudaCompile>
     <CudaCompile Include="x17\cuda_x17_sha512.cu">
       <MaxRegCount>80</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="x15\x14.cu">
+    </CudaCompile>
+    <CudaCompile Include="x15\x15.cu">
+    </CudaCompile>
+    <CudaCompile Include="x17\x17.cu">
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

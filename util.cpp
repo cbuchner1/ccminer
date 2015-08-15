@@ -1877,6 +1877,9 @@ void print_hash_tests(void)
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);
 
+	whirlxHash(&hash[0], &buf[0]);
+	printpfx("whirlpoolx", hash);
+
 	x11hash(&hash[0], &buf[0]);
 	printpfx("X11", hash);
 
