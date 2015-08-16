@@ -381,6 +381,9 @@ extern int scanhash_whirlpoolx(int thr_id, uint32_t *pdata,
 extern int scanhash_zr5(int thr_id, struct work *work, uint32_t max_nonce,
 	unsigned long *hashes_done);
 
+extern int scanhash_ether(int thr_id, struct work *work, uint64_t max_nonce,
+	unsigned long *hashes_done);
+
 /* api related */
 void *api_thread(void *userdata);
 void api_set_throughput(int thr_id, uint32_t throughput);
@@ -659,6 +662,7 @@ struct pool_infos {
 #define POOL_GETWORK  1
 #define POOL_STRATUM  2
 #define POOL_LONGPOLL 4
+#define POOL_ETHER    128
 	uint8_t type;
 #define POOL_ST_DEFINED 1
 #define POOL_ST_VALID 2
@@ -710,6 +714,9 @@ json_t * json_rpc_call_pool(CURL *curl, struct pool_infos*,
 	const char *req, bool lp_scan, bool lp, int *err);
 json_t * json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos*,
 	const char *req, int *err);
+
+bool ether_getwork(CURL *curl, struct pool_infos *pool, struct work *work);
+bool ether_submitwork(CURL *curl, struct pool_infos *pool, struct work *work);
 
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
 bool stratum_send_line(struct stratum_ctx *sctx, char *s);

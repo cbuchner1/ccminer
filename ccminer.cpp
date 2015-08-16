@@ -90,6 +90,7 @@ enum sha_algos {
 	ALGO_C11,
 	ALGO_DEEP,
 	ALGO_DMD_GR,
+	ALGO_ETHER,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
@@ -127,6 +128,7 @@ static const char *algo_names[] = {
 	"c11",
 	"deep",
 	"dmd-gr",
+	"ethash",
 	"fresh",
 	"fugue256",
 	"groestl",
@@ -807,6 +809,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool stale_work = false;
 	char s[384];
 
+	if (pool->type & POOL_ETHER)
+		return ether_submitwork(curl, pool, work);
+
 	/* discard if a newer bloc was received */
 	stale_work = work->height && work->height < g_work.height;
 	if (have_stratum && !stale_work && opt_algo != ALGO_ZR5 && opt_algo != ALGO_SCRYPT_JANE) {
@@ -1082,6 +1087,10 @@ static bool get_upstream_work(CURL *curl, struct work *work)
 	struct timeval tv_start, tv_end, diff;
 	struct pool_infos *pool = &pools[work->pooln];
 	json_t *val;
+
+	if (pool->type & POOL_ETHER) {
+		return ether_getwork(curl, pool, work);
+	}
 
 	if (opt_debug_threads)
 		applog(LOG_DEBUG, "%s: want_longpoll=%d have_longpoll=%d",
@@ -1974,6 +1983,10 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_ZR5:
 			rc = scanhash_zr5(thr_id, &work, max_nonce, &hashes_done);
+			break;
+
+		case ALGO_ETHER:
+			rc = scanhash_ether(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
 		default:
@@ -3160,6 +3173,10 @@ int main(int argc, char *argv[])
 		pool_dump_infos();
 	cur_pooln = pool_get_first_valid(0);
 	pool_switch(cur_pooln);
+
+	if (opt_algo == ALGO_ETHER) {
+		pools[cur_pooln].type |= POOL_ETHER;
+	}
 
 	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)
 	      ? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)

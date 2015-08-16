@@ -21,6 +21,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  crc32.c hefty1.c \
 			  ccminer.cpp pools.cpp util.cpp bignum.cpp \
 			  api.cpp hashlog.cpp nvml.cpp stats.cpp sysinfos.cpp cuda.cpp \
+			  ethash/etherpc.cpp ethash/ethash.cu \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
 			  heavy/cuda_combine.cu heavy/cuda_combine.h \
