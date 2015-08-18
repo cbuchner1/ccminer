@@ -2464,6 +2464,10 @@ void parse_arg(int key, char *arg)
 				i = opt_algo = ALGO_DMD_GR;
 			else if (!strcasecmp("doom", arg))
 				i = opt_algo = ALGO_LUFFA;
+			else if (!strcasecmp("lyra2re", arg))
+				i = opt_algo = ALGO_LYRA2;
+			else if (!strcasecmp("lyra2rev2", arg))
+				i = opt_algo = ALGO_LYRA2v2;
 			else if (!strcasecmp("ziftr", arg))
 				i = opt_algo = ALGO_ZR5;
 			else

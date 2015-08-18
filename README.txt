@@ -224,7 +224,8 @@ features.
 >>> RELEASE HISTORY <<<
 
   August 2015...
-                  Restore WhirlpoolX algo
+                  Add Lyra2REv2 algo (Vertcoin/Zoom)
+                  Restore WhirlpoolX algo (VNL)
 
   July 06th 2015  v1.6.5-C11
                   Nvml api power limits
