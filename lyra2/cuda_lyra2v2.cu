@@ -1,12 +1,17 @@
 #include <stdio.h>
 #include <memory.h>
 
+#ifdef __INTELLISENSE__
+#define __CUDA_ARCH__ 500
+#endif
+
 #include "cuda_lyra2_vectors.h"
 
 #define TPB 16
 
 #define Nrow 4
 #define Ncol 4
+
 #if __CUDA_ARCH__ < 500
 #define vectype ulonglong4
 #define u64type uint64_t
@@ -23,7 +28,9 @@
 
 __device__ vectype *DMatrix;
 
-#ifdef __CUDA_ARCH__
+#if __CUDA_ARCH__ >= 320
+
+#if __CUDA_ARCH__ >= 500
 static __device__ __forceinline__
 void Gfunc_v35(uint2 &a, uint2 &b, uint2 &c, uint2 &d)
 {
@@ -32,8 +39,7 @@ void Gfunc_v35(uint2 &a, uint2 &b, uint2 &c, uint2 &d)
 	a += b; d ^= a; d = ROR16(d);
 	c += d; b ^= c; b = ROR2(b, 63);
 }
-
-#if __CUDA_ARCH__ < 500
+#else
 static __device__ __forceinline__
 void Gfunc_v35(unsigned long long &a, unsigned long long &b, unsigned long long &c, unsigned long long &d)
 {
@@ -57,10 +63,6 @@ void round_lyra_v35(vectype* s)
 	Gfunc_v35(s[0].z, s[1].w, s[2].x, s[3].y);
 	Gfunc_v35(s[0].w, s[1].x, s[2].y, s[3].z);
 }
-#else
-#define round_lyra_v35(s) {}
-#endif
-
 
 static __device__ __forceinline__
 void reduceDuplex(vectype state[4], uint32_t thread)
@@ -489,6 +491,10 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 
 	} //thread
 }
+#else /*__CUDA_ARCH__ >= 320 */
+__global__ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
+__global__ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
+#endif
 
 __host__
 void lyra2v2_cpu_init(int thr_id, uint32_t threads,uint64_t *hash)
@@ -511,9 +517,9 @@ void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	dim3 block(tpb);
 
 	if (device_sm[device_map[thr_id]] >= 500)
-		lyra2v2_gpu_hash_32 << <grid, block >> > (threads, startNounce, (uint2*)d_outputHash);
+		lyra2v2_gpu_hash_32 <<<grid, block>>> (threads, startNounce, (uint2*)d_outputHash);
 	else
-		lyra2v2_gpu_hash_32_v3 <<<grid, block>>> (threads, startNounce,(uint2*) d_outputHash);
+		lyra2v2_gpu_hash_32_v3 <<<grid, block>>> (threads, startNounce, (uint2*)d_outputHash);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 }

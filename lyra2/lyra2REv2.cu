@@ -94,6 +94,12 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
 
+		if (device_sm[device_map[thr_id]] < 320) {
+			applog(LOG_ERR, "Device SM 3.2 required!");
+			proper_exit(1);
+			return -1;
+		}
+
 		// DMatrix
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash2[thr_id], 16 * 4 * 4 * sizeof(uint64_t) * throughput));
 		lyra2v2_cpu_init(thr_id, throughput, d_hash2[thr_id]);
