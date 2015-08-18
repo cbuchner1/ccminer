@@ -392,6 +392,8 @@
     </CudaCompile>
     <CudaCompile Include="Algo256\keccak256.cu" />
     <CudaCompile Include="Algo256\cuda_blake256.cu" />
+    <CudaCompile Include="Algo256\cuda_bmw256.cu" />
+    <CudaCompile Include="Algo256\cuda_cubehash256.cu" />
     <CudaCompile Include="Algo256\cuda_fugue256.cu" />
     <CudaCompile Include="Algo256\cuda_groestl256.cu" />
     <CudaCompile Include="Algo256\cuda_keccak256.cu">
@@ -440,6 +442,8 @@
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2RE.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2.cu" />
+    <CudaCompile Include="lyra2\lyra2REv2.cu" />
+    <CudaCompile Include="lyra2\cuda_lyra2v2.cu" />
     <CudaCompile Include="skein.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>

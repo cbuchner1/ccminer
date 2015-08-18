@@ -10,6 +10,7 @@ extern "C" {
 #include "cuda_helper.h"
 
 static uint64_t* d_hash[MAX_GPUS];
+static uint64_t* d_hash2[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
@@ -19,6 +20,7 @@ extern void keccak256_cpu_init(int thr_id, uint32_t threads);
 extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
+extern void lyra2_cpu_init(int thr_id, uint32_t threads, uint64_t *hash);
 extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 
 extern void groestl256_cpu_init(int thr_id, uint32_t threads);
@@ -26,7 +28,7 @@ extern void groestl256_setTarget(const void *ptarget);
 extern uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
 extern uint32_t groestl256_getSecNonce(int thr_id, int num);
 
-extern "C" void lyra2_hash(void *state, const void *input)
+extern "C" void lyra2re_hash(void *state, const void *input)
 {
 	sph_blake256_context     ctx_blake;
 	sph_keccak256_context    ctx_keccak;
@@ -79,7 +81,11 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 		skein256_cpu_init(thr_id, throughput);
 		groestl256_cpu_init(thr_id, throughput);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
+		// DMatrix
+		cudaMalloc(&d_hash2[thr_id], (size_t)16 * 8 * 8 * sizeof(uint64_t) * throughput);
+		lyra2_cpu_init(thr_id, throughput, d_hash2[thr_id]);
+
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));
 
 		init[thr_id] = true;
 	}
@@ -108,7 +114,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 			uint32_t _ALIGN(64) vhash64[8];
 
 			be32enc(&endiandata[19], foundNonce);
-			lyra2_hash(vhash64, endiandata);
+			lyra2re_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
@@ -116,7 +122,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 				if (secNonce != UINT32_MAX)
 				{
 					be32enc(&endiandata[19], secNonce);
-					lyra2_hash(vhash64, endiandata);
+					lyra2re_hash(vhash64, endiandata);
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 						if (opt_debug)
 							applog(LOG_BLUE, "GPU #%d: found second nonce %08x", device_map[thr_id], secNonce);

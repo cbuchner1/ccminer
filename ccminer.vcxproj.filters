@@ -583,6 +583,12 @@
     <CudaCompile Include="Algo256\cuda_blake256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_bmw256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_cubehash256.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
     <CudaCompile Include="Algo256\cuda_fugue256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
@@ -599,6 +605,12 @@
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2RE.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2v2.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2REv2.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="zr5.cu">

@@ -1841,8 +1841,11 @@ void print_hash_tests(void)
 	luffa_hash(&hash[0], &buf[0]);
 	printpfx("luffa", hash);
 
-	lyra2_hash(&hash[0], &buf[0]);
+	lyra2re_hash(&hash[0], &buf[0]);
 	printpfx("lyra2", hash);
+
+	lyra2v2_hash(&hash[0], &buf[0]);
+	printpfx("lyra2v2", hash);
 
 	myriadhash(&hash[0], &buf[0]);
 	printpfx("myriad", hash);

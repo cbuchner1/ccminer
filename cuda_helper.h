@@ -606,6 +606,37 @@ uint2 SWAPUINT2(uint2 value)
 	return make_uint2(value.y, value.x);
 }
 
+/* Byte aligned Rotations (lyra2) */
+#ifdef __CUDA_ARCH__
+__device__ __inline__ uint2 ROL8(const uint2 a)
+{
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x6543);
+	result.y = __byte_perm(a.y, a.x, 0x2107);
+	return result;
+}
+
+__device__ __inline__ uint2 ROR16(const uint2 a)
+{
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x1076);
+	result.y = __byte_perm(a.y, a.x, 0x5432);
+	return result;
+}
+
+__device__ __inline__ uint2 ROR24(const uint2 a)
+{
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x2107);
+	result.y = __byte_perm(a.y, a.x, 0x6543);
+	return result;
+}
+#else
+#define ROL8(u)  ((u) << 8)
+#define ROR16(u) ((u) >> 16)
+#define ROR24(u) ((u) >> 24)
+#endif
+
 /* uint2 for bmw512 - to double check later */
 
 __device__ __forceinline__
