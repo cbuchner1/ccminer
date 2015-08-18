@@ -1775,7 +1775,7 @@ void do_gpu_tests(void)
 	//scanhash_scrypt_jane(0, (uint32_t*)buf, tgt, NULL, 1, &done, &tv, &tv);
 
 	memset(buf, 0, sizeof buf);
-	scanhash_x11(0, (uint32_t*)buf, tgt, 1, &done);
+	scanhash_lyra2(0, (uint32_t*)buf, tgt, 1, &done);
 
 	//memset(buf, 0, sizeof buf);
 	// buf[0] = 1; buf[64] = 2; // for endian tests
