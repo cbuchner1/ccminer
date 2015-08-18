@@ -13,7 +13,8 @@
 #define ROTATEUPWARDS11(a) LROT(a,11)
 
 //#define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
-#define SWAP(a,b) { a ^= b; b ^=a; a ^=b;}
+#define SWAP(a,b) { a ^= b; b ^= a; a ^= b; }
+
 __device__ __forceinline__ void rrounds(uint32_t x[2][2][2][2][2])
 {
 	int r;
@@ -155,7 +156,8 @@ __device__ __forceinline__ void hash_fromx(uint32_t *out, uint32_t x[2][2][2][2]
 
 }
 
-void __device__ __forceinline__ Update32(uint32_t x[2][2][2][2][2], const uint32_t *data)
+__device__ __forceinline__
+void Update32(uint32_t x[2][2][2][2][2], const uint32_t *data)
 {
 	/* "xor the block into the first b bytes of the state" */
 	/* "and then transform the state invertibly through r identical rounds" */
@@ -163,24 +165,22 @@ void __device__ __forceinline__ Update32(uint32_t x[2][2][2][2][2], const uint32
 	rrounds(x);
 }
 
-void __device__ __forceinline__ Update32_const(uint32_t x[2][2][2][2][2])
+__device__ __forceinline__
+void Update32_const(uint32_t x[2][2][2][2][2])
 {
 	x[0][0][0][0][0] ^= 0x80;
 	rrounds(x);
 }
 
-
-
-void __device__ __forceinline__ Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
+__device__ __forceinline__
+void Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 {
-	int i;
-
 	/* "the integer 1 is xored into the last state word x_11111" */
-	x[1][1][1][1][1] ^= 1;
+	x[1][1][1][1][1] ^= 1U;
 
 	/* "the state is then transformed invertibly through 10r identical rounds" */
 	#pragma unroll 2
-	for (i = 0; i < 10; ++i) rrounds(x);
+	for (int i = 0; i < 10; ++i) rrounds(x);
 
 	/* "output the first h/8 bytes of the state" */
 	hash_fromx(hashval, x);
@@ -198,8 +198,8 @@ void cubehash256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g
     uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
-
         uint32_t Hash[8]; // = &g_hash[16 * hashPosition];
+
 		LOHI(Hash[0], Hash[1], __ldg(&g_hash[thread]));
 		LOHI(Hash[2], Hash[3], __ldg(&g_hash[thread + 1 * threads]));
 		LOHI(Hash[4], Hash[5], __ldg(&g_hash[thread + 2 * threads]));
@@ -207,19 +207,16 @@ void cubehash256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g
 
 		uint32_t x[2][2][2][2][2] =
 		{
-			0xEA2BD4B4, 0xCCD6F29F, 0x63117E71,
-			0x35481EAE, 0x22512D5B, 0xE5D94E63,
-			0x7E624131, 0xF4CC12BE, 0xC2D0B696,
-			0x42AF2070, 0xD0720C35, 0x3361DA8C,
-			0x28CCECA4, 0x8EF8AD83, 0x4680AC00,
-			0x40E5FBAB, 0xD89041C3, 0x6107FBD5,
-			0x6C859D41, 0xF0B26679, 0x09392549,
-			0x5FA25603, 0x65C892FD, 0x93CB6285,
-			0x2AF2B5AE, 0x9E4B4E60, 0x774ABFDD,
-			0x85254725, 0x15815AEB, 0x4AB6AAD6,
-			0x9CDAF8AF, 0xD6032C0A
-
+			0xEA2BD4B4, 0xCCD6F29F, 0x63117E71,	0x35481EAE,
+			0x22512D5B, 0xE5D94E63, 0x7E624131, 0xF4CC12BE,
+			0xC2D0B696, 0x42AF2070, 0xD0720C35, 0x3361DA8C,
+			0x28CCECA4, 0x8EF8AD83, 0x4680AC00, 0x40E5FBAB,
+			0xD89041C3, 0x6107FBD5, 0x6C859D41, 0xF0B26679,
+			0x09392549, 0x5FA25603, 0x65C892FD, 0x93CB6285,
+			0x2AF2B5AE, 0x9E4B4E60, 0x774ABFDD, 0x85254725,
+			0x15815AEB, 0x4AB6AAD6, 0x9CDAF8AF, 0xD6032C0A
 		};
+
 		x[0][0][0][0][0] ^= Hash[0];
 		x[0][0][0][0][1] ^= Hash[1];
 		x[0][0][0][1][0] ^= Hash[2];
@@ -230,7 +227,7 @@ void cubehash256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g
 		x[0][0][1][1][1] ^= Hash[7];
 
 		rrounds(x);
-		x[0][0][0][0][0] ^= 0x80;
+		x[0][0][0][0][0] ^= 0x80U;
 		rrounds(x);
 
 		Final(x, Hash);
@@ -244,17 +241,12 @@ void cubehash256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *g
 
 
 __host__
-void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash)
+void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash, int order)
 {
+	uint32_t tpb = 576;
 
-	uint32_t tpb;
-	if (device_sm[device_map[thr_id]]<500)
-		tpb = 576;
-	else
-		tpb = 576;
-    // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + tpb-1)/tpb);
     dim3 block(tpb);
 
-    cubehash256_gpu_hash_32<<<grid, block>>>(threads, startNounce, d_hash);
+    cubehash256_gpu_hash_32 <<<grid, block>>> (threads, startNounce, d_hash);
 }
