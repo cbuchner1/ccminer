@@ -9,7 +9,7 @@
 static uint32_t *d_gnounce[MAX_GPUS];
 static uint32_t *d_GNonce[MAX_GPUS];
 
-__constant__ uint64_t pTarget[8];
+__constant__ uint64_t pTarget[4];
 
 #define shl(x, n) ((x) << (n))
 #define shr(x, n) ((x) >> (n))
