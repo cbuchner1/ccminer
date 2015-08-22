@@ -493,12 +493,6 @@
     <CudaCompile Include="x17\cuda_x17_sha512.cu">
       <MaxRegCount>80</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="x15\x14.cu">
-    </CudaCompile>
-    <CudaCompile Include="x15\x15.cu">
-    </CudaCompile>
-    <CudaCompile Include="x17\x17.cu">
-    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico" />

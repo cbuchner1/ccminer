@@ -66,12 +66,12 @@ int LYRA2(void *K, int64_t kLen, const void *pwd, int32_t pwdlen, const void *sa
 	// for Lyra2REv2, nCols = 4, v1 was using 8
 	const int64_t BLOCK_LEN = (nCols == 4) ? BLOCK_LEN_BLAKE2_SAFE_INT64 : BLOCK_LEN_BLAKE2_SAFE_BYTES;
 
-	i = (int64_t)ROW_LEN_BYTES * nRows;
-	uint64_t *wholeMatrix = malloc(i);
+	size_t sz = (size_t)ROW_LEN_BYTES * nRows;
+	uint64_t *wholeMatrix = malloc(sz);
 	if (wholeMatrix == NULL) {
 		return -1;
 	}
-	memset(wholeMatrix, 0, i);
+	memset(wholeMatrix, 0, sz);
 
 	//Allocates pointers to each row of the matrix
 	uint64_t **memMatrix = malloc(sizeof(uint64_t*) * nRows);
@@ -103,7 +103,7 @@ int LYRA2(void *K, int64_t kLen, const void *pwd, int32_t pwdlen, const void *sa
 	memcpy(ptrByte, salt, saltlen);
 	ptrByte += saltlen;
 
-	memset(ptrByte, 0, nBlocksInput * BLOCK_LEN_BLAKE2_SAFE_BYTES - (saltlen + pwdlen));
+	memset(ptrByte, 0, (size_t) (nBlocksInput * BLOCK_LEN_BLAKE2_SAFE_BYTES - (saltlen + pwdlen)));
 
 	//Concatenates the basil: every integer passed as parameter, in the order they are provided by the interface
 	memcpy(ptrByte, &kLen, sizeof(int64_t));
