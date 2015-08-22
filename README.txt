@@ -120,7 +120,7 @@ its command line interface and options.
                           (default: retry indefinitely)
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 15)
       --time-limit      maximum time [s] to mine before exiting the program.
-  -T, --timeout=N       network timeout, in seconds (default: 270)
+  -T, --timeout=N       network timeout, in seconds (default: 300)
   -s, --scantime=N      upper bound on time spent scanning current work when
                         long polling is unavailable, in seconds (default: 5)
   -n, --ndevs           list cuda devices

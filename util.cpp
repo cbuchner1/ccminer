@@ -404,7 +404,7 @@ static json_t *json_rpc_call(CURL *curl, const char *url,
 	char *httpdata;
 	char len_hdr[64], hashrate_hdr[64];
 	char curl_err_str[CURL_ERROR_SIZE] = { 0 };
-	long timeout = longpoll ? opt_timeout*2 : opt_timeout;
+	long timeout = longpoll ? opt_timeout : opt_timeout/2;
 	struct header_info hi = { 0 };
 	bool lp_scanning = longpoll_scan && !have_longpoll;
 
@@ -598,7 +598,7 @@ json_t *json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos *pool, con
 		strlen(pool->pass)?':':'\0', pool->pass);
 
 	// on pool rotate by time-limit, this keepalive can be a problem
-	bool keepalive = pool->time_limit == 0 || pool->time_limit > opt_timeout*4;
+	bool keepalive = pool->time_limit == 0 || pool->time_limit > opt_timeout;
 
 	return json_rpc_call(curl, lp_url, userpass, req, false, true, keepalive, curl_err);
 }
@@ -853,6 +853,7 @@ char *stratum_recv_line(struct stratum_ctx *sctx)
 {
 	ssize_t len, buflen;
 	char *tok, *sret = NULL;
+	int timeout = opt_timeout;
 
 	if (!sctx->sockbuf)
 		return NULL;
@@ -860,7 +861,7 @@ char *stratum_recv_line(struct stratum_ctx *sctx)
 	if (!strstr(sctx->sockbuf, "\n")) {
 		bool ret = true;
 		time_t rstart = time(NULL);
-		if (!socket_full(sctx->sock, opt_timeout)) {
+		if (!socket_full(sctx->sock, timeout)) {
 			applog(LOG_ERR, "stratum_recv_line timed out");
 			goto out;
 		}
@@ -881,7 +882,7 @@ char *stratum_recv_line(struct stratum_ctx *sctx)
 				}
 			} else
 				stratum_buffer_append(sctx, s);
-		} while (time(NULL) - rstart < opt_timeout && !strstr(sctx->sockbuf, "\n"));
+		} while (time(NULL) - rstart < timeout && !strstr(sctx->sockbuf, "\n"));
 
 		if (!ret) {
 			applog(LOG_ERR, "stratum_recv_line failed");

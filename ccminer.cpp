@@ -184,7 +184,7 @@ static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_time_limit = -1;
 time_t firstwork_time = 0;
-int opt_timeout = 60; // curl
+int opt_timeout = 300; // curl
 int opt_scantime = 10;
 static json_t *opt_config;
 static const bool opt_time = true;
@@ -335,7 +335,7 @@ Options:\n\
                           (default: retry indefinitely)\n\
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 30)\n\
       --time-limit      maximum time [s] to mine before exiting the program.\n\
-  -T, --timeout=N       network timeout, in seconds (default: 60)\n\
+  -T, --timeout=N       network timeout, in seconds (default: 300)\n\
   -s, --scantime=N      upper bound on time spent scanning current work when\n\
                           long polling is unavailable, in seconds (default: 10)\n\
   -n, --ndevs           list cuda devices\n\
@@ -2642,6 +2642,7 @@ void parse_arg(int key, char *arg)
 			// change some defaults if multi pools
 			if (opt_retries == -1) opt_retries = 1;
 			if (opt_fail_pause == 30) opt_fail_pause = 5;
+			if (opt_timeout == 300) opt_timeout = 60;
 		}
 		p = strstr(arg, "://");
 		if (p) {
