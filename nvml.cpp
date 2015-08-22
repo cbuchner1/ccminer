@@ -338,7 +338,7 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	nclocks = min(nclocks, 127);
 	if (nclocks)
 		nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, clocks);
-	for (int8_t u=0; u < nclocks; u++) {
+	for (uint8_t u=0; u < nclocks; u++) {
 		// ordered by pstate (so highest is first memory clock - P0)
 		if (clocks[u] <= mem_clk) {
 			mem_clk = clocks[u];

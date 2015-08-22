@@ -1067,7 +1067,7 @@ static bool get_mininginfo(CURL *curl, struct work *work)
 			}
 			key = json_object_get(res, "netmhashps");
 			if (key && json_is_real(key)) {
-				net_hashrate = (json_real_value(key) * 1e6);
+				net_hashrate = (uint64_t)(json_real_value(key) * 1e6);
 			}
 			key = json_object_get(res, "blocks");
 			if (key && json_is_integer(key)) {
