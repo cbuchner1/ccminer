@@ -190,7 +190,7 @@ static json_t *opt_config;
 static const bool opt_time = true;
 static enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
-int opt_affinity = -1;
+int64_t opt_affinity = -1L;
 int opt_priority = 0;
 static double opt_difficulty = 1.;
 bool opt_extranonce = true;
@@ -487,12 +487,12 @@ static inline void drop_policy(void) {
 #endif
 }
 
-static void affine_to_cpu_mask(int id, uint8_t mask) {
+static void affine_to_cpu_mask(int id, unsigned long mask) {
 	cpu_set_t set;
 	CPU_ZERO(&set);
 	for (uint8_t i = 0; i < num_cpus; i++) {
 		// cpu mask
-		if (mask & (1<<i)) { CPU_SET(i, &set); }
+		if (mask & (1UL<<i)) { CPU_SET(i, &set); }
 	}
 	if (id == -1) {
 		// process affinity
@@ -505,17 +505,17 @@ static void affine_to_cpu_mask(int id, uint8_t mask) {
 #elif defined(__FreeBSD__) /* FreeBSD specific policy and affinity management */
 #include <sys/cpuset.h>
 static inline void drop_policy(void) { }
-static void affine_to_cpu_mask(int id, uint8_t mask) {
+static void affine_to_cpu_mask(int id, unsigned long mask) {
 	cpuset_t set;
 	CPU_ZERO(&set);
 	for (uint8_t i = 0; i < num_cpus; i++) {
-		if (mask & (1<<i)) CPU_SET(i, &set);
+		if (mask & (1UL<<i)) CPU_SET(i, &set);
 	}
 	cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(cpuset_t), &set);
 }
 #elif defined(WIN32) /* Windows */
 static inline void drop_policy(void) { }
-static void affine_to_cpu_mask(int id, uint8_t mask) {
+static void affine_to_cpu_mask(int id, unsigned long mask) {
 	if (id == -1)
 		SetProcessAffinityMask(GetCurrentProcess(), mask);
 	else
@@ -1568,16 +1568,16 @@ static void *miner_thread(void *userdata)
 
 	/* Cpu thread affinity */
 	if (num_cpus > 1) {
-		if (opt_affinity == -1 && opt_n_threads > 1) {
+		if (opt_affinity == -1L && opt_n_threads > 1) {
 			if (opt_debug)
 				applog(LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)", thr_id,
-						thr_id % num_cpus, (1 << (thr_id % num_cpus)));
+						thr_id % num_cpus, (1UL << (thr_id % num_cpus)));
 			affine_to_cpu_mask(thr_id, 1 << (thr_id % num_cpus));
-		} else if (opt_affinity != -1) {
+		} else if (opt_affinity != -1L) {
 			if (opt_debug)
-				applog(LOG_DEBUG, "Binding thread %d to cpu mask %x", thr_id,
-						opt_affinity);
-			affine_to_cpu_mask(thr_id, opt_affinity);
+				applog(LOG_DEBUG, "Binding thread %d to cpu mask %lx", thr_id,
+						(long) opt_affinity);
+			affine_to_cpu_mask(thr_id, (unsigned long) opt_affinity);
 		}
 	}
 
@@ -2444,6 +2444,7 @@ void parse_arg(int key, char *arg)
 {
 	char *p = arg;
 	int v, i;
+	uint64_t ul;
 	double d;
 
 	switch(key) {
@@ -2839,12 +2840,11 @@ void parse_arg(int key, char *arg)
 		}
 		break;
 	case 1020:
-		v = atoi(arg);
-		if (v < -1)
-			v = -1;
-		if (v > (1<<num_cpus)-1)
-			v = -1;
-		opt_affinity = v;
+		p = strstr(arg, "0x");
+		ul = p ? strtoul(p, NULL, 16) : atol(arg);
+		if (ul > (1UL<<num_cpus)-1)
+			ul = -1L;
+		opt_affinity = ul;
 		break;
 	case 1021:
 		v = atoi(arg);
@@ -3241,7 +3241,7 @@ int main(int argc, char *argv[])
 	if (opt_affinity != -1) {
 		if (!opt_quiet)
 			applog(LOG_DEBUG, "Binding process to cpu mask %x", opt_affinity);
-		affine_to_cpu_mask(-1, opt_affinity);
+		affine_to_cpu_mask(-1, (unsigned long)opt_affinity);
 	}
 	if (active_gpus == 0) {
 		applog(LOG_ERR, "No CUDA devices found! terminating.");
