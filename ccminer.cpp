@@ -84,7 +84,6 @@ struct workio_cmd {
 };
 
 enum sha_algos {
-	ALGO_ANIME,
 	ALGO_BLAKE,
 	ALGO_BLAKECOIN,
 	ALGO_C11,
@@ -122,7 +121,6 @@ enum sha_algos {
 };
 
 static const char *algo_names[] = {
-	"anime",
 	"blake",
 	"blakecoin",
 	"c11",
@@ -280,7 +278,6 @@ static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
-			anime       Animecoin\n\
 			blake       Blake 256 (SFR)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
 			c11/flax    X11 variant\n\
@@ -604,7 +601,6 @@ static void calc_network_diff(struct work *work)
 	int shfb = 8 * (26 - (shift - 3));
 
 	switch (opt_algo) {
-		case ALGO_ANIME:
 		case ALGO_QUARK:
 			diffone = 0xFFFFFF0000000000ull;
 			break;
@@ -630,7 +626,6 @@ static void calc_network_diff(struct work *work)
 		case ALGO_HEAVY:
 			data64 = (uint64_t*)(rtarget + 2);
 			break;
-		case ALGO_ANIME:
 		case ALGO_QUARK:
 			data64 = (uint64_t*)(rtarget + 3);
 			break;
@@ -1882,11 +1877,6 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_QUBIT:
 			rc = scanhash_qubit(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_ANIME:
-			rc = scanhash_anime(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 

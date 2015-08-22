@@ -64,7 +64,6 @@ This code is based on the pooler cpuminer and inherits
 its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
-                          anime       use to mine Animecoin
                           blake       use to mine Saffroncoin (Blake 256)
                           blakecoin   use to mine Old Blake 256
                           c11/flax    use to mine Chaincoin and Flax
@@ -226,6 +225,7 @@ features.
   August 2015...
                   Add Lyra2REv2 algo (Vertcoin/Zoom)
                   Restore WhirlpoolX algo (VNL)
+                  Drop animecoin support
 
   July 06th 2015  v1.6.5-C11
                   Nvml api power limits
