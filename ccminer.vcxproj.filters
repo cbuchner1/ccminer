@@ -652,6 +652,12 @@
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
       <Filter>Source Files\neoscrypt</Filter>
     </CudaCompile>
+    <CudaCompile Include="Algo256\bmw.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_bmw.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">

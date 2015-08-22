@@ -34,6 +34,7 @@ DarkCoin and other X11 coins
 Chaincoin and Flaxscript (C11)
 Saffroncoin blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
+Midnight (BMW 256)
 Qubit (Digibyte, ...)
 Luffa (Joincoin)
 Keccak (Maxcoin)
@@ -66,6 +67,7 @@ its command line interface and options.
   -a, --algo=ALGO       specify the algorithm to use
                           blake       use to mine Saffroncoin (Blake 256)
                           blakecoin   use to mine Old Blake 256
+                          bmw         use to mine Midnight
                           c11/flax    use to mine Chaincoin and Flax
                           deep        use to mine Deepcoin
                           dmd-gr      use to mine Diamond-Groestl
@@ -225,7 +227,8 @@ features.
   August 2015...
                   Add Lyra2REv2 algo (Vertcoin/Zoom)
                   Restore WhirlpoolX algo (VNL)
-                  Drop animecoin support
+                  Drop Animecoin support
+                  Add bmw (Midnight) algo
 
   July 06th 2015  v1.6.5-C11
                   Nvml api power limits

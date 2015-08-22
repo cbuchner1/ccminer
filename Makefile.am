@@ -37,6 +37,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  Algo256/cuda_bmw256.cu Algo256/cuda_cubehash256.cu \
 			  Algo256/cuda_blake256.cu Algo256/cuda_groestl256.cu Algo256/cuda_keccak256.cu Algo256/cuda_skein256.cu \
 			  Algo256/blake256.cu Algo256/keccak256.cu \
+			  Algo256/bmw.cu Algo256/cuda_bmw.cu \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
 			  JHA/cuda_jha_compactionTest.cu cuda_checkhash.cu \
 			  quark/cuda_jh512.cu quark/cuda_quark_blake512.cu quark/cuda_quark_groestl512.cu quark/cuda_skein512.cu \
@@ -94,6 +95,9 @@ nvcc_FLAGS += $(JANSSON_INCLUDES) --ptxas-options="-v"
 
 Algo256/blake256.o: Algo256/blake256.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
+
+Algo256/cuda_bmw.o: Algo256/cuda_bmw.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=76 -o $@ -c $<
 
 heavy/cuda_hefty1.o: heavy/cuda_hefty1.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<

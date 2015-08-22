@@ -89,6 +89,21 @@ void cuda_checkhash_64(uint32_t threads, uint32_t startNounce, uint32_t *hash, u
 	}
 }
 
+__global__ __launch_bounds__(512, 4)
+void cuda_checkhash_32(uint32_t threads, uint32_t startNounce, uint32_t *hash, uint32_t *resNonces)
+{
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t *inpHash = &hash[thread << 3];
+
+		if (resNonces[0] == UINT32_MAX) {
+			if (hashbelowtarget(inpHash, pTarget))
+				resNonces[0] = (startNounce + thread);
+		}
+	}
+}
+
 __host__
 uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash)
 {
@@ -105,6 +120,28 @@ uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	}
 
 	cuda_checkhash_64 <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNonces[thr_id]);
+	cudaThreadSynchronize();
+
+	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	return h_resNonces[thr_id][0];
+}
+
+__host__
+uint32_t cuda_check_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash)
+{
+	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));
+
+	const uint32_t threadsperblock = 512;
+
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	if (!init_done) {
+		applog(LOG_ERR, "missing call to cuda_check_cpu_init");
+		return UINT32_MAX;
+	}
+
+	cuda_checkhash_32 <<<grid, block>>> (threads, startNounce, d_inputHash, d_resNonces[thr_id]);
 	cudaThreadSynchronize();
 
 	cudaMemcpy(h_resNonces[thr_id], d_resNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
