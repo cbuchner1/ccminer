@@ -94,8 +94,8 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
 
-		if (device_sm[device_map[thr_id]] < 320) {
-			applog(LOG_ERR, "Device SM 3.2 required!");
+		if (device_sm[device_map[thr_id]] < 300) {
+			applog(LOG_ERR, "Device SM 3.0 or more recent required!");
 			proper_exit(1);
 			return -1;
 		}

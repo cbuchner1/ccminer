@@ -2,6 +2,7 @@
 #include <memory.h>
 
 #ifdef __INTELLISENSE__
+/* just for vstudio code colors */
 #define __CUDA_ARCH__ 500
 #endif
 
@@ -28,7 +29,7 @@
 
 __device__ vectype *DMatrix;
 
-#if __CUDA_ARCH__ >= 320
+#if __CUDA_ARCH__ >= 300
 
 #if __CUDA_ARCH__ >= 500
 static __device__ __forceinline__
@@ -338,7 +339,7 @@ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outpu
 		);
 	}
 
-#if __CUDA_ARCH__ == 350
+#if __CUDA_ARCH__ <= 350
 	if (thread < threads)
 #endif
 	{
@@ -427,7 +428,7 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 		);
 	}
 
-#if __CUDA_ARCH__ == 350
+#if __CUDA_ARCH__ <= 350
 	if (thread < threads)
 #endif
 	{
@@ -483,15 +484,14 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 		for (int i = 0; i < 12; i++)
 			round_lyra_v35(state);
 
-		outputHash[thread]=            ((uint2*)state)[0];
-		outputHash[thread + threads] = ((uint2*)state)[1];
+		outputHash[thread]               = ((uint2*)state)[0];
+		outputHash[thread + threads]     = ((uint2*)state)[1];
 		outputHash[thread + 2 * threads] = ((uint2*)state)[2];
 		outputHash[thread + 3 * threads] = ((uint2*)state)[3];
-//		((vectype*)outputHash)[thread] = state[0];
-
-	} //thread
+	}
 }
-#else /*__CUDA_ARCH__ >= 320 */
+#else
+/* if __CUDA_ARCH__ < 300 .. */
 __global__ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
 __global__ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
 #endif
@@ -506,7 +506,7 @@ __host__
 void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
 	uint32_t tpb;
-	if (device_sm[device_map[thr_id]] < 500)
+	if (device_sm[device_map[thr_id]] == 350)
 		tpb = 64;
 	else if (device_sm[device_map[thr_id]] == 500)
 		tpb = 32;
@@ -517,7 +517,7 @@ void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	dim3 block(tpb);
 
 	if (device_sm[device_map[thr_id]] >= 500)
-		lyra2v2_gpu_hash_32 <<<grid, block>>> (threads, startNounce, (uint2*)d_outputHash);
+		lyra2v2_gpu_hash_32    <<<grid, block>>> (threads, startNounce, (uint2*)d_outputHash);
 	else
 		lyra2v2_gpu_hash_32_v3 <<<grid, block>>> (threads, startNounce, (uint2*)d_outputHash);
 
