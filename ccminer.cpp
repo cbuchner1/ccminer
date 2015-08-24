@@ -538,6 +538,9 @@ void get_currentalgo(char* buf, int sz)
  */
 void proper_exit(int reason)
 {
+	if (abort_flag) /* already called */
+		return;
+
 	abort_flag = true;
 	usleep(200 * 1000);
 	cuda_shutdown();
@@ -554,8 +557,8 @@ void proper_exit(int reason)
 	timeEndPeriod(1); // else never executed
 #endif
 #ifdef USE_WRAPNVML
-	if (hnvml && !opt_keep_clocks) {
-		for (int n=0; n < opt_n_threads; n++) {
+	if (hnvml) {
+		for (int n=0; n < opt_n_threads && !opt_keep_clocks; n++) {
 			nvml_reset_clocks(hnvml, device_map[n]);
 		}
 		nvml_destroy(hnvml);
@@ -1238,7 +1241,7 @@ static void *workio_thread(void *userdata)
 		return NULL;
 	}
 
-	while (ok) {
+	while (ok && !abort_flag) {
 		struct workio_cmd *wc;
 
 		/* wait for workio_cmd sent to us, on our queue */
@@ -1584,7 +1587,7 @@ static void *miner_thread(void *userdata)
 		}
 	}
 
-	while (1) {
+	while (!abort_flag) {
 		struct timeval tv_start, tv_end, diff;
 		unsigned long hashes_done;
 		uint32_t start_nonce;
@@ -2176,7 +2179,7 @@ wait_lp_url:
 
 longpoll_retry:
 
-	while (1) {
+	while (!abort_flag) {
 		json_t *val = NULL, *soval;
 		int err = 0;
 
@@ -2309,7 +2312,7 @@ wait_stratum_url:
 	pool_is_switching = false;
 	stratum_need_reset = false;
 
-	while (1) {
+	while (!abort_flag) {
 		int failures = 0;
 
 		if (stratum_need_reset) {
@@ -2320,7 +2323,7 @@ wait_stratum_url:
 				stratum.url = strdup(pool->url); // may be useless
 		}
 
-		while (!stratum.curl) {
+		while (!stratum.curl && !abort_flag) {
 			pthread_mutex_lock(&g_work_lock);
 			g_work_time = 0;
 			g_work.data[0] = 0;
@@ -3389,10 +3392,13 @@ int main(int argc, char *argv[])
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 
+	/* wait for mining threads */
+	for (i = 0; i < opt_n_threads; i++)
+		pthread_join(thr_info[i].pth, NULL);
+
 	if (opt_debug)
 		applog(LOG_DEBUG, "workio thread dead, exiting.");
 
 	proper_exit(EXIT_CODE_OK);
-
 	return 0;
 }

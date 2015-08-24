@@ -878,7 +878,7 @@ static void api()
 	buffer = (char *) calloc(1, MYBUFSIZ + 1);
 
 	counter = 0;
-	while (bye == 0) {
+	while (bye == 0 && !abort_flag) {
 		counter++;
 
 		clisiz = sizeof(cli);
