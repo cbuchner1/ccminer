@@ -225,6 +225,7 @@ features.
 >>> RELEASE HISTORY <<<
 
   August 2015...
+                  Allow to load remote config with curl (-c http://...)
                   Add Lyra2REv2 algo (Vertcoin/Zoom)
                   Restore WhirlpoolX algo (VNL)
                   Drop Animecoin support

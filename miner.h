@@ -245,9 +245,13 @@ void aligned_free(void *ptr);
 
 #if JANSSON_MAJOR_VERSION >= 2
 #define JSON_LOADS(str, err_ptr) json_loads((str), 0, (err_ptr))
+#define JSON_LOADF(str, err_ptr) json_load_file((str), 0, (err_ptr))
 #else
 #define JSON_LOADS(str, err_ptr) json_loads((str), (err_ptr))
+#define JSON_LOADF(str, err_ptr) json_load_file((str), (err_ptr))
 #endif
+
+json_t * json_load_url(char* cfg_url, json_error_t *err);
 
 #define USER_AGENT PACKAGE_NAME "/" PACKAGE_VERSION
 
