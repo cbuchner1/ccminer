@@ -4,8 +4,9 @@
 #ifdef WIN32
 
 #include <windows.h>
+#include <time.h>
 
-extern int opt_priority;
+#define localtime_r(src, dst) localtime_s(dst, src)
 
 static __inline void sleep(int secs)
 {
@@ -15,6 +16,8 @@ static __inline void sleep(int secs)
 enum {
 	PRIO_PROCESS = 0,
 };
+
+extern int opt_priority;
 
 static __inline int setpriority(int which, int who, int prio)
 {
