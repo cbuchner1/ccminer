@@ -1,5 +1,5 @@
 
-ccMiner release 1.6.5-C11 (Jul 2015) "Special for Chaincoin C11"
+ccMiner release 1.6.6 (Aug 2015)   "Lyra2REv2, BMW And Vanilla"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -147,6 +147,7 @@ its command line interface and options.
       --cpu-affinity    set process affinity to specific cpu core(s) mask
       --cpu-priority    set process priority (default: 0 idle, 2 normal to 5 highest)
   -c, --config=FILE     load a JSON-format configuration file
+                        can be from an url with the http:// prefix
   -V, --version         display version information and exit
   -h, --help            display this help text and exit
 
@@ -224,7 +225,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  August 2015...
+  Aug. 28th 2015  v1.6.6
                   Allow to load remote config with curl (-c http://...)
                   Add Lyra2REv2 algo (Vertcoin/Zoom)
                   Restore WhirlpoolX algo (VNL)
