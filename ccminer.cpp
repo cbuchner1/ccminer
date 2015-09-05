@@ -1819,7 +1819,6 @@ static void *miner_thread(void *userdata)
 		}
 
 		work.scanned_from = start_nonce;
-		nonceptr[0] = start_nonce;
 
 		if (opt_debug)
 			applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x range=%08x",
@@ -2047,7 +2046,7 @@ static void *miner_thread(void *userdata)
 			work.scanned_to = max_nonce;
 			if (opt_debug && opt_benchmark) {
 				// to debug nonce ranges
-				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%llx", device_map[thr_id],
+				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%08x", device_map[thr_id],
 					nonceptr[0], (nonceptr[0] - start_nonce));
 			}
 		}
