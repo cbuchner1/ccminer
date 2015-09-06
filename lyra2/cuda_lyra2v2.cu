@@ -78,12 +78,16 @@ void reduceDuplex(vectype state[4], uint32_t thread)
 		uint32_t s1 = ps1 + i*memshift;
 		uint32_t s2 = ps2 - i*memshift;
 
+		#pragma unroll
 		for (int j = 0; j < 3; j++)
 			state1[j] = __ldg4(&(DMatrix+s1)[j]);
 
 		for (int j = 0; j < 3; j++)
 			state[j] ^= state1[j];
+
 		round_lyra_v35(state);
+
+		#pragma unroll
 		for (int j = 0; j < 3; j++)
 			state1[j] ^= state[j];
 
@@ -353,6 +357,7 @@ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outpu
 
 		for (int i = 0; i<12; i++)
 			round_lyra_v35(state);
+
 		state[0] ^= shuffle4(((vectype*)padding)[0], 0);
 		state[1] ^= shuffle4(((vectype*)padding)[1], 0);
 
@@ -417,14 +422,14 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 	if (threadIdx.x == 0) {
 
 		((uint16*)blake2b_IV)[0] = make_uint16(
-			 0xf3bcc908, 0x6a09e667 , 0x84caa73b, 0xbb67ae85 ,
-			 0xfe94f82b, 0x3c6ef372 , 0x5f1d36f1, 0xa54ff53a ,
-			 0xade682d1, 0x510e527f , 0x2b3e6c1f, 0x9b05688c ,
-			 0xfb41bd6b, 0x1f83d9ab , 0x137e2179, 0x5be0cd19
+			 0xf3bcc908, 0x6a09e667, 0x84caa73b, 0xbb67ae85,
+			 0xfe94f82b, 0x3c6ef372, 0x5f1d36f1, 0xa54ff53a,
+			 0xade682d1, 0x510e527f, 0x2b3e6c1f, 0x9b05688c,
+			 0xfb41bd6b, 0x1f83d9ab, 0x137e2179, 0x5be0cd19
 		);
 		((uint16*)padding)[0] = make_uint16(
-			 0x20, 0x0 , 0x20, 0x0 , 0x20, 0x0 , 0x01, 0x0 ,
-			 0x04, 0x0 , 0x04, 0x0 , 0x80, 0x0 , 0x0, 0x01000000
+			 0x20, 0x0, 0x20, 0x0, 0x20, 0x0, 0x01, 0x0,
+			 0x04, 0x0, 0x04, 0x0, 0x80, 0x0, 0x0, 0x01000000
 		);
 	}
 
@@ -497,9 +502,10 @@ __global__ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, u
 #endif
 
 __host__
-void lyra2v2_cpu_init(int thr_id, uint32_t threads,uint64_t *hash)
+void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_hash2)
 {
-	cudaMemcpyToSymbol(DMatrix, &hash, sizeof(hash), 0, cudaMemcpyHostToDevice);
+	// just assign the device pointer allocated in main loop
+	cudaMemcpyToSymbol(DMatrix, &d_hash2, sizeof(uint64_t*), 0, cudaMemcpyHostToDevice);
 }
 
 __host__
