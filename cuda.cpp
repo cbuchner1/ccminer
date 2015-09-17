@@ -212,6 +212,8 @@ void cuda_reset_device(int thr_id, bool *init)
 			usleep(1000);
 	}
 	cudaDeviceReset();
+	if (opt_cudaschedule >= 0)
+		cudaSetDeviceFlags((unsigned)(opt_cudaschedule & cudaDeviceScheduleMask));
 }
 
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)

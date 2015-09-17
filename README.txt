@@ -106,6 +106,7 @@ its command line interface and options.
 
   -i, --intensity=N[,N] GPU threads per call 8-25 (2^N + F, default: 0=auto)
                         Decimals and multiple values are allowed for fine tuning
+      --cuda-schedule   Set device threads scheduling mode (default: auto)
   -f, --diff-factor     Divide difficulty by this factor (default 1.0)
   -m, --diff-multiplier Multiply difficulty by this value (default 1.0)
       --vote=VOTE       block reward vote (for HeavyCoin)
@@ -224,6 +225,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Under Dev...    v1.6.7
+                  Add --cuda-schedule parameter
 
   Aug. 28th 2015  v1.6.6
                   Allow to load remote config with curl (-c http://...)

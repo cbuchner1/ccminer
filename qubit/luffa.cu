@@ -44,6 +44,8 @@ extern "C" int scanhash_luffa(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		if (opt_cudaschedule == -1) // to reduce cpu usage...
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
 

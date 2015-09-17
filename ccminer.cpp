@@ -206,6 +206,7 @@ uint32_t device_gpu_clocks[MAX_GPUS] = { 0 };
 uint32_t device_mem_clocks[MAX_GPUS] = { 0 };
 uint32_t device_plimit[MAX_GPUS] = { 0 };
 int8_t device_pstate[MAX_GPUS] = { -1 };
+int opt_cudaschedule = -1;
 static bool opt_keep_clocks = false;
 
 // un-linked to cmdline scrypt options (useless)
@@ -320,6 +321,7 @@ Options:\n\
                         (matching 2nd gt640 in the PC)\n\
   -i  --intensity=N[,N] GPU intensity 8.0-25.0 (default: auto) \n\
                         Decimals are allowed for fine tuning \n\
+      --cuda-schedule   Set device threads scheduling mode (default: auto)\n\
   -f, --diff-factor     Divide difficulty by this factor (default 1.0) \n\
   -m, --diff-multiplier Multiply difficulty by this value (default 1.0) \n\
       --vote=VOTE       block reward vote (for HeavyCoin)\n\
@@ -393,6 +395,7 @@ struct option options[] = {
 	{ "cputest", 0, NULL, 1006 },
 	{ "cpu-affinity", 1, NULL, 1020 },
 	{ "cpu-priority", 1, NULL, 1021 },
+	{ "cuda-schedule", 1, NULL, 1025 },
 	{ "debug", 0, NULL, 'D' },
 	{ "help", 0, NULL, 'h' },
 	{ "intensity", 1, NULL, 'i' },
@@ -2860,6 +2863,9 @@ void parse_arg(int key, char *arg)
 			show_usage_and_exit(1);
 		opt_priority = v;
 		break;
+	case 1025: // cuda-schedule
+		opt_cudaschedule = atoi(arg);
+		break;
 	case 1060: // max-temp
 		d = atof(arg);
 		opt_max_temp = d;
@@ -3322,7 +3328,7 @@ int main(int argc, char *argv[])
 	/* nvml is currently not the best choice on Windows (only in x64) */
 	hnvml = nvml_create();
 	if (hnvml) {
-		bool gpu_reinit = false;
+		bool gpu_reinit = (opt_cudaschedule >= 0); //false
 		cuda_devicenames(); // refresh gpu vendor name
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
 		for (int n=0; n < opt_n_threads; n++) {
@@ -3332,11 +3338,18 @@ int main(int argc, char *argv[])
 				gpu_reinit = true;
 			if (nvml_set_clocks(hnvml, device_map[n]) == 1)
 				gpu_reinit = true;
-			if (gpu_reinit)
+			if (gpu_reinit) {
 				cuda_reset_device(n, NULL);
+			}
 		}
 	}
 #endif
+	// force reinit to set default device flags
+	if (opt_cudaschedule >= 0 && !hnvml) {
+		for (int n=0; n < opt_n_threads; n++) {
+			cuda_reset_device(n, NULL);
+		}
+	}
 #ifdef WIN32
 	if (!hnvml && nvapi_init() == 0)
 		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");

@@ -529,6 +529,7 @@ extern char* device_name[MAX_GPUS];
 extern short device_map[MAX_GPUS];
 extern long  device_sm[MAX_GPUS];
 extern uint32_t gpus_intensity[MAX_GPUS];
+extern int opt_cudaschedule;
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
