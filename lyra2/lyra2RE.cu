@@ -75,10 +75,10 @@ extern "C" void lyra2re_hash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done)
+extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	int intensity = (device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 18 : 17;
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity); // 18=256*256*4;
@@ -135,6 +135,7 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = groestl256_getSecNonce(thr_id, 1);
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				if (secNonce != UINT32_MAX)
 				{
 					be32enc(&endiandata[19], secNonce);
@@ -142,6 +143,8 @@ extern "C" int scanhash_lyra2(int thr_id, uint32_t *pdata,
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 						if (opt_debug)
 							applog(LOG_BLUE, "GPU #%d: found second nonce %08x", device_map[thr_id], secNonce);
+						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+							bn_store_hash_target_ratio(vhash64, ptarget, work);
 						pdata[21] = secNonce;
 						res++;
 					}

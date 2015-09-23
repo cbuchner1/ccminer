@@ -1873,165 +1873,106 @@ static void *miner_thread(void *userdata)
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
 
-		case ALGO_HEAVY:
-			rc = scanhash_heavy(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done, work.maxvote, HEAVYCOIN_BLKHDR_SZ);
-			break;
-
-		case ALGO_KECCAK:
-			rc = scanhash_keccak256(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_MJOLLNIR:
-			rc = scanhash_heavy(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done, 0, MNR_BLKHDR_SZ);
-			break;
-
-		case ALGO_DEEP:
-			rc = scanhash_deep(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_LUFFA:
-			rc = scanhash_luffa(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
 		case ALGO_BLAKECOIN:
-			rc = scanhash_blake256(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done, 8);
+			rc = scanhash_blake256(thr_id, &work, max_nonce, &hashes_done, 8);
 			break;
-
 		case ALGO_BLAKE:
-			rc = scanhash_blake256(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done, 14);
+			rc = scanhash_blake256(thr_id, &work, max_nonce, &hashes_done, 14);
 			break;
-
 		case ALGO_BMW:
-			rc = scanhash_bmw(thr_id, work.data, work.target, max_nonce, &hashes_done);
+			rc = scanhash_bmw(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_C11:
-			rc = scanhash_c11(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_c11(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
+		case ALGO_DEEP:
+			rc = scanhash_deep(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_FRESH:
+			rc = scanhash_fresh(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_FUGUE256:
-			rc = scanhash_fugue256(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_fugue256(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
 		case ALGO_GROESTL:
 		case ALGO_DMD_GR:
-			rc = scanhash_groestlcoin(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_groestlcoin(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_MYR_GR:
-			rc = scanhash_myriad(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_myriad(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
+		case ALGO_HEAVY:
+			rc = scanhash_heavy(thr_id, &work, max_nonce, &hashes_done, work.maxvote, HEAVYCOIN_BLKHDR_SZ);
+			break;
+		case ALGO_MJOLLNIR:
+			rc = scanhash_heavy(thr_id, &work, max_nonce, &hashes_done, 0, MNR_BLKHDR_SZ);
+			break;
+		case ALGO_KECCAK:
+			rc = scanhash_keccak256(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_JACKPOT:
-			rc = scanhash_jackpot(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_jackpot(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
+		case ALGO_LUFFA:
+			rc = scanhash_luffa(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_QUARK:
-			rc = scanhash_quark(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_quark(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_QUBIT:
-			rc = scanhash_qubit(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_qubit(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
-		case ALGO_FRESH:
-			rc = scanhash_fresh(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
 		case ALGO_LYRA2:
-			rc = scanhash_lyra2(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_lyra2(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_LYRA2v2:
 			rc = scanhash_lyra2v2(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_NEOSCRYPT:
-			rc = scanhash_neoscrypt(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_neoscrypt(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_NIST5:
-			rc = scanhash_nist5(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_nist5(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_PENTABLAKE:
-			rc = scanhash_pentablake(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_pentablake(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_SCRYPT:
-			rc = scanhash_scrypt(thr_id, work.data, work.target, NULL,
-			                      max_nonce, &hashes_done, &tv_start, &tv_end);
+			rc = scanhash_scrypt(thr_id, &work, max_nonce, &hashes_done,
+				NULL, &tv_start, &tv_end);
 			break;
-
 		case ALGO_SCRYPT_JANE:
-			rc = scanhash_scrypt_jane(thr_id, work.data, work.target, NULL,
-			                      max_nonce, &hashes_done, &tv_start, &tv_end);
+			rc = scanhash_scrypt_jane(thr_id, &work, max_nonce, &hashes_done,
+				NULL, &tv_start, &tv_end);
 			break;
-
 		case ALGO_SKEIN:
-			rc = scanhash_skeincoin(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_skeincoin(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_SKEIN2:
-			rc = scanhash_skein2(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_skein2(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_S3:
-			rc = scanhash_s3(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_WHIRLPOOLX:
-			rc = scanhash_whirlpoolx(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_whirlx(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_X11:
-			rc = scanhash_x11(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_x11(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_X13:
-			rc = scanhash_x13(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_x13(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_X14:
-			rc = scanhash_x14(thr_id, work.data, work.target,
-				              max_nonce, &hashes_done);
-			break;
-
+			rc = scanhash_x14(thr_id, &work, max_nonce, &hashes_done);
 		case ALGO_X15:
-			rc = scanhash_x15(thr_id, work.data, work.target,
-				              max_nonce, &hashes_done);
+			rc = scanhash_x15(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_X17:
-			rc = scanhash_x17(thr_id, work.data, work.target,
-				              max_nonce, &hashes_done);
+			rc = scanhash_x17(thr_id, &work, max_nonce, &hashes_done);
 			break;
-
 		case ALGO_ZR5:
 			rc = scanhash_zr5(thr_id, &work, max_nonce, &hashes_done);
 			break;

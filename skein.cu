@@ -346,10 +346,11 @@ static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 
 	const uint32_t first_nonce = pdata[19];
 	const int swap = 1;
@@ -425,7 +426,12 @@ extern "C" int scanhash_skeincoin(int thr_id, uint32_t *pdata, const uint32_t *p
 					endiandata[19] = swab32_if(secNonce, swap);
 					skeincoinhash(vhash64, endiandata);
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
+						bn_store_hash_target_ratio(vhash64, ptarget, work);
 						// todo: use 19 20 21... zr5 pok to adapt...
+						endiandata[19] = swab32_if(secNonce, swap);
+						skeincoinhash(vhash64, endiandata);
+						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+							bn_store_hash_target_ratio(vhash64, ptarget, work);
 						pdata[19+res*2] = swab32_if(secNonce, !swap);
 						res++;
 					}

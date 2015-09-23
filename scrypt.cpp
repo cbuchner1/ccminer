@@ -689,10 +689,12 @@ static void computeGold(uint32_t* const input, uint32_t *reference, uchar *scrat
 // using SSE2 vectorized HMAC SHA256 on CPU and
 // a salsa core implementation on GPU with CUDA
 //
-int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsigned char *scratchbuf,
-	uint32_t max_nonce, unsigned long *hashes_done, struct timeval *tv_start, struct timeval *tv_end)
+int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done,
+	unsigned char *scratchbuf, struct timeval *tv_start, struct timeval *tv_end)
 {
 	int result = 0;
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	int throughput = cuda_throughput(thr_id);
 
 	if(throughput == 0)
@@ -904,6 +906,7 @@ int scanhash_scrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsign
 							device_map[thr_id], device_name[thr_id], i, cur);
 					} else {
 						*hashes_done = n - pdata[19];
+						bn_store_hash_target_ratio(refhash, ptarget, work);
 						pdata[19] = nonce[cur] + i;
 						result = 1;
 						goto byebye;

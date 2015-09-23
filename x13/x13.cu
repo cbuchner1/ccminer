@@ -145,10 +145,10 @@ extern "C" void x13hash(void *output, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
-    unsigned long *hashes_done)
+extern "C" int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	int intensity = 19; // (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 20 : 19;
 	uint32_t throughput =  device_intensity(thr_id, __func__, 1 << intensity); // 19=256*256*8;
@@ -207,23 +207,30 @@ extern "C" int scanhash_x13(int thr_id, uint32_t *pdata,
 		x13_hamsi512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
-			const uint32_t Htarg = ptarget[7];
-			uint32_t vhash64[8];
+			uint32_t vhash[8];
 			be32enc(&endiandata[19], foundNonce);
-			x13hash(vhash64, endiandata);
+			x13hash(vhash, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				*hashes_done = pdata[19] - first_nonce + throughput;
+				bn_store_hash_target_ratio(vhash, ptarget, work);
+				pdata[19] = foundNonce;
 				if (secNonce != 0) {
+					be32enc(&endiandata[19], secNonce);
+					x13hash(vhash, endiandata);
 					pdata[21] = secNonce;
+					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio) {
+						bn_store_hash_target_ratio(vhash, ptarget, work);
+						xchg(pdata[19], pdata[21]);
+					}
 					res++;
 				}
-				pdata[19] = foundNonce;
 				return res;
 			} else {
 				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);

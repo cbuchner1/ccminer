@@ -8,8 +8,11 @@ extern uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t sta
 
 static bool init[MAX_GPUS] = { 0 };
 
-int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done)
+int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 
 	int intensity = is_windows() ? 18 : 19;
@@ -37,7 +40,6 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
 	if (have_stratum) {
 		for (int k = 0; k < 20; k++)
 			be32enc(&endiandata[k], pdata[k]);
@@ -64,6 +66,7 @@ int scanhash_neoscrypt(int thr_id, uint32_t *pdata, const uint32_t *ptarget, uin
 			neoscrypt((uchar*)vhash64, (uchar*) endiandata, 0x80000620U);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				pdata[19] = foundNonce;
 				return 1;
 			} else {

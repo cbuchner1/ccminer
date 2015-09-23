@@ -130,10 +130,10 @@ struct check_nonce_for_remove
 static bool init[MAX_GPUS] = { 0 };
 
 __host__
-int scanhash_heavy(int thr_id, uint32_t *pdata,
-    const uint32_t *ptarget, uint32_t max_nonce,
-    unsigned long *hashes_done, uint32_t maxvote, int blocklen)
+int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done, uint32_t maxvote, int blocklen)
 {
+    uint32_t *pdata = work->data;
+    uint32_t *ptarget = work->target;
     const uint32_t first_nonce = pdata[19];
     // CUDA will process thousands of threads.
     uint32_t throughput = device_intensity(thr_id, __func__, (1U << 19) - 256);
@@ -271,18 +271,17 @@ int scanhash_heavy(int thr_id, uint32_t *pdata,
             {
                 uint32_t nonce = cpu_nonceVector[i];
                 uint32_t *foundhash = &hash[8*i];
-                if (foundhash[7] <= ptarget[7]) {
-                    if (fulltest(foundhash, ptarget)) {
-                        uint32_t verification[8];
-                        pdata[19] += nonce - pdata[19];
-                        heavycoin_hash((uchar*)verification, (uchar*)pdata, blocklen);
-                        if (memcmp(verification, foundhash, 8*sizeof(uint32_t))) {
-                            applog(LOG_ERR, "hash for nonce=$%08X does not validate on CPU!\n", nonce);
-                        } else {
-                            *hashes_done = pdata[19] - first_nonce;
-                            rc = 1;
-                            goto exit;
-                        }
+                if (foundhash[7] <= ptarget[7] && fulltest(foundhash, ptarget)) {
+                    uint32_t vhash[8];
+                    pdata[19] += nonce - pdata[19];
+                    heavycoin_hash((uchar*)vhash, (uchar*)pdata, blocklen);
+                    if (memcmp(vhash, foundhash, 8*sizeof(uint32_t))) {
+                        applog(LOG_ERR, "hash for nonce %08x does not validate on CPU!\n", nonce);
+                    } else {
+                        *hashes_done = pdata[19] - first_nonce;
+                        bn_store_hash_target_ratio(vhash, ptarget, work);
+                        rc = 1;
+                        goto exit;
                     }
                 }
             }

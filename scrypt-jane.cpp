@@ -430,9 +430,11 @@ unsigned char GetNfactor(unsigned int nTimestamp)
 					 | (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 static int s_Nfactor = 0;
 
-int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, unsigned char *scratchbuf,
-	uint32_t max_nonce, unsigned long *hashes_done, struct timeval *tv_start, struct timeval *tv_end)
+int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done,
+	unsigned char *scratchbuf, struct timeval *tv_start, struct timeval *tv_end)
 {
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t Htarg = ptarget[7];
 	uint32_t N;
 
@@ -594,6 +596,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget, u
 
 				if (memcmp(thash, &hash[cur][8*i], 32) == 0)
 				{
+					bn_store_hash_target_ratio(thash, ptarget, work);
 					*hashes_done = n - pdata[19];
 					pdata[19] = tmp_nonce;
 					scrypt_free(&Vbuf);

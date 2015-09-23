@@ -36,9 +36,10 @@ void skein2hash(void *output, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done)
+int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 
 	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
@@ -88,9 +89,15 @@ int scanhash_skein2(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				if (secNonce != 0) {
 					if (!opt_quiet)
 						applog(LOG_BLUE, "GPU #%d: found second nonce %08x !", device_map[thr_id], swab32(secNonce));
+
+					endiandata[19] = secNonce;
+					skein2hash(vhash64, endiandata);
+					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+						bn_store_hash_target_ratio(vhash64, ptarget, work);
 					pdata[21] = swab32(secNonce);
 					res++;
 				}

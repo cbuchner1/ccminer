@@ -379,17 +379,18 @@ void blake256_cpu_setBlock_16(uint32_t *penddata, const uint32_t *midstate, cons
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_blake256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds=14)
+extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds=14)
 {
-	const uint32_t first_nonce = pdata[19];
-	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
 	uint32_t _ALIGN(64) endiandata[20];
 #if PRECALC64
 	uint32_t _ALIGN(64) midstate[8];
 #else
 	uint32_t crcsum;
 #endif
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
+	const uint32_t first_nonce = pdata[19];
+	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 20;
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
 	throughput = min(throughput, max_nonce - first_nonce);

@@ -35,10 +35,11 @@ extern "C" void keccak256_hash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done)
+extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 21); // 256*256*8*4
 	throughput = min(throughput, max_nonce - first_nonce);
@@ -55,7 +56,6 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++) {
 		be32enc(&endiandata[k], pdata[k]);
 	}
@@ -74,6 +74,7 @@ extern "C" int scanhash_keccak256(int thr_id, uint32_t *pdata,
 			keccak256_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				pdata[19] = foundNonce;
 				return 1;
 			}

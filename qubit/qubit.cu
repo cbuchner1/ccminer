@@ -74,11 +74,11 @@ extern "C" void qubithash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done)
+extern "C" int scanhash_qubit(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
-	uint32_t endiandata[20];
+	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	uint32_t throughput =  device_intensity(thr_id, __func__, 1U << 19); // 256*256*8
 	throughput = min(throughput, max_nonce - first_nonce);
@@ -119,6 +119,8 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
@@ -130,8 +132,12 @@ extern "C" int scanhash_qubit(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				*hashes_done = pdata[19] - first_nonce + throughput;
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				if (secNonce != 0) {
+					be32enc(&endiandata[19], secNonce);
+					qubithash(vhash64, endiandata);
+					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+						bn_store_hash_target_ratio(vhash64, ptarget, work);
 					pdata[21] = secNonce;
 					res++;
 				}

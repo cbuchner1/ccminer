@@ -22,9 +22,11 @@ extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n,
 
 static bool init[MAX_GPUS] = { 0 };
 
-int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done)
+int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	uint32_t start_nonce = pdata[19]++;
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 19;
 	uint32_t throughput =  device_intensity(thr_id, __func__, 1 << intensity); // 256*256*8
@@ -42,8 +44,7 @@ int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 		init[thr_id] = true;
 	}
 
-	// Endian Drehung ist notwendig
-	uint32_t endiandata[20];
+	// Endian
 	for (int kk=0; kk < 20; kk++)
 		be32enc(&endiandata[kk], pdata[kk]);
 
@@ -57,17 +58,17 @@ int scanhash_fugue256(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
 
 		if (foundNounce < UINT32_MAX)
 		{
-			uint32_t hash[8];
-			const uint32_t Htarg = ptarget[7];
-
-			endiandata[19] = SWAP32(foundNounce);
+			uint32_t vhash[8];
 			sph_fugue256_context ctx_fugue;
+			endiandata[19] = SWAP32(foundNounce);
+
 			sph_fugue256_init(&ctx_fugue);
 			sph_fugue256 (&ctx_fugue, endiandata, 80);
-			sph_fugue256_close(&ctx_fugue, &hash);
+			sph_fugue256_close(&ctx_fugue, &vhash);
 
-			if (hash[7] <= Htarg && fulltest(hash, ptarget))
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget))
 			{
+				bn_store_hash_target_ratio(vhash, ptarget, work);
 				pdata[19] = foundNounce;
 				*hashes_done = foundNounce - start_nonce + 1;
 				return 1;

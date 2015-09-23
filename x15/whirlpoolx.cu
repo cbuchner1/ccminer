@@ -37,9 +37,10 @@ extern "C" void whirlxHash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_whirlx(int thr_id,  struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	uint32_t endiandata[20];
 	int intensity = is_windows() ? 20 : 22;
@@ -65,6 +66,7 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *
 
 	whirlpoolx_setBlock_80((void*)endiandata, ptarget);
 	whirlpoolx_precompute(thr_id);
+
 	do {
 		uint32_t foundNonce = whirlpoolx_cpu_hash(thr_id, throughput, pdata[19]);
 		if (foundNonce != UINT32_MAX)
@@ -74,8 +76,10 @@ extern "C" int scanhash_whirlpoolx(int thr_id, uint32_t *pdata, const uint32_t *
 			be32enc(&endiandata[19], foundNonce);
 			whirlxHash(vhash64, endiandata);
 
+			*hashes_done = pdata[19] - first_nonce + throughput;
+
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				*hashes_done = pdata[19] - first_nonce + throughput;
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				pdata[19] = foundNonce;
 				return 1;
 			} else {

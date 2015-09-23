@@ -37,9 +37,11 @@ static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
 	return iftrue ? swab32(val) : val;
 }
 
-extern "C" int scanhash_bmw(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	bool swapnonce = true;
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 21);
@@ -59,7 +61,6 @@ extern "C" int scanhash_bmw(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++) {
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 	}
@@ -80,6 +81,7 @@ extern "C" int scanhash_bmw(int thr_id, uint32_t *pdata, const uint32_t *ptarget
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				*hashes_done = foundNonce - first_nonce + 1;
 				pdata[19] = swab32_if(foundNonce,!swapnonce);
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				return 1;
 			}
 			else {

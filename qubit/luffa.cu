@@ -30,10 +30,11 @@ extern "C" void luffa_hash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_luffa(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(64) endiandata[20];
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 22); // 256*256*8*8
 	throughput = min(throughput, max_nonce - first_nonce);
@@ -75,7 +76,7 @@ extern "C" int scanhash_luffa(int thr_id, uint32_t *pdata, const uint32_t *ptarg
 			luffa_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				//*hashes_done = min(max_nonce - first_nonce, (uint64_t) pdata[19] - first_nonce + throughput);
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				pdata[19] = foundNonce;
 				return 1;
 			} else {
