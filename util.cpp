@@ -38,6 +38,7 @@
 
 extern pthread_mutex_t stratum_sock_lock;
 extern pthread_mutex_t stratum_work_lock;
+extern bool opt_debug_diff;
 
 bool opt_tracegpu = false;
 
@@ -765,7 +766,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 		}
 	}
 
-	if (!rc && opt_debug) {
+	if ((!rc && opt_debug) || opt_debug_diff) {
 		uint32_t hash_be[8], target_be[8];
 		char *hash_str, *target_str;
 		
@@ -789,11 +790,14 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 	return rc;
 }
 
-void diff_to_target(uint32_t *target, double diff)
+void diff_to_target(struct work* work, double diff)
 {
+	uint32_t *target = work->target;
 	uint64_t m;
 	int k;
-	
+
+	work->targetdiff = diff;
+
 	for (k = 6; k > 0 && diff > 1.0; k--)
 		diff /= 4294967296.0;
 	m = (uint64_t)(4294901760.0 / diff);

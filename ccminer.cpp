@@ -160,9 +160,11 @@ static const char *algo_names[] = {
 };
 
 bool opt_debug = false;
+bool opt_debug_diff = false;
 bool opt_debug_threads = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
+bool opt_showdiff = false;
 
 // todo: limit use of these flags,
 // prefer the pools[] attributes
@@ -370,6 +372,7 @@ Options:\n\
       --syslog-prefix=... allow to change syslog tool name\n"
 #endif
 "\
+      --show-diff       display submitted block and net difficulty\n\
   -B, --background      run the miner in the background\n\
       --benchmark       run in offline benchmark mode\n\
       --cputest         debug hashes from cpu algorithms\n\
@@ -425,6 +428,7 @@ struct option options[] = {
 	{ "retries", 1, NULL, 'r' },
 	{ "retry-pause", 1, NULL, 'R' },
 	{ "scantime", 1, NULL, 's' },
+	{ "show-diff", 0, NULL, 1013 },
 	{ "statsavg", 1, NULL, 'N' },
 	{ "gpu-clock", 1, NULL, 1070 },
 	{ "mem-clock", 1, NULL, 1071 },
@@ -601,13 +605,24 @@ static void calc_network_diff(struct work *work)
 {
 	// sample for diff 43.281 : 1c05ea29
 	uchar rtarget[48] = { 0 };
-	uint64_t diffone = 0xFFFF000000000000ull; //swab64(0xFFFFull);
 	uint64_t *data64, d64;
 	// todo: endian reversed on longpoll could be zr5 specific...
 	uint32_t nbits = have_longpoll ? work->data[18] : swab32(work->data[18]);
 	uint32_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 	uint32_t bits = (nbits & 0xffffff);
 	int shfb = 8 * (26 - (shift - 3));
+
+#if 1
+	uint64_t diffone = 0x0000FFFF00000000ull;
+	double d = (double)0x0000ffff / (double)bits;
+	for (int m=shift; m < 29; m++) d *= 256.0;
+	for (int m=29; m < shift; m++) d /= 256.0;
+	if (opt_debug_diff)
+		applog(LOG_DEBUG, "diff: %f -> shift %u, bits %08x, shfb %d", d, shift, bits, shfb);
+	net_diff = d;
+	return;
+#else
+	uint64_t diffone = 0xFFFF000000000000ull; //swab64(0xFFFFull);
 
 	switch (opt_algo) {
 		case ALGO_QUARK:
@@ -643,10 +658,11 @@ static void calc_network_diff(struct work *work)
 	d64 = swab64(*data64);
 	if (!d64)
 		d64 = 1;
-	net_diff = (double)diffone / d64; // 43.281
-	if (opt_debug)
+	net_diff = (double)(diffone) / d64; // 43.281
+	if (opt_debug_diff)
 		applog(LOG_DEBUG, "diff: %08x -> shift %u, bits %08x, shfb %d -> %.5f (pool %u)",
 			nbits, shift, bits, shfb, net_diff, work->pooln);
+#endif
 }
 
 static bool work_decode(const json_t *val, struct work *work)
@@ -679,9 +695,8 @@ static bool work_decode(const json_t *val, struct work *work)
 	for (i = 0; i < atarget_sz; i++)
 		work->target[i] = le32dec(work->target + i);
 
-	if (opt_max_diff > 0. && !allow_mininginfo)
+	if ((opt_showdiff || opt_max_diff > 0.) && !allow_mininginfo)
 		calc_network_diff(work);
-
 
 	work->tx_count = use_pok = 0;
 	if (work->data[0] & POK_BOOL_MASK) {
@@ -697,10 +712,10 @@ static bool work_decode(const json_t *val, struct work *work)
 				size_t txlen = strlen(hexstr)/2;
 				work->tx_count++;
 				if (work->tx_count > POK_MAX_TXS || txlen >= POK_MAX_TX_SZ) {
-					// when tx is too big, just reset use_pok for the bloc
+					// when tx is too big, just reset use_pok for the block
 					use_pok = 0;
 					if (opt_debug) applog(LOG_WARNING,
-						"pok: large bloc ignored, tx len: %u", txlen);
+						"pok: large block ignored, tx len: %u", txlen);
 					work->tx_count = 0;
 					break;
 				}
@@ -709,7 +724,7 @@ static bool work_decode(const json_t *val, struct work *work)
 				totlen += txlen;
 			}
 			if (opt_debug)
-				applog(LOG_DEBUG, "bloc txs: %u, total len: %u", work->tx_count, totlen);
+				applog(LOG_DEBUG, "block txs: %u, total len: %u", work->tx_count, totlen);
 		}
 	}
 
@@ -749,7 +764,7 @@ static void calc_target_diff(struct work *work)
 		//case ALGO_SCRYPT:
 		//case ALGO_SCRYPT_JANE:
 			// todo/check...
-			work->difficulty = 0.;
+			work->difficulty = work->targetdiff;
 			return;
 		case ALGO_HEAVY:
 			data64 = (uint64_t*)(rtarget + 2);
@@ -764,8 +779,14 @@ static void calc_target_diff(struct work *work)
 		work->difficulty /= opt_difficulty;
 }
 
-static int share_result(int result, int pooln, const char *reason)
+#define YES "yes!"
+#define YAY "yay!!!"
+#define BOO "booooo"
+
+static int share_result(int result, int pooln, double sharediff, const char *reason)
 {
+	const char *flag;
+	char suppl[32] = { 0 };
 	char s[32] = { 0 };
 	double hashrate = 0.;
 	struct pool_infos *p = &pools[pooln];
@@ -782,15 +803,25 @@ static int share_result(int result, int pooln, const char *reason)
 	global_hashrate = llround(hashrate);
 
 	format_hashrate(hashrate, s);
-	applog(LOG_NOTICE, "accepted: %lu/%lu (%.2f%%), %s %s",
+	if (opt_showdiff)
+		sprintf(suppl, "diff %.3f", sharediff);
+	else // accepted percent
+		sprintf(suppl, "%.2f%%", 100. * p->accepted_count / (p->accepted_count + p->rejected_count));
+
+	if (!net_diff || sharediff < net_diff) {
+		flag = use_colors ?
+			(result ? CL_GRN YES : CL_RED BOO)
+		:	(result ? "(" YES ")" : "(" BOO ")");
+	} else {
+		flag = use_colors ?
+			(result ? CL_GRN YAY : CL_RED BOO)
+		:	(result ? "(" YAY ")" : "(" BOO ")");
+	}
+
+	applog(LOG_NOTICE, "accepted: %lu/%lu (%s), %s %s",
 			p->accepted_count,
 			p->accepted_count + p->rejected_count,
-			100. * p->accepted_count / (p->accepted_count + p->rejected_count),
-			s,
-			use_colors ?
-				(result ? CL_GRN "yay!!!" : CL_RED "booooo")
-			:	(result ? "(yay!!!)" : "(booooo)"));
-
+			suppl, s, flag);
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		/* if (strncasecmp(reason, "low difficulty", 14) == 0) {
@@ -814,7 +845,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	bool stale_work = false;
 	char s[384];
 
-	/* discard if a newer bloc was received */
+	/* discard if a newer block was received */
 	stale_work = work->height && work->height < g_work.height;
 	if (have_stratum && !stale_work && opt_algo != ALGO_ZR5 && opt_algo != ALGO_SCRYPT_JANE) {
 		pthread_mutex_lock(&g_work_lock);
@@ -828,7 +859,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		if (get_blocktemplate(curl, &wheight)) {
 			if (work->height && work->height < wheight.height) {
 				if (opt_debug)
-					applog(LOG_WARNING, "bloc %u was already solved", work->height);
+					applog(LOG_WARNING, "block %u was already solved", work->height);
 				return true;
 			}
 		}
@@ -885,6 +916,16 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		ntimestr = bin2hex((const uchar*)(&ntime), 4);
 		xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
+
+		// store to keep/display the solved ratio/diff
+		stratum.sharediff = work->sharediff;
+
+		if (net_diff && stratum.sharediff > net_diff && (!opt_quiet || opt_debug_diff))
+			applog(LOG_INFO, "share diff: %.5f, possible block found!!!",
+				stratum.sharediff);
+		else if (opt_debug_diff)
+			applog(LOG_DEBUG, "share diff: %.5f (x %.1f)",
+				stratum.sharediff, work->shareratio);
 
 		if (opt_algo == ALGO_HEAVY) {
 			be16enc(&nvote, *((uint16_t*)&work->data[20]));
@@ -947,8 +988,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		res = json_object_get(val, "result");
 		reason = json_object_get(val, "reject-reason");
-		if (!share_result(json_is_true(res),
-				work->pooln,
+		if (!share_result(json_is_true(res), work->pooln, work->sharediff,
 				reason ? json_string_value(reason) : NULL))
 		{
 			if (check_dups)
@@ -969,7 +1009,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	json_t *err = json_object_get(val, "error");
 	if (err && !json_is_null(err)) {
 		allow_gbt = false;
-		applog(LOG_INFO, "GBT not supported, bloc height unavailable");
+		applog(LOG_INFO, "GBT not supported, block height unavailable");
 		return false;
 	}
 
@@ -1373,7 +1413,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	work->xnonce2_len = sctx->xnonce2_size;
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
-	// also store the bloc number
+	// also store the block number
 	work->height = sctx->job.height;
 	// and the pool of the current stratum
 	work->pooln = sctx->pooln;
@@ -1415,7 +1455,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	work->data[17] = le32dec(sctx->job.ntime);
 	work->data[18] = le32dec(sctx->job.nbits);
 
-	if (opt_max_diff > 0.)
+	if (opt_showdiff || opt_max_diff > 0.)
 		calc_network_diff(work);
 
 	switch (opt_algo) {
@@ -1460,21 +1500,21 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_NEOSCRYPT:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
-			diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
+			diff_to_target(work, sctx->job.diff / (65536.0 * opt_difficulty));
 			break;
 		case ALGO_DMD_GR:
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
 		case ALGO_LYRA2v2:
-			diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
+			diff_to_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
 		case ALGO_LYRA2:
-			diff_to_target(work->target, sctx->job.diff / (128.0 * opt_difficulty));
+			diff_to_target(work, sctx->job.diff / (128.0 * opt_difficulty));
 			break;
 		default:
-			diff_to_target(work->target, sctx->job.diff / opt_difficulty);
+			diff_to_target(work, sctx->job.diff / opt_difficulty);
 	}
 	return true;
 }
@@ -1919,8 +1959,7 @@ static void *miner_thread(void *userdata)
 			break;
 
 		case ALGO_LYRA2v2:
-			rc = scanhash_lyra2v2(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
+			rc = scanhash_lyra2v2(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
 		case ALGO_NEOSCRYPT:
@@ -2208,7 +2247,7 @@ longpoll_retry:
 				if (!opt_quiet) {
 					char netinfo[64] = { 0 };
 					if (net_diff > 0.) {
-						sprintf(netinfo, ", diff %.2f", net_diff);
+						sprintf(netinfo, ", diff %.3f", net_diff);
 					}
 					applog(LOG_BLUE, "%s detected new block%s", short_url, netinfo);
 				}
@@ -2280,7 +2319,7 @@ static bool stratum_handle_response(char *buf)
 	// store time required to the pool to answer to a submit
 	stratum.answer_msec = (1000 * diff.tv_sec) + (uint32_t) (0.001 * diff.tv_usec);
 
-	share_result(json_is_true(res_val), stratum.pooln,
+	share_result(json_is_true(res_val), stratum.pooln, stratum.sharediff,
 		err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
 
 	ret = true;
@@ -2366,7 +2405,7 @@ wait_stratum_url:
 			if (stratum.job.clean) {
 				if (!opt_quiet) {
 					if (net_diff > 0.)
-						applog(LOG_BLUE, "%s block %d, diff %.2f", algo_names[opt_algo],
+						applog(LOG_BLUE, "%s block %d, diff %.3f", algo_names[opt_algo],
 							stratum.job.height, net_diff);
 					else
 						applog(LOG_BLUE, "%s %s block %d", pool->short_url, algo_names[opt_algo],
@@ -2840,6 +2879,9 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1012:
 		opt_extranonce = false;
+		break;
+	case 1013:
+		opt_showdiff = true;
 		break;
 	case 'S':
 	case 1018:

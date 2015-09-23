@@ -71,10 +71,10 @@ void lyra2v2_hash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce,
-	unsigned long *hashes_done)
+extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	uint32_t *pdata = work->data;
+	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	int intensity = (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 18 : 17;
 	unsigned int defthr = 1U << intensity;
@@ -138,10 +138,15 @@ extern "C" int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
+				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				// check if there was another one...
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (foundNonces[1] != 0)
 				{
+					be32enc(&endiandata[19], foundNonces[1]);
+					lyra2v2_hash(vhash64, endiandata);
+					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+						bn_store_hash_target_ratio(vhash64, ptarget, work);
 					pdata[21] = foundNonces[1];
 					res++;
 				}

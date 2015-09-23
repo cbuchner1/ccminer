@@ -322,8 +322,8 @@ extern int scanhash_fresh(int thr_id, uint32_t *pdata,
 extern int scanhash_lyra2(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done);
 
-extern int scanhash_lyra2v2(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_lyra2v2(int thr_id, struct work *work,
+	uint32_t max_nonce, unsigned long *hashes_done);
 
 extern int scanhash_neoscrypt(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done);
@@ -495,6 +495,7 @@ extern bool opt_benchmark;
 extern bool opt_debug;
 extern bool opt_quiet;
 extern bool opt_protocol;
+extern bool opt_showdiff;
 extern bool opt_tracegpu;
 extern int opt_n_threads;
 extern int active_gpus;
@@ -571,13 +572,15 @@ extern bool hex2bin(unsigned char *p, const char *hexstr, size_t len);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
-extern void diff_to_target(uint32_t *target, double diff);
+extern void diff_to_target(struct work* work, double diff);
 extern void get_currentalgo(char* buf, int sz);
 extern uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
 
 // bignum
 double bn_convert_nbits(const uint32_t nbits);
 void bn_nbits_to_uchar(const uint32_t nBits, uchar *target);
+double bn_hash_target_ratio(uint32_t* hash, uint32_t* target);
+void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, struct work* work);
 
 struct stratum_job {
 	char *job_id;
@@ -607,6 +610,7 @@ struct stratum_ctx {
 	char *sockbuf;
 
 	double next_diff;
+	double sharediff;
 
 	char *session_id;
 	size_t xnonce1_size;
@@ -643,7 +647,10 @@ struct work {
 		uint64_t u64[1];
 	} noncerange;
 
+	double targetdiff;
 	double difficulty;
+	double shareratio;
+	double sharediff;
 	uint32_t height;
 	uint8_t  pooln;
 
