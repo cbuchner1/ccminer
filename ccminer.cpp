@@ -620,15 +620,25 @@ static void calc_network_diff(struct work *work)
 	net_diff = d;
 }
 
+/* decode data from getwork (wallets and longpoll pools) */
 static bool work_decode(const json_t *val, struct work *work)
 {
-	int data_size = sizeof(work->data), target_size = sizeof(work->target);
-	int adata_sz = ARRAY_SIZE(work->data), atarget_sz = ARRAY_SIZE(work->target);
+	int data_size, target_size = sizeof(work->target);
+	int adata_sz, atarget_sz = ARRAY_SIZE(work->target);
 	int i;
 
-	if (opt_algo == ALGO_NEOSCRYPT || opt_algo == ALGO_ZR5) {
-		data_size = 80; adata_sz = 20;
+	switch (opt_algo) {
+	case ALGO_ZR5:
+		data_size = 80;
+		break;
+	case ALGO_NEOSCRYPT:
+		data_size = 84; // typo in FTC wallet ? and clones..
+		break;
+	default:
+		data_size = 128; // sizeof(work->data);
 	}
+
+	adata_sz = data_size / 4; // sizeof(uint32_t);
 
 	if (unlikely(!jobj_binary(val, "data", work->data, data_size))) {
 		applog(LOG_ERR, "JSON inval data");
@@ -654,6 +664,9 @@ static bool work_decode(const json_t *val, struct work *work)
 		calc_network_diff(work);
 
 	work->targetdiff = target_to_diff(work->target);
+
+	// for api stats, on longpoll pools
+	stratum_diff = work->targetdiff;
 
 	work->tx_count = use_pok = 0;
 	if (work->data[0] & POK_BOOL_MASK) {
@@ -2111,6 +2124,8 @@ longpoll_retry:
 					if (net_diff > 0.) {
 						sprintf(netinfo, ", diff %.3f", net_diff);
 					}
+					if (opt_showdiff)
+						sprintf(&netinfo[strlen(netinfo)], ", target %.3f", g_work.targetdiff);
 					applog(LOG_BLUE, "%s detected new block%s", short_url, netinfo);
 				}
 				g_work_time = time(NULL);
