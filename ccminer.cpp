@@ -604,25 +604,24 @@ static bool jobj_binary(const json_t *obj, const char *key,
 static void calc_network_diff(struct work *work)
 {
 	// sample for diff 43.281 : 1c05ea29
-	uchar rtarget[48] = { 0 };
-	uint64_t *data64, d64;
 	// todo: endian reversed on longpoll could be zr5 specific...
 	uint32_t nbits = have_longpoll ? work->data[18] : swab32(work->data[18]);
-	uint32_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 	uint32_t bits = (nbits & 0xffffff);
-	int shfb = 8 * (26 - (shift - 3));
-
+	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 #if 1
 	uint64_t diffone = 0x0000FFFF00000000ull;
 	double d = (double)0x0000ffff / (double)bits;
 	for (int m=shift; m < 29; m++) d *= 256.0;
 	for (int m=29; m < shift; m++) d /= 256.0;
 	if (opt_debug_diff)
-		applog(LOG_DEBUG, "diff: %f -> shift %u, bits %08x, shfb %d", d, shift, bits, shfb);
+		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
 	net_diff = d;
 	return;
 #else
+	uchar rtarget[48] = { 0 };
+	uint64_t *data64, d64;
 	uint64_t diffone = 0xFFFF000000000000ull; //swab64(0xFFFFull);
+	int shfb = 8 * (26 - (shift - 3));
 
 	switch (opt_algo) {
 		case ALGO_QUARK:
