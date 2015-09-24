@@ -790,6 +790,7 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 	return rc;
 }
 
+// Only used by stratum pools
 void diff_to_target(struct work* work, double diff)
 {
 	uint32_t *target = work->target;
@@ -808,6 +809,26 @@ void diff_to_target(struct work* work, double diff)
 		target[k] = (uint32_t)m;
 		target[k + 1] = (uint32_t)(m >> 32);
 	}
+}
+
+// Only used by longpoll pools
+double target_to_diff(uint32_t* target)
+{
+	uchar* tgt = (uchar*) target;
+	uint64_t m =
+		(uint64_t)tgt[29] << 56 |
+		(uint64_t)tgt[28] << 48 |
+		(uint64_t)tgt[27] << 40 |
+		(uint64_t)tgt[26] << 32 |
+		(uint64_t)tgt[25] << 24 |
+		(uint64_t)tgt[24] << 16 |
+		(uint64_t)tgt[23] << 8  |
+		(uint64_t)tgt[22] << 0;
+
+	if (!m)
+		return 0.;
+	else
+		return (double)0x0000ffff00000000/m;
 }
 
 #ifdef WIN32

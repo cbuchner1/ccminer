@@ -485,7 +485,8 @@ extern bool hex2bin(unsigned char *p, const char *hexstr, size_t len);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
-extern void diff_to_target(struct work* work, double diff);
+void diff_to_target(struct work* work, double diff);
+double target_to_diff(uint32_t* target);
 extern void get_currentalgo(char* buf, int sz);
 extern uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
 
@@ -561,7 +562,6 @@ struct work {
 	} noncerange;
 
 	double targetdiff;
-	double difficulty;
 	double shareratio;
 	double sharediff;
 	uint32_t height;

@@ -608,60 +608,16 @@ static void calc_network_diff(struct work *work)
 	uint32_t nbits = have_longpoll ? work->data[18] : swab32(work->data[18]);
 	uint32_t bits = (nbits & 0xffffff);
 	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
-#if 1
+
 	uint64_t diffone = 0x0000FFFF00000000ull;
 	double d = (double)0x0000ffff / (double)bits;
+
 	for (int m=shift; m < 29; m++) d *= 256.0;
 	for (int m=29; m < shift; m++) d /= 256.0;
 	if (opt_debug_diff)
 		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
+
 	net_diff = d;
-	return;
-#else
-	uchar rtarget[48] = { 0 };
-	uint64_t *data64, d64;
-	uint64_t diffone = 0xFFFF000000000000ull; //swab64(0xFFFFull);
-	int shfb = 8 * (26 - (shift - 3));
-
-	switch (opt_algo) {
-		case ALGO_QUARK:
-			diffone = 0xFFFFFF0000000000ull;
-			break;
-		case ALGO_SCRYPT:
-		case ALGO_SCRYPT_JANE:
-			// cant get the right value on these 3 algos...
-			diffone = 0xFFFFFFFF00000000ull;
-			net_diff = 0.;
-			break;
-		case ALGO_NEOSCRYPT:
-			// todo/check... (neoscrypt data is reversed)
-			if (opt_debug)
-				applog(LOG_DEBUG, "diff: %08x -> shift %u, bits %08x, shfb %d", nbits, shift, bits, shfb);
-			net_diff = 0.;
-			return;
-	}
-
-	bn_nbits_to_uchar(nbits, rtarget);
-
-	data64 = (uint64_t*)(rtarget + 4);
-
-	switch (opt_algo) {
-		case ALGO_HEAVY:
-			data64 = (uint64_t*)(rtarget + 2);
-			break;
-		case ALGO_QUARK:
-			data64 = (uint64_t*)(rtarget + 3);
-			break;
-	}
-
-	d64 = swab64(*data64);
-	if (!d64)
-		d64 = 1;
-	net_diff = (double)(diffone) / d64; // 43.281
-	if (opt_debug_diff)
-		applog(LOG_DEBUG, "diff: %08x -> shift %u, bits %08x, shfb %d -> %.5f (pool %u)",
-			nbits, shift, bits, shfb, net_diff, work->pooln);
-#endif
 }
 
 static bool work_decode(const json_t *val, struct work *work)
@@ -696,6 +652,8 @@ static bool work_decode(const json_t *val, struct work *work)
 
 	if ((opt_showdiff || opt_max_diff > 0.) && !allow_mininginfo)
 		calc_network_diff(work);
+
+	work->targetdiff = target_to_diff(work->target);
 
 	work->tx_count = use_pok = 0;
 	if (work->data[0] & POK_BOOL_MASK) {
@@ -742,40 +700,6 @@ static bool work_decode(const json_t *val, struct work *work)
 	cbin2hex(work->job_id, (const char*)&work->data[17], 4);
 
 	return true;
-}
-
-/**
- * Calculate the work difficulty as double
- */
-static void calc_target_diff(struct work *work)
-{
-	// sample for diff 32.53 : 00000007de5f0000
-	char rtarget[32];
-	uint64_t diffone = 0xFFFF000000000000ull;
-	uint64_t *data64, d64;
-
-	swab256(rtarget, work->target);
-
-	data64 = (uint64_t*)(rtarget + 3);
-
-	switch (opt_algo) {
-		case ALGO_NEOSCRYPT: /* diffone in work->target[7] ? */
-		//case ALGO_SCRYPT:
-		//case ALGO_SCRYPT_JANE:
-			// todo/check...
-			work->difficulty = work->targetdiff;
-			return;
-		case ALGO_HEAVY:
-			data64 = (uint64_t*)(rtarget + 2);
-			break;
-	}
-
-	d64 = swab64(*data64);
-	if (unlikely(!d64))
-		d64 = 1;
-	work->difficulty = (double)diffone / d64;
-	if (opt_difficulty > 0.)
-		work->difficulty /= opt_difficulty;
 }
 
 #define YES "yes!"
@@ -873,7 +797,6 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_WARNING, "stale work detected, discarding");
 		return true;
 	}
-	calc_target_diff(work);
 
 	if (pool->type & POOL_STRATUM) {
 		uint32_t sent = 0;
@@ -1686,13 +1609,12 @@ static void *miner_thread(void *userdata)
 
 		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
 		{
-			calc_target_diff(&g_work);
 			if (opt_debug) {
 				uint64_t target64 = g_work.target[7] * 0x100000000ULL + g_work.target[6];
-				applog(LOG_DEBUG, "job %s target change: %llx (%.1f)", g_work.job_id, target64, g_work.difficulty);
+				applog(LOG_DEBUG, "job %s target change: %llx (%.1f)", g_work.job_id, target64, g_work.targetdiff);
 			}
 			memcpy(work.target, g_work.target, sizeof(work.target));
-			work.difficulty = g_work.difficulty;
+			work.targetdiff = g_work.targetdiff;
 			work.height = g_work.height;
 			//nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 		}
