@@ -2324,6 +2324,7 @@ wait_stratum_url:
 						applog(LOG_ERR, "...terminating workio thread");
 						//tq_push(thr_info[work_thr_id].q, NULL);
 						workio_abort();
+						proper_exit(EXIT_CODE_POOL_TIMEOUT);
 						goto out;
 					}
 				}
