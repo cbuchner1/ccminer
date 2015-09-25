@@ -20,6 +20,15 @@ extern "C" void my_fugue256_addbits_and_close(void *cc, unsigned ub, unsigned n,
     ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u)   | \
       (((x) >> 8) & 0x0000ff00u) | (((x) >> 24) & 0x000000ffu))
 
+void fugue256_hash(unsigned char* output, const unsigned char* input, int len)
+{
+	sph_fugue256_context ctx;
+
+	sph_fugue256_init(&ctx);
+	sph_fugue256(&ctx, input, len);
+	sph_fugue256_close(&ctx, (void *)output);
+}
+
 static bool init[MAX_GPUS] = { 0 };
 
 int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
@@ -91,11 +100,17 @@ int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigne
 	return 0;
 }
 
-void fugue256_hash(unsigned char* output, const unsigned char* input, int len)
+// cleanup
+void free_fugue256(int thr_id)
 {
-	sph_fugue256_context ctx;
+	if (!init[thr_id])
+		return;
 
-	sph_fugue256_init(&ctx);
-	sph_fugue256(&ctx, input, len);
-	sph_fugue256_close(&ctx, (void *)output);
+	cudaSetDevice(device_map[thr_id]);
+
+	fugue256_cpu_free(thr_id);
+
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

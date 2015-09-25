@@ -103,6 +103,12 @@ void groestlcoin_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+void groestlcoin_cpu_free(int thr_id)
+{
+	cudaFree(d_resultNonce[thr_id]);
+}
+
+__host__
 void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
 	uint32_t msgBlock[32];

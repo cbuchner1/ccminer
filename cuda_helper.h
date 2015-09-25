@@ -31,6 +31,7 @@ extern int cuda_arch[MAX_GPUS];
 extern int cuda_get_arch(int thr_id);
 extern void cuda_reset_device(int thr_id, bool *init);
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
+extern void cuda_check_cpu_free(int thr_id);
 extern void cuda_check_cpu_setTarget(const void *ptarget);
 extern uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash);
 extern uint32_t cuda_check_hash_suppl(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_inputHash, uint8_t numNonce);

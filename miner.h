@@ -300,6 +300,42 @@ extern int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, un
 extern int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done,
 	unsigned char *scratchbuf, struct timeval *tv_start, struct timeval *tv_end);
 
+/* free device allocated memory per algo */
+void miner_free_device(int thr_id);
+
+extern void free_blake256(int thr_id);
+extern void free_bmw(int thr_id);
+extern void free_c11(int thr_id);
+extern void free_deep(int thr_id);
+extern void free_keccak256(int thr_id);
+extern void free_fresh(int thr_id);
+extern void free_fugue256(int thr_id);
+extern void free_groestlcoin(int thr_id);
+extern void free_heavy(int thr_id);
+extern void free_jackpot(int thr_id);
+extern void free_luffa(int thr_id);
+extern void free_lyra2(int thr_id);
+extern void free_lyra2v2(int thr_id);
+extern void free_myriad(int thr_id);
+extern void free_neoscrypt(int thr_id);
+extern void free_nist5(int thr_id);
+extern void free_pentablake(int thr_id);
+extern void free_quark(int thr_id);
+extern void free_qubit(int thr_id);
+extern void free_skeincoin(int thr_id);
+extern void free_skein2(int thr_id);
+extern void free_s3(int thr_id);
+extern void free_whirlx(int thr_id);
+extern void free_x11(int thr_id);
+extern void free_x13(int thr_id);
+extern void free_x14(int thr_id);
+extern void free_x15(int thr_id);
+extern void free_x17(int thr_id);
+extern void free_zr5(int thr_id);
+//extern void free_sha256d(int thr_id);
+extern void free_scrypt(int thr_id);
+extern void free_scrypt_jane(int thr_id);
+
 /* api related */
 void *api_thread(void *userdata);
 void api_set_throughput(int thr_id, uint32_t throughput);

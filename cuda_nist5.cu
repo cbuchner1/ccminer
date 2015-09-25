@@ -72,6 +72,7 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
+	int res = 0;
 
 	uint32_t throughput =  device_intensity(thr_id, __func__, 1 << 20); // 256*256*16
 	throughput = min(throughput,  (max_nonce - first_nonce));
@@ -83,18 +84,25 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 	{
 		cudaSetDevice(device_map[thr_id]);
 
-		// Konstanten kopieren, Speicher belegen
+		// Constants copy/init (no device alloc in these algos)
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_keccak512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput));
+		// char[64] work space for hashes results
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput));
 
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
+
+#ifdef USE_STREAMS
+	cudaStream_t stream[5];
+	for (int i = 0; i < 5; i++)
+		cudaStreamCreate(&stream[i]);
+#endif
 
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], pdata[k]);
@@ -123,7 +131,7 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 			nist5hash(vhash64, endiandata);
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				int res = 1;
+				res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				if (secNonce != 0) {
@@ -135,7 +143,7 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 					res++;
 				}
 				pdata[19] = foundNonce;
-				return res;
+				goto out;
 			}
 			else {
 				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
@@ -146,6 +154,27 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
-	return 0;
+out:
+#ifdef USE_STREAMS
+	for (int i = 0; i < 5; i++)
+		cudaStreamDestroy(stream[i]);
+#endif
+
+	return res;
+}
+
+// ressources cleanup
+extern "C" void free_nist5(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	cuda_check_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

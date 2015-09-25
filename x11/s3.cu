@@ -136,3 +136,19 @@ extern "C" int scanhash_s3(int thr_id, struct work* work, uint32_t max_nonce, un
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
+
+// cleanup
+extern "C" void free_s3(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	cuda_check_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
+}

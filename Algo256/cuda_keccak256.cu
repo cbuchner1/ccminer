@@ -300,3 +300,10 @@ void keccak256_cpu_init(int thr_id, uint32_t threads)
 	CUDA_SAFE_CALL(cudaMalloc(&d_KNonce[thr_id], sizeof(uint32_t)));
 	CUDA_SAFE_CALL(cudaMallocHost(&d_nounce[thr_id], 1*sizeof(uint32_t)));
 }
+
+__host__
+void keccak256_cpu_free(int thr_id)
+{
+	cudaFree(d_KNonce[thr_id]);
+	cudaFreeHost(d_nounce[thr_id]);
+}

@@ -4,6 +4,7 @@
 
 extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
 extern void neoscrypt_cpu_init(int thr_id, uint32_t threads);
+extern void neoscrypt_cpu_free(int thr_id);
 extern uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, int have_stratum, int order);
 
 static bool init[MAX_GPUS] = { 0 };
@@ -80,4 +81,18 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
+}
+
+// cleanup
+void free_neoscrypt(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	neoscrypt_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

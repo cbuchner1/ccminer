@@ -24,6 +24,7 @@ extern void skein256_cpu_init(int thr_id, uint32_t threads);
 extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 
 extern void groestl256_cpu_init(int thr_id, uint32_t threads);
+extern void groestl256_cpu_free(int thr_id);
 extern void groestl256_setTarget(const void *ptarget);
 extern uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order);
 extern uint32_t groestl256_getSecNonce(int thr_id, int num);
@@ -161,4 +162,20 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
 	return 0;
+}
+
+// cleanup
+extern "C" void free_lyra2(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	groestl256_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

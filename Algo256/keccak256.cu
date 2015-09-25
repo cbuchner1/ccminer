@@ -17,6 +17,7 @@ extern "C"
 static uint32_t *d_hash[MAX_GPUS];
 
 extern void keccak256_cpu_init(int thr_id, uint32_t threads);
+extern void keccak256_cpu_free(int thr_id);
 extern void keccak256_setBlock_80(void *pdata,const void *ptarget);
 extern uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
@@ -92,4 +93,20 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 	} while (!work_restart[thr_id].restart);
 
 	return 0;
+}
+
+// cleanup
+extern "C" void free_keccak256(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	keccak256_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

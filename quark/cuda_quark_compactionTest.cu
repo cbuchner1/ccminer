@@ -27,7 +27,7 @@ __device__ cuda_compactTestFunction_t d_QuarkTrueFunction = QuarkTrueTest, d_Qua
 
 cuda_compactTestFunction_t h_QuarkTrueFunction[MAX_GPUS], h_QuarkFalseFunction[MAX_GPUS];
 
-// Setup-Funktionen
+// Setup/Alloc Function
 __host__ void quark_compactTest_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaMemcpyFromSymbol(&h_QuarkTrueFunction[thr_id], d_QuarkTrueFunction, sizeof(cuda_compactTestFunction_t));
@@ -43,6 +43,18 @@ __host__ void quark_compactTest_cpu_init(int thr_id, uint32_t threads)
 
 	cudaMalloc(&d_partSum[0][thr_id], sizeof(uint32_t) * s1); // BLOCKSIZE (Threads/Block)
 	cudaMalloc(&d_partSum[1][thr_id], sizeof(uint32_t) * s1); // BLOCKSIZE (Threads/Block)
+}
+
+// Because all alloc should have a free...
+__host__ void quark_compactTest_cpu_free(int thr_id)
+{
+	cudaFree(d_tempBranch1Nonces[thr_id]);
+	cudaFree(d_numValid[thr_id]);
+
+	cudaFree(d_partSum[0][thr_id]);
+	cudaFree(d_partSum[1][thr_id]);
+
+	cudaFreeHost(h_numValid[thr_id]);
 }
 
 #if __CUDA_ARCH__ < 300

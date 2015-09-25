@@ -733,6 +733,13 @@ void fugue256_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+void fugue256_cpu_free(int thr_id)
+{
+	cudaFree(d_fugue256_hashoutput[thr_id]);
+	cudaFree(d_resultNonce[thr_id]);
+}
+
+__host__
 void fugue256_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
 	// CPU-Vorbereitungen treffen

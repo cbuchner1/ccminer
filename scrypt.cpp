@@ -685,6 +685,12 @@ static int lastFactor = 0;
 
 static void computeGold(uint32_t* const input, uint32_t *reference, uchar *scratchpad);
 
+// cleanup
+void free_scrypt(int thr_id)
+{
+	// todo ?
+}
+
 // Scrypt proof of work algorithm
 // using SSE2 vectorized HMAC SHA256 on CPU and
 // a salsa core implementation on GPU with CUDA

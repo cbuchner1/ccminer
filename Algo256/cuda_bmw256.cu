@@ -270,6 +270,13 @@ void bmw256_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+void bmw256_cpu_free(int thr_id)
+{
+	cudaFree(d_GNonce[thr_id]);
+	cudaFreeHost(d_gnounce[thr_id]);
+}
+
+__host__
 void bmw256_setTarget(const void *pTargetIn)
 {
 	cudaMemcpyToSymbol(pTarget, pTargetIn, 32, 0, cudaMemcpyHostToDevice);

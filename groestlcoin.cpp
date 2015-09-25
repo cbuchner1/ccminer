@@ -91,3 +91,16 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 	return 0;
 }
 
+// cleanup
+void free_groestlcoin(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	groestlcoin_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
+}

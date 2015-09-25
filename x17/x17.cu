@@ -82,10 +82,6 @@ extern void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startN
 extern void x17_haval256_cpu_init(int thr_id, uint32_t threads);
 extern void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
-extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes,
-											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse,
-											int order);
 
 // X17 Hashfunktion
 extern "C" void x17hash(void *output, const void *input)
@@ -289,4 +285,20 @@ extern "C" int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, u
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
+}
+
+// cleanup
+extern "C" void free_x17(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	cuda_check_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

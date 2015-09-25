@@ -300,6 +300,22 @@ exit:
     return rc;
 }
 
+// cleanup
+extern "C" void free_heavy(int thr_id)
+{
+    if (!init[thr_id])
+        return;
+
+    cudaSetDevice(device_map[thr_id]);
+
+    cudaFree(heavy_nonceVector[thr_id]);
+
+    // todo: free sub algos vectors
+
+    init[thr_id] = false;
+
+    cudaDeviceSynchronize();
+}
 __host__
 void heavycoin_hash(uchar* output, const uchar* input, int len)
 {

@@ -8,6 +8,7 @@
 #include "miner.h"
 
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
+void myriadgroestl_cpu_free(int thr_id);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
 void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce);
 
@@ -95,3 +96,16 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	return 0;
 }
 
+// cleanup
+void free_myriad(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	myriadgroestl_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
+}

@@ -28,6 +28,7 @@ extern void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t* matrix);
 
 extern void bmw256_setTarget(const void *ptarget);
 extern void bmw256_cpu_init(int thr_id, uint32_t threads);
+extern void bmw256_cpu_free(int thr_id);
 extern void bmw256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *resultnonces);
 
 void lyra2v2_hash(void *state, const void *input)
@@ -168,4 +169,21 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	*hashes_done = pdata[19] - first_nonce + 1;
 	MyStreamSynchronize(NULL, 0, device_map[thr_id]);
 	return 0;
+}
+
+// cleanup
+extern "C" void free_lyra2v2(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+	cudaFree(d_hash2[thr_id]);
+
+	bmw256_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

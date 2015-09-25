@@ -1503,6 +1503,45 @@ static bool wanna_mine(int thr_id)
 	return state;
 }
 
+// required to switch algos
+void miner_free_device(int thr_id)
+{
+	// todo: some kind of algo "registration"
+	// to call automatically if needed
+	free_blake256(thr_id);
+	free_bmw(thr_id);
+	free_c11(thr_id);
+	free_deep(thr_id);
+	free_keccak256(thr_id);
+	free_fresh(thr_id);
+	free_fugue256(thr_id);
+	free_groestlcoin(thr_id);
+	free_heavy(thr_id);
+	free_jackpot(thr_id);
+	free_luffa(thr_id);
+	free_lyra2(thr_id);
+	free_lyra2v2(thr_id);
+	free_myriad(thr_id);
+	free_neoscrypt(thr_id);
+	free_nist5(thr_id);
+	free_pentablake(thr_id);
+	free_quark(thr_id);
+	free_qubit(thr_id);
+	free_skeincoin(thr_id);
+	free_skein2(thr_id);
+	free_s3(thr_id);
+	free_whirlx(thr_id);
+	free_x11(thr_id);
+	free_x13(thr_id);
+	free_x14(thr_id);
+	free_x15(thr_id);
+	free_x17(thr_id);
+	free_zr5(thr_id);
+	//free_sha256d(thr_id);
+	free_scrypt(thr_id);
+	free_scrypt_jane(thr_id);
+}
+
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;

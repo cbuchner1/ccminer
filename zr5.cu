@@ -469,3 +469,30 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
+
+// cleanup
+extern "C" void free_zr5(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	cudaFree(d_poks[thr_id]);
+	cudaFree(d_permut[thr_id]);
+	cudaFree(d_buffers[thr_id]);
+
+	cudaFree(d_blake[thr_id]);
+	cudaFree(d_groes[thr_id]);
+	cudaFree(d_jh512[thr_id]);
+	cudaFree(d_skein[thr_id]);
+
+	cudaFree(d_txs[thr_id]);
+
+	cuda_check_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
+}

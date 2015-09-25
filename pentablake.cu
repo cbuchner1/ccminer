@@ -442,3 +442,20 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return rc;
 }
+
+// cleanup
+void free_pentablake(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+	cudaFree(h_resNounce[thr_id]);
+	cudaFree(d_resNounce[thr_id]);
+
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
+}

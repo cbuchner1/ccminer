@@ -12,6 +12,7 @@ extern "C" {
 static uint32_t *d_hash[MAX_GPUS];
 
 extern void whirlpoolx_cpu_init(int thr_id, uint32_t threads);
+extern void whirlpoolx_cpu_free(int thr_id);
 extern void whirlpoolx_setBlock_80(void *pdata, const void *ptarget);
 extern uint32_t whirlpoolx_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce);
 extern void whirlpoolx_precompute(int thr_id);
@@ -98,4 +99,20 @@ extern "C" int scanhash_whirlx(int thr_id,  struct work* work, uint32_t max_nonc
 	*(hashes_done) = pdata[19] - first_nonce + 1;
 
 	return 0;
+}
+
+// cleanup
+extern "C" void free_whirlx(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	whirlpoolx_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

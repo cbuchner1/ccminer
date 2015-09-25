@@ -545,6 +545,15 @@ extern void whirlpoolx_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+extern void whirlpoolx_cpu_free(int thr_id)
+{
+	cudaFree(d_WXNonce[thr_id]);
+	cudaFreeHost(h_wxnounce[thr_id]);
+	cudaFree(d_xtra[thr_id]);
+	cudaFree(d_tmp[thr_id]);
+}
+
+__host__
 void whirlpoolx_setBlock_80(void *pdata, const void *ptarget)
 {
 	uint64_t PaddedMessage[16];

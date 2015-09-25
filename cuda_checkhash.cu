@@ -23,6 +23,13 @@ void cuda_check_cpu_init(int thr_id, uint32_t threads)
     init_done = true;
 }
 
+__host__
+void cuda_check_cpu_free(int thr_id)
+{
+	cudaFree(d_resNonces[thr_id]);
+	cudaFreeHost(h_resNonces[thr_id]);
+}
+
 // Target Difficulty
 __host__
 void cuda_check_cpu_setTarget(const void *ptarget)

@@ -101,3 +101,19 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
+
+// cleanup
+extern "C" void free_bmw(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	cuda_check_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
+}

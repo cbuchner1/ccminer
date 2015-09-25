@@ -41,6 +41,7 @@ extern void quark_jh512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
+extern void quark_compactTest_cpu_free(int thr_id);
 extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable,
 											uint32_t *d_nonces1, uint32_t *nrm1,
 											uint32_t *d_nonces2, uint32_t *nrm2,
@@ -50,6 +51,7 @@ extern void quark_compactTest_single_false_cpu_hash_64(int thr_id, uint32_t thre
 											int order);
 
 extern uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_inputHash, int order);
+
 
 // Original Quarkhash Funktion aus einem miner Quelltext
 extern "C" void quarkhash(void *state, const void *input)
@@ -251,4 +253,27 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
+}
+
+// cleanup
+extern "C" void free_quark(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+	cudaDeviceSynchronize();
+
+	cudaFree(d_hash[thr_id]);
+
+	cudaFree(d_branch1Nonces[thr_id]);
+	cudaFree(d_branch2Nonces[thr_id]);
+	cudaFree(d_branch3Nonces[thr_id]);
+
+	quark_compactTest_cpu_free(thr_id);
+
+	cuda_check_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
 }

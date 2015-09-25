@@ -262,7 +262,6 @@ void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *out
 __host__
 void groestl256_cpu_init(int thr_id, uint32_t threads)
 {
-
 	// Texturen mit obigem Makro initialisieren
 	texDef(t0up2, d_T0up, T0up_cpu, sizeof(uint32_t) * 256);
 	texDef(t0dn2, d_T0dn, T0dn_cpu, sizeof(uint32_t) * 256);
@@ -275,6 +274,13 @@ void groestl256_cpu_init(int thr_id, uint32_t threads)
 
 	cudaMalloc(&d_GNonces[thr_id], 2*sizeof(uint32_t));
 	cudaMallocHost(&h_GNonces[thr_id], 2*sizeof(uint32_t));
+}
+
+__host__
+void groestl256_cpu_free(int thr_id)
+{
+	cudaFree(d_GNonces[thr_id]);
+	cudaFreeHost(h_GNonces[thr_id]);
 }
 
 __host__

@@ -328,6 +328,13 @@ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+void myriadgroestl_cpu_free(int thr_id)
+{
+    cudaFree(d_resultNonce[thr_id]);
+    cudaFree(d_outputHashes[thr_id]);
+}
+
+__host__
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
     // Nachricht expandieren und setzen

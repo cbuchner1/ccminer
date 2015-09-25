@@ -736,6 +736,13 @@ void neoscrypt_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+void neoscrypt_cpu_free(int thr_id)
+{
+	cudaFree(d_NNonce[thr_id]);
+	cudaFree(d_buffer[thr_id]);
+}
+
+__host__
 uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, int have_stratum, int order)
 {
 	uint32_t result[MAX_GPUS];
