@@ -410,28 +410,28 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 
 		if (foundNonce != UINT32_MAX)
 		{
-			uint32_t _ALIGN(64) vhash64[8];
+			uint32_t _ALIGN(64) vhash[8];
 
 			endiandata[19] = swab32_if(foundNonce, swap);
-			skeincoinhash(vhash64, endiandata);
+			skeincoinhash(vhash, endiandata);
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				int res = 1;
 				uint8_t num = res;
+				bn_store_hash_target_ratio(vhash, ptarget, work);
 				if (checkSecnonce) {
 					secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
 				}
 				while (secNonce != 0 && res < 2) /* todo: up to 6 */
 				{
 					endiandata[19] = swab32_if(secNonce, swap);
-					skeincoinhash(vhash64, endiandata);
-					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-						bn_store_hash_target_ratio(vhash64, ptarget, work);
+					skeincoinhash(vhash, endiandata);
+					if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 						// todo: use 19 20 21... zr5 pok to adapt...
 						endiandata[19] = swab32_if(secNonce, swap);
-						skeincoinhash(vhash64, endiandata);
-						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-							bn_store_hash_target_ratio(vhash64, ptarget, work);
+						skeincoinhash(vhash, endiandata);
+						if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio)
+							bn_store_hash_target_ratio(vhash, ptarget, work);
 						pdata[19+res*2] = swab32_if(secNonce, !swap);
 						res++;
 					}
