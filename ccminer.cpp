@@ -786,7 +786,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	if (have_stratum && !stale_work && opt_algo != ALGO_ZR5 && opt_algo != ALGO_SCRYPT_JANE) {
 		pthread_mutex_lock(&g_work_lock);
 		if (strlen(work->job_id + 8))
-			stale_work = strncmp(work->job_id + 8, g_work.job_id + 8, 4);
+			stale_work = strncmp(work->job_id + 8, g_work.job_id + 8, sizeof(g_work.job_id) - 8);
 		pthread_mutex_unlock(&g_work_lock);
 	}
 
@@ -855,7 +855,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		// store to keep/display the solved ratio/diff
 		stratum.sharediff = work->sharediff;
 
-		if (net_diff && stratum.sharediff > net_diff && (!opt_quiet || opt_debug_diff))
+		if (net_diff && stratum.sharediff > net_diff && (opt_debug || opt_debug_diff))
 			applog(LOG_INFO, "share diff: %.5f, possible block found!!!",
 				stratum.sharediff);
 		else if (opt_debug_diff)
@@ -2315,12 +2315,14 @@ wait_stratum_url:
 		if (switchn != pool_switch_count) goto pool_switched;
 
 		if (stratum.job.job_id &&
-		    (!g_work_time || strncmp(stratum.job.job_id, g_work.job_id + 8, 120))) {
+		    (!g_work_time || strncmp(stratum.job.job_id, g_work.job_id + 8, sizeof(g_work.job_id)-8))) {
 			pthread_mutex_lock(&g_work_lock);
 			if (stratum_gen_work(&stratum, &g_work))
 				g_work_time = time(NULL);
 			if (stratum.job.clean) {
-				if (!opt_quiet) {
+				static uint32_t last_bloc_height;
+				if (!opt_quiet && stratum.job.height != last_bloc_height) {
+					last_bloc_height = stratum.job.height;
 					if (net_diff > 0.)
 						applog(LOG_BLUE, "%s block %d, diff %.3f", algo_names[opt_algo],
 							stratum.job.height, net_diff);
