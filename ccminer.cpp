@@ -628,11 +628,9 @@ static bool work_decode(const json_t *val, struct work *work)
 	int i;
 
 	switch (opt_algo) {
+	case ALGO_NEOSCRYPT:
 	case ALGO_ZR5:
 		data_size = 80;
-		break;
-	case ALGO_NEOSCRYPT:
-		data_size = 84; // typo in FTC wallet ? and clones..
 		break;
 	default:
 		data_size = 128; // sizeof(work->data);
@@ -640,12 +638,23 @@ static bool work_decode(const json_t *val, struct work *work)
 
 	adata_sz = data_size / 4; // sizeof(uint32_t);
 
-	if (unlikely(!jobj_binary(val, "data", work->data, data_size))) {
-		applog(LOG_ERR, "JSON inval data");
-		return false;
+	if (!jobj_binary(val, "data", work->data, data_size)) {
+		json_t *obj = json_object_get(val, "data");
+		int len = obj ? (int) strlen(json_string_value(obj)) : 0;
+		if (!len || len > sizeof(work->data)*2) {
+			applog(LOG_ERR, "JSON invalid data (len %d <> %d)", len/2, data_size);
+			return false;
+		} else {
+			data_size = len / 2;
+			if (!jobj_binary(val, "data", work->data, data_size)) {
+				applog(LOG_ERR, "JSON invalid data (len %d)", data_size);
+				return false;
+			}
+		}
 	}
-	if (unlikely(!jobj_binary(val, "target", work->target, target_size))) {
-		applog(LOG_ERR, "JSON inval target");
+
+	if (!jobj_binary(val, "target", work->target, target_size)) {
+		applog(LOG_ERR, "JSON invalid target");
 		return false;
 	}
 
@@ -690,7 +699,7 @@ static bool work_decode(const json_t *val, struct work *work)
 					break;
 				}
 				hex2bin((uchar*)work->txs[tx].data, hexstr, min(txlen, POK_MAX_TX_SZ));
-				work->txs[tx].len = txlen;
+				work->txs[tx].len = (uint32_t) (txlen);
 				totlen += txlen;
 			}
 			if (opt_debug)
@@ -979,9 +988,9 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 
 #define GBT_CAPABILITIES "[\"coinbasetxn\", \"coinbasevalue\", \"longpoll\", \"workid\"]"
 static const char *gbt_req =
-	"{\"method\": \"getblocktemplate\", \"params\": ["
-	//	"{\"capabilities\": " GBT_CAPABILITIES "}"
-	"], \"id\":9}\r\n";
+	"{\"method\": \"getblocktemplate\", \"params\": [{"
+	//	"\"capabilities\": " GBT_CAPABILITIES ""
+	"}], \"id\":9}\r\n";
 
 static bool get_blocktemplate(CURL *curl, struct work *work)
 {
@@ -1037,7 +1046,7 @@ static bool get_mininginfo(CURL *curl, struct work *work)
 		if (res) {
 			json_t *key = json_object_get(res, "difficulty");
 			if (key) {
-				if (!json_is_real(key))
+				if (json_is_object(key))
 					key = json_object_get(key, "proof-of-work");
 				if (json_is_real(key))
 					net_diff = json_real_value(key);
