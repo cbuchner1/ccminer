@@ -610,6 +610,9 @@
     <CudaCompile Include="lyra2\lyra2REv2.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <ClInclude Include="lyra2\cuda_lyra2v2_sm3.cuh">
+      <Filter>Source Files\CUDA</Filter>
+    </ClInclude>
     <CudaCompile Include="zr5.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
