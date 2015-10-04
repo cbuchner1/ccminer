@@ -12,7 +12,7 @@ extern "C" {
 
 
 static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
-static uint64_t *d_hash2[MAX_GPUS];
+static uint64_t* d_matrix[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
@@ -24,7 +24,7 @@ extern void skein256_cpu_init(int thr_id, uint32_t threads);
 extern void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash, int order);
 
 extern void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t* matrix);
+extern void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t* d_matrix);
 
 extern void bmw256_setTarget(const void *ptarget);
 extern void bmw256_cpu_init(int thr_id, uint32_t threads);
@@ -77,9 +77,10 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-	int intensity = (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 18 : 17;
+	int dev_id = device_map[thr_id];
+	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 20 : 18;
 	unsigned int defthr = 1U << intensity;
-	uint32_t throughput = device_intensity(device_map[thr_id], __func__, defthr);
+	uint32_t throughput = device_intensity(dev_id, __func__, defthr);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x00ff;
@@ -102,10 +103,10 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 		}
 
 		// DMatrix
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash2[thr_id], 16 * 4 * 4 * sizeof(uint64_t) * throughput));
-		lyra2v2_cpu_init(thr_id, throughput, d_hash2[thr_id]);
+		CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], (size_t)16 * sizeof(uint64_t) * 4 * 3 * throughput));
+		lyra2v2_cpu_init(thr_id, throughput, d_matrix[thr_id]);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)throughput * 32));
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));
 
 		init[thr_id] = true;
 	}
@@ -130,18 +131,18 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 
 		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonces);
 
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		if (foundNonces[0] != 0)
 		{
-			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonces[0]);
 			lyra2v2_hash(vhash64, endiandata);
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget))
+			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
 				bn_store_hash_target_ratio(vhash64, ptarget, work);
 				// check if there was another one...
-				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (foundNonces[1] != 0)
 				{
 					be32enc(&endiandata[19], foundNonces[1]);
@@ -157,8 +158,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 			}
 			else
 			{
-				if (vhash64[7] > Htarg) // don't show message if it is equal but fails fulltest
-					applog(LOG_WARNING, "GPU #%d: result does not validate on CPU!", thr_id);
+				applog(LOG_WARNING, "GPU #%d: result does not validate on CPU!", dev_id);
 			}
 		}
 
@@ -180,7 +180,7 @@ extern "C" void free_lyra2v2(int thr_id)
 	cudaSetDevice(device_map[thr_id]);
 
 	cudaFree(d_hash[thr_id]);
-	cudaFree(d_hash2[thr_id]);
+	cudaFree(d_matrix[thr_id]);
 
 	bmw256_cpu_free(thr_id);
 	init[thr_id] = false;

@@ -350,10 +350,10 @@ __global__ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint
 #endif
 
 __host__
-void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_hash2)
+void lyra2v2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_matrix)
 {
 	// just assign the device pointer allocated in main loop
-	cudaMemcpyToSymbol(DMatrix, &d_hash2, sizeof(uint64_t*), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(DMatrix, &d_matrix, sizeof(uint64_t*), 0, cudaMemcpyHostToDevice);
 }
 
 __host__
