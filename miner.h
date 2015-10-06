@@ -523,7 +523,8 @@ extern bool hex2bin(unsigned char *p, const char *hexstr, size_t len);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
-void diff_to_target(struct work* work, double diff);
+void diff_to_target(uint32_t* target, double diff);
+void work_set_target(struct work* work, double diff);
 double target_to_diff(uint32_t* target);
 extern void get_currentalgo(char* buf, int sz);
 extern uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
@@ -533,6 +534,9 @@ double bn_convert_nbits(const uint32_t nbits);
 void bn_nbits_to_uchar(const uint32_t nBits, uchar *target);
 double bn_hash_target_ratio(uint32_t* hash, uint32_t* target);
 void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, struct work* work);
+
+void work_set_target_ratio(struct work* work, uint32_t* hash);
+
 
 struct stratum_job {
 	char *job_id;

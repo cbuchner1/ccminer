@@ -791,13 +791,10 @@ bool fulltest(const uint32_t *hash, const uint32_t *target)
 }
 
 // Only used by stratum pools
-void diff_to_target(struct work* work, double diff)
+void diff_to_target(uint32_t *target, double diff)
 {
-	uint32_t *target = work->target;
 	uint64_t m;
 	int k;
-
-	work->targetdiff = diff;
 
 	for (k = 6; k > 0 && diff > 1.0; k--)
 		diff /= 4294967296.0;
@@ -810,6 +807,14 @@ void diff_to_target(struct work* work, double diff)
 		target[k + 1] = (uint32_t)(m >> 32);
 	}
 }
+
+// Only used by stratum pools
+void work_set_target(struct work* work, double diff)
+{
+        diff_to_target(work->target, diff);
+        work->targetdiff = diff;
+}
+
 
 // Only used by longpoll pools
 double target_to_diff(uint32_t* target)

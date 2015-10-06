@@ -1448,21 +1448,21 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_NEOSCRYPT:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
-			diff_to_target(work, sctx->job.diff / (65536.0 * opt_difficulty));
+			work_set_target(work, sctx->job.diff / (65536.0 * opt_difficulty));
 			break;
 		case ALGO_DMD_GR:
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
 		case ALGO_LYRA2v2:
-			diff_to_target(work, sctx->job.diff / (256.0 * opt_difficulty));
+			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
 		case ALGO_LYRA2:
-			diff_to_target(work, sctx->job.diff / (128.0 * opt_difficulty));
+			work_set_target(work, sctx->job.diff / (128.0 * opt_difficulty));
 			break;
 		default:
-			diff_to_target(work, sctx->job.diff / opt_difficulty);
+			work_set_target(work, sctx->job.diff / opt_difficulty);
 	}
 	return true;
 }

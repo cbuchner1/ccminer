@@ -97,7 +97,7 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				int res = 1;
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				bn_store_hash_target_ratio(vhash, ptarget, work);
+				work_set_target_ratio(work, vhash);
 				#if 0
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				if (secNonce != 0) {

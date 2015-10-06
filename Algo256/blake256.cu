@@ -436,6 +436,8 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 		// GPU FULL HASH
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], targetHigh, crcsum, blakerounds);
 #endif
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhashcpu[8];
@@ -447,27 +449,24 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 			be32enc(&endiandata[19], foundNonce);
 			blake256hash(vhashcpu, endiandata, blakerounds);
 
-			//applog(LOG_BLUE, "%08x %16llx", vhashcpu[6], targetHigh);
 			if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget))
 			{
 				rc = 1;
+				work_set_target_ratio(work, vhashcpu);
 				pdata[19] = foundNonce;
-				*hashes_done = pdata[19] - first_nonce + 1;
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
 					be32enc(&endiandata[19], extra_results[0]);
 					blake256hash(vhashcpu, endiandata, blakerounds);
-					if (vhashcpu[6] <= Htarg /* && fulltest(vhashcpu, ptarget) */) {
+					if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget)) {
 						pdata[21] = extra_results[0];
 						applog(LOG_BLUE, "1:%x 2:%x", foundNonce, extra_results[0]);
-						*hashes_done = max(*hashes_done, extra_results[0] - first_nonce + 1);
+						work_set_target_ratio(work, vhashcpu);
 						rc = 2;
 					}
 					extra_results[0] = UINT32_MAX;
 				}
 #endif
-				//applog_hash((uint8_t*)ptarget);
-				//applog_compare_hash((uint8_t*)vhashcpu,(uint8_t*)ptarget);
 				return rc;
 			}
 			else if (opt_debug) {

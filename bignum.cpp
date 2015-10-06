@@ -78,3 +78,9 @@ extern "C" void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, str
 		work->sharediff = work->targetdiff * work->shareratio;
 	}
 }
+
+extern "C" void work_set_target_ratio(struct work* work, uint32_t* hash)
+{
+	bn_store_hash_target_ratio(hash, work->target, work);
+}
+
