@@ -116,6 +116,7 @@ enum sha_algos {
 	ALGO_X14,
 	ALGO_X15,
 	ALGO_X17,
+	ALGO_WHIRLCOIN,
 	ALGO_WHIRLPOOLX,
 	ALGO_ZR5,
 	ALGO_COUNT
@@ -154,6 +155,7 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
+	"whirlpool",
 	"whirlpoolx",
 	"zr5",
 	""
@@ -315,6 +317,7 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17\n\
+			whirlpool   Old Whirlcoin algo\n\
 			whirlpoolx  WhirlpoolX (VNL)\n\
 			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
@@ -1372,6 +1375,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_GROESTL:
 		case ALGO_KECCAK:
 		case ALGO_BLAKECOIN:
+		case ALGO_WHIRLCOIN:
 			SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
 			break;
 		default:
@@ -1807,6 +1811,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_S3:
 			case ALGO_X11:
 			case ALGO_X13:
+			case ALGO_WHIRLCOIN:
 				minmax = 0x400000;
 				break;
 			case ALGO_LYRA2:
@@ -1937,6 +1942,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_S3:
 			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_WHIRLCOIN:
+			rc = scanhash_whirl(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_WHIRLPOOLX:
 			rc = scanhash_whirlx(thr_id, &work, max_nonce, &hashes_done);
@@ -2444,6 +2452,8 @@ void parse_arg(int key, char *arg)
 				i = opt_algo = ALGO_LYRA2;
 			else if (!strcasecmp("lyra2rev2", arg))
 				i = opt_algo = ALGO_LYRA2v2;
+			else if (!strcasecmp("whirl", arg))
+				 i = opt_algo = ALGO_WHIRLCOIN;
 			else if (!strcasecmp("ziftr", arg))
 				i = opt_algo = ALGO_ZR5;
 			else
