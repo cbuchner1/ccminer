@@ -13,6 +13,7 @@ static uint32_t *d_hash[MAX_GPUS];
 
 extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode);
 extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x15_whirlpool_cpu_free(int thr_id);
 
 extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
 extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
@@ -118,3 +119,20 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
+
+// cleanup
+extern "C" void free_whirl(int thr_id)
+{
+	if (!init[thr_id])
+		return;
+
+	cudaSetDevice(device_map[thr_id]);
+
+	cudaFree(d_hash[thr_id]);
+
+	x15_whirlpool_cpu_free(thr_id);
+	init[thr_id] = false;
+
+	cudaDeviceSynchronize();
+}
+

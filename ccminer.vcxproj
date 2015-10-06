@@ -493,6 +493,7 @@
     <CudaCompile Include="x15\x15.cu" />
     <CudaCompile Include="x15\cuda_whirlpoolx.cu" />
     <CudaCompile Include="x15\whirlpoolx.cu" />
+    <CudaCompile Include="x15\whirlpool.cu" />
     <CudaCompile Include="x17\x17.cu">
     </CudaCompile>
     <CudaCompile Include="x17\cuda_x17_haval512.cu">

@@ -461,7 +461,8 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 					if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget)) {
 						pdata[21] = extra_results[0];
 						applog(LOG_BLUE, "1:%x 2:%x", foundNonce, extra_results[0]);
-						work_set_target_ratio(work, vhashcpu);
+						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio)
+							work_set_target_ratio(work, vhashcpu);
 						rc = 2;
 					}
 					extra_results[0] = UINT32_MAX;

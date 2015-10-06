@@ -1543,6 +1543,7 @@ void miner_free_device(int thr_id)
 	free_skeincoin(thr_id);
 	free_skein2(thr_id);
 	free_s3(thr_id);
+	free_whirl(thr_id);
 	free_whirlx(thr_id);
 	free_x11(thr_id);
 	free_x13(thr_id);
