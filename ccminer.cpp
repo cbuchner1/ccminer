@@ -117,6 +117,7 @@ enum sha_algos {
 	ALGO_X15,
 	ALGO_X17,
 	ALGO_WHIRLCOIN,
+	ALGO_WHIRLPOOL,
 	ALGO_WHIRLPOOLX,
 	ALGO_ZR5,
 	ALGO_COUNT
@@ -155,6 +156,7 @@ static const char *algo_names[] = {
 	"x14",
 	"x15",
 	"x17",
+	"whirlcoin",
 	"whirlpool",
 	"whirlpoolx",
 	"zr5",
@@ -1378,6 +1380,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_WHIRLCOIN:
 			SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
 			break;
+		case ALGO_WHIRLPOOL:
 		default:
 			sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	}
@@ -1813,6 +1816,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_X11:
 			case ALGO_X13:
 			case ALGO_WHIRLCOIN:
+			case ALGO_WHIRLPOOL:
 				minmax = 0x400000;
 				break;
 			case ALGO_LYRA2:
@@ -1945,6 +1949,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_WHIRLCOIN:
+		case ALGO_WHIRLPOOL:
 			rc = scanhash_whirl(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_WHIRLPOOLX:
@@ -2454,7 +2459,7 @@ void parse_arg(int key, char *arg)
 			else if (!strcasecmp("lyra2rev2", arg))
 				i = opt_algo = ALGO_LYRA2v2;
 			else if (!strcasecmp("whirl", arg))
-				 i = opt_algo = ALGO_WHIRLCOIN;
+				 i = opt_algo = ALGO_WHIRLPOOL;
 			else if (!strcasecmp("ziftr", arg))
 				i = opt_algo = ALGO_ZR5;
 			else
