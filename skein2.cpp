@@ -89,7 +89,7 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				bn_store_hash_target_ratio(vhash64, ptarget, work);
+				work_set_target_ratio(work, vhash64);
 				if (secNonce != 0) {
 					if (!opt_quiet)
 						applog(LOG_BLUE, "GPU #%d: found second nonce %08x !", device_map[thr_id], swab32(secNonce));
@@ -97,7 +97,7 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 					endiandata[19] = secNonce;
 					skein2hash(vhash64, endiandata);
 					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-						bn_store_hash_target_ratio(vhash64, ptarget, work);
+						work_set_target_ratio(work, vhash64);
 					pdata[21] = swab32(secNonce);
 					res++;
 				}

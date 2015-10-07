@@ -435,7 +435,7 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 			zr5hash(vhash64, pdata);
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
-				bn_store_hash_target_ratio(vhash64, ptarget, work);
+				work_set_target_ratio(work, vhash64);
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, oldp19, d_hash[thr_id], 1);
 				if (secNonce != 0) {
 					offset = secNonce - oldp19;
@@ -446,7 +446,7 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 					zr5hash(vhash64, tmpdata);
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-							bn_store_hash_target_ratio(vhash64, ptarget, work);
+							work_set_target_ratio(work, vhash64);
 						pdata[21] = secNonce;
 						pdata[22] = pok;
 						res++;

@@ -418,7 +418,7 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				int res = 1;
 				uint8_t num = res;
-				bn_store_hash_target_ratio(vhash, ptarget, work);
+				work_set_target_ratio(work, vhash);
 				if (checkSecnonce) {
 					secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
 				}
@@ -431,7 +431,7 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 						endiandata[19] = swab32_if(secNonce, swap);
 						skeincoinhash(vhash, endiandata);
 						if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio)
-							bn_store_hash_target_ratio(vhash, ptarget, work);
+							work_set_target_ratio(work, vhash);
 						pdata[19+res*2] = swab32_if(secNonce, !swap);
 						res++;
 					}

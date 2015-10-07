@@ -239,7 +239,7 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 			quarkhash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				bn_store_hash_target_ratio(vhash64, ptarget, work);
+				work_set_target_ratio(work, vhash64);
 				pdata[19] = foundNonce;
 				return 1;
 			} else {

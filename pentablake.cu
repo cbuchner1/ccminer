@@ -416,13 +416,13 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				rc = 1;
-				bn_store_hash_target_ratio(vhash, ptarget, work);
+				work_set_target_ratio(work, vhash);
 				if (extra_results[0] != UINT32_MAX) {
 					// Rare but possible if the throughput is big
 					be32enc(&endiandata[19], extra_results[0]);
 					pentablakehash(vhash, endiandata);
 					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio)
-						bn_store_hash_target_ratio(vhash, ptarget, work);
+						work_set_target_ratio(work, vhash);
 					applog(LOG_NOTICE, "GPU found more than one result yippee!");
 					pdata[21] = extra_results[0];
 					extra_results[0] = UINT32_MAX;

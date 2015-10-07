@@ -218,13 +218,13 @@ extern "C" int scanhash_x11(int thr_id, struct work* work, uint32_t max_nonce, u
 				int res = 1;
 				// check if there was some other ones...
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				bn_store_hash_target_ratio(vhash64, ptarget, work);
+				work_set_target_ratio(work, vhash64);
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (secNonce != 0) {
 					be32enc(&endiandata[19], secNonce);
 					x11hash(vhash64, endiandata);
 					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-						bn_store_hash_target_ratio(vhash64, ptarget, work);
+						work_set_target_ratio(work, vhash64);
 					pdata[21] = secNonce;
 					res++;
 				}

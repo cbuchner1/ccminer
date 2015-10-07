@@ -73,7 +73,7 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 			endiandata[19] = swab32(foundNounce);
 			myriadhash(vhash, endiandata);
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
-				bn_store_hash_target_ratio(vhash, ptarget, work);
+				work_set_target_ratio(work, vhash);
 				pdata[19] = foundNounce;
 				free(outputHash);
 				return 1;

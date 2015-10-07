@@ -508,7 +508,7 @@ static inline int scanhash_sha256d_4way(int thr_id,  uint32_t *pdata,
 				pdata[19] = data[4 * 3 + i];
 				sha256d_80_swap(hash, pdata);
 				if (fulltest(hash, ptarget)) {
-					bn_store_hash_target_ratio(hash, ptarget, work);
+					work_set_target_ratio(work, hash);
 					*hashes_done = n - first_nonce + 1;
 					return 1;
 				}

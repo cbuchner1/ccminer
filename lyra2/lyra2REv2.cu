@@ -141,14 +141,14 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget))
 			{
 				int res = 1;
-				bn_store_hash_target_ratio(vhash64, ptarget, work);
+				work_set_target_ratio(work, vhash64);
 				// check if there was another one...
 				if (foundNonces[1] != 0)
 				{
 					be32enc(&endiandata[19], foundNonces[1]);
 					lyra2v2_hash(vhash64, endiandata);
 					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-						bn_store_hash_target_ratio(vhash64, ptarget, work);
+						work_set_target_ratio(work, vhash64);
 					pdata[21] = foundNonces[1];
 					res++;
 				}

@@ -77,7 +77,7 @@ int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigne
 
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget))
 			{
-				bn_store_hash_target_ratio(vhash, ptarget, work);
+				work_set_target_ratio(work, vhash);
 				pdata[19] = foundNounce;
 				*hashes_done = foundNounce - start_nonce + 1;
 				return 1;

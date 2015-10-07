@@ -81,7 +81,7 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				*hashes_done = foundNonce - first_nonce + 1;
 				pdata[19] = swab32_if(foundNonce,!swapnonce);
-				bn_store_hash_target_ratio(vhash64, ptarget, work);
+				work_set_target_ratio(work, vhash64);
 				return 1;
 			}
 			else {

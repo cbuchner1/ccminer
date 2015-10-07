@@ -136,7 +136,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = groestl256_getSecNonce(thr_id, 1);
-				bn_store_hash_target_ratio(vhash64, ptarget, work);
+				work_set_target_ratio(work, vhash64);
 				if (secNonce != UINT32_MAX)
 				{
 					be32enc(&endiandata[19], secNonce);
@@ -145,7 +145,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 						if (opt_debug)
 							applog(LOG_BLUE, "GPU #%d: found second nonce %08x", device_map[thr_id], secNonce);
 						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-							bn_store_hash_target_ratio(vhash64, ptarget, work);
+							work_set_target_ratio(work, vhash64);
 						pdata[21] = secNonce;
 						res++;
 					}

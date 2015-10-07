@@ -279,7 +279,7 @@ int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned l
                         applog(LOG_ERR, "hash for nonce %08x does not validate on CPU!\n", nonce);
                     } else {
                         *hashes_done = pdata[19] - first_nonce;
-                        bn_store_hash_target_ratio(vhash, ptarget, work);
+                        work_set_target_ratio(work, vhash);
                         rc = 1;
                         goto exit;
                     }

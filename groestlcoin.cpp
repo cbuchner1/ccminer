@@ -68,7 +68,7 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 			groestlhash(vhash, endiandata);
 
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
-				bn_store_hash_target_ratio(vhash, ptarget, work);
+				work_set_target_ratio(work, vhash);
 				pdata[19] = foundNounce;
 				free(outputHash);
 				return true;
