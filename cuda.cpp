@@ -196,7 +196,7 @@ int cuda_gpu_clocks(struct cgpu_info *gpu)
 // if we use 2 threads on the same gpu, we need to reinit the threads
 void cuda_reset_device(int thr_id, bool *init)
 {
-	int dev_id = device_map[thr_id];
+	int dev_id = device_map[thr_id % MAX_GPUS];
 	cudaSetDevice(dev_id);
 	if (init != NULL) {
 		// with init array, its meant to be used in algo's scan code...
@@ -214,6 +214,16 @@ void cuda_reset_device(int thr_id, bool *init)
 	cudaDeviceReset();
 	if (opt_cudaschedule >= 0)
 		cudaSetDeviceFlags((unsigned)(opt_cudaschedule & cudaDeviceScheduleMask));
+}
+
+// return free memory in megabytes
+int cuda_available_memory(int thr_id)
+{
+	int dev_id = device_map[thr_id % MAX_GPUS];
+	size_t mtotal, mfree = 0;
+	cudaSetDevice(dev_id);
+	cudaMemGetInfo(&mfree, &mtotal);
+	return (int) (mfree / (1024 * 1024));
 }
 
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)

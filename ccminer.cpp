@@ -55,13 +55,14 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
-// from cuda.cpp
+// decl. from cuda.cpp (to move in miner.h)
 int cuda_num_devices();
 void cuda_devicenames();
 void cuda_reset_device(int thr_id, bool *init);
 void cuda_shutdown();
 int cuda_finddevice(char *name);
 void cuda_print_devices();
+int cuda_available_memory(int thr_id);
 
 #include "nvml.h"
 #ifdef USE_WRAPNVML
@@ -120,6 +121,7 @@ enum sha_algos {
 	ALGO_WHIRLPOOL,
 	ALGO_WHIRLPOOLX,
 	ALGO_ZR5,
+	ALGO_AUTO,
 	ALGO_COUNT
 };
 
@@ -160,6 +162,7 @@ static const char *algo_names[] = {
 	"whirlpool",
 	"whirlpoolx",
 	"zr5",
+	"auto", /* reserved for multi algo */
 	""
 };
 
@@ -168,6 +171,7 @@ bool opt_debug_diff = false;
 bool opt_debug_threads = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
+int algo_benchmark = -1;
 bool opt_showdiff = false;
 
 // todo: limit use of these flags,
@@ -319,7 +323,8 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17\n\
-			whirlpool   Old Whirlcoin algo\n\
+			whirlcoin   Old Whirlcoin (Whirlpool algo)\n\
+			whirlpool   Whirlpool algo\n\
 			whirlpoolx  WhirlpoolX (VNL)\n\
 			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
@@ -1559,12 +1564,60 @@ void miner_free_device(int thr_id)
 	free_scrypt_jane(thr_id);
 }
 
+// to benchmark all algos
+bool algo_switch_next(int thr_id)
+{
+	int algo = (int) opt_algo;
+	int prev_algo = algo;
+	int dev_id = device_map[thr_id % MAX_GPUS];
+	int mfree;
+	char rate[32] = { 0 };
+
+	// free current algo memory and track mem usage
+	miner_free_device(thr_id);
+	mfree = cuda_available_memory(thr_id);
+
+	work_restart[thr_id].restart = 1;
+
+	algo++;
+	if (algo == ALGO_AUTO)
+		return false;
+
+	// we need to wait completion on all cards before the switch
+	if (opt_n_threads > 1) {
+		pthread_mutex_lock(&stratum_sock_lock); // unused in benchmark
+		for (int n=0; n < opt_n_threads; n++)
+			if (!work_restart[thr_id].restart) {
+				applog(LOG_DEBUG, "GPU #%d: waiting GPU %d", dev_id, device_map[n]);
+				usleep(100*1000);
+			}
+		sleep(1);
+		pthread_mutex_unlock(&stratum_sock_lock);
+	}
+
+	double hashrate = stats_get_speed(thr_id, thr_hashrates[thr_id]);
+	format_hashrate(hashrate, rate);
+	applog(LOG_NOTICE, "GPU #%d: %s rate: %s - %d MB free", dev_id, algo_names[prev_algo], rate, mfree);
+
+	stats_purge_all();
+	global_hashrate = 0;
+
+	opt_algo = (enum sha_algos) algo;
+
+	applog(LOG_BLUE, "GPU #%d: Benchmark for algo %s...", dev_id, algo_names[algo]);
+	sleep(1);
+	work_restart[thr_id].restart = 0;
+
+	return true;
+}
+
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
 	int switchn = pool_switch_count;
 	int thr_id = mythr->id;
 	struct work work;
+	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
 	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) - (thr_id + 1);
 	bool work_done = false;
@@ -1673,6 +1726,19 @@ static void *miner_thread(void *userdata)
 					}
 				}
 				g_work_time = time(NULL);
+			}
+		}
+
+		if (opt_benchmark && algo_benchmark >= 0) {
+			if (loopcnt > 3) {
+				if (!algo_switch_next(thr_id)) {
+					proper_exit(0);
+					break;
+				}
+				algo_benchmark = (int) opt_algo;
+				// for scrypt...
+				opt_autotune = false;
+				loopcnt = 0;
 			}
 		}
 
@@ -1825,8 +1891,10 @@ static void *miner_thread(void *userdata)
 				minmax = 0x300000;
 				break;
 			case ALGO_SCRYPT:
+				minmax = 0x80000;
+				break;
 			case ALGO_SCRYPT_JANE:
-				minmax = 0x100000;
+				minmax = 0x1000;
 				break;
 			}
 			max64 = max(minmax-1, max64);
@@ -2012,7 +2080,8 @@ static void *miner_thread(void *userdata)
 				pthread_mutex_lock(&stats_lock);
 				thr_hashrates[thr_id] = hashes_done / dtime;
 				thr_hashrates[thr_id] *= rate_factor;
-				stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
+				if (loopcnt) // ignore first (init time)
+					stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
 				pthread_mutex_unlock(&stats_lock);
 			}
 		}
@@ -2090,6 +2159,7 @@ static void *miner_thread(void *userdata)
 					break;
 			}
 		}
+		loopcnt++;
 	}
 
 out:
@@ -3025,6 +3095,16 @@ static void parse_cmdline(int argc, char *argv[])
 		fprintf(stderr, "%s: Heavycoin hash requires block reward vote parameter (see --vote)\n",
 			argv[0]);
 		show_usage_and_exit(1);
+	}
+
+	if (opt_algo == ALGO_AUTO) {
+		for (int n=0; n < MAX_GPUS; n++)
+			gpus_intensity[n] = 0; // use default
+		if (opt_benchmark) {
+			opt_autotune = false;
+			algo_benchmark = opt_algo = ALGO_BLAKE; /* first */
+			applog(LOG_BLUE, "Starting benchmark mode");
+		}
 	}
 }
 
