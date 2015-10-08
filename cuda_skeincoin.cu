@@ -708,6 +708,12 @@ __host__
 void skeincoin_init(int thr_id)
 {
 	cuda_get_arch(thr_id);
+	CUDA_SAFE_CALL(cudaMalloc(&d_found[thr_id], 2 * sizeof(uint32_t)));
+}
+
+__host__
+void skeincoin_free(int thr_id) {
+	cudaFree(d_found[thr_id]);
 }
 
 __host__
@@ -716,7 +722,6 @@ void skeincoin_setBlock_80(int thr_id, void *pdata)
 	uint64_t message[16];
 	memcpy(&message[0], pdata, 80);
 
-	CUDA_SAFE_CALL(cudaMalloc(&(d_found[thr_id]), 2 * sizeof(uint32_t)));
 	cudaMemcpyToSymbol(c_message16, &message[8], 16, 0, cudaMemcpyHostToDevice);
 
 	precalc(message);

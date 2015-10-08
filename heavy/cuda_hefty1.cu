@@ -31,7 +31,8 @@ uint32_t hefty_cpu_hashTable[] = {
     0x510e527fUL,
     0x9b05688cUL,
     0x1f83d9abUL,
-    0x5be0cd19UL };
+    0x5be0cd19UL
+};
 
 uint32_t hefty_cpu_constantTable[] = {
     0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL,
@@ -316,7 +317,13 @@ void hefty_cpu_init(int thr_id, uint32_t threads)
                         sizeof(uint32_t) * 64 );
 
     // Speicher für alle Hefty1 hashes belegen
-    CUDA_SAFE_CALL(cudaMalloc(&heavy_heftyHashes[thr_id], 8 * sizeof(uint32_t) * threads));
+    CUDA_SAFE_CALL(cudaMalloc(&heavy_heftyHashes[thr_id], (size_t) 32 * threads));
+}
+
+__host__
+void hefty_cpu_free(int thr_id)
+{
+    cudaFree(heavy_heftyHashes[thr_id]);
 }
 
 __host__

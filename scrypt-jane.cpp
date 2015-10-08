@@ -426,10 +426,17 @@ unsigned char GetNfactor(unsigned int nTimestamp)
 	return Nfactor;
 }
 
+static bool init[MAX_GPUS] = { 0 };
+
 // cleanup
 void free_scrypt_jane(int thr_id)
 {
-	// todo ?
+	int dev_id = device_map[thr_id];
+
+	cudaSetDevice(dev_id);
+	cudaDeviceReset(); // well, simple way to free ;)
+
+	init[thr_id] = false;
 }
 
 #define bswap_32x4(x) ((((x) << 24) & 0xff000000u) | (((x) << 8) & 0x00ff0000u) \
@@ -467,7 +474,18 @@ int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsi
 		s_Nfactor = Nfactor;
 	}
 
-	int throughput = cuda_throughput(thr_id);
+	static __thread int throughput = 0;
+	if(!init[thr_id]) {
+		int dev_id = device_map[thr_id];
+
+		cudaSetDevice(dev_id);
+		cudaDeviceReset();
+		cudaSetDevice(dev_id);
+		throughput = cuda_throughput(thr_id);
+		applog(LOG_INFO, "GPU #%d: cuda throughput is %d", dev_id, throughput);
+
+		init[thr_id] = true;
+	}
 
 	if(throughput == 0)
 		return -1;
@@ -602,7 +620,7 @@ int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsi
 
 				if (memcmp(thash, &hash[cur][8*i], 32) == 0)
 				{
-					bn_store_hash_target_ratio(thash, ptarget, work);
+					work_set_target_ratio(work, thash);
 					*hashes_done = n - pdata[19];
 					pdata[19] = tmp_nonce;
 					scrypt_free(&Vbuf);

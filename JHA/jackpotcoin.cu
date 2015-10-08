@@ -21,6 +21,7 @@ extern void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 extern void quark_groestl512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void quark_groestl512_cpu_free(int thr_id);
 
 extern void quark_jh512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -29,6 +30,7 @@ extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void jackpot_compactTest_cpu_init(int thr_id, uint32_t threads);
+extern void jackpot_compactTest_cpu_free(int thr_id);
 extern void jackpot_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable, 
 											uint32_t *d_nonces1, uint32_t *nrm1,
 											uint32_t *d_nonces2, uint32_t *nrm2,
@@ -264,8 +266,10 @@ extern "C" void free_jackpot(int thr_id)
 	cudaFree(d_branch1Nonces[thr_id]);
 	cudaFree(d_branch2Nonces[thr_id]);
 	cudaFree(d_branch3Nonces[thr_id]);
-
 	cudaFree(d_jackpotNonces[thr_id]);
+
+	quark_groestl512_cpu_free(thr_id);
+	jackpot_compactTest_cpu_free(thr_id);
 
 	cuda_check_cpu_free(thr_id);
 	init[thr_id] = false;

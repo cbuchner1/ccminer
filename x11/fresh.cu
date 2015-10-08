@@ -21,6 +21,7 @@ extern void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x11_simd512_cpu_free(int thr_id);
 
 extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -163,6 +164,7 @@ extern "C" void free_fresh(int thr_id)
 	cudaSetDevice(device_map[thr_id]);
 
 	cudaFree(d_hash[thr_id]);
+	x11_simd512_cpu_free(thr_id);
 
 	cuda_check_cpu_free(thr_id);
 	init[thr_id] = false;

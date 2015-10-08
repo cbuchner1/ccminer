@@ -28,14 +28,11 @@ extern void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t st
 
 extern int x11_simd512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x11_simd512_cpu_free(int thr_id);
 
 extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-extern void quark_compactTest_cpu_init(int thr_id, uint32_t threads);
-extern void quark_compactTest_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *inpHashes,
-											uint32_t *d_noncesTrue, size_t *nrmTrue, uint32_t *d_noncesFalse, size_t *nrmFalse,
-											int order);
 
 extern "C" void qubithash(void *state, const void *input)
 {
@@ -96,7 +93,7 @@ extern "C" int scanhash_qubit(int thr_id, struct work* work, uint32_t max_nonce,
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -166,6 +163,8 @@ extern "C" void free_qubit(int thr_id)
 	cudaSetDevice(device_map[thr_id]);
 
 	cudaFree(d_hash[thr_id]);
+
+	x11_simd512_cpu_free(thr_id);
 
 	cuda_check_cpu_free(thr_id);
 	init[thr_id] = false;

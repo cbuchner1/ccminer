@@ -673,6 +673,13 @@ int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+void x11_simd512_cpu_free(int thr_id)
+{
+	cudaFree(d_temp4[thr_id]);
+	cudaFree(d_state[thr_id]);
+}
+
+__host__
 void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = TPB;

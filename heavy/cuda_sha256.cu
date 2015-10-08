@@ -160,8 +160,9 @@ template <int BLOCKSIZE> __global__ void sha256_gpu_hash(uint32_t threads, uint3
 	}
 }
 
-// Setup-Funktionen
-__host__ void sha256_cpu_init(int thr_id, uint32_t threads)
+// Setup Function
+__host__
+void sha256_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol(	sha256_gpu_constantTable,
@@ -169,7 +170,13 @@ __host__ void sha256_cpu_init(int thr_id, uint32_t threads)
 						sizeof(uint32_t) * 64 );
 
 	// Speicher für alle Ergebnisse belegen
-	cudaMalloc(&d_hash2output[thr_id], 8 * sizeof(uint32_t) * threads);
+	cudaMalloc(&d_hash2output[thr_id], (size_t) 8 * sizeof(uint32_t) * threads);
+}
+
+__host__
+void sha256_cpu_free(int thr_id)
+{
+	cudaFree(d_hash2output[thr_id]);
 }
 
 static int BLOCKSIZE = 84;

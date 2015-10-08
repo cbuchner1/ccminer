@@ -185,7 +185,7 @@ template <int BLOCKSIZE> __global__ void keccak512_gpu_hash(uint32_t threads, ui
 
 // ---------------------------- END CUDA keccak512 functions ------------------------------------
 
-__host__ 
+__host__
 void keccak512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
@@ -195,7 +195,13 @@ void keccak512_cpu_init(int thr_id, uint32_t threads)
 						0, cudaMemcpyHostToDevice);
 
 	// Speicher für alle Ergebnisse belegen
-	cudaMalloc(&d_hash3output[thr_id], 16 * sizeof(uint32_t) * threads);
+	cudaMalloc(&d_hash3output[thr_id], (size_t) 64 * threads);
+}
+
+__host__
+void keccak512_cpu_free(int thr_id)
+{
+	cudaFree(d_hash3output[thr_id]);
 }
 
 // ----------------BEGIN keccak512 CPU version from scrypt-jane code --------------------

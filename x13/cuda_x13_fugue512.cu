@@ -38,6 +38,9 @@
  * @author   phm <phm@inbox.com>
  */
 
+// store allocated textures device addresses
+static unsigned int* d_textures[MAX_GPUS][4];
+
 #define mixtab0(x) (*((uint32_t*)mixtabs + (    (x))))
 #define mixtab1(x) (*((uint32_t*)mixtabs + (256+(x))))
 #define mixtab2(x) (*((uint32_t*)mixtabs + (512+(x))))
@@ -657,25 +660,37 @@ __global__ void x13_fugue512_gpu_hash_64(uint32_t threads, uint32_t startNounce,
 	}
 }
 
-#define texDef(texname, texmem, texsource, texsize) \
+#define texDef(id, texname, texmem, texsource, texsize) { \
 	unsigned int *texmem; \
 	cudaMalloc(&texmem, texsize); \
+	d_textures[thr_id][id] = texmem; \
 	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
 	texname.normalized = 0; \
 	texname.filterMode = cudaFilterModePoint; \
 	texname.addressMode[0] = cudaAddressModeClamp; \
 	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
-	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); }
-
-__host__ void x13_fugue512_cpu_init(int thr_id, uint32_t threads)
-{
-	texDef(mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
-	texDef(mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
-	texDef(mixTab2Tex, mixTab2m, mixtab2_cpu, sizeof(uint32_t)*256);
-	texDef(mixTab3Tex, mixTab3m, mixtab3_cpu, sizeof(uint32_t)*256);
+	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); \
+	} \
 }
 
-__host__ void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__
+void x13_fugue512_cpu_init(int thr_id, uint32_t threads)
+{
+	texDef(0, mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
+	texDef(1, mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
+	texDef(2, mixTab2Tex, mixTab2m, mixtab2_cpu, sizeof(uint32_t)*256);
+	texDef(3, mixTab3Tex, mixTab3m, mixtab3_cpu, sizeof(uint32_t)*256);
+}
+
+__host__
+void x13_fugue512_cpu_free(int thr_id)
+{
+	for (int i=0; i<4; i++)
+		cudaFree(d_textures[thr_id][i]);
+}
+
+__host__
+void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = 256;
 

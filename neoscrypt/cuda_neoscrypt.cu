@@ -730,7 +730,7 @@ void neoscrypt_cpu_init(int thr_id, uint32_t threads)
 {
 	cuda_get_arch(thr_id);
 	cudaMalloc(&d_NNonce[thr_id], sizeof(uint32_t));
-	CUDA_SAFE_CALL(cudaMalloc(&d_buffer[thr_id], threads * 256 * SHIFT));
+	CUDA_SAFE_CALL(cudaMalloc(&d_buffer[thr_id], (size_t) 256 * SHIFT * threads));
 	cudaMemcpyToSymbol(W, &d_buffer[thr_id], sizeof(uint4*), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(BLAKE2S_SIGMA, BLAKE2S_SIGMA_host, sizeof(BLAKE2S_SIGMA_host), 0, cudaMemcpyHostToDevice);
 }

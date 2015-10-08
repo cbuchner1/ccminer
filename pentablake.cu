@@ -381,7 +381,7 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 		if (active_gpus > 1) {
 			cudaSetDevice(device_map[thr_id]);
 		}
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], 64 * throughput));
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], 2*sizeof(uint32_t)));
 		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], 2*sizeof(uint32_t)));
 
@@ -452,7 +452,7 @@ void free_pentablake(int thr_id)
 	cudaSetDevice(device_map[thr_id]);
 
 	cudaFree(d_hash[thr_id]);
-	cudaFree(h_resNounce[thr_id]);
+	cudaFreeHost(h_resNounce[thr_id]);
 	cudaFree(d_resNounce[thr_id]);
 
 	init[thr_id] = false;

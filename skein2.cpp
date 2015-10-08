@@ -16,6 +16,7 @@ extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
 
+extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 void skein2hash(void *output, const void *input)
@@ -38,6 +39,7 @@ static bool init[MAX_GPUS] = { 0 };
 
 int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
+	int dev_id = device_map[thr_id];
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
@@ -50,9 +52,9 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(dev_id);
 
-		cudaMalloc(&d_hash[thr_id], throughput * 64U);
+		cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput);
 
 		quark_skein512_cpu_init(thr_id, throughput);
 		cuda_check_cpu_init(thr_id, throughput);
@@ -92,7 +94,7 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 				work_set_target_ratio(work, vhash64);
 				if (secNonce != 0) {
 					if (!opt_quiet)
-						applog(LOG_BLUE, "GPU #%d: found second nonce %08x !", device_map[thr_id], swab32(secNonce));
+						applog(LOG_BLUE, "GPU #%d: found second nonce %08x !", dev_id, swab32(secNonce));
 
 					endiandata[19] = secNonce;
 					skein2hash(vhash64, endiandata);
@@ -104,7 +106,7 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 				pdata[19] = swab32(foundNonce);
 				return res;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", dev_id, foundNonce);
 			}
 		}
 

@@ -11,12 +11,14 @@
 #include <openssl/sha.h>
 
 static uint32_t *d_hash[MAX_GPUS];
+static __thread bool sm5 = true;
 
 extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
 
 extern void skeincoin_init(int thr_id);
+extern void skeincoin_free(int thr_id);
 extern void skeincoin_setBlock_80(int thr_id, void *pdata);
 extern uint32_t skeincoin_hash_sm5(int thr_id, uint32_t threads, uint32_t startNounce, int swap, uint64_t target64, uint32_t *secNonce);
 
@@ -355,7 +357,7 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 	const uint32_t first_nonce = pdata[19];
 	const int swap = 1;
 
-	bool sm5 = (device_sm[device_map[thr_id]] >= 500);
+	sm5 = (device_sm[device_map[thr_id]] >= 500);
 	bool checkSecnonce = (have_stratum || have_longpoll) && !sm5;
 
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 20);
@@ -473,9 +475,11 @@ extern "C" void free_skeincoin(int thr_id)
 
 	cudaSetDevice(device_map[thr_id]);
 
-	cudaFree(d_hash[thr_id]);
+	if (!sm5) {
+		cudaFree(d_hash[thr_id]);
+		cuda_check_cpu_free(thr_id);
+	}
 
-	cuda_check_cpu_free(thr_id);
 	init[thr_id] = false;
 
 	cudaDeviceSynchronize();

@@ -30,6 +30,7 @@ extern void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t star
 extern void quark_groestl512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void quark_groestl512_cpu_free(int thr_id);
 
 extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -270,6 +271,7 @@ extern "C" void free_quark(int thr_id)
 	cudaFree(d_branch2Nonces[thr_id]);
 	cudaFree(d_branch3Nonces[thr_id]);
 
+	quark_groestl512_cpu_free(thr_id);
 	quark_compactTest_cpu_free(thr_id);
 
 	cuda_check_cpu_free(thr_id);

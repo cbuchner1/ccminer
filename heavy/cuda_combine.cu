@@ -124,7 +124,13 @@ __host__
 void combine_cpu_init(int thr_id, uint32_t threads)
 {
 	// Speicher für alle Ergebnisse belegen
-	CUDA_SAFE_CALL(cudaMalloc(&d_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads));
+	CUDA_SAFE_CALL(cudaMalloc(&d_hashoutput[thr_id], (size_t) 32 * threads));
+}
+
+__host__
+void combine_cpu_free(int thr_id)
+{
+	cudaFree(d_hashoutput[thr_id]);
 }
 
 __host__

@@ -685,10 +685,18 @@ static int lastFactor = 0;
 
 static void computeGold(uint32_t* const input, uint32_t *reference, uchar *scratchpad);
 
+static bool init[MAX_GPUS] = { 0 };
+
 // cleanup
 void free_scrypt(int thr_id)
 {
-	// todo ?
+	int dev_id = device_map[thr_id];
+
+	// trivial way to free all...
+	cudaSetDevice(dev_id);
+	cudaDeviceReset();
+
+	init[thr_id] = false;
 }
 
 // Scrypt proof of work algorithm
@@ -701,9 +709,20 @@ int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	int result = 0;
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
-	int throughput = cuda_throughput(thr_id);
+	static __thread int throughput = 0;
 
-	if(throughput == 0)
+	if (!init[thr_id]) {
+		int dev_id = device_map[thr_id];
+		cudaSetDevice(dev_id);
+		cudaDeviceReset();
+		cudaSetDevice(dev_id);
+		throughput = cuda_throughput(thr_id);
+		applog(LOG_INFO, "GPU #%d: cuda throughput is %d", dev_id, throughput);
+
+		init[thr_id] = true;
+	}
+
+	if (throughput == 0)
 		return -1;
 
 	gettimeofday(tv_start, NULL);
@@ -912,7 +931,7 @@ int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 							device_map[thr_id], device_name[thr_id], i, cur);
 					} else {
 						*hashes_done = n - pdata[19];
-						bn_store_hash_target_ratio(refhash, ptarget, work);
+						work_set_target_ratio(work, refhash);
 						pdata[19] = nonce[cur] + i;
 						result = 1;
 						goto byebye;

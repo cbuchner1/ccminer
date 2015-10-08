@@ -33,8 +33,9 @@ __device__ cuda_compactTestFunction_t d_JackpotTrueFunction = JackpotTrueTest, d
 
 cuda_compactTestFunction_t h_JackpotTrueFunction[MAX_GPUS], h_JackpotFalseFunction[MAX_GPUS];
 
-// Setup-Funktionen
-__host__ void jackpot_compactTest_cpu_init(int thr_id, uint32_t threads)
+// Setup-Function
+__host__
+void jackpot_compactTest_cpu_init(int thr_id, uint32_t threads)
 {
 	cudaMemcpyFromSymbol(&h_JackpotTrueFunction[thr_id], d_JackpotTrueFunction, sizeof(cuda_compactTestFunction_t));
 	cudaMemcpyFromSymbol(&h_JackpotFalseFunction[thr_id], d_JackpotFalseFunction, sizeof(cuda_compactTestFunction_t));
@@ -49,6 +50,18 @@ __host__ void jackpot_compactTest_cpu_init(int thr_id, uint32_t threads)
 
 	cudaMalloc(&d_partSum[0][thr_id], sizeof(uint32_t) * s1); // BLOCKSIZE (Threads/Block)
 	cudaMalloc(&d_partSum[1][thr_id], sizeof(uint32_t) * s1); // BLOCKSIZE (Threads/Block)
+}
+
+__host__
+void jackpot_compactTest_cpu_free(int thr_id)
+{
+	cudaFree(d_tempBranch1Nonces[thr_id]);
+	cudaFree(d_numValid[thr_id]);
+
+	cudaFree(d_partSum[0][thr_id]);
+	cudaFree(d_partSum[1][thr_id]);
+
+	cudaFreeHost(h_numValid[thr_id]);
 }
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 300

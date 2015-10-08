@@ -5,6 +5,8 @@
 #define MAXWELL_OR_FERMI 0
 #define USE_SHARED 1
 
+static unsigned int *d_textures[MAX_GPUS][8];
+
 // #define SPH_C32(x)    ((uint32_t)(x ## U))
 // #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
 
@@ -274,28 +276,38 @@ void quark_groestl512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32
 #endif
 }
 
-#define texDef(texname, texmem, texsource, texsize) \
+#define texDef(id, texname, texmem, texsource, texsize) { \
 	unsigned int *texmem; \
 	cudaMalloc(&texmem, texsize); \
+	d_textures[thr_id][id] = texmem; \
 	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
 	texname.normalized = 0; \
 	texname.filterMode = cudaFilterModePoint; \
 	texname.addressMode[0] = cudaAddressModeClamp; \
 	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
-	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
+	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); \
+	} \
+}
 
 __host__
 void quark_groestl512_sm20_init(int thr_id, uint32_t threads)
 {
 	// Texturen mit obigem Makro initialisieren
-	texDef(t0up1, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
-	texDef(t0dn1, d_T0dn, T0dn_cpu, sizeof(uint32_t)*256);
-	texDef(t1up1, d_T1up, T1up_cpu, sizeof(uint32_t)*256);
-	texDef(t1dn1, d_T1dn, T1dn_cpu, sizeof(uint32_t)*256);
-	texDef(t2up1, d_T2up, T2up_cpu, sizeof(uint32_t)*256);
-	texDef(t2dn1, d_T2dn, T2dn_cpu, sizeof(uint32_t)*256);
-	texDef(t3up1, d_T3up, T3up_cpu, sizeof(uint32_t)*256);
-	texDef(t3dn1, d_T3dn, T3dn_cpu, sizeof(uint32_t)*256);
+	texDef(0, t0up1, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
+	texDef(1, t0dn1, d_T0dn, T0dn_cpu, sizeof(uint32_t)*256);
+	texDef(2, t1up1, d_T1up, T1up_cpu, sizeof(uint32_t)*256);
+	texDef(3, t1dn1, d_T1dn, T1dn_cpu, sizeof(uint32_t)*256);
+	texDef(4, t2up1, d_T2up, T2up_cpu, sizeof(uint32_t)*256);
+	texDef(5, t2dn1, d_T2dn, T2dn_cpu, sizeof(uint32_t)*256);
+	texDef(6, t3up1, d_T3up, T3up_cpu, sizeof(uint32_t)*256);
+	texDef(7, t3dn1, d_T3dn, T3dn_cpu, sizeof(uint32_t)*256);
+}
+
+__host__
+void quark_groestl512_sm20_free(int thr_id)
+{
+	for (int i=0; i<8; i++)
+		cudaFree(d_textures[thr_id][i]);
 }
 
 __host__

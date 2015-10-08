@@ -142,6 +142,14 @@ void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
+void quark_groestl512_cpu_free(int thr_id)
+{
+    int dev_id = device_map[thr_id];
+    if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300)
+        quark_groestl512_sm20_free(thr_id);
+}
+
+__host__
 void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
     int threadsperblock = TPB;

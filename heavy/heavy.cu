@@ -178,7 +178,7 @@ int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned l
     {
         uint16_t *ext = (uint16_t *)&pdata[20];
 
-        if (opt_vote > maxvote) {
+        if (opt_vote > maxvote && !opt_benchmark) {
             applog(LOG_WARNING, "Your block reward vote (%hu) exceeds "
                     "the maxvote reported by the pool (%hu).",
                     opt_vote, maxvote);
@@ -310,12 +310,18 @@ extern "C" void free_heavy(int thr_id)
 
     cudaFree(heavy_nonceVector[thr_id]);
 
-    // todo: free sub algos vectors
+    blake512_cpu_free(thr_id);
+    groestl512_cpu_free(thr_id);
+    hefty_cpu_free(thr_id);
+    keccak512_cpu_free(thr_id);
+    sha256_cpu_free(thr_id);
+    combine_cpu_free(thr_id);
 
     init[thr_id] = false;
 
     cudaDeviceSynchronize();
 }
+
 __host__
 void heavycoin_hash(uchar* output, const uchar* input, int len)
 {

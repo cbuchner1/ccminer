@@ -191,8 +191,9 @@ template <int BLOCKSIZE> __global__ void blake512_gpu_hash(uint32_t threads, uin
 
 // ---------------------------- END CUDA blake512 functions ------------------------------------
 
-// Setup-Funktionen
-__host__ void blake512_cpu_init(int thr_id, uint32_t threads)
+// Setup Function
+__host__
+void blake512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol( c_sigma,
@@ -211,12 +212,19 @@ __host__ void blake512_cpu_init(int thr_id, uint32_t threads)
 						0, cudaMemcpyHostToDevice);
 
 	// Speicher für alle Ergebnisse belegen
-	CUDA_SAFE_CALL(cudaMalloc(&d_hash5output[thr_id], 16 * sizeof(uint32_t) * threads));
+	CUDA_SAFE_CALL(cudaMalloc(&d_hash5output[thr_id], (size_t) 64 * threads));
+}
+
+__host__
+void blake512_cpu_free(int thr_id)
+{
+	cudaFree(d_hash5output[thr_id]);
 }
 
 static int BLOCKSIZE = 84;
 
-__host__ void blake512_cpu_setBlock(void *pdata, int len)
+__host__
+void blake512_cpu_setBlock(void *pdata, int len)
 	// data muss 84-Byte haben!
 	// heftyHash hat 32-Byte
 {

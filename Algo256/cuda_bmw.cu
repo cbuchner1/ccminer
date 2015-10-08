@@ -372,3 +372,9 @@ void bmw256_midstate_init(int thr_id, uint32_t threads)
 {
 	cudaMalloc(&d_midstate[thr_id], sizeof(sph_bmw256_context));
 }
+
+__host__
+void bmw256_midstate_free(int thr_id)
+{
+	cudaFree(d_midstate[thr_id]);
+}

@@ -144,9 +144,8 @@ int cuda_throughput(int thr_id)
 		cuCtxCreate( &ctx, CU_CTX_SCHED_YIELD, device_map[thr_id] );
 		cuCtxSetCurrent(ctx);
 #else
-		checkCudaErrors(cudaSetDeviceFlags(cudaDeviceScheduleYield));
 		checkCudaErrors(cudaSetDevice(device_map[thr_id]));
-		// checkCudaErrors(cudaFree(0));
+		checkCudaErrors(cudaSetDeviceFlags(cudaDeviceScheduleYield));
 #endif
 
 		KernelInterface *kernel;
@@ -256,7 +255,7 @@ inline int _ConvertSMVer2Cores(int major, int minor)
 	}
 
 	// If we don't find the values, we default use the previous one to run properly
-    applog(LOG_WARNING, "MapSMtoCores for SM %d.%d is undefined. Default to use %d Cores/SM", major, minor, 128);
+	applog(LOG_WARNING, "MapSMtoCores for SM %d.%d is undefined. Default to use %d Cores/SM", major, minor, 128);
 	return 128;
 }
 

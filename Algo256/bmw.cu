@@ -13,6 +13,7 @@ extern "C" {
 static uint32_t *d_hash[MAX_GPUS];
 
 extern void bmw256_midstate_init(int thr_id, uint32_t threads);
+extern void bmw256_midstate_free(int thr_id);
 extern void bmw256_setBlock_80(int thr_id, void *pdata);
 extern void bmw256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int swap);
 
@@ -111,8 +112,9 @@ extern "C" void free_bmw(int thr_id)
 	cudaSetDevice(device_map[thr_id]);
 
 	cudaFree(d_hash[thr_id]);
-
+	bmw256_midstate_free(thr_id);
 	cuda_check_cpu_free(thr_id);
+
 	init[thr_id] = false;
 
 	cudaDeviceSynchronize();

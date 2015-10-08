@@ -19,6 +19,7 @@ extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
 extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 extern void keccak256_cpu_init(int thr_id, uint32_t threads);
+extern void keccak256_cpu_free(int thr_id);
 extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 extern void skein256_cpu_init(int thr_id, uint32_t threads);
 extern void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash, int order);
@@ -183,6 +184,8 @@ extern "C" void free_lyra2v2(int thr_id)
 	cudaFree(d_matrix[thr_id]);
 
 	bmw256_cpu_free(thr_id);
+	keccak256_cpu_free(thr_id);
+
 	init[thr_id] = false;
 
 	cudaDeviceSynchronize();

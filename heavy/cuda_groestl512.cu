@@ -9,6 +9,7 @@
 // globaler Speicher für alle HeftyHashes aller Threads
 extern uint32_t *heavy_heftyHashes[MAX_GPUS];
 extern uint32_t *heavy_nonceVector[MAX_GPUS];
+static unsigned int *d_textures[MAX_GPUS][8];
 
 // globaler Speicher für unsere Ergebnisse
 uint32_t *d_hash4output[MAX_GPUS];
@@ -730,36 +731,50 @@ template <int BLOCKSIZE> __global__ void groestl512_gpu_hash(uint32_t threads, u
 	}
 }
 
-#define texDef(texname, texmem, texsource, texsize) \
+#define texDef(id, texname, texmem, texsource, texsize) { \
 	unsigned int *texmem; \
 	cudaMalloc(&texmem, texsize); \
+	d_textures[thr_id][id] = texmem; \
 	cudaMemcpy(texmem, texsource, texsize, cudaMemcpyHostToDevice); \
 	texname.normalized = 0; \
 	texname.filterMode = cudaFilterModePoint; \
 	texname.addressMode[0] = cudaAddressModeClamp; \
 	{ cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<unsigned int>(); \
-	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); } \
+	  cudaBindTexture(NULL, &texname, texmem, &channelDesc, texsize ); \
+	} \
+}
 
-// Setup-Funktionen
-__host__ void groestl512_cpu_init(int thr_id, uint32_t threads)
+// Setup Function
+__host__
+void groestl512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Texturen mit obigem Makro initialisieren
-	texDef(t0up, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
-	texDef(t0dn, d_T0dn, T0dn_cpu, sizeof(uint32_t)*256);
-	texDef(t1up, d_T1up, T1up_cpu, sizeof(uint32_t)*256);
-	texDef(t1dn, d_T1dn, T1dn_cpu, sizeof(uint32_t)*256);
-	texDef(t2up, d_T2up, T2up_cpu, sizeof(uint32_t)*256);
-	texDef(t2dn, d_T2dn, T2dn_cpu, sizeof(uint32_t)*256);
-	texDef(t3up, d_T3up, T3up_cpu, sizeof(uint32_t)*256);
-	texDef(t3dn, d_T3dn, T3dn_cpu, sizeof(uint32_t)*256);
+	texDef(0, t0up, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
+	texDef(1, t0dn, d_T0dn, T0dn_cpu, sizeof(uint32_t)*256);
+	texDef(2, t1up, d_T1up, T1up_cpu, sizeof(uint32_t)*256);
+	texDef(3, t1dn, d_T1dn, T1dn_cpu, sizeof(uint32_t)*256);
+	texDef(4, t2up, d_T2up, T2up_cpu, sizeof(uint32_t)*256);
+	texDef(5, t2dn, d_T2dn, T2dn_cpu, sizeof(uint32_t)*256);
+	texDef(6, t3up, d_T3up, T3up_cpu, sizeof(uint32_t)*256);
+	texDef(7, t3dn, d_T3dn, T3dn_cpu, sizeof(uint32_t)*256);
 
 	// Speicher für alle Ergebnisse belegen
-	cudaMalloc(&d_hash4output[thr_id], 16 * sizeof(uint32_t) * threads);
+	cudaMalloc(&d_hash4output[thr_id], (size_t) 64 * threads);
+}
+
+__host__
+void groestl512_cpu_free(int thr_id)
+{
+	for (int i=0; i <8; i++)
+		cudaFree(d_textures[thr_id][i]);
+
+	cudaFree(d_hash4output[thr_id]);
 }
 
 static int BLOCKSIZE = 84;
 
-__host__ void groestl512_cpu_setBlock(void *data, int len)
+__host__
+void groestl512_cpu_setBlock(void *data, int len)
 	// data muss 80/84-Byte haben!
 	// heftyHash hat 32-Byte
 {

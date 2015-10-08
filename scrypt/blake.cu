@@ -404,10 +404,10 @@ void cuda_blake256_hash( uint64_t *g_out, uint32_t nonce, uint32_t *g_good, bool
 
 static std::map<int, uint32_t *> context_good[2];
 
+static bool init[MAX_GPUS] = { 0 };
+
 bool default_prepare_blake256(int thr_id, const uint32_t host_pdata[20], const uint32_t host_ptarget[8])
 {
-	static bool init[MAX_GPUS] = { 0 };
-
 	if (!init[thr_id])
 	{
 		// allocate pinned host memory for good hashes
@@ -441,3 +441,13 @@ void default_do_blake256(dim3 grid, dim3 threads, int thr_id, int stream, uint32
 						cudaMemcpyDeviceToHost, context_streams[stream][thr_id]));
 	}
 }
+
+void default_free_blake256(int thr_id)
+{
+	if (init[thr_id]) {
+		cudaFree(context_good[0][thr_id]);
+		cudaFree(context_good[1][thr_id]);
+		init[thr_id] = false;
+	}
+}
+
