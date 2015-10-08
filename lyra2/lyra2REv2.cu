@@ -84,14 +84,16 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	uint32_t throughput = device_intensity(dev_id, __func__, defthr);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00ff;
+		ptarget[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(dev_id);
 		//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		//if (opt_n_gputhreads == 1)
 		//	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		cudaGetLastError();
+
 		blake256_cpu_init(thr_id, throughput);
 		keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
@@ -103,8 +105,8 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 			return -1;
 		}
 
-		// DMatrix
-		CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], (size_t)16 * sizeof(uint64_t) * 4 * 3 * throughput));
+		// DMatrix (780Ti may prefer 16 instead of 12, cf djm34)
+		CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], (size_t)12 * sizeof(uint64_t) * 4 * 4 * throughput));
 		lyra2v2_cpu_init(thr_id, throughput, d_matrix[thr_id]);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));

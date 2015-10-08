@@ -16,26 +16,28 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 
+	int dev_id = device_map[thr_id];
 	int intensity = is_windows() ? 18 : 19;
 	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
 	throughput = throughput / 32; /* set for max intensity ~= 20 */
 	throughput = min(throughput, max_nonce - first_nonce + 1);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		ptarget[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
-		int dev_id = device_map[thr_id];
+		cudaDeviceSynchronize();
 		cudaSetDevice(dev_id);
 		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		cudaGetLastError(); // reset errors if device is not "reset"
 
 		if (device_sm[dev_id] <= 300) {
 			applog(LOG_ERR, "Sorry neoscrypt is not supported on SM 3.0 devices");
 			proper_exit(EXIT_CODE_CUDA_ERROR);
 		}
 
-		applog(LOG_INFO, "Using %d cuda threads", throughput);
+		applog(LOG_INFO, "GPU #%d: Using %d cuda threads", dev_id, throughput);
 		neoscrypt_cpu_init(thr_id, throughput);
 
 		init[thr_id] = true;
@@ -71,7 +73,7 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 				pdata[19] = foundNonce;
 				return 1;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", dev_id, foundNonce);
 			}
 		}
 

@@ -49,7 +49,7 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0005;
+		ptarget[7] = 0x0005;
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
@@ -66,6 +66,7 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
 	}
 
+	cudaGetLastError();
 	bmw256_setBlock_80(thr_id, (void*)endiandata);
 
 	cuda_check_cpu_setTarget(ptarget);

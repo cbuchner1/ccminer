@@ -85,7 +85,9 @@ struct workio_cmd {
 };
 
 enum sha_algos {
-	ALGO_BLAKE,
+	ALGO_BLAKE = 0,
+	ALGO_LYRA2, 	/* moved first for benchs */
+	ALGO_LYRA2v2,
 	ALGO_BLAKECOIN,
 	ALGO_BMW,
 	ALGO_C11,
@@ -98,8 +100,6 @@ enum sha_algos {
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
 	ALGO_LUFFA,
-	ALGO_LYRA2,
-	ALGO_LYRA2v2,
 	ALGO_MJOLLNIR,		/* Hefty hash */
 	ALGO_MYR_GR,
 	ALGO_NEOSCRYPT,
@@ -127,6 +127,8 @@ enum sha_algos {
 
 static const char *algo_names[] = {
 	"blake",
+	"lyra2",
+	"lyra2v2",
 	"blakecoin",
 	"bmw",
 	"c11",
@@ -139,8 +141,6 @@ static const char *algo_names[] = {
 	"keccak",
 	"jackpot",
 	"luffa",
-	"lyra2",
-	"lyra2v2",
 	"mjollnir",
 	"myr-gr",
 	"neoscrypt",
@@ -171,7 +171,6 @@ bool opt_debug_diff = false;
 bool opt_debug_threads = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
-int algo_benchmark = -1;
 bool opt_showdiff = false;
 
 // todo: limit use of these flags,
@@ -266,6 +265,7 @@ volatile bool abort_flag = false;
 struct work_restart *work_restart = NULL;
 static int app_exit_code = EXIT_CODE_OK;
 
+pthread_mutex_t algo_lock;
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
 static double thr_hashrates[MAX_GPUS] = { 0 };
@@ -279,8 +279,12 @@ uint8_t conditional_state[MAX_GPUS] = { 0 };
 double opt_max_temp = 0.0;
 double opt_max_diff = -1.;
 double opt_max_rate = -1.;
-
+// algos benchmark
+int algo_benchmark = -1;
+double * algo_hashrates[MAX_GPUS] = { 0 };
+int device_mem_free[MAX_GPUS] = { 0 };
 int opt_statsavg = 30;
+
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
 char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
@@ -1562,6 +1566,9 @@ void miner_free_device(int thr_id)
 	//free_sha256d(thr_id);
 	free_scrypt(thr_id);
 	free_scrypt_jane(thr_id);
+
+	// reset remains of error..
+	cudaGetLastError();
 }
 
 // to benchmark all algos
@@ -1577,38 +1584,76 @@ bool algo_switch_next(int thr_id)
 	miner_free_device(thr_id);
 	mfree = cuda_available_memory(thr_id);
 
-	work_restart[thr_id].restart = 1;
-
 	algo++;
-	if (algo == ALGO_AUTO)
-		return false;
+
+	// skip some duplicated algos
+	if (algo == ALGO_C11) algo++; // same as x11
+	if (algo == ALGO_DMD_GR) algo++; // same as groestl
+	if (algo == ALGO_WHIRLCOIN) algo++; // same as whirlpool
+	// and unwanted ones...
+	if (algo == ALGO_SCRYPT) algo++;
+	if (algo == ALGO_SCRYPT_JANE) algo++;
+
+	work_restart[thr_id].restart = 1;
 
 	// we need to wait completion on all cards before the switch
 	if (opt_n_threads > 1) {
-		pthread_mutex_lock(&stratum_sock_lock); // unused in benchmark
-		for (int n=0; n < opt_n_threads; n++)
-			if (!work_restart[thr_id].restart) {
-				applog(LOG_DEBUG, "GPU #%d: waiting GPU %d", dev_id, device_map[n]);
-				usleep(100*1000);
+		pthread_mutex_lock(&algo_lock); // wait work_restart for all
+		for (int n=0; n < opt_n_threads; n++) {
+			int timeout = 1000;
+			while (!work_restart[n].restart && --timeout) {
+				//applog(LOG_DEBUG, "GPU #%d: waiting GPU %d", dev_id, device_map[n]);
+				usleep(200*1000);
 			}
-		sleep(1);
-		pthread_mutex_unlock(&stratum_sock_lock);
+		}
+		pthread_mutex_unlock(&algo_lock);
 	}
 
 	double hashrate = stats_get_speed(thr_id, thr_hashrates[thr_id]);
 	format_hashrate(hashrate, rate);
-	applog(LOG_NOTICE, "GPU #%d: %s rate: %s - %d MB free", dev_id, algo_names[prev_algo], rate, mfree);
+	applog(LOG_NOTICE, "GPU #%d: %s hashrate = %s", dev_id, algo_names[prev_algo], rate);
+
+	// check if there is there is memory leaks
+	if (device_mem_free[thr_id] > mfree)
+		applog(LOG_WARNING, "GPU #%d, memory leak detected! %d MB free", dev_id, mfree);
+	device_mem_free[thr_id] = mfree;
+
+	// store to dump a table per gpu later
+	algo_hashrates[thr_id][prev_algo] = hashrate;
+
+	if (algo == ALGO_AUTO)
+		return false;
+
+	// wait other threads before algo switch
+	pthread_mutex_lock(&algo_lock);
+
+	opt_algo = (enum sha_algos) algo;
+	work_restart[thr_id].restart = 0;
 
 	stats_purge_all();
 	global_hashrate = 0;
 
-	opt_algo = (enum sha_algos) algo;
+	if (thr_id == 0)
+		applog(LOG_BLUE, "Benchmark algo %s...", algo_names[algo]);
 
-	applog(LOG_BLUE, "GPU #%d: Benchmark for algo %s...", dev_id, algo_names[algo]);
-	sleep(1);
-	work_restart[thr_id].restart = 0;
+	//applog(LOG_BLUE, "GPU #%d: Benchmark algo %s...", dev_id, algo_names[algo]);
+	pthread_mutex_unlock(&algo_lock);
 
 	return true;
+}
+
+static void display_benchmark_results()
+{
+	for (int n=0; n < opt_n_threads; n++)
+	{
+		int dev_id = device_map[n];
+		applog(LOG_BLUE, "Benchmark results for GPU #%d - %s:", dev_id, device_name[dev_id]);
+		for (int i=0; i < ALGO_COUNT-1; i++) {
+			double rate = algo_hashrates[n][i];
+			if (rate == 0.0) continue;
+			applog(LOG_INFO, "%12s : %15.0f H/s", algo_names[i], rate);
+		}
+	}
 }
 
 static void *miner_thread(void *userdata)
@@ -1729,19 +1774,6 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
-		if (opt_benchmark && algo_benchmark >= 0) {
-			if (loopcnt > 3) {
-				if (!algo_switch_next(thr_id)) {
-					proper_exit(0);
-					break;
-				}
-				algo_benchmark = (int) opt_algo;
-				// for scrypt...
-				opt_autotune = false;
-				loopcnt = 0;
-			}
-		}
-
 		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
 		{
 			if (opt_debug) {
@@ -1778,6 +1810,24 @@ static void *miner_thread(void *userdata)
 			nonceptr[0]++; //??
 
 		pthread_mutex_unlock(&g_work_lock);
+
+		// -a auto --benchmark
+		if (opt_benchmark && algo_benchmark >= 0) {
+			//applog(LOG_DEBUG, "GPU #%d: loop %d", device_map[thr_id], loopcnt);
+			if (loopcnt >= 3) {
+				if (!algo_switch_next(thr_id) && thr_id == 0)
+				{
+					display_benchmark_results();
+					proper_exit(0);
+					break;
+				}
+				algo_benchmark = (int) opt_algo;
+				// for scrypt...
+				opt_autotune = false;
+				loopcnt = 0;
+			}
+		}
+		loopcnt++;
 
 		/* prevent gpu scans before a job is received */
 		if (have_stratum && work.data[0] == 0 && !opt_benchmark) {
@@ -1877,6 +1927,7 @@ static void *miner_thread(void *userdata)
 				minmax = 0x2000000;
 				break;
 			case ALGO_C11:
+			case ALGO_DEEP:
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
 			case ALGO_X11:
@@ -1885,11 +1936,11 @@ static void *miner_thread(void *userdata)
 			case ALGO_WHIRLPOOL:
 				minmax = 0x400000;
 				break;
-			case ALGO_LYRA2:
 			case ALGO_NEOSCRYPT:
 			case ALGO_X15:
 				minmax = 0x300000;
 				break;
+			case ALGO_LYRA2:
 			case ALGO_SCRYPT:
 				minmax = 0x80000;
 				break;
@@ -1914,7 +1965,7 @@ static void *miner_thread(void *userdata)
 		else
 			max_nonce = (uint32_t) (max64 + start_nonce);
 
-		// todo: keep it rounded for gpu threads ?
+		// todo: keep it rounded to a multiple of 256 ?
 
 		if (unlikely(start_nonce > max_nonce)) {
 			// should not happen but seen in skein2 benchmark with 2 gpus
@@ -1929,6 +1980,9 @@ static void *miner_thread(void *userdata)
 
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
+
+
+		cudaGetLastError(); // reset previous errors
 
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
@@ -2080,7 +2134,7 @@ static void *miner_thread(void *userdata)
 				pthread_mutex_lock(&stats_lock);
 				thr_hashrates[thr_id] = hashes_done / dtime;
 				thr_hashrates[thr_id] *= rate_factor;
-				if (loopcnt) // ignore first (init time)
+				if (loopcnt > 1) // ignore first (init time)
 					stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
 				pthread_mutex_unlock(&stats_lock);
 			}
@@ -2116,7 +2170,7 @@ static void *miner_thread(void *userdata)
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
 			pthread_mutex_unlock(&stats_lock);
-			if (opt_benchmark) {
+			if (opt_benchmark && algo_benchmark == -1) {
 				format_hashrate(hashrate, s);
 				applog(LOG_NOTICE, "Total: %s", s);
 			}
@@ -2159,7 +2213,6 @@ static void *miner_thread(void *userdata)
 					break;
 			}
 		}
-		loopcnt++;
 	}
 
 out:
@@ -3084,25 +3137,27 @@ static void parse_cmdline(int argc, char *argv[])
 		parse_arg(key, optarg);
 	}
 	if (optind < argc) {
-		fprintf(stderr, "%s: unsupported non-option argument '%s'\n",
+		fprintf(stderr, "%s: unsupported non-option argument '%s' (see --help)\n",
 			argv[0], argv[optind]);
-		show_usage_and_exit(1);
+		//show_usage_and_exit(1);
 	}
 
 	parse_config(opt_config);
 
-	if (opt_algo == ALGO_HEAVY && opt_vote == 9999) {
+	if (opt_algo == ALGO_HEAVY && opt_vote == 9999 && !opt_benchmark) {
 		fprintf(stderr, "%s: Heavycoin hash requires block reward vote parameter (see --vote)\n",
 			argv[0]);
 		show_usage_and_exit(1);
 	}
 
 	if (opt_algo == ALGO_AUTO) {
-		for (int n=0; n < MAX_GPUS; n++)
+		for (int n=0; n < MAX_GPUS; n++) {
 			gpus_intensity[n] = 0; // use default
+			algo_hashrates[n] = (double*) calloc(1, ALGO_COUNT * sizeof(double));
+		}
 		if (opt_benchmark) {
 			opt_autotune = false;
-			algo_benchmark = opt_algo = ALGO_BLAKE; /* first */
+			algo_benchmark = opt_algo = (enum sha_algos) 0; /* first */
 			applog(LOG_BLUE, "Starting benchmark mode");
 		}
 	}
@@ -3177,6 +3232,7 @@ int main(int argc, char *argv[])
 	jane_params = strdup("");
 
 	pthread_mutex_init(&applog_lock, NULL);
+	pthread_mutex_init(&algo_lock, NULL);
 
 	// number of cpus for thread affinity
 #if defined(WIN32)

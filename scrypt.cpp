@@ -694,6 +694,7 @@ void free_scrypt(int thr_id)
 
 	// trivial way to free all...
 	cudaSetDevice(dev_id);
+	cudaDeviceSynchronize();
 	cudaDeviceReset();
 
 	init[thr_id] = false;
@@ -714,6 +715,7 @@ int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	if (!init[thr_id]) {
 		int dev_id = device_map[thr_id];
 		cudaSetDevice(dev_id);
+		cudaDeviceSynchronize();
 		cudaDeviceReset();
 		cudaSetDevice(dev_id);
 		throughput = cuda_throughput(thr_id);

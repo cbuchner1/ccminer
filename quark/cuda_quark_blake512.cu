@@ -225,7 +225,7 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 __host__
 void quark_blake512_cpu_init(int thr_id, uint32_t threads)
 {
-	CUDA_SAFE_CALL(cudaGetLastError());
+//	CUDA_SAFE_CALL(cudaGetLastError());
 }
 
 __host__

@@ -168,7 +168,7 @@ extern "C" int scanhash_x14(int thr_id,  struct work* work, uint32_t max_nonce, 
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000f;
+		ptarget[7] = 0x000f;
 
 	if (!init[thr_id])
 	{

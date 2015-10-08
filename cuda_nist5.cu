@@ -83,6 +83,7 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 
 	if (!init[thr_id])
 	{
+		cudaDeviceSynchronize();
 		cudaSetDevice(device_map[thr_id]);
 
 		// Constants copy/init (no device alloc in these algos)

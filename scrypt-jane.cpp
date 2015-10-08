@@ -434,6 +434,7 @@ void free_scrypt_jane(int thr_id)
 	int dev_id = device_map[thr_id];
 
 	cudaSetDevice(dev_id);
+	cudaDeviceSynchronize();
 	cudaDeviceReset(); // well, simple way to free ;)
 
 	init[thr_id] = false;
@@ -479,6 +480,7 @@ int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsi
 		int dev_id = device_map[thr_id];
 
 		cudaSetDevice(dev_id);
+		cudaDeviceSynchronize();
 		cudaDeviceReset();
 		cudaSetDevice(dev_id);
 		throughput = cuda_throughput(thr_id);

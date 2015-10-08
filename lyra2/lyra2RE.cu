@@ -10,7 +10,7 @@ extern "C" {
 #include "cuda_helper.h"
 
 static uint64_t* d_hash[MAX_GPUS];
-//static uint64_t* d_hash2[MAX_GPUS];
+//static uint64_t* d_matrix[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
@@ -87,11 +87,12 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00ff;
+		ptarget[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		cudaGetLastError(); // reset last error
 
 		blake256_cpu_init(thr_id, throughput);
 		keccak256_cpu_init(thr_id,throughput);
@@ -99,8 +100,8 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 		groestl256_cpu_init(thr_id, throughput);
 
 		// DMatrix
-//		cudaMalloc(&d_hash2[thr_id], (size_t)16 * 8 * 8 * sizeof(uint64_t) * throughput);
-//		lyra2_cpu_init(thr_id, throughput, d_hash2[thr_id]);
+//		cudaMalloc(&d_matrix[thr_id], (size_t)16 * 8 * 8 * sizeof(uint64_t) * throughput);
+//		lyra2_cpu_init(thr_id, throughput, d_matrix[thr_id]);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));
 
@@ -174,6 +175,7 @@ extern "C" void free_lyra2(int thr_id)
 	cudaSetDevice(device_map[thr_id]);
 
 	cudaFree(d_hash[thr_id]);
+	//cudaFree(d_matrix[thr_id]);
 
 	keccak256_cpu_free(thr_id);
 	groestl256_cpu_free(thr_id);

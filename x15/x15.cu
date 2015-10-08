@@ -178,7 +178,7 @@ extern "C" int scanhash_x15(int thr_id,  struct work* work, uint32_t max_nonce, 
 	throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00FF;
+		ptarget[7] = 0x00FF;
 
 	if (!init[thr_id])
 	{
@@ -199,7 +199,7 @@ extern "C" int scanhash_x15(int thr_id,  struct work* work, uint32_t max_nonce, 
 		x14_shabal512_cpu_init(thr_id, throughput);
 		x15_whirlpool_cpu_init(thr_id, throughput, 0);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
