@@ -1632,6 +1632,7 @@ bool algo_switch_next(int thr_id)
 
 	stats_purge_all();
 	global_hashrate = 0;
+	thr_hashrates[thr_id] = 0; // reset for minmax64
 
 	if (thr_id == 0)
 		applog(LOG_BLUE, "Benchmark algo %s...", algo_names[algo]);

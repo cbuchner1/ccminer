@@ -376,7 +376,7 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 		if (sm5) {
 			skeincoin_init(thr_id);
 		} else {
-			cudaMalloc(&d_hash[thr_id], throughput * 64U);
+			cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput);
 			quark_skein512_cpu_init(thr_id, throughput);
 			cuda_check_cpu_init(thr_id, throughput);
 			CUDA_SAFE_CALL(cudaDeviceSynchronize());
@@ -475,7 +475,9 @@ extern "C" void free_skeincoin(int thr_id)
 
 	cudaSetDevice(device_map[thr_id]);
 
-	if (!sm5) {
+	if (sm5)
+		skeincoin_free(thr_id);
+	else {
 		cudaFree(d_hash[thr_id]);
 		cuda_check_cpu_free(thr_id);
 	}

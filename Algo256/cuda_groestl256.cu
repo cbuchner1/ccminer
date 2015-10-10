@@ -67,14 +67,14 @@ __constant__ uint32_t pTarget[8];
 	#define T3dn(x) tex1Dfetch(t3dn2, x)
 #endif
 
-texture<unsigned int, 1, cudaReadModeElementType> t0up2;
-texture<unsigned int, 1, cudaReadModeElementType> t0dn2;
-texture<unsigned int, 1, cudaReadModeElementType> t1up2;
-texture<unsigned int, 1, cudaReadModeElementType> t1dn2;
-texture<unsigned int, 1, cudaReadModeElementType> t2up2;
-texture<unsigned int, 1, cudaReadModeElementType> t2dn2;
-texture<unsigned int, 1, cudaReadModeElementType> t3up2;
-texture<unsigned int, 1, cudaReadModeElementType> t3dn2;
+static texture<unsigned int, 1, cudaReadModeElementType> t0up2;
+static texture<unsigned int, 1, cudaReadModeElementType> t0dn2;
+static texture<unsigned int, 1, cudaReadModeElementType> t1up2;
+static texture<unsigned int, 1, cudaReadModeElementType> t1dn2;
+static texture<unsigned int, 1, cudaReadModeElementType> t2up2;
+static texture<unsigned int, 1, cudaReadModeElementType> t2dn2;
+static texture<unsigned int, 1, cudaReadModeElementType> t3up2;
+static texture<unsigned int, 1, cudaReadModeElementType> t3dn2;
 
 #define RSTT(d0, d1, a, b0, b1, b2, b3, b4, b5, b6, b7) do { \
 	t[d0] = T0up(B32_0(a[b0])) \
@@ -283,6 +283,15 @@ void groestl256_cpu_init(int thr_id, uint32_t threads)
 __host__
 void groestl256_cpu_free(int thr_id)
 {
+	cudaUnbindTexture(t0up2);
+	cudaUnbindTexture(t0dn2);
+	cudaUnbindTexture(t1up2);
+	cudaUnbindTexture(t1dn2);
+	cudaUnbindTexture(t2up2);
+	cudaUnbindTexture(t2dn2);
+	cudaUnbindTexture(t3up2);
+	cudaUnbindTexture(t3dn2);
+
 	for (int i=0; i<8; i++)
 		cudaFree(d_textures[thr_id][i]);
 

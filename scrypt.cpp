@@ -692,6 +692,9 @@ void free_scrypt(int thr_id)
 {
 	int dev_id = device_map[thr_id];
 
+	if (!init[thr_id])
+		return;
+
 	// trivial way to free all...
 	cudaSetDevice(dev_id);
 	cudaDeviceSynchronize();

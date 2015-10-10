@@ -433,6 +433,9 @@ void free_scrypt_jane(int thr_id)
 {
 	int dev_id = device_map[thr_id];
 
+	if (!init[thr_id])
+		return;
+
 	cudaSetDevice(dev_id);
 	cudaDeviceSynchronize();
 	cudaDeviceReset(); // well, simple way to free ;)

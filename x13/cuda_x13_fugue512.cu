@@ -46,10 +46,10 @@ static unsigned int* d_textures[MAX_GPUS][4];
 #define mixtab2(x) (*((uint32_t*)mixtabs + (512+(x))))
 #define mixtab3(x) (*((uint32_t*)mixtabs + (768+(x))))
 
-texture<unsigned int, 1, cudaReadModeElementType> mixTab0Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab1Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab2Tex;
-texture<unsigned int, 1, cudaReadModeElementType> mixTab3Tex;
+static texture<unsigned int, 1, cudaReadModeElementType> mixTab0Tex;
+static texture<unsigned int, 1, cudaReadModeElementType> mixTab1Tex;
+static texture<unsigned int, 1, cudaReadModeElementType> mixTab2Tex;
+static texture<unsigned int, 1, cudaReadModeElementType> mixTab3Tex;
 
 static const uint32_t mixtab0_cpu[] = {
 	SPH_C32(0x63633297), SPH_C32(0x7c7c6feb), SPH_C32(0x77775ec7),
@@ -685,6 +685,11 @@ void x13_fugue512_cpu_init(int thr_id, uint32_t threads)
 __host__
 void x13_fugue512_cpu_free(int thr_id)
 {
+	cudaUnbindTexture(mixTab0Tex);
+	cudaUnbindTexture(mixTab1Tex);
+	cudaUnbindTexture(mixTab2Tex);
+	cudaUnbindTexture(mixTab3Tex);
+
 	for (int i=0; i<4; i++)
 		cudaFree(d_textures[thr_id][i]);
 }
