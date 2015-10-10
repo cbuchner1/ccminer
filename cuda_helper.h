@@ -11,6 +11,7 @@
 #define __launch_bounds__(max_tpb, min_blocks)
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifndef UINT32_MAX
@@ -29,7 +30,6 @@ extern int cuda_arch[MAX_GPUS];
 
 // common functions
 extern int cuda_get_arch(int thr_id);
-extern void cuda_reset_device(int thr_id, bool *init);
 extern void cuda_check_cpu_init(int thr_id, uint32_t threads);
 extern void cuda_check_cpu_free(int thr_id);
 extern void cuda_check_cpu_setTarget(const void *ptarget);

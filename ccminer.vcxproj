@@ -231,6 +231,7 @@
     </ClCompile>
     <ClCompile Include="pools.cpp" />
     <ClCompile Include="util.cpp" />
+    <ClCompile Include="bench.cpp" />
     <ClCompile Include="bignum.cpp" />
     <ClInclude Include="bignum.hpp" />
     <ClCompile Include="fuguecoin.cpp" />
@@ -309,6 +310,7 @@
     <ClInclude Include="elist.h" />
     <ClInclude Include="heavy\heavy.h" />
     <ClInclude Include="hefty1.h" />
+    <ClInclude Include="algos.h" />
     <ClInclude Include="miner.h" />
     <ClInclude Include="nvml.h" />
     <ClInclude Include="res\resource.h" />

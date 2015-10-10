@@ -261,6 +261,7 @@ extern "C" void free_x14(int thr_id)
 		return;
 
 	cudaSetDevice(device_map[thr_id]);
+	cudaDeviceSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 

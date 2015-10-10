@@ -41,7 +41,9 @@
 #endif
 
 #include "miner.h"
+#include "algos.h"
 #include <cuda_runtime.h>
+
 
 #ifdef WIN32
 #include <Mmsystem.h>
@@ -54,15 +56,6 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #define LP_SCANTIME		60
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
-
-// decl. from cuda.cpp (to move in miner.h)
-int cuda_num_devices();
-void cuda_devicenames();
-void cuda_reset_device(int thr_id, bool *init);
-void cuda_shutdown();
-int cuda_finddevice(char *name);
-void cuda_print_devices();
-int cuda_available_memory(int thr_id);
 
 #include "nvml.h"
 #ifdef USE_WRAPNVML
@@ -82,88 +75,6 @@ struct workio_cmd {
 		struct work	*work;
 	} u;
 	int pooln;
-};
-
-enum sha_algos {
-	ALGO_BLAKE = 0,
-	ALGO_LYRA2, 	/* moved first for benchs */
-	ALGO_LYRA2v2,
-	ALGO_BLAKECOIN,
-	ALGO_BMW,
-	ALGO_C11,
-	ALGO_DEEP,
-	ALGO_DMD_GR,
-	ALGO_FRESH,
-	ALGO_FUGUE256,		/* Fugue256 */
-	ALGO_GROESTL,
-	ALGO_HEAVY,		/* Heavycoin hash */
-	ALGO_KECCAK,
-	ALGO_JACKPOT,
-	ALGO_LUFFA,
-	ALGO_MJOLLNIR,		/* Hefty hash */
-	ALGO_MYR_GR,
-	ALGO_NEOSCRYPT,
-	ALGO_NIST5,
-	ALGO_PENTABLAKE,
-	ALGO_QUARK,
-	ALGO_QUBIT,
-	ALGO_SCRYPT,
-	ALGO_SCRYPT_JANE,
-	ALGO_SKEIN,
-	ALGO_SKEIN2,
-	ALGO_S3,
-	ALGO_X11,
-	ALGO_X13,
-	ALGO_X14,
-	ALGO_X15,
-	ALGO_X17,
-	ALGO_WHIRLCOIN,
-	ALGO_WHIRLPOOL,
-	ALGO_WHIRLPOOLX,
-	ALGO_ZR5,
-	ALGO_AUTO,
-	ALGO_COUNT
-};
-
-static const char *algo_names[] = {
-	"blake",
-	"lyra2",
-	"lyra2v2",
-	"blakecoin",
-	"bmw",
-	"c11",
-	"deep",
-	"dmd-gr",
-	"fresh",
-	"fugue256",
-	"groestl",
-	"heavy",
-	"keccak",
-	"jackpot",
-	"luffa",
-	"mjollnir",
-	"myr-gr",
-	"neoscrypt",
-	"nist5",
-	"penta",
-	"quark",
-	"qubit",
-	"scrypt",
-	"scrypt-jane",
-	"skein",
-	"skein2",
-	"s3",
-	"x11",
-	"x13",
-	"x14",
-	"x15",
-	"x17",
-	"whirlcoin",
-	"whirlpool",
-	"whirlpoolx",
-	"zr5",
-	"auto", /* reserved for multi algo */
-	""
 };
 
 bool opt_debug = false;
@@ -197,7 +108,7 @@ int opt_timeout = 300; // curl
 int opt_scantime = 10;
 static json_t *opt_config;
 static const bool opt_time = true;
-static enum sha_algos opt_algo = ALGO_X11;
+enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
 int64_t opt_affinity = -1L;
 int opt_priority = 0;
@@ -265,10 +176,9 @@ volatile bool abort_flag = false;
 struct work_restart *work_restart = NULL;
 static int app_exit_code = EXIT_CODE_OK;
 
-pthread_mutex_t algo_lock;
 pthread_mutex_t applog_lock;
 static pthread_mutex_t stats_lock;
-static double thr_hashrates[MAX_GPUS] = { 0 };
+double thr_hashrates[MAX_GPUS] = { 0 };
 uint64_t global_hashrate = 0;
 double   stratum_diff = 0.0;
 double   net_diff = 0;
@@ -279,10 +189,7 @@ uint8_t conditional_state[MAX_GPUS] = { 0 };
 double opt_max_temp = 0.0;
 double opt_max_diff = -1.;
 double opt_max_rate = -1.;
-// algos benchmark
-int algo_benchmark = -1;
-double * algo_hashrates[MAX_GPUS] = { 0 };
-int device_mem_free[MAX_GPUS] = { 0 };
+
 int opt_statsavg = 30;
 
 // strdup on char* to allow a common free() if used
@@ -1571,92 +1478,6 @@ void miner_free_device(int thr_id)
 	cudaGetLastError();
 }
 
-// to benchmark all algos
-bool algo_switch_next(int thr_id)
-{
-	int algo = (int) opt_algo;
-	int prev_algo = algo;
-	int dev_id = device_map[thr_id % MAX_GPUS];
-	int mfree;
-	char rate[32] = { 0 };
-
-	// free current algo memory and track mem usage
-	miner_free_device(thr_id);
-	mfree = cuda_available_memory(thr_id);
-
-	algo++;
-
-	// skip some duplicated algos
-	if (algo == ALGO_C11) algo++; // same as x11
-	if (algo == ALGO_DMD_GR) algo++; // same as groestl
-	if (algo == ALGO_WHIRLCOIN) algo++; // same as whirlpool
-	// and unwanted ones...
-	if (algo == ALGO_SCRYPT) algo++;
-	if (algo == ALGO_SCRYPT_JANE) algo++;
-
-	work_restart[thr_id].restart = 1;
-
-	// we need to wait completion on all cards before the switch
-	if (opt_n_threads > 1) {
-		pthread_mutex_lock(&algo_lock); // wait work_restart for all
-		for (int n=0; n < opt_n_threads; n++) {
-			int timeout = 1000;
-			while (!work_restart[n].restart && --timeout) {
-				//applog(LOG_DEBUG, "GPU #%d: waiting GPU %d", dev_id, device_map[n]);
-				usleep(200*1000);
-			}
-		}
-		pthread_mutex_unlock(&algo_lock);
-	}
-
-	double hashrate = stats_get_speed(thr_id, thr_hashrates[thr_id]);
-	format_hashrate(hashrate, rate);
-	applog(LOG_NOTICE, "GPU #%d: %s hashrate = %s", dev_id, algo_names[prev_algo], rate);
-
-	// check if there is there is memory leaks
-	if (device_mem_free[thr_id] > mfree)
-		applog(LOG_WARNING, "GPU #%d, memory leak detected! %d MB free", dev_id, mfree);
-	device_mem_free[thr_id] = mfree;
-
-	// store to dump a table per gpu later
-	algo_hashrates[thr_id][prev_algo] = hashrate;
-
-	if (algo == ALGO_AUTO)
-		return false;
-
-	// wait other threads before algo switch
-	pthread_mutex_lock(&algo_lock);
-
-	opt_algo = (enum sha_algos) algo;
-	work_restart[thr_id].restart = 0;
-
-	stats_purge_all();
-	global_hashrate = 0;
-	thr_hashrates[thr_id] = 0; // reset for minmax64
-
-	if (thr_id == 0)
-		applog(LOG_BLUE, "Benchmark algo %s...", algo_names[algo]);
-
-	//applog(LOG_BLUE, "GPU #%d: Benchmark algo %s...", dev_id, algo_names[algo]);
-	pthread_mutex_unlock(&algo_lock);
-
-	return true;
-}
-
-static void display_benchmark_results()
-{
-	for (int n=0; n < opt_n_threads; n++)
-	{
-		int dev_id = device_map[n];
-		applog(LOG_BLUE, "Benchmark results for GPU #%d - %s:", dev_id, device_name[dev_id]);
-		for (int i=0; i < ALGO_COUNT-1; i++) {
-			double rate = algo_hashrates[n][i];
-			if (rate == 0.0) continue;
-			applog(LOG_INFO, "%12s : %15.0f H/s", algo_names[i], rate);
-		}
-	}
-}
-
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -1812,19 +1633,16 @@ static void *miner_thread(void *userdata)
 
 		pthread_mutex_unlock(&g_work_lock);
 
-		// -a auto --benchmark
-		if (opt_benchmark && algo_benchmark >= 0) {
+		// --benchmark [-a auto]
+		if (opt_benchmark && bench_algo >= 0) {
 			//applog(LOG_DEBUG, "GPU #%d: loop %d", device_map[thr_id], loopcnt);
 			if (loopcnt >= 3) {
-				if (!algo_switch_next(thr_id) && thr_id == 0)
+				if (!bench_algo_switch_next(thr_id) && thr_id == 0)
 				{
-					display_benchmark_results();
+					bench_display_results();
 					proper_exit(0);
 					break;
 				}
-				algo_benchmark = (int) opt_algo;
-				// for scrypt...
-				opt_autotune = false;
 				loopcnt = 0;
 			}
 		}
@@ -2171,7 +1989,7 @@ static void *miner_thread(void *userdata)
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
 			pthread_mutex_unlock(&stats_lock);
-			if (opt_benchmark && algo_benchmark == -1) {
+			if (opt_benchmark && bench_algo == -1) {
 				format_hashrate(hashrate, s);
 				applog(LOG_NOTICE, "Total: %s", s);
 			}
@@ -3150,18 +2968,6 @@ static void parse_cmdline(int argc, char *argv[])
 			argv[0]);
 		show_usage_and_exit(1);
 	}
-
-	if (opt_algo == ALGO_AUTO) {
-		for (int n=0; n < MAX_GPUS; n++) {
-			gpus_intensity[n] = 0; // use default
-			algo_hashrates[n] = (double*) calloc(1, ALGO_COUNT * sizeof(double));
-		}
-		if (opt_benchmark) {
-			opt_autotune = false;
-			algo_benchmark = opt_algo = (enum sha_algos) 0; /* first */
-			applog(LOG_BLUE, "Starting benchmark mode");
-		}
-	}
 }
 
 #ifndef WIN32
@@ -3233,7 +3039,6 @@ int main(int argc, char *argv[])
 	jane_params = strdup("");
 
 	pthread_mutex_init(&applog_lock, NULL);
-	pthread_mutex_init(&algo_lock, NULL);
 
 	// number of cpus for thread affinity
 #if defined(WIN32)
@@ -3386,6 +3191,14 @@ int main(int argc, char *argv[])
 	}
 	if (!opt_n_threads)
 		opt_n_threads = active_gpus;
+
+	if (opt_benchmark && opt_algo == ALGO_AUTO) {
+		bench_init(opt_n_threads);
+		for (int n=0; n < MAX_GPUS; n++) {
+			gpus_intensity[n] = 0; // use default
+		}
+		opt_autotune = false;
+	}
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog)

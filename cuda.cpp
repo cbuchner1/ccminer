@@ -212,8 +212,10 @@ void cuda_reset_device(int thr_id, bool *init)
 			usleep(1000);
 	}
 	cudaDeviceReset();
-	if (opt_cudaschedule >= 0)
+	if (opt_cudaschedule >= 0) {
+		cudaSetDevice(dev_id);
 		cudaSetDeviceFlags((unsigned)(opt_cudaschedule & cudaDeviceScheduleMask));
+	}
 }
 
 // return free memory in megabytes

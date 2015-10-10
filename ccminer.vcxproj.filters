@@ -246,11 +246,17 @@
     <ClCompile Include="hefty1.c">
       <Filter>Source Files\CUDA\heavy</Filter>
     </ClCompile>
+    <ClCompile Include="bench.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="bignum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="algos.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="compat.h">
       <Filter>Header Files</Filter>
     </ClInclude>

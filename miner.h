@@ -483,6 +483,15 @@ extern long  device_sm[MAX_GPUS];
 extern uint32_t gpus_intensity[MAX_GPUS];
 extern int opt_cudaschedule;
 
+// decl. from cuda.cpp
+int cuda_num_devices();
+void cuda_devicenames();
+void cuda_reset_device(int thr_id, bool *init);
+void cuda_shutdown();
+int cuda_finddevice(char *name);
+void cuda_print_devices();
+int cuda_available_memory(int thr_id);
+
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
 #define CL_GRN  "\x1B[32m"
@@ -534,8 +543,14 @@ double bn_convert_nbits(const uint32_t nbits);
 void bn_nbits_to_uchar(const uint32_t nBits, uchar *target);
 double bn_hash_target_ratio(uint32_t* hash, uint32_t* target);
 void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, struct work* work);
-
 void work_set_target_ratio(struct work* work, uint32_t* hash);
+
+// bench
+extern int bench_algo;
+void bench_init(int threads);
+void bench_free();
+bool bench_algo_switch_next(int thr_id);
+void bench_display_results();
 
 
 struct stratum_job {
