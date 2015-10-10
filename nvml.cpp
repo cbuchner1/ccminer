@@ -25,9 +25,6 @@
 #include "nvml.h"
 #include "cuda_runtime.h"
 
-// cuda.cpp
-int cuda_num_devices();
-
 #ifdef USE_WRAPNVML
 
 extern nvml_handle *hnvml;

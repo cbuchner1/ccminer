@@ -23,6 +23,11 @@
 
 #include "cuda_runtime.h"
 
+#ifdef __cplusplus
+/* miner.h functions are declared in C type, not C++ */
+extern "C" {
+#endif
+
 // CUDA Devices on the System
 int cuda_num_devices()
 {
@@ -150,49 +155,6 @@ uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount)
 	return throughput;
 }
 
-// Zeitsynchronisations-Routine von cudaminer mit CPU sleep
-// Note: if you disable all of these calls, CPU usage will hit 100%
-typedef struct { double value[8]; } tsumarray;
-cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
-{
-	cudaError_t result = cudaSuccess;
-	if (situation >= 0)
-	{
-		static std::map<int, tsumarray> tsum;
-
-		double a = 0.95, b = 0.05;
-		if (tsum.find(situation) == tsum.end()) { a = 0.5; b = 0.5; } // faster initial convergence
-
-		double tsync = 0.0;
-		double tsleep = 0.95 * tsum[situation].value[thr_id];
-		if (cudaStreamQuery(stream) == cudaErrorNotReady)
-		{
-			usleep((useconds_t)(1e6*tsleep));
-			struct timeval tv_start, tv_end;
-			gettimeofday(&tv_start, NULL);
-			result = cudaStreamSynchronize(stream);
-			gettimeofday(&tv_end, NULL);
-			tsync = 1e-6 * (tv_end.tv_usec-tv_start.tv_usec) + (tv_end.tv_sec-tv_start.tv_sec);
-		}
-		if (tsync >= 0) tsum[situation].value[thr_id] = a * tsum[situation].value[thr_id] + b * (tsleep+tsync);
-	}
-	else
-		result = cudaStreamSynchronize(stream);
-	return result;
-}
-
-int cuda_gpu_clocks(struct cgpu_info *gpu)
-{
-	cudaDeviceProp props;
-	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
-		gpu->gpu_clock = props.clockRate;
-		gpu->gpu_memclock = props.memoryClockRate;
-		gpu->gpu_mem = props.totalGlobalMem;
-		return 0;
-	}
-	return -1;
-}
-
 // if we use 2 threads on the same gpu, we need to reinit the threads
 void cuda_reset_device(int thr_id, bool *init)
 {
@@ -226,6 +188,53 @@ int cuda_available_memory(int thr_id)
 	cudaSetDevice(dev_id);
 	cudaMemGetInfo(&mfree, &mtotal);
 	return (int) (mfree / (1024 * 1024));
+}
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+int cuda_gpu_clocks(struct cgpu_info *gpu)
+{
+	cudaDeviceProp props;
+	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
+		gpu->gpu_clock = props.clockRate;
+		gpu->gpu_memclock = props.memoryClockRate;
+		gpu->gpu_mem = props.totalGlobalMem;
+		return 0;
+	}
+	return -1;
+}
+
+// Zeitsynchronisations-Routine von cudaminer mit CPU sleep
+// Note: if you disable all of these calls, CPU usage will hit 100%
+typedef struct { double value[8]; } tsumarray;
+cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
+{
+	cudaError_t result = cudaSuccess;
+	if (situation >= 0)
+	{
+		static std::map<int, tsumarray> tsum;
+
+		double a = 0.95, b = 0.05;
+		if (tsum.find(situation) == tsum.end()) { a = 0.5; b = 0.5; } // faster initial convergence
+
+		double tsync = 0.0;
+		double tsleep = 0.95 * tsum[situation].value[thr_id];
+		if (cudaStreamQuery(stream) == cudaErrorNotReady)
+		{
+			usleep((useconds_t)(1e6*tsleep));
+			struct timeval tv_start, tv_end;
+			gettimeofday(&tv_start, NULL);
+			result = cudaStreamSynchronize(stream);
+			gettimeofday(&tv_end, NULL);
+			tsync = 1e-6 * (tv_end.tv_usec-tv_start.tv_usec) + (tv_end.tv_sec-tv_start.tv_sec);
+		}
+		if (tsync >= 0) tsum[situation].value[thr_id] = a * tsum[situation].value[thr_id] + b * (tsleep+tsync);
+	}
+	else
+		result = cudaStreamSynchronize(stream);
+	return result;
 }
 
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)

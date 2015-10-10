@@ -39,9 +39,6 @@ extern "C" {
 #  include <malloc.h>
 #  define alloca _alloca
 # elif !defined HAVE_ALLOCA
-#  ifdef  __cplusplus
-extern "C"
-#  endif
 void *alloca (size_t);
 # endif
 #endif
@@ -483,7 +480,7 @@ extern long  device_sm[MAX_GPUS];
 extern uint32_t gpus_intensity[MAX_GPUS];
 extern int opt_cudaschedule;
 
-// decl. from cuda.cpp
+// cuda.cpp
 int cuda_num_devices();
 void cuda_devicenames();
 void cuda_reset_device(int thr_id, bool *init);
