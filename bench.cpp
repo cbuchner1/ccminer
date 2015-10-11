@@ -29,6 +29,10 @@ void bench_init(int threads)
 	applog(LOG_BLUE, "Starting benchmark mode with %s", algo_names[opt_algo]);
 	pthread_barrier_init(&miner_barr, NULL, threads);
 	pthread_barrier_init(&algo_barr, NULL, threads);
+	// required for usage of first algo.
+	for (int n=0; n < opt_n_threads; n++) {
+		device_mem_free[n] = cuda_available_memory(n);
+	}
 }
 
 void bench_free()

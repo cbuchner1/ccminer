@@ -338,9 +338,9 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 	const uint32_t oldp0 = pdata[0];
 	const uint32_t version = (oldp0 & (~POK_DATA_MASK)) | (use_pok ? POK_BOOL_MASK : 0);
 	const uint32_t first_nonce = pdata[19];
-	uint32_t throughput =  device_intensity(thr_id, __func__, 1U << 18);
+	uint32_t throughput =  cuda_default_throughput(thr_id, 1U << 18);
 	throughput = min(throughput, (1U << 20)-1024);
-	throughput = min(throughput, max_nonce - first_nonce);
+	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		ptarget[7] = 0x0000ff;

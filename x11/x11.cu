@@ -146,8 +146,8 @@ extern "C" int scanhash_x11(int thr_id, struct work* work, uint32_t max_nonce, u
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	int intensity = (device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 20 : 19;
-	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity); // 19=256*256*8;
-	throughput = min(throughput, max_nonce - first_nonce);
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity); // 19=256*256*8;
+	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x5;

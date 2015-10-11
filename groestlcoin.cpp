@@ -33,8 +33,8 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	uint32_t start_nonce = pdata[19];
-	uint32_t throughput = device_intensity(thr_id, __func__, 1 << 19); // 256*256*8
-	throughput = min(throughput, max_nonce - start_nonce);
+	uint32_t throughput = cuda_default_throughput(thr_id, 1 << 19); // 256*256*8
+	if (init[thr_id]) throughput = min(throughput, max_nonce - start_nonce);
 
 	uint32_t *outputHash = (uint32_t*)malloc(throughput * 64);
 

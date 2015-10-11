@@ -389,7 +389,7 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 20;
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
-	throughput = min(throughput, max_nonce - first_nonce);
+	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	int rc = 0;
 

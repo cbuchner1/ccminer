@@ -360,8 +360,8 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 	sm5 = (device_sm[device_map[thr_id]] >= 500);
 	bool checkSecnonce = (have_stratum || have_longpoll) && !sm5;
 
-	uint32_t throughput = device_intensity(thr_id, __func__, 1U << 20);
-	throughput = min(throughput, (max_nonce - first_nonce));
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 20);
+	if (init[thr_id]) throughput = min(throughput, (max_nonce - first_nonce));
 
 	uint32_t foundNonce, secNonce = 0;
 	uint64_t target64 = 0;

@@ -371,8 +371,8 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	int rc = 0;
-	uint32_t throughput =  device_intensity(thr_id, __func__, 128U * 2560); // 18.5
-	throughput = min(throughput, max_nonce - first_nonce);
+	uint32_t throughput =  cuda_default_throughput(thr_id, 128U * 2560); // 18.5
+	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x000F;
