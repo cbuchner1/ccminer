@@ -246,8 +246,7 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)
 {
 	struct cgpu_info *gpu = &thr_info[thr_id].gpu;
-	int dev_id = device_map[thr_id % MAX_GPUS];
 	gpu->hw_errors++;
-	applog(LOG_ERR, "GPU #%d: %s %s", dev_id, func, cudaGetErrorString(err));
+	gpulog(LOG_ERR, thr_id, "%s %s", func, cudaGetErrorString(err));
 	sleep(1);
 }

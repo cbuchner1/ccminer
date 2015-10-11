@@ -68,7 +68,7 @@ bool bench_algo_switch_next(int thr_id)
 	char rate[32] = { 0 };
 	double hashrate = stats_get_speed(thr_id, thr_hashrates[thr_id]);
 	format_hashrate(hashrate, rate);
-	applog(LOG_NOTICE, "GPU #%d: %s hashrate = %s", dev_id, algo_names[prev_algo], rate);
+	gpulog(LOG_NOTICE, thr_id, "%s hashrate = %s", algo_names[prev_algo], rate);
 
 	// free current algo memory and track mem usage
 	mused = cuda_available_memory(thr_id);
@@ -77,8 +77,8 @@ bool bench_algo_switch_next(int thr_id)
 
 	// check if there is memory leak
 	if (device_mem_free[thr_id] > mfree) {
-		applog(LOG_WARNING, "GPU #%d, memory leak detected in %s ! %d MB free",
-			dev_id, algo_names[prev_algo], mfree);
+		gpulog(LOG_WARNING, thr_id, "memory leak detected in %s ! %d MB free",
+			algo_names[prev_algo], mfree);
 	}
 	// store used memory per algo
 	algo_mem_used[thr_id][opt_algo] = device_mem_free[thr_id] - mused;

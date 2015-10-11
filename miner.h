@@ -526,7 +526,7 @@ uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);
 
 extern void format_hashrate(double hashrate, char *output);
 extern void applog(int prio, const char *fmt, ...);
-#define gpulog(prio, fmt, thr_id, ...) applog(prio, fmt, thr_id, __VA_ARGS__)
+extern void gpulog(int prio, int thr_id, const char *fmt, ...);
 void get_defconfig_path(char *out, size_t bufsize, char *argv0);
 extern void cbin2hex(char *out, const char *in, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);

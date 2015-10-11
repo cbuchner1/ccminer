@@ -1407,8 +1407,7 @@ static bool wanna_mine(int thr_id)
 		float temp = gpu_temp(cgpu);
 		if (temp > opt_max_temp) {
 			if (!conditional_state[thr_id] && !opt_quiet)
-				applog(LOG_INFO, "GPU #%d: temperature too high (%.0f°c), waiting...",
-					device_map[thr_id], temp);
+				gpulog(LOG_INFO, thr_id, "temperature too high (%.0f°c), waiting...", temp);
 			state = false;
 		}
 #endif
@@ -1637,7 +1636,7 @@ static void *miner_thread(void *userdata)
 
 		// --benchmark [-a auto]
 		if (opt_benchmark && bench_algo >= 0) {
-			//applog(LOG_DEBUG, "GPU #%d: loop %d", dev_id, loopcnt);
+			//gpulog(LOG_DEBUG, thr_id, "loop %d", loopcnt);
 			if (loopcnt >= 3) {
 				if (!bench_algo_switch_next(thr_id) && thr_id == 0)
 				{
@@ -1795,9 +1794,8 @@ static void *miner_thread(void *userdata)
 
 		work.scanned_from = start_nonce;
 
-		if (opt_debug)
-			applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x range=%08x",
-				dev_id, start_nonce, max_nonce, (max_nonce-start_nonce));
+		gpulog(LOG_DEBUG, thr_id, "start=%08x end=%08x range=%08x",
+			start_nonce, max_nonce, (max_nonce-start_nonce));
 
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
@@ -1969,8 +1967,7 @@ static void *miner_thread(void *userdata)
 			work.scanned_to = max_nonce;
 			if (opt_debug && opt_benchmark) {
 				// to debug nonce ranges
-				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%08x", dev_id,
-					nonceptr[0], (nonceptr[0] - start_nonce));
+				gpulog(LOG_DEBUG, thr_id, "ends=%08x range=%08x", nonceptr[0], (nonceptr[0] - start_nonce));
 			}
 		}
 
@@ -1978,9 +1975,9 @@ static void *miner_thread(void *userdata)
 			hashlog_remember_scan_range(&work);
 
 		/* output */
-		if (!opt_quiet && firstwork_time) {
+		if (!opt_quiet && loopcnt > 1) {
 			format_hashrate(thr_hashrates[thr_id], s);
-			applog(LOG_INFO, "GPU #%d: %s, %s", dev_id, device_name[dev_id], s);
+			gpulog(LOG_INFO, thr_id, "%s, %s", device_name[dev_id], s);
 		}
 
 		/* ignore first loop hashrate */
@@ -3191,6 +3188,8 @@ int main(int argc, char *argv[])
 	}
 	if (!opt_n_threads)
 		opt_n_threads = active_gpus;
+	else if (active_gpus > opt_n_threads)
+		active_gpus = opt_n_threads;
 
 	// generally doesn't work... let 1
 	gpu_threads = opt_n_threads / active_gpus;
@@ -3270,7 +3269,7 @@ int main(int argc, char *argv[])
 		bool gpu_reinit = (opt_cudaschedule >= 0); //false
 		cuda_devicenames(); // refresh gpu vendor name
 		applog(LOG_INFO, "NVML GPU monitoring enabled.");
-		for (int n=0; n < opt_n_threads; n++) {
+		for (int n=0; n < active_gpus; n++) {
 			if (nvml_set_pstate(hnvml, device_map[n]) == 1)
 				gpu_reinit = true;
 			if (nvml_set_plimit(hnvml, device_map[n]) == 1)
@@ -3285,7 +3284,7 @@ int main(int argc, char *argv[])
 #endif
 	// force reinit to set default device flags
 	if (opt_cudaschedule >= 0 && !hnvml) {
-		for (int n=0; n < opt_n_threads; n++) {
+		for (int n=0; n < active_gpus; n++) {
 			cuda_reset_device(n, NULL);
 		}
 	}
