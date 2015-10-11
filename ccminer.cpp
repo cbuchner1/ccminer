@@ -110,6 +110,7 @@ static json_t *opt_config;
 static const bool opt_time = true;
 enum sha_algos opt_algo = ALGO_X11;
 int opt_n_threads = 0;
+int gpu_threads = 1;
 int64_t opt_affinity = -1L;
 int opt_priority = 0;
 static double opt_difficulty = 1.;
@@ -1483,6 +1484,7 @@ static void *miner_thread(void *userdata)
 	struct thr_info *mythr = (struct thr_info *)userdata;
 	int switchn = pool_switch_count;
 	int thr_id = mythr->id;
+	int dev_id = device_map[thr_id % MAX_GPUS];
 	struct work work;
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
@@ -1635,7 +1637,7 @@ static void *miner_thread(void *userdata)
 
 		// --benchmark [-a auto]
 		if (opt_benchmark && bench_algo >= 0) {
-			//applog(LOG_DEBUG, "GPU #%d: loop %d", device_map[thr_id], loopcnt);
+			//applog(LOG_DEBUG, "GPU #%d: loop %d", dev_id, loopcnt);
 			if (loopcnt >= 3) {
 				if (!bench_algo_switch_next(thr_id) && thr_id == 0)
 				{
@@ -1755,11 +1757,11 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_KECCAK:
 			case ALGO_JACKPOT:
-			case ALGO_NEOSCRYPT:
 			case ALGO_X15:
 				minmax = 0x300000;
 				break;
 			case ALGO_LYRA2:
+			case ALGO_NEOSCRYPT:
 			case ALGO_SCRYPT:
 				minmax = 0x80000;
 				break;
@@ -1795,7 +1797,7 @@ static void *miner_thread(void *userdata)
 
 		if (opt_debug)
 			applog(LOG_DEBUG, "GPU #%d: start=%08x end=%08x range=%08x",
-				device_map[thr_id], start_nonce, max_nonce, (max_nonce-start_nonce));
+				dev_id, start_nonce, max_nonce, (max_nonce-start_nonce));
 
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
@@ -1967,7 +1969,7 @@ static void *miner_thread(void *userdata)
 			work.scanned_to = max_nonce;
 			if (opt_debug && opt_benchmark) {
 				// to debug nonce ranges
-				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%08x", device_map[thr_id],
+				applog(LOG_DEBUG, "GPU #%d:  ends=%08x range=%08x", dev_id,
 					nonceptr[0], (nonceptr[0] - start_nonce));
 			}
 		}
@@ -1978,8 +1980,7 @@ static void *miner_thread(void *userdata)
 		/* output */
 		if (!opt_quiet && firstwork_time) {
 			format_hashrate(thr_hashrates[thr_id], s);
-			applog(LOG_INFO, "GPU #%d: %s, %s",
-				device_map[thr_id], device_name[device_map[thr_id]], s);
+			applog(LOG_INFO, "GPU #%d: %s, %s", dev_id, device_name[dev_id], s);
 		}
 
 		/* ignore first loop hashrate */
@@ -2835,8 +2836,6 @@ void parse_arg(int key, char *arg)
 						proper_exit(EXIT_CODE_CUDA_NODEVICE);
 					}
 				}
-				// set number of active gpus
-				active_gpus = opt_n_threads;
 				pch = strtok (NULL, ",");
 			}
 		}
@@ -3057,8 +3056,11 @@ int main(int argc, char *argv[])
 	if (num_cpus < 1)
 		num_cpus = 1;
 
+	// number of gpus
+	active_gpus = cuda_num_devices();
+
 	for (i = 0; i < MAX_GPUS; i++) {
-		device_map[i] = i;
+		device_map[i] = i % active_gpus;
 		device_name[i] = NULL;
 		device_config[i] = NULL;
 		device_backoff[i] = is_windows() ? 12 : 2;
@@ -3070,8 +3072,6 @@ int main(int argc, char *argv[])
 		device_pstate[i] = -1;
 	}
 
-	// number of gpus
-	active_gpus = cuda_num_devices();
 	cuda_devicenames();
 
 	/* parse command line */
@@ -3191,6 +3191,9 @@ int main(int argc, char *argv[])
 	}
 	if (!opt_n_threads)
 		opt_n_threads = active_gpus;
+
+	// generally doesn't work... let 1
+	gpu_threads = opt_n_threads / active_gpus;
 
 	if (opt_benchmark && opt_algo == ALGO_AUTO) {
 		bench_init(opt_n_threads);

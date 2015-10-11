@@ -96,6 +96,7 @@ its command line interface and options.
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
                           x17         use to mine X17
+                          whirlpool   use to mine Joincoin
                           whirlpoolx  use to mine Vanilla
                           zr5         use to mine ZiftrCoin
 
@@ -228,6 +229,9 @@ features.
 >>> RELEASE HISTORY <<<
 
   Under Dev...    v1.7
+                  Restore whirlpool algo (and whirlcoin variant)
+                  Prepare algo switch ability
+                  Add --benchmark -a auto to run a multi algo benchmark
                   Add --cuda-schedule parameter
                   Add --show-diff parameter, which display shares diff,
                     and is able to detect real solved blocks on pools.

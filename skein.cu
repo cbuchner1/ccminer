@@ -364,7 +364,7 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 	throughput = min(throughput, (max_nonce - first_nonce));
 
 	uint32_t foundNonce, secNonce = 0;
-	uint64_t target64;
+	uint64_t target64 = 0;
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x03;

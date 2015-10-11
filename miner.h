@@ -447,6 +447,7 @@ extern bool opt_showdiff;
 extern bool opt_tracegpu;
 extern int opt_n_threads;
 extern int active_gpus;
+extern int gpu_threads;
 extern int opt_timeout;
 extern bool want_longpoll;
 extern bool have_longpoll;
@@ -489,6 +490,9 @@ int cuda_finddevice(char *name);
 void cuda_print_devices();
 int cuda_available_memory(int thr_id);
 
+uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
+uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);
+
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
 #define CL_GRN  "\x1B[32m"
@@ -522,6 +526,7 @@ int cuda_available_memory(int thr_id);
 
 extern void format_hashrate(double hashrate, char *output);
 extern void applog(int prio, const char *fmt, ...);
+#define gpulog(prio, fmt, thr_id, ...) applog(prio, fmt, thr_id, __VA_ARGS__)
 void get_defconfig_path(char *out, size_t bufsize, char *argv0);
 extern void cbin2hex(char *out, const char *in, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);
@@ -533,7 +538,6 @@ void diff_to_target(uint32_t* target, double diff);
 void work_set_target(struct work* work, double diff);
 double target_to_diff(uint32_t* target);
 extern void get_currentalgo(char* buf, int sz);
-extern uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
 
 // bignum
 double bn_convert_nbits(const uint32_t nbits);
@@ -547,6 +551,7 @@ extern int bench_algo;
 void bench_init(int threads);
 void bench_free();
 bool bench_algo_switch_next(int thr_id);
+void bench_set_throughput(int thr_id, uint32_t throughput);
 void bench_display_results();
 
 

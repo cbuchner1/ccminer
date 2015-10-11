@@ -67,7 +67,8 @@ void cuda_devicenames()
 		exit(1);
 	}
 
-	GPU_N = min(MAX_GPUS, GPU_N);
+	if (opt_n_threads)
+		GPU_N = min(MAX_GPUS, opt_n_threads);
 	for (int i=0; i < GPU_N; i++)
 	{
 		char vendorname[32] = { 0 };
@@ -98,7 +99,7 @@ void cuda_print_devices()
 	int ngpus = cuda_num_devices();
 	cuda_devicenames();
 	for (int n=0; n < ngpus; n++) {
-		int m = device_map[n];
+		int m = device_map[n % MAX_GPUS];
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, m);
 		if (!opt_n_threads || n < opt_n_threads) {
@@ -148,10 +149,25 @@ int cuda_finddevice(char *name)
 	return -1;
 }
 
+// deprecated since 1.7
 uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount)
 {
 	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
+	if (gpu_threads > 1) throughput >> (gpu_threads-1);
 	api_set_throughput(thr_id, throughput);
+	bench_set_throughput(thr_id, throughput);
+	return throughput;
+}
+
+// since 1.7
+uint32_t cuda_default_throughput(int thr_id, uint32_t defcount)
+{
+	//int dev_id = device_map[thr_id % MAX_GPUS];
+	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
+	if (gpu_threads > 1) throughput >> (gpu_threads-1);
+	api_set_throughput(thr_id, throughput);
+	bench_set_throughput(thr_id, throughput);
+	//if (opt_debug) applog(LOG_DEBUG, "GPU %d-%d: throughput %u", dev_id, thr_id, throughput);
 	return throughput;
 }
 
@@ -240,7 +256,8 @@ cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 void cudaReportHardwareFailure(int thr_id, cudaError_t err, const char* func)
 {
 	struct cgpu_info *gpu = &thr_info[thr_id].gpu;
+	int dev_id = device_map[thr_id % MAX_GPUS];
 	gpu->hw_errors++;
-	applog(LOG_ERR, "GPU #%d: %s %s", device_map[thr_id], func, cudaGetErrorString(err));
+	applog(LOG_ERR, "GPU #%d: %s %s", dev_id, func, cudaGetErrorString(err));
 	sleep(1);
 }

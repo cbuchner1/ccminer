@@ -11,7 +11,9 @@
 
 int bench_algo = -1;
 
-static double * algo_hashrates[MAX_GPUS] = { 0 };
+static double algo_hashrates[MAX_GPUS][ALGO_COUNT] = { 0 };
+static uint32_t algo_throughput[MAX_GPUS][ALGO_COUNT] = { 0 };
+static int algo_mem_used[MAX_GPUS][ALGO_COUNT] = { 0 };
 static int device_mem_free[MAX_GPUS] = { 0 };
 
 static pthread_barrier_t miner_barr;
@@ -25,18 +27,12 @@ void bench_init(int threads)
 {
 	bench_algo = opt_algo = (enum sha_algos) 0; /* first */
 	applog(LOG_BLUE, "Starting benchmark mode with %s", algo_names[opt_algo]);
-	for (int n=0; n < MAX_GPUS; n++) {
-		algo_hashrates[n] = (double*) calloc(1, ALGO_COUNT * sizeof(double));
-	}
 	pthread_barrier_init(&miner_barr, NULL, threads);
 	pthread_barrier_init(&algo_barr, NULL, threads);
 }
 
 void bench_free()
 {
-	for (int n=0; n < MAX_GPUS; n++) {
-		free(algo_hashrates[n]);
-	}
 	pthread_barrier_destroy(&miner_barr);
 	pthread_barrier_destroy(&algo_barr);
 }
@@ -47,12 +43,7 @@ bool bench_algo_switch_next(int thr_id)
 	int algo = (int) opt_algo;
 	int prev_algo = algo;
 	int dev_id = device_map[thr_id % MAX_GPUS];
-	int mfree;
-	char rate[32] = { 0 };
-
-	// free current algo memory and track mem usage
-	miner_free_device(thr_id);
-	mfree = cuda_available_memory(thr_id);
+	int mfree, mused;
 
 	algo++;
 
@@ -70,16 +61,23 @@ bool bench_algo_switch_next(int thr_id)
 		pthread_barrier_wait(&miner_barr);
 	}
 
-
+	char rate[32] = { 0 };
 	double hashrate = stats_get_speed(thr_id, thr_hashrates[thr_id]);
 	format_hashrate(hashrate, rate);
 	applog(LOG_NOTICE, "GPU #%d: %s hashrate = %s", dev_id, algo_names[prev_algo], rate);
 
+	// free current algo memory and track mem usage
+	mused = cuda_available_memory(thr_id);
+	miner_free_device(thr_id);
+	mfree = cuda_available_memory(thr_id);
+
 	// check if there is memory leak
 	if (device_mem_free[thr_id] > mfree) {
 		applog(LOG_WARNING, "GPU #%d, memory leak detected in %s ! %d MB free",
-			dev_id,	algo_names[prev_algo], mfree);
+			dev_id, algo_names[prev_algo], mfree);
 	}
+	// store used memory per algo
+	algo_mem_used[thr_id][opt_algo] = device_mem_free[thr_id] - mused;
 	device_mem_free[thr_id] = mfree;
 
 	// store to dump a table per gpu later
@@ -109,6 +107,11 @@ bool bench_algo_switch_next(int thr_id)
 	return true;
 }
 
+void bench_set_throughput(int thr_id, uint32_t throughput)
+{
+	algo_throughput[thr_id][opt_algo] = throughput;
+}
+
 void bench_display_results()
 {
 	for (int n=0; n < opt_n_threads; n++)
@@ -118,7 +121,9 @@ void bench_display_results()
 		for (int i=0; i < ALGO_COUNT-1; i++) {
 			double rate = algo_hashrates[n][i];
 			if (rate == 0.0) continue;
-			applog(LOG_INFO, "%12s : %12.1f kH/s", algo_names[i], rate / 1024.);
+			applog(LOG_INFO, "%12s : %12.1f kH/s, %5d MB, %8u thr.", algo_names[i],
+				rate / 1024., algo_mem_used[n][i], algo_throughput[n][i]);
 		}
 	}
 }
+
