@@ -490,8 +490,8 @@ int cuda_finddevice(char *name);
 void cuda_print_devices();
 int cuda_available_memory(int thr_id);
 
-uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount);
 uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);
+#define device_intensity(t,f,d) cuda_default_throughput(t,d)
 
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"

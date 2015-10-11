@@ -149,22 +149,12 @@ int cuda_finddevice(char *name)
 	return -1;
 }
 
-// deprecated since 1.7
-uint32_t device_intensity(int thr_id, const char *func, uint32_t defcount)
-{
-	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
-	if (gpu_threads > 1) throughput >> (gpu_threads-1);
-	api_set_throughput(thr_id, throughput);
-	bench_set_throughput(thr_id, throughput);
-	return throughput;
-}
-
 // since 1.7
 uint32_t cuda_default_throughput(int thr_id, uint32_t defcount)
 {
 	//int dev_id = device_map[thr_id % MAX_GPUS];
 	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
-	if (gpu_threads > 1) throughput >> (gpu_threads-1);
+	if (gpu_threads > 1 && throughput == defcount) throughput /= (gpu_threads-1);
 	api_set_throughput(thr_id, throughput);
 	bench_set_throughput(thr_id, throughput);
 	//if (opt_debug) applog(LOG_DEBUG, "GPU %d-%d: throughput %u", dev_id, thr_id, throughput);
