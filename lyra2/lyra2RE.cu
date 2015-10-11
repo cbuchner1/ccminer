@@ -47,12 +47,14 @@ extern uint32_t groestl256_getSecNonce(int thr_id, int num);
 
 extern "C" void lyra2re_hash(void *state, const void *input)
 {
+	uint32_t hashA[8], hashB[8];
+
 	sph_blake256_context     ctx_blake;
 	sph_keccak256_context    ctx_keccak;
 	sph_skein256_context     ctx_skein;
 	sph_groestl256_context   ctx_groestl;
 
-	uint32_t hashA[8], hashB[8];
+	sph_blake256_set_rounds(14);
 
 	sph_blake256_init(&ctx_blake);
 	sph_blake256(&ctx_blake, input, 80);

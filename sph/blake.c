@@ -36,6 +36,8 @@
 
 #include "sph_blake.h"
 
+int blake256_rounds = 14;
+
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -1053,6 +1055,13 @@ sph_blake256_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst)
 {
 	blake32_close(cc, ub, n, dst, 8);
 	sph_blake256_init(cc);
+}
+
+/* see sph_blake.h */
+void
+sph_blake256_set_rounds(int rounds)
+{
+	blake256_rounds = rounds;
 }
 
 #if SPH_64

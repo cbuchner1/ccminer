@@ -1738,10 +1738,8 @@ static void *miner_thread(void *userdata)
 				minmax = 0x80000000U;
 				break;
 			case ALGO_BMW:
-			case ALGO_KECCAK:
 				minmax = 0x40000000U;
 				break;
-			case ALGO_JACKPOT:
 			case ALGO_LUFFA:
 				minmax = 0x2000000;
 				break;
@@ -1755,6 +1753,8 @@ static void *miner_thread(void *userdata)
 			case ALGO_WHIRLPOOL:
 				minmax = 0x400000;
 				break;
+			case ALGO_KECCAK:
+			case ALGO_JACKPOT:
 			case ALGO_NEOSCRYPT:
 			case ALGO_X15:
 				minmax = 0x300000;

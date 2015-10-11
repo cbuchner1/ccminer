@@ -17,16 +17,13 @@ extern "C" {
 /* threads per block and throughput (intensity) */
 #define TPB 128
 
-/* added in sph_blake.c */
-extern "C" int blake256_rounds = 14;
-
 /* hash by cpu with blake 256 */
 extern "C" void blake256hash(void *output, const void *input, int8_t rounds = 14)
 {
 	uchar hash[64];
 	sph_blake256_context ctx;
 
-	blake256_rounds = rounds;
+	sph_blake256_set_rounds(rounds);
 
 	sph_blake256_init(&ctx);
 	sph_blake256(&ctx, input, 80);
@@ -356,8 +353,7 @@ static void blake256mid(uint32_t *output, const uint32_t *input, int8_t rounds =
 {
 	sph_blake256_context ctx;
 
-	/* in sph_blake.c */
-	blake256_rounds = rounds;
+	sph_blake256_set_rounds(rounds);
 
 	sph_blake256_init(&ctx);
 	sph_blake256(&ctx, input, 64);
@@ -392,14 +388,14 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 	const uint32_t first_nonce = pdata[19];
 	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 22 : 20;
-	uint32_t throughput = device_intensity(thr_id, __func__, 1U << intensity);
-	throughput = min(throughput, max_nonce - first_nonce);
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity, max_nonce - first_nonce);
 
 	int rc = 0;
 
 	if (opt_benchmark) {
-		targetHigh = 0x1ULL << 32;
-		((uint32_t*)ptarget)[6] = swab32(0xff);
+		ptarget[7] = 0;
+		ptarget[6] = swab32(0xff);
+		targetHigh = 0xffULL << 32;
 	}
 
 	if (opt_tracegpu) {

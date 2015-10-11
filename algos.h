@@ -2,10 +2,8 @@
 #define ALGOS_H
 
 enum sha_algos {
-	ALGO_BLAKE = 0,
-	ALGO_LYRA2, 	/* moved first for benchs */
-	ALGO_LYRA2v2,
-	ALGO_BLAKECOIN,
+	ALGO_BLAKECOIN = 0,
+	ALGO_BLAKE,
 	ALGO_BMW,
 	ALGO_C11,
 	ALGO_DEEP,
@@ -17,6 +15,8 @@ enum sha_algos {
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
 	ALGO_LUFFA,
+	ALGO_LYRA2,
+	ALGO_LYRA2v2,
 	ALGO_MJOLLNIR,		/* Hefty hash */
 	ALGO_MYR_GR,
 	ALGO_NEOSCRYPT,
@@ -43,10 +43,8 @@ enum sha_algos {
 };
 
 static const char *algo_names[] = {
-	"blake",
-	"lyra2",
-	"lyra2v2",
 	"blakecoin",
+	"blake",
 	"bmw",
 	"c11",
 	"deep",
@@ -58,6 +56,8 @@ static const char *algo_names[] = {
 	"keccak",
 	"jackpot",
 	"luffa",
+	"lyra2",
+	"lyra2v2",
 	"mjollnir",
 	"myr-gr",
 	"neoscrypt",
