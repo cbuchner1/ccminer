@@ -20,6 +20,8 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 	int intensity = is_windows() ? 18 : 19;
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	throughput = throughput / 32; /* set for max intensity ~= 20 */
+	api_set_throughput(thr_id, throughput);
+
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce + 1);
 
 	if (opt_benchmark)

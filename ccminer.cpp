@@ -108,7 +108,7 @@ int opt_timeout = 300; // curl
 int opt_scantime = 10;
 static json_t *opt_config;
 static const bool opt_time = true;
-enum sha_algos opt_algo = ALGO_X11;
+volatile enum sha_algos opt_algo = ALGO_AUTO;
 int opt_n_threads = 0;
 int gpu_threads = 1;
 int64_t opt_affinity = -1L;
@@ -1435,49 +1435,6 @@ static bool wanna_mine(int thr_id)
 	return state;
 }
 
-// required to switch algos
-void miner_free_device(int thr_id)
-{
-	// todo: some kind of algo "registration"
-	// to call automatically if needed
-	free_blake256(thr_id);
-	free_bmw(thr_id);
-	free_c11(thr_id);
-	free_deep(thr_id);
-	free_keccak256(thr_id);
-	free_fresh(thr_id);
-	free_fugue256(thr_id);
-	free_groestlcoin(thr_id);
-	free_heavy(thr_id);
-	free_jackpot(thr_id);
-	free_luffa(thr_id);
-	free_lyra2(thr_id);
-	free_lyra2v2(thr_id);
-	free_myriad(thr_id);
-	free_neoscrypt(thr_id);
-	free_nist5(thr_id);
-	free_pentablake(thr_id);
-	free_quark(thr_id);
-	free_qubit(thr_id);
-	free_skeincoin(thr_id);
-	free_skein2(thr_id);
-	free_s3(thr_id);
-	free_whirl(thr_id);
-	free_whirlx(thr_id);
-	free_x11(thr_id);
-	free_x13(thr_id);
-	free_x14(thr_id);
-	free_x15(thr_id);
-	free_x17(thr_id);
-	free_zr5(thr_id);
-	//free_sha256d(thr_id);
-	free_scrypt(thr_id);
-	free_scrypt_jane(thr_id);
-
-	// reset remains of error..
-	cudaGetLastError();
-}
-
 static void *miner_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -1634,7 +1591,7 @@ static void *miner_thread(void *userdata)
 
 		pthread_mutex_unlock(&g_work_lock);
 
-		// --benchmark [-a auto]
+		// --benchmark [-a all]
 		if (opt_benchmark && bench_algo >= 0) {
 			//gpulog(LOG_DEBUG, thr_id, "loop %d", loopcnt);
 			if (loopcnt >= 3) {
@@ -1756,6 +1713,7 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_KECCAK:
 			case ALGO_JACKPOT:
+			case ALGO_X14:
 			case ALGO_X15:
 				minmax = 0x300000;
 				break;
@@ -1800,8 +1758,10 @@ static void *miner_thread(void *userdata)
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
 
-
-		cudaGetLastError(); // reset previous errors
+		// check (and reset) previous errors
+		cudaError_t err = cudaGetLastError();
+		if (err != cudaSuccess && !opt_quiet)
+			gpulog(LOG_WARNING, thr_id, "%s", cudaGetErrorString(err));
 
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
@@ -1904,6 +1864,7 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_X14:
 			rc = scanhash_x14(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_X15:
 			rc = scanhash_x15(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -2388,7 +2349,9 @@ void parse_arg(int key, char *arg)
 		}
 		if (i == ALGO_COUNT) {
 			// some aliases...
-			if (!strcasecmp("flax", arg))
+			if (!strcasecmp("all", arg))
+				i = opt_algo = ALGO_AUTO;
+			else if (!strcasecmp("flax", arg))
 				i = opt_algo = ALGO_C11;
 			else if (!strcasecmp("diamond", arg))
 				i = opt_algo = ALGO_DMD_GR;

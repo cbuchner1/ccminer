@@ -14,8 +14,8 @@
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 __constant__ uint32_t pTarget[8];
 
-static uint32_t *d_wnounce[MAX_GPUS];
-static uint32_t *d_WNonce[MAX_GPUS];
+static uint32_t *h_wnounce[MAX_GPUS] = { 0 };
+static uint32_t *d_WNonce[MAX_GPUS] = { 0 };
 
 #define USE_ALL_TABLES 1
 
@@ -2575,14 +2575,14 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 	}
 
 	cudaMalloc(&d_WNonce[thr_id], sizeof(uint32_t));
-	cudaMallocHost(&d_wnounce[thr_id], sizeof(uint32_t));
+	cudaMallocHost(&h_wnounce[thr_id], sizeof(uint32_t));
 }
 
 __host__
 extern void x15_whirlpool_cpu_free(int thr_id)
 {
 	cudaFree(d_WNonce[thr_id]);
-	cudaFreeHost(d_wnounce[thr_id]);
+	cudaFreeHost(h_wnounce[thr_id]);
 }
 
 __host__
@@ -2613,9 +2613,9 @@ extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint
 	oldwhirlpool_gpu_finalhash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector,d_WNonce[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);
-	cudaMemcpy(d_wnounce[thr_id], d_WNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_wnounce[thr_id], d_WNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-	result = *d_wnounce[thr_id];
+	result = *h_wnounce[thr_id];
 
 	return result;
 }

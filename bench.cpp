@@ -21,7 +21,7 @@ static pthread_barrier_t algo_barr;
 static pthread_mutex_t bench_lock = PTHREAD_MUTEX_INITIALIZER;
 
 extern double thr_hashrates[MAX_GPUS];
-extern enum sha_algos opt_algo;
+extern volatile enum sha_algos opt_algo;
 
 void bench_init(int threads)
 {
@@ -39,6 +39,48 @@ void bench_free()
 {
 	pthread_barrier_destroy(&miner_barr);
 	pthread_barrier_destroy(&algo_barr);
+}
+
+// required to switch algos
+void algo_free_all(int thr_id)
+{
+	// only initialized algos will be freed
+	free_blake256(thr_id);
+	free_bmw(thr_id);
+	free_c11(thr_id);
+	free_deep(thr_id);
+	free_keccak256(thr_id);
+	free_fresh(thr_id);
+	free_fugue256(thr_id);
+	free_groestlcoin(thr_id);
+	free_heavy(thr_id);
+	free_jackpot(thr_id);
+	free_luffa(thr_id);
+	free_lyra2(thr_id);
+	free_lyra2v2(thr_id);
+	free_myriad(thr_id);
+	free_neoscrypt(thr_id);
+	free_nist5(thr_id);
+	free_pentablake(thr_id);
+	free_quark(thr_id);
+	free_qubit(thr_id);
+	free_skeincoin(thr_id);
+	free_skein2(thr_id);
+	free_s3(thr_id);
+	free_whirl(thr_id);
+	free_whirlx(thr_id);
+	free_x11(thr_id);
+	free_x13(thr_id);
+	free_x14(thr_id);
+	free_x15(thr_id);
+	free_x17(thr_id);
+	free_zr5(thr_id);
+	//free_sha256d(thr_id);
+	free_scrypt(thr_id);
+	free_scrypt_jane(thr_id);
+
+	// warn on cuda error
+	CUDA_LOG_ERROR();
 }
 
 // benchmark all algos (called once per mining thread)
@@ -60,6 +102,11 @@ bool bench_algo_switch_next(int thr_id)
 	if (algo == ALGO_SCRYPT) algo++;
 	if (algo == ALGO_SCRYPT_JANE) algo++;
 
+	// free current algo memory and track mem usage
+	mused = cuda_available_memory(thr_id);
+	algo_free_all(thr_id);
+	mfree = cuda_available_memory(thr_id);
+
 	// we need to wait completion on all cards before the switch
 	if (opt_n_threads > 1) {
 		pthread_barrier_wait(&miner_barr);
@@ -70,15 +117,12 @@ bool bench_algo_switch_next(int thr_id)
 	format_hashrate(hashrate, rate);
 	gpulog(LOG_NOTICE, thr_id, "%s hashrate = %s", algo_names[prev_algo], rate);
 
-	// free current algo memory and track mem usage
-	mused = cuda_available_memory(thr_id);
-	miner_free_device(thr_id);
-	mfree = cuda_available_memory(thr_id);
-
 	// check if there is memory leak
 	if (device_mem_free[thr_id] > mfree) {
 		gpulog(LOG_WARNING, thr_id, "memory leak detected in %s ! %d MB free",
 			algo_names[prev_algo], mfree);
+		cuda_reset_device(thr_id, NULL); // force to free the leak
+		mfree = cuda_available_memory(thr_id);
 	}
 	// store used memory per algo
 	algo_mem_used[thr_id][opt_algo] = device_mem_free[thr_id] - mused;

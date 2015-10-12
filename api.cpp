@@ -1002,5 +1002,9 @@ void api_set_throughput(int thr_id, uint32_t throughput)
 		if (i && (1U << i) < throughput) {
 			cgpu->intensity += ((float) (throughput-(1U << i)) / (1U << i));
 		}
+
+		// to display in bench results
+		if (opt_benchmark)
+			bench_set_throughput(thr_id, throughput);
 	}
 }

@@ -147,6 +147,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 			{
 				int res = 1;
 				work_set_target_ratio(work, vhash64);
+				pdata[19] = foundNonces[0];
 				// check if there was another one...
 				if (foundNonces[1] != 0)
 				{
@@ -155,9 +156,9 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
 						work_set_target_ratio(work, vhash64);
 					pdata[21] = foundNonces[1];
+					//xchg(pdata[19], pdata[21]);
 					res++;
 				}
-				pdata[19] = foundNonces[0];
 				MyStreamSynchronize(NULL, 0, device_map[thr_id]);
 				return res;
 			}

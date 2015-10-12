@@ -493,6 +493,9 @@ int cuda_available_memory(int thr_id);
 uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);
 #define device_intensity(t,f,d) cuda_default_throughput(t,d)
 
+void cuda_log_lasterror(int thr_id, const char* func, int line);
+#define CUDA_LOG_ERROR() cuda_log_lasterror(thr_id, __func__, __LINE__)
+
 #define CL_N    "\x1B[0m"
 #define CL_RED  "\x1B[31m"
 #define CL_GRN  "\x1B[32m"
@@ -553,7 +556,7 @@ void bench_free();
 bool bench_algo_switch_next(int thr_id);
 void bench_set_throughput(int thr_id, uint32_t throughput);
 void bench_display_results();
-
+void algo_free_all(int thr_id);
 
 struct stratum_job {
 	char *job_id;

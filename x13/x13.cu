@@ -208,6 +208,8 @@ extern "C" int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, u
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
+		CUDA_LOG_ERROR();
+
 		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
@@ -245,6 +247,9 @@ extern "C" int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, u
 	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce + 1;
+
+	CUDA_LOG_ERROR();
+
 	return 0;
 }
 
@@ -254,7 +259,7 @@ extern "C" void free_x13(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 
@@ -263,7 +268,8 @@ extern "C" void free_x13(int thr_id)
 	x13_fugue512_cpu_free(thr_id);
 
 	cuda_check_cpu_free(thr_id);
-	init[thr_id] = false;
+	CUDA_LOG_ERROR();
 
 	cudaDeviceSynchronize();
+	init[thr_id] = false;
 }

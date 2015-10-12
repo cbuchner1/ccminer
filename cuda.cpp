@@ -156,8 +156,7 @@ uint32_t cuda_default_throughput(int thr_id, uint32_t defcount)
 	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
 	if (gpu_threads > 1 && throughput == defcount) throughput /= (gpu_threads-1);
 	api_set_throughput(thr_id, throughput);
-	bench_set_throughput(thr_id, throughput);
-	//if (opt_debug) applog(LOG_DEBUG, "GPU %d-%d: throughput %u", dev_id, thr_id, throughput);
+	//gpulog(LOG_INFO, thr_id, "throughput %u", throughput);
 	return throughput;
 }
 
@@ -194,6 +193,14 @@ int cuda_available_memory(int thr_id)
 	cudaSetDevice(dev_id);
 	cudaMemGetInfo(&mfree, &mtotal);
 	return (int) (mfree / (1024 * 1024));
+}
+
+// Check (and reset) last cuda error, and report it in logs
+void cuda_log_lasterror(int thr_id, const char* func, int line)
+{
+	cudaError_t err = cudaGetLastError();
+	if (err != cudaSuccess && !opt_quiet)
+		gpulog(LOG_WARNING, thr_id, "%s:%d %s", func, line, cudaGetErrorString(err));
 }
 
 #ifdef __cplusplus

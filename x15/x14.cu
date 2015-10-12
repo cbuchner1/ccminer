@@ -27,7 +27,7 @@ extern "C" {
 #include "cuda_helper.h"
 
 // Memory for the hash functions
-static uint32_t *d_hash[MAX_GPUS];
+static uint32_t *d_hash[MAX_GPUS] = { 0 };
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_blake512_cpu_setBlock_80(int thr_id, uint32_t *pdata);
@@ -190,7 +190,9 @@ extern "C" int scanhash_x14(int thr_id,  struct work* work, uint32_t max_nonce, 
 
 		cuda_check_cpu_init(thr_id, throughput);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
+		cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput);
+
+		CUDA_LOG_ERROR();
 
 		init[thr_id] = true;
 	}
@@ -217,9 +219,12 @@ extern "C" int scanhash_x14(int thr_id,  struct work* work, uint32_t max_nonce, 
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
+		CUDA_LOG_ERROR();
+
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+
 		if (foundNonce != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -250,6 +255,8 @@ extern "C" int scanhash_x14(int thr_id,  struct work* work, uint32_t max_nonce, 
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
+	CUDA_LOG_ERROR();
+
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
@@ -260,17 +267,17 @@ extern "C" void free_x14(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
-	cudaDeviceSynchronize();
-
-	cudaFree(d_hash[thr_id]);
+	cudaThreadSynchronize();
 
 	quark_groestl512_cpu_free(thr_id);
 	x11_simd512_cpu_free(thr_id);
 	x13_fugue512_cpu_free(thr_id);
 
+	cudaFree(d_hash[thr_id]);
+	d_hash[thr_id] = NULL;
+
 	cuda_check_cpu_free(thr_id);
-	init[thr_id] = false;
 
 	cudaDeviceSynchronize();
+	init[thr_id] = false;
 }
