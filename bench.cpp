@@ -98,7 +98,6 @@ bool bench_algo_switch_next(int thr_id)
 	if (algo == ALGO_DMD_GR) algo++; // same as groestl
 	if (algo == ALGO_WHIRLCOIN) algo++; // same as whirlpool
 	// and unwanted ones...
-	if (algo == ALGO_LYRA2) algo++; // weird memory leak to fix (uint2 Matrix[96][8] too big)
 	if (algo == ALGO_SCRYPT) algo++;
 	if (algo == ALGO_SCRYPT_JANE) algo++;
 

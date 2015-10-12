@@ -176,7 +176,7 @@ void groestl256_perm_Q(uint32_t thread, uint32_t *a, char *mixtabs)
 }
 
 __global__ __launch_bounds__(256,1)
-void groestl256_gpu_hash32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash, uint32_t *resNonces)
+void groestl256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash, uint32_t *resNonces)
 {
 #if USE_SHARED
 	extern __shared__ char mixtabs[];
@@ -315,7 +315,7 @@ uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNoun
 #else
 	size_t shared_size = 0;
 #endif
-	groestl256_gpu_hash32<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash, d_GNonces[thr_id]);
+	groestl256_gpu_hash_32<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash, d_GNonces[thr_id]);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 

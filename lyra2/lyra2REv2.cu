@@ -92,26 +92,26 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	{
 		cudaSetDevice(dev_id);
 		//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-		//if (opt_n_gputhreads == 1)
+		//if (gpu_threads == 1)
 		//	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
-		cudaGetLastError();
+		CUDA_LOG_ERROR();
 
 		blake256_cpu_init(thr_id, throughput);
 		keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
 
-		if (device_sm[device_map[thr_id]] < 300) {
-			applog(LOG_ERR, "Device SM 3.0 or more recent required!");
-			proper_exit(1);
-			return -1;
-		}
-
 		// DMatrix (780Ti may prefer 16 instead of 12, cf djm34)
 		CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], (size_t)12 * sizeof(uint64_t) * 4 * 4 * throughput));
 		lyra2v2_cpu_init(thr_id, throughput, d_matrix[thr_id]);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));
+
+		if (device_sm[dev_id] < 300) {
+			applog(LOG_ERR, "Device SM 3.0 or more recent required!");
+			proper_exit(1);
+			return -1;
+		}
 
 		init[thr_id] = true;
 	}
@@ -153,18 +153,18 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 				{
 					be32enc(&endiandata[19], foundNonces[1]);
 					lyra2v2_hash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-						work_set_target_ratio(work, vhash64);
 					pdata[21] = foundNonces[1];
-					//xchg(pdata[19], pdata[21]);
+					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio) {
+						work_set_target_ratio(work, vhash64);
+						xchg(pdata[19], pdata[21]);
+					}
 					res++;
 				}
-				MyStreamSynchronize(NULL, 0, device_map[thr_id]);
 				return res;
 			}
 			else
 			{
-				applog(LOG_WARNING, "GPU #%d: result does not validate on CPU!", dev_id);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonces[0]);
 			}
 		}
 
@@ -173,7 +173,6 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	} while (!work_restart[thr_id].restart && (max_nonce > ((uint64_t)(pdata[19]) + throughput)));
 
 	*hashes_done = pdata[19] - first_nonce + 1;
-	MyStreamSynchronize(NULL, 0, device_map[thr_id]);
 	return 0;
 }
 
@@ -183,7 +182,7 @@ extern "C" void free_lyra2v2(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 	cudaFree(d_matrix[thr_id]);

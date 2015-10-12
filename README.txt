@@ -229,9 +229,10 @@ features.
 >>> RELEASE HISTORY <<<
 
   Under Dev...    v1.7
+                  Improve lyra2 (v1) cuda implementation
                   Restore whirlpool algo (and whirlcoin variant)
                   Prepare algo switch ability
-                  Add --benchmark -a all to run a benchmark for all algos
+                  Add --benchmark alone to run a benchmark for all algos
                   Add --cuda-schedule parameter
                   Add --show-diff parameter, which display shares diff,
                     and is able to detect real solved blocks on pools.
