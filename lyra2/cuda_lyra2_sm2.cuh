@@ -10,9 +10,8 @@
 
 #define TPB30 160
 
-#if __CUDA_ARCH__ >= 200 && __CUDA_ARCH__ <= 350
-
-static __constant__ uint2 blake2b_IV[8] = {
+#if (__CUDA_ARCH__ >= 200 && __CUDA_ARCH__ <= 350) || !defined(__CUDA_ARCH__)
+__constant__ static uint2 blake2b_IV[8] = {
 	{ 0xf3bcc908, 0x6a09e667 },
 	{ 0x84caa73b, 0xbb67ae85 },
 	{ 0xfe94f82b, 0x3c6ef372 },
@@ -22,6 +21,9 @@ static __constant__ uint2 blake2b_IV[8] = {
 	{ 0xfb41bd6b, 0x1f83d9ab },
 	{ 0x137e2179, 0x5be0cd19 }
 };
+#endif
+
+#if __CUDA_ARCH__ >= 200 && __CUDA_ARCH__ <= 350
 
 #define reduceDuplexRow(rowIn, rowInOut, rowOut) { \
 	for (int i = 0; i < 8; i++) { \

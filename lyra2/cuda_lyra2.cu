@@ -11,6 +11,11 @@
 
 #include "cuda_lyra2_sm2.cuh"
 
+#ifdef __INTELLISENSE__
+/* just for vstudio code colors */
+#define __CUDA_ARCH__ 500
+#endif
+
 #if !defined(__CUDA_ARCH__) ||  __CUDA_ARCH__ >= 500
 
 #include "cuda_lyra2_vectors.h"

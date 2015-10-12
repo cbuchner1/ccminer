@@ -79,6 +79,9 @@
     <Filter Include="Source Files\neoscrypt">
       <UniqueIdentifier>{2037fd0d-e7a2-4da8-956c-150aec726a99}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\lyra2">
+      <UniqueIdentifier>{1613763f-895c-4321-b58b-6f5849868956}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -419,6 +422,12 @@
     <ClInclude Include="bignum.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="lyra2\cuda_lyra2v2_sm3.cuh">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </ClInclude>
+    <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
@@ -607,21 +616,6 @@
     <CudaCompile Include="Algo256\cuda_skein256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
-    <CudaCompile Include="lyra2\cuda_lyra2.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="lyra2\lyra2RE.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="lyra2\cuda_lyra2v2.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="lyra2\lyra2REv2.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
-    <ClInclude Include="lyra2\cuda_lyra2v2_sm3.cuh">
-      <Filter>Source Files\CUDA</Filter>
-    </ClInclude>
     <CudaCompile Include="zr5.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
@@ -669,6 +663,18 @@
     </CudaCompile>
     <CudaCompile Include="Algo256\cuda_bmw.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2v2.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2RE.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2REv2.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

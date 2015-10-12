@@ -246,6 +246,7 @@
     <ClCompile Include="myriadgroestl.cpp" />
     <ClCompile Include="lyra2\Lyra2.c" />
     <ClCompile Include="lyra2\Sponge.c" />
+    <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh" />
     <ClInclude Include="neoscrypt\neoscrypt.h" />
     <ClCompile Include="neoscrypt\neoscrypt.cpp" />
     <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />

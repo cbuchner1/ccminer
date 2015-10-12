@@ -2,15 +2,15 @@
 #include <stdint.h>
 #include <memory.h>
 
-#ifdef __INTELLISENSE__
-/* just for vstudio code colors */
-#define __CUDA_ARCH__ 500
-#endif
-
 #define TPB52 10
 #define TPB50 16
 
 #include "cuda_lyra2v2_sm3.cuh"
+
+#ifdef __INTELLISENSE__
+/* just for vstudio code colors */
+#define __CUDA_ARCH__ 500
+#endif
 
 #if __CUDA_ARCH__ >= 500
 
@@ -18,11 +18,10 @@
 
 #define Nrow 4
 #define Ncol 4
-#define u64type uint2
-#define vectype uint28
+#define uint4x2 uint28
 #define memshift 3
 
-__device__ vectype *DMatrix;
+__device__ uint4x2 *DMatrix;
 
 __device__ __forceinline__
 void Gfunc_v5(uint2 &a, uint2 &b, uint2 &c, uint2 &d)
@@ -34,7 +33,7 @@ void Gfunc_v5(uint2 &a, uint2 &b, uint2 &c, uint2 &d)
 }
 
 __device__ __forceinline__
-void round_lyra_v5(vectype* s)
+void round_lyra_v5(uint4x2* s)
 {
 	Gfunc_v5(s[0].x, s[1].x, s[2].x, s[3].x);
 	Gfunc_v5(s[0].y, s[1].y, s[2].y, s[3].y);
@@ -48,9 +47,9 @@ void round_lyra_v5(vectype* s)
 }
 
 __device__ __forceinline__
-void reduceDuplex(vectype state[4], uint32_t thread)
+void reduceDuplex(uint4x2 state[4], uint32_t thread)
 {
-	vectype state1[3];
+	uint4x2 state1[3];
 	uint32_t ps1 = (Nrow * Ncol * memshift * thread);
 	uint32_t ps2 = (memshift * (Ncol-1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
 
@@ -81,7 +80,7 @@ void reduceDuplex(vectype state[4], uint32_t thread)
 }
 
 __device__ __forceinline__
-void reduceDuplex50(vectype state[4], uint32_t thread)
+void reduceDuplex50(uint4x2 state[4], uint32_t thread)
 {
 	uint32_t ps1 = (Nrow * Ncol * memshift * thread);
 	uint32_t ps2 = (memshift * (Ncol - 1) + memshift * Ncol + Nrow * Ncol * memshift * thread);
@@ -105,9 +104,9 @@ void reduceDuplex50(vectype state[4], uint32_t thread)
 }
 
 __device__ __forceinline__
-void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOut, vectype state[4], uint32_t thread)
+void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOut, uint4x2 state[4], uint32_t thread)
 {
-	vectype state2[3], state1[3];
+	uint4x2 state2[3], state1[3];
 
 	uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
 	uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
@@ -152,7 +151,7 @@ void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOu
 		#pragma unroll
 		for (int j = 0; j < 3; j++)
 		{
-			vectype tmp = state1[j] + state2[j];
+			uint4x2 tmp = state1[j] + state2[j];
 			state[j] ^= tmp;
 		}
 
@@ -180,9 +179,9 @@ void reduceDuplexRowSetupV2(const int rowIn, const int rowInOut, const int rowOu
 
 
 __device__ __forceinline__
-void reduceDuplexRowtV2(const int rowIn, const int rowInOut, const int rowOut, vectype* state, uint32_t thread)
+void reduceDuplexRowtV2(const int rowIn, const int rowInOut, const int rowOut, uint4x2* state, uint32_t thread)
 {
-	vectype state1[3],state2[3];
+	uint4x2 state1[3],state2[3];
 	uint32_t ps1 = (memshift * Ncol * rowIn + Nrow * Ncol * memshift * thread);
 	uint32_t ps2 = (memshift * Ncol * rowInOut + Nrow * Ncol * memshift * thread);
 	uint32_t ps3 = (memshift * Ncol * rowOut + Nrow * Ncol * memshift * thread);
@@ -260,9 +259,9 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
-	vectype state[4];
+	uint4x2 state[4];
 
-	uint28 blake2b_IV[2];
+	uint4x2 blake2b_IV[2];
 
 	if (threadIdx.x == 0) {
 
@@ -344,7 +343,9 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 }
 #else
 #include "cuda_helper.h"
+#if __CUDA_ARCH__ < 300
 __device__ void* DMatrix;
+#endif
 __global__ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
 #endif
 

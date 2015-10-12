@@ -11,6 +11,8 @@
 
 #if __CUDA_ARCH__ >= 300 && __CUDA_ARCH__ < 500
 
+#include "cuda_lyra2_vectors.h"
+
 #define Nrow 4
 #define Ncol 4
 
