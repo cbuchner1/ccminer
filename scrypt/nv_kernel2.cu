@@ -24,6 +24,8 @@
 	#define __ldg(x) (*(x))
 #endif
 
+#if !defined(__CUDA_ARCH__) ||  __CUDA_ARCH__ >= 300
+
 // grab lane ID
 static __device__ __inline__ unsigned int __laneId() { unsigned int laneId; asm( "mov.u32 %0, %%laneid;" : "=r"( laneId ) ); return laneId; }
 
@@ -635,3 +637,6 @@ template <int ALGO> __global__ void nv2_scrypt_core_kernelB_LG(uint32_t *g_odata
 
 	__transposed_write_BC(B, C, (uint4*)(g_odata), 1);
 }
+
+#endif /* prevent SM 2 */
+

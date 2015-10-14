@@ -6,10 +6,14 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include "cuda_lyra2_vectors.h"
-
 #define TPB50 16
 #define TPB52 8
+
+#include "cuda_lyra2_sm2.cuh"
+
+#if !defined(__CUDA_ARCH__) ||  __CUDA_ARCH__ >= 500
+
+#include "cuda_lyra2_vectors.h"
 
 #define uint2x4 uint28
 #define memshift 3
@@ -238,6 +242,11 @@ void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
 		g_hash[thread + threads*3] = ((uint2*)state)[3];
 	}
 }
+#else
+/* for unsupported SM arch */
+__device__ void* DMatrix;
+__global__ void lyra2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash) {}
+#endif
 
 __host__
 void lyra2_cpu_init(int thr_id, uint32_t threads, uint64_t* d_matrix)
@@ -252,9 +261,14 @@ void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint6
 	int dev_id = device_map[thr_id % MAX_GPUS];
 	uint32_t tpb = TPB52;
 	if (device_sm[dev_id] == 500) tpb = TPB50;
+	if (device_sm[dev_id] <= 300) tpb = TPB30;
 
 	dim3 grid((threads + tpb - 1) / tpb);
 	dim3 block(tpb);
 
-	lyra2_gpu_hash_32 <<< grid, block >>> (threads, startNounce, (uint2*)d_hash);
+	if (device_sm[dev_id] >= 500)
+		lyra2_gpu_hash_32 <<< grid, block >>> (threads, startNounce, (uint2*)d_hash);
+	else
+		lyra2_gpu_hash_32_sm2 <<< grid, block >>> (threads, startNounce, d_hash);
+
 }

@@ -15,6 +15,7 @@ static uint64_t* d_matrix[MAX_GPUS];
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
+
 extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 extern void keccak256_cpu_init(int thr_id, uint32_t threads);
 extern void keccak256_cpu_free(int thr_id);
@@ -110,7 +111,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
+	uint32_t _ALIGN(128) endiandata[20];
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], pdata[k]);
 

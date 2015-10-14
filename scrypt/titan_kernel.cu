@@ -28,6 +28,8 @@ typedef enum
 	#define __ldg(x) (*(x))
 #endif
 
+#if !defined(__CUDA_ARCH__) ||  __CUDA_ARCH__ >= 300
+
 // scratchbuf constants (pointers to scratch buffer for each warp, i.e. 32 hashes)
 __constant__ uint32_t* c_V[TOTAL_WARP_LIMIT];
 
@@ -736,3 +738,5 @@ bool TitanKernel::run_kernel(dim3 grid, dim3 threads, int WARPS_PER_BLOCK, int t
 
 	return success;
 }
+
+#endif /* prevent SM 2 */

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <memory.h>
 
 #ifdef __INTELLISENSE__
@@ -9,15 +10,11 @@
 #define TPB52 10
 #define TPB50 16
 
-#include "cuda_lyra2_vectors.h"
-
 #include "cuda_lyra2v2_sm3.cuh"
 
-#ifndef __CUDA_ARCH__
-__device__ void *DMatrix;
-#endif
-
 #if __CUDA_ARCH__ >= 500
+
+#include "cuda_lyra2_vectors.h"
 
 #define Nrow 4
 #define Ncol 4
@@ -346,6 +343,8 @@ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHa
 	}
 }
 #else
+#include "cuda_helper.h"
+__device__ void* DMatrix;
 __global__ void lyra2v2_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
 #endif
 
