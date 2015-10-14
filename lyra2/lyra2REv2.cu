@@ -11,7 +11,7 @@ extern "C" {
 #include "cuda_helper.h"
 
 
-static _ALIGN(64) uint64_t *d_hash[MAX_GPUS];
+static uint64_t *d_hash[MAX_GPUS];
 static uint64_t* d_matrix[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
@@ -86,7 +86,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		ptarget[7] = 0x00ff;
+		ptarget[7] = 0x000f;
 
 	if (!init[thr_id])
 	{

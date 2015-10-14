@@ -119,10 +119,16 @@ void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outp
 		p6 = h[6] + t12[1];
 		p7 = h[7];
 
-		#pragma unroll
-		for (int i = 1; i<19; i+=2) {
-			Round_8_512v35(h,t12,p0,p1,p2,p3,p4,p5,p6,p7,i);
-		}
+		// forced unroll required
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 1);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 3);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 5);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 7);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 9);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 11);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 13);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 15);
+		Round_8_512v35(h, t12, p0, p1, p2, p3, p4, p5, p6, p7, 17);
 
 		p0 ^= dt0;
 		p1 ^= dt1;
@@ -143,11 +149,17 @@ void skein256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outp
 		p5 += t12[3];  //p5 already equal h[5]
 		p6 += t12[4];
 
-		#pragma unroll
-		for (int i = 1; i<17; i+=2)	{
-			Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, i);
-		}
+		// forced unroll
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 1);
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 3);
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 5);
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 7);
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 9);
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 11);
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 13);
+		Round_8_512v35(h, t, p0, p1, p2, p3, p4, p5, p6, p7, 15);
 		Round_8_512v35_final(h, t, p0, p1, p2, p3, p4, p5, p6, p7);
+
 		outputHash[thread]           = devectorize(p0);
 		outputHash[threads+thread]   = devectorize(p1);
 		outputHash[2*threads+thread] = devectorize(p2);
@@ -285,12 +297,13 @@ __host__
 void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_outputHash, int order)
 {
 	const uint32_t threadsperblock = 256;
+	int dev_id = device_map[thr_id];
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
 	// only 1kH/s perf change between kernels on a 960...
-	if (device_sm[device_map[thr_id]] > 300 && cuda_arch[device_map[thr_id]] > 300)
+	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
 		skein256_gpu_hash_32<<<grid, block>>>(threads, startNounce, d_outputHash);
 	else
 		skein256_gpu_hash_32_v30<<<grid, block>>>(threads, startNounce, d_outputHash);
