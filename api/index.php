@@ -1,5 +1,5 @@
 <?php
-/* ccminer API sample UI (API 1.5) */
+/* ccminer API sample UI (API 1.7) */
 
 $host = 'http://localhost/api/'; // 'http://'.$_SERVER['SERVER_NAME'].'/api/';
 $configs = array(
@@ -46,6 +46,7 @@ function translateField($key)
 	$intl['ACC'] = 'Accepted shares';
 	$intl['ACCMN'] = 'Accepted / mn';
 	$intl['REJ'] = 'Rejected';
+	$intl['SOLV'] = 'Solved';
 	$intl['DIFF'] = 'Difficulty';
 	$intl['NETKHS'] = 'Net Rate';
 	$intl['UPTIME'] = 'Miner up time';

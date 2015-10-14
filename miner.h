@@ -678,6 +678,7 @@ struct pool_infos {
 	uint32_t wait_time;
 	uint32_t accepted_count;
 	uint32_t rejected_count;
+	uint32_t solved_count;
 	uint32_t disconnects;
 };
 

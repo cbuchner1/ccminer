@@ -842,8 +842,8 @@ void diff_to_target(uint32_t *target, double diff)
 // Only used by stratum pools
 void work_set_target(struct work* work, double diff)
 {
-        diff_to_target(work->target, diff);
-        work->targetdiff = diff;
+	diff_to_target(work->target, diff);
+	work->targetdiff = diff;
 }
 
 
@@ -1527,13 +1527,6 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 	pthread_mutex_lock(&stratum_work_lock);
 	sctx->next_diff = diff;
 	pthread_mutex_unlock(&stratum_work_lock);
-
-	/* store for api stats */
-	if (diff != stratum_diff) {
-		stratum_diff = diff;
-		applog(LOG_WARNING, "Stratum difficulty set to %g", diff);
-		g_work_time = 0;
-	}
 
 	return true;
 }

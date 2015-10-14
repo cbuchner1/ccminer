@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.6"
+#define APIVERSION "1.7"
 
 #ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -168,11 +168,13 @@ static char *getsummary(char *params)
 	char algo[64]; *algo = '\0';
 	time_t ts = time(NULL);
 	double accps, uptime = difftime(ts, startup);
-	uint32_t wait_time = 0, accepted_count = 0, rejected_count = 0;
+	uint32_t wait_time = 0, solved_count = 0;
+	uint32_t accepted_count = 0, rejected_count = 0;
 	for (int p = 0; p < num_pools; p++) {
 		wait_time += pools[p].wait_time;
 		accepted_count += pools[p].accepted_count;
 		rejected_count += pools[p].rejected_count;
+		solved_count += pools[p].solved_count;
 	}
 	accps = (60.0 * accepted_count) / (uptime ? uptime : 1.0);
 
@@ -180,12 +182,12 @@ static char *getsummary(char *params)
 
 	*buffer = '\0';
 	sprintf(buffer, "NAME=%s;VER=%s;API=%s;"
-		"ALGO=%s;GPUS=%d;KHS=%.2f;ACC=%d;REJ=%d;"
+		"ALGO=%s;GPUS=%d;KHS=%.2f;SOLV=%d;ACC=%d;REJ=%d;"
 		"ACCMN=%.3f;DIFF=%.6f;NETKHS=%.0f;"
 		"POOLS=%u;WAIT=%u;UPTIME=%.0f;TS=%u|",
 		PACKAGE_NAME, PACKAGE_VERSION, APIVERSION,
 		algo, active_gpus, (double)global_hashrate / 1000.,
-		accepted_count, rejected_count,
+		solved_count, accepted_count, rejected_count,
 		accps, net_diff > 1e-6 ? net_diff : stratum_diff, (double)net_hashrate / 1000.,
 		num_pools, wait_time, uptime, (uint32_t) ts);
 	return buffer;
@@ -212,10 +214,10 @@ static char *getpoolnfo(char *params)
 		cbin2hex(&nonce[2], (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
 	}
 
-	snprintf(s, MYBUFSIZ, "URL=%s;USER=%s;ACC=%d;REJ=%d;H=%u;JOB=%s;DIFF=%.6f;"
+	snprintf(s, MYBUFSIZ, "URL=%s;USER=%s;SOLV=%d;ACC=%d;REJ=%d;H=%u;JOB=%s;DIFF=%.6f;"
 		"N2SZ=%d;N2=%s;PING=%u;DISCO=%u;WAIT=%u;UPTIME=%u|",
 		p->url, p->type & POOL_STRATUM ? p->user : "",
-		p->accepted_count, p->rejected_count,
+		p->solved_count, p->accepted_count, p->rejected_count,
 		stratum.job.height, jobid, stratum_diff,
 		(int) stratum.xnonce2_size, nonce, stratum.answer_msec,
 		p->disconnects, p->wait_time, p->work_time);

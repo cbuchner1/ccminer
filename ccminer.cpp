@@ -680,6 +680,7 @@ static int share_result(int result, int pooln, double sharediff, const char *rea
 			(result ? CL_GRN YES : CL_RED BOO)
 		:	(result ? "(" YES ")" : "(" BOO ")");
 	} else {
+		p->solved_count++;
 		flag = use_colors ?
 			(result ? CL_GRN YAY : CL_RED BOO)
 		:	(result ? "(" YAY ")" : "(" BOO ")");
@@ -1384,6 +1385,16 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		default:
 			work_set_target(work, sctx->job.diff / opt_difficulty);
 	}
+
+	if (stratum_diff != sctx->job.diff) {
+		char sdiff[32] = { 0 };
+		// store for api stats
+		stratum_diff = sctx->job.diff;
+		if (opt_showdiff && work->targetdiff != stratum_diff)
+			snprintf(sdiff, 32, " (%.5f)", work->targetdiff);
+		applog(LOG_WARNING, "Stratum difficulty set to %g%s", stratum_diff, sdiff);
+	}
+
 	return true;
 }
 
