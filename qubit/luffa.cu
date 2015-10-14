@@ -45,8 +45,10 @@ extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		if (opt_cudaschedule == -1) // to reduce cpu usage...
-			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		CUDA_LOG_ERROR();
+		//if (opt_cudaschedule == -1) // to reduce cpu usage...
+		//	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		CUDA_LOG_ERROR();
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 
@@ -103,12 +105,12 @@ extern "C" void free_luffa(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaDeviceSynchronize();
+	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 
 	cuda_check_cpu_free(thr_id);
 
-	cudaThreadSynchronize();
+	cudaDeviceSynchronize();
 	init[thr_id] = false;
 }

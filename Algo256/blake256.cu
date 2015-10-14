@@ -10,9 +10,11 @@
 
 extern "C" {
 #include "sph/sph_blake.h"
+//extern int blake256_rounds;
+}
+
 #include <stdint.h>
 #include <memory.h>
-}
 
 /* threads per block and throughput (intensity) */
 #define TPB 128
@@ -467,10 +469,10 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 #endif
 				return rc;
 			}
-			else if (opt_debug) {
+			else if (vhashcpu[7] > ptarget[7] && opt_debug) {
 				applog_hash((uchar*)ptarget);
 				applog_compare_hash((uchar*)vhashcpu, (uchar*)ptarget);
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", foundNonce);
 			}
 		}
 
@@ -493,7 +495,7 @@ extern "C" void free_blake256(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	cudaFreeHost(h_resNonce[thr_id]);
 	cudaFree(d_resNonce[thr_id]);

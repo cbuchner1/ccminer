@@ -261,6 +261,7 @@ void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint6
 	int dev_id = device_map[thr_id % MAX_GPUS];
 	uint32_t tpb = TPB52;
 	if (device_sm[dev_id] == 500) tpb = TPB50;
+	if (device_sm[dev_id] == 350) tpb = TPB30; // to enhance (or not)
 	if (device_sm[dev_id] <= 300) tpb = TPB30;
 
 	dim3 grid((threads + tpb - 1) / tpb);

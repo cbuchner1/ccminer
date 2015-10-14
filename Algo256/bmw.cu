@@ -87,7 +87,7 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 				return 1;
 			}
 			else {
-				applog(LOG_DEBUG, "GPU #%d: result for nounce %08x does not validate on CPU!", thr_id, foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", foundNonce);
 			}
 		}
 
@@ -110,13 +110,12 @@ extern "C" void free_bmw(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 	bmw256_midstate_free(thr_id);
 	cuda_check_cpu_free(thr_id);
 
-	init[thr_id] = false;
-
 	cudaDeviceSynchronize();
+	init[thr_id] = false;
 }

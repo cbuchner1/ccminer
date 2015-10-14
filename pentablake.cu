@@ -423,7 +423,6 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 					pentablakehash(vhash, endiandata);
 					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio)
 						work_set_target_ratio(work, vhash);
-					applog(LOG_NOTICE, "GPU found more than one result yippee!");
 					pdata[21] = extra_results[0];
 					extra_results[0] = UINT32_MAX;
 					rc++;
@@ -431,7 +430,7 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 				pdata[19] = foundNonce;
 				return rc;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nounce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", foundNonce);
 			}
 		}
 
@@ -449,13 +448,13 @@ void free_pentablake(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 	cudaFreeHost(h_resNounce[thr_id]);
 	cudaFree(d_resNounce[thr_id]);
 
-	init[thr_id] = false;
-
 	cudaDeviceSynchronize();
+
+	init[thr_id] = false;
 }

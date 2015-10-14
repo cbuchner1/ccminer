@@ -207,7 +207,7 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 		input[3] = startNonce + thread;
 		blake256_compress2nd(h, input, 640);
 
-        #pragma unroll
+		#pragma unroll
 		for (int i = 0; i<4; i++) {
 			Hash[i*threads + thread] = cuda_swab32ll(MAKE_ULONGLONG(h[2 * i], h[2*i+1]));
 		}

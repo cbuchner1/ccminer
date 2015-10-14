@@ -419,6 +419,10 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 		}
 		zr5_final_round(thr_id, throughput);
 
+		// do not scan results on interuption
+		if (work_restart[thr_id].restart)
+			return -1;
+
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
@@ -455,7 +459,7 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 				}
 				return res;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 
 				pdata[19]++;
 				pdata[0] = oldp0;

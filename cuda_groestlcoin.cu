@@ -153,7 +153,7 @@ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, vo
 
 	int dev_id = device_map[thr_id];
 	if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300) {
-		printf("Sorry, This algo is not supported by this GPU arch (SM 3.0 required)");
+		gpulog(LOG_ERR, thr_id, "Sorry, This algo is not supported by this GPU arch (SM 3.0 required)");
 		proper_exit(EXIT_CODE_CUDA_ERROR);
 	}
 

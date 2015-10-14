@@ -1856,7 +1856,7 @@ static uint32_t zrtest[20] = {
 
 void do_gpu_tests(void)
 {
-#ifdef _DEBUG
+#if 1 //def _DEBUG
 	unsigned long done;
 	char s[128] = { '\0' };
 	uchar buf[160];

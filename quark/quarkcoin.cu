@@ -262,8 +262,7 @@ extern "C" void free_quark(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
-	cudaDeviceSynchronize();
+	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 

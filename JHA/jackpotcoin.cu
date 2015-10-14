@@ -95,6 +95,7 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
+	int dev_id = device_map[thr_id];
 
 	uint32_t throughput =  cuda_default_throughput(thr_id, 1U << 20);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
@@ -104,7 +105,13 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(dev_id);
+		cuda_get_arch(thr_id);
+		if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300) {
+			gpulog(LOG_ERR, thr_id, "Sorry, This algo is not supported by this GPU arch (SM 3.0 required)");
+			proper_exit(EXIT_CODE_CUDA_ERROR);
+		}
+
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 
@@ -214,6 +221,7 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 		CUDA_LOG_ERROR();
 
 		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhash64[8];
@@ -239,15 +247,14 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 				pdata[19] = foundNonce;
 				return res;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!",
-					device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", foundNonce);
 			}
 		}
 
 		if ((uint64_t) pdata[19] + throughput > max_nonce) {
 			*hashes_done = pdata[19] - first_nonce;
 			pdata[19] = max_nonce;
-			break;
+			return 0;
 		}
 
 		pdata[19] += throughput;
