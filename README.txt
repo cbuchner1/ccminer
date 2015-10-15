@@ -229,7 +229,8 @@ features.
 >>> RELEASE HISTORY <<<
 
   Under Dev...    v1.7
-                  Improve lyra2 (v1) cuda implementation
+                  Add windows support for SM 2.1 and drop SM 3.5 (x86)
+                  Improve lyra2 (v1/v2) cuda implementation
                   Restore whirlpool algo (and whirlcoin variant)
                   Prepare algo switch ability
                   Add --benchmark alone to run a benchmark for all algos

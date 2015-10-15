@@ -158,7 +158,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_50,sm_50;compute_52,sm_52;compute_30,sm_30;compute_35,sm_35</CodeGeneration>
+      <CodeGeneration>compute_50,sm_50;compute_52,sm_52;compute_30,sm_30;compute_20,sm_21</CodeGeneration>
       <AdditionalOptions>--ptxas-options="-O2" %(AdditionalOptions)</AdditionalOptions>
       <Optimization>O2</Optimization>
     </CudaCompile>

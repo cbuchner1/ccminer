@@ -409,9 +409,9 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 	}
 
 	if (!init[thr_id]) {
-		if (active_gpus > 1)
-			cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(device_map[thr_id]);
 		CUDA_LOG_ERROR();
+
 		cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t));
 		cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t));
 		CUDA_LOG_ERROR();

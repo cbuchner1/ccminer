@@ -17,7 +17,6 @@
 #define Ncol 4
 
 #define vectype ulonglong4
-#define u64type uint64_t
 #define memshift 4
 
 __device__ vectype *DMatrix;

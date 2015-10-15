@@ -82,7 +82,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	const uint32_t first_nonce = pdata[19];
 	int dev_id = device_map[thr_id];
 	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 20 : 18;
-	uint32_t throughput = cuda_default_throughput(dev_id, 1U << intensity);
+	uint32_t throughput = cuda_default_throughput(dev_id, 1UL << intensity);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
@@ -100,6 +100,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 		keccak256_cpu_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
+		CUDA_LOG_ERROR();
 
 		// DMatrix (780Ti may prefer 16 instead of 12, cf djm34)
 		CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], (size_t)12 * sizeof(uint64_t) * 4 * 4 * throughput));
@@ -118,7 +119,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 
 	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++)
-		be32enc(&endiandata[k], ((uint32_t*)pdata)[k]);
+		be32enc(&endiandata[k], pdata[k]);
 
 	blake256_cpu_setBlock_80(pdata);
 	bmw256_setTarget(ptarget);
