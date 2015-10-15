@@ -1959,7 +1959,7 @@ static void *miner_thread(void *userdata)
 			for (int i = 0; i < opt_n_threads && thr_hashrates[i]; i++)
 				hashrate += stats_get_speed(i, thr_hashrates[i]);
 			pthread_mutex_unlock(&stats_lock);
-			if (opt_benchmark && bench_algo == -1) {
+			if (opt_benchmark && bench_algo == -1 && loopcnt > 2) {
 				format_hashrate(hashrate, s);
 				applog(LOG_NOTICE, "Total: %s", s);
 			}
@@ -2352,35 +2352,15 @@ void parse_arg(int key, char *arg)
 	case 'a': /* --algo */
 		p = strstr(arg, ":"); // optional factor
 		if (p) *p = '\0';
-		for (i = 0; i < ALGO_COUNT; i++) {
-			if (algo_names[i] && !strcasecmp(arg, algo_names[i])) {
-				opt_algo = (enum sha_algos)i;
-				break;
-			}
-		}
-		if (i == ALGO_COUNT) {
-			// some aliases...
-			if (!strcasecmp("all", arg))
-				i = opt_algo = ALGO_AUTO;
-			else if (!strcasecmp("flax", arg))
-				i = opt_algo = ALGO_C11;
-			else if (!strcasecmp("diamond", arg))
-				i = opt_algo = ALGO_DMD_GR;
-			else if (!strcasecmp("doom", arg))
-				i = opt_algo = ALGO_LUFFA;
-			else if (!strcasecmp("lyra2re", arg))
-				i = opt_algo = ALGO_LYRA2;
-			else if (!strcasecmp("lyra2rev2", arg))
-				i = opt_algo = ALGO_LYRA2v2;
-			else if (!strcasecmp("whirl", arg))
-				 i = opt_algo = ALGO_WHIRLPOOL;
-			else if (!strcasecmp("ziftr", arg))
-				i = opt_algo = ALGO_ZR5;
-			else
-				applog(LOG_ERR, "Unknown algo parameter '%s'", arg);
-		}
-		if (i == ALGO_COUNT)
+
+		i = algo_to_int(arg);
+		if (i >= 0)
+			opt_algo = (enum sha_algos)i;
+		else {
+			applog(LOG_ERR, "Unknown algo parameter '%s'", arg);
 			show_usage_and_exit(1);
+		}
+
 		if (p) {
 			opt_nfactor = atoi(p + 1);
 			if (opt_algo == ALGO_SCRYPT_JANE) {

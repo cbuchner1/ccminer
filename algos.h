@@ -1,6 +1,9 @@
 #ifndef ALGOS_H
 #define ALGOS_H
 
+#include <string.h>
+#include "compat.h"
+
 enum sha_algos {
 	ALGO_BLAKECOIN = 0,
 	ALGO_BLAKE,
@@ -83,5 +86,40 @@ static const char *algo_names[] = {
 	""
 };
 
+// string to int/enum
+static inline int algo_to_int(char* arg)
+{
+	int i;
+
+	for (i = 0; i < ALGO_COUNT; i++) {
+		if (algo_names[i] && !strcasecmp(arg, algo_names[i])) {
+			return i;
+		}
+	}
+
+	if (i == ALGO_COUNT) {
+		// some aliases...
+		if (!strcasecmp("all", arg))
+			i = ALGO_AUTO;
+		else if (!strcasecmp("flax", arg))
+			i = ALGO_C11;
+		else if (!strcasecmp("diamond", arg))
+			i = ALGO_DMD_GR;
+		else if (!strcasecmp("doom", arg))
+			i = ALGO_LUFFA;
+		else if (!strcasecmp("lyra2re", arg))
+			i = ALGO_LYRA2;
+		else if (!strcasecmp("lyra2rev2", arg))
+			i = ALGO_LYRA2v2;
+		else if (!strcasecmp("whirl", arg))
+			i = ALGO_WHIRLPOOL;
+		else if (!strcasecmp("ziftr", arg))
+			i = ALGO_ZR5;
+		else
+			i = -1;
+	}
+
+	return i;
+}
 
 #endif

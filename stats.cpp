@@ -32,8 +32,8 @@ void stats_remember_speed(int thr_id, uint32_t hashcount, double hashrate, uint8
 		return;
 
 	// first hash rates are often erroneous
-	if (uid < opt_n_threads * 2)
-		return;
+	//if (uid < opt_n_threads * 2)
+	//	return;
 
 	memset(&data, 0, sizeof(data));
 	data.uid = (uint32_t) uid;

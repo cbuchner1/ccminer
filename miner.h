@@ -299,7 +299,7 @@ extern int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonc
 	unsigned char *scratchbuf, struct timeval *tv_start, struct timeval *tv_end);
 
 /* free device allocated memory per algo */
-void miner_free_device(int thr_id);
+void algo_free_all(int thr_id);
 
 extern void free_blake256(int thr_id);
 extern void free_bmw(int thr_id);
@@ -556,7 +556,6 @@ void bench_free();
 bool bench_algo_switch_next(int thr_id);
 void bench_set_throughput(int thr_id, uint32_t throughput);
 void bench_display_results();
-void algo_free_all(int thr_id);
 
 struct stratum_job {
 	char *job_id;
