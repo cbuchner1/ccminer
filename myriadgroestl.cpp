@@ -78,8 +78,7 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 				free(outputHash);
 				return 1;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!",
-					device_map[thr_id], foundNounce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
 			}
 		}
 
@@ -102,7 +101,7 @@ void free_myriad(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	myriadgroestl_cpu_free(thr_id);
 	init[thr_id] = false;

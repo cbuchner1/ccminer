@@ -4,10 +4,6 @@
 #include <unistd.h>
 #include <map>
 
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
 // include thrust
 #ifndef __cplusplus
 #include <thrust/version.h>

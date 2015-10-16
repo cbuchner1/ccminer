@@ -48,7 +48,7 @@ extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce,
 		CUDA_LOG_ERROR();
 		//if (opt_cudaschedule == -1) // to reduce cpu usage...
 		//	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-		CUDA_LOG_ERROR();
+		//CUDA_LOG_ERROR();
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 
@@ -82,7 +82,7 @@ extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce,
 				pdata[19] = foundNonce;
 				return 1;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 			}
 		}
 
@@ -111,6 +111,6 @@ extern "C" void free_luffa(int thr_id)
 
 	cuda_check_cpu_free(thr_id);
 
-	cudaDeviceSynchronize();
 	init[thr_id] = false;
+	cudaDeviceSynchronize();
 }

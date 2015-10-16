@@ -67,8 +67,9 @@ extern "C" int scanhash_deep(int thr_id, struct work* work, uint32_t max_nonce, 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		CUDA_LOG_ERROR();
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 
 		qubit_luffa512_cpu_init(thr_id, throughput);
 		x11_cubehash512_cpu_init(thr_id, throughput);
@@ -117,7 +118,7 @@ extern "C" int scanhash_deep(int thr_id, struct work* work, uint32_t max_nonce, 
 				return res;
 			}
 			else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 			}
 		}
 
@@ -135,7 +136,7 @@ extern "C" void free_deep(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
 

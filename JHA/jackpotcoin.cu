@@ -247,7 +247,7 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 				pdata[19] = foundNonce;
 				return res;
 			} else {
-				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 			}
 		}
 

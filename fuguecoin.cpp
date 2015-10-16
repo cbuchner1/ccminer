@@ -82,8 +82,7 @@ int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigne
 				*hashes_done = foundNounce - start_nonce + 1;
 				return 1;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!",
-					device_map[thr_id], foundNounce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
 			}
 		}
 
@@ -106,7 +105,7 @@ void free_fugue256(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	fugue256_cpu_free(thr_id);
 

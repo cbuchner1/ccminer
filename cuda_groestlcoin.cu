@@ -99,7 +99,7 @@ void groestlcoin_cpu_init(int thr_id, uint32_t threads)
 	// to check if the binary supports SM3+
 	cuda_get_arch(thr_id);
 
-	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t));
+	CUDA_SAFE_CALL(cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t)));
 }
 
 __host__

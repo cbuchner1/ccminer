@@ -36,14 +36,15 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 	uint32_t throughput = cuda_default_throughput(thr_id, 1 << 19); // 256*256*8
 	if (init[thr_id]) throughput = min(throughput, max_nonce - start_nonce);
 
-	uint32_t *outputHash = (uint32_t*)malloc(throughput * 64);
+	uint32_t *outputHash = (uint32_t*)malloc((size_t) 64* throughput);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000000ff;
+		ptarget[7] = 0x000ff;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		CUDA_LOG_ERROR();
 		groestlcoin_cpu_init(thr_id, throughput);
 		init[thr_id] = true;
 	}
@@ -73,8 +74,7 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 				free(outputHash);
 				return true;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for nonce %08x does not validate on CPU!",
-					device_map[thr_id], foundNounce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
 			}
 		}
 
@@ -97,7 +97,7 @@ void free_groestlcoin(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	cudaSetDevice(device_map[thr_id]);
+	cudaThreadSynchronize();
 
 	groestlcoin_cpu_free(thr_id);
 	init[thr_id] = false;

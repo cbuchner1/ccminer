@@ -474,7 +474,7 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 			else if (vhashcpu[7] > ptarget[7] && opt_debug) {
 				applog_hash((uchar*)ptarget);
 				applog_compare_hash((uchar*)vhashcpu, (uchar*)ptarget);
-				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 			}
 		}
 

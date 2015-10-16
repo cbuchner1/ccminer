@@ -234,7 +234,7 @@ extern "C" int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, u
 				}
 				return res;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 			}
 		}
 

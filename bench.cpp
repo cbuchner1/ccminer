@@ -4,10 +4,10 @@
  * 2015 - tpruvot@github
  */
 
+#include <unistd.h>
+
 #include "miner.h"
 #include "algos.h"
-
-#include <unistd.h>
 
 int bench_algo = -1;
 
@@ -120,7 +120,13 @@ bool bench_algo_switch_next(int thr_id)
 	// free current algo memory and track mem usage
 	mused = cuda_available_memory(thr_id);
 	algo_free_all(thr_id);
+
+	// device can take some time to free
 	mfree = cuda_available_memory(thr_id);
+	if (device_mem_free[thr_id] > mfree) {
+		sleep(1);
+		mfree = cuda_available_memory(thr_id);
+	}
 
 	// we need to wait completion on all cards before the switch
 	if (opt_n_threads > 1) {
@@ -132,10 +138,15 @@ bool bench_algo_switch_next(int thr_id)
 	format_hashrate(hashrate, rate);
 	gpulog(LOG_NOTICE, thr_id, "%s hashrate = %s", algo_names[prev_algo], rate);
 
-	// check if there is memory leak
+	// ensure memory leak is still real after the barrier
 	if (device_mem_free[thr_id] > mfree) {
-		gpulog(LOG_WARNING, thr_id, "memory leak detected in %s ! %d MB free",
-			algo_names[prev_algo], mfree);
+		mfree = cuda_available_memory(thr_id);
+	}
+
+	// check if there is memory leak
+	if (device_mem_free[thr_id] - mfree > 1) {
+		gpulog(LOG_WARNING, thr_id, "possible %d MB memory leak in %s! %d MB free",
+			(device_mem_free[thr_id] - mfree), algo_names[prev_algo], mfree);
 		cuda_reset_device(thr_id, NULL); // force to free the leak
 		mfree = cuda_available_memory(thr_id);
 	}

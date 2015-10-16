@@ -275,8 +275,8 @@ int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned l
                     uint32_t vhash[8];
                     pdata[19] += nonce - pdata[19];
                     heavycoin_hash((uchar*)vhash, (uchar*)pdata, blocklen);
-                    if (memcmp(vhash, foundhash, 8*sizeof(uint32_t))) {
-                        applog(LOG_ERR, "hash for nonce %08x does not validate on CPU!\n", nonce);
+                    if (memcmp(vhash, foundhash, 32)) {
+                        gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", nonce);
                     } else {
                         *hashes_done = pdata[19] - first_nonce;
                         work_set_target_ratio(work, vhash);
@@ -306,7 +306,7 @@ extern "C" void free_heavy(int thr_id)
     if (!init[thr_id])
         return;
 
-    cudaSetDevice(device_map[thr_id]);
+    cudaThreadSynchronize();
 
     cudaFree(heavy_nonceVector[thr_id]);
 
