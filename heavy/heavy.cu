@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <openssl/sha.h>
 #include <map>
+
 // include thrust
+#define USE_TRUST 1
+
+#if USE_THRUST
 #include <thrust/remove.h>
 #include <thrust/device_vector.h>
+#endif
 
 #include "miner.h"
 
@@ -200,30 +205,28 @@ int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned l
     blake512_cpu_setBlock(pdata, blocklen);
 
     do {
+        uint32_t actualNumberOfValuesInNonceVectorGPU = throughput;
 
         ////// Compaction init
-        thrust::device_ptr<uint32_t> devNoncePtr(heavy_nonceVector[thr_id]);
-        thrust::device_ptr<uint32_t> devNoncePtrEnd((heavy_nonceVector[thr_id]) + throughput);
-        uint32_t actualNumberOfValuesInNonceVectorGPU = throughput;
-        uint64_t *t;
 
         hefty_cpu_hash(thr_id, throughput, pdata[19]);
-        //cudaThreadSynchronize();
         sha256_cpu_hash(thr_id, throughput, pdata[19]);
-        //cudaThreadSynchronize();
 
         // Hier ist die längste CPU Wartephase. Deshalb ein strategisches MyStreamSynchronize() hier.
         MyStreamSynchronize(NULL, 1, thr_id);
 
+#if USE_THRUST
+        thrust::device_ptr<uint32_t> devNoncePtr(heavy_nonceVector[thr_id]);
+        thrust::device_ptr<uint32_t> devNoncePtrEnd((heavy_nonceVector[thr_id]) + throughput);
+
         ////// Compaction
-        t = (uint64_t*) target2;
+        uint64_t *t = (uint64_t*) target2;
         devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*t, d_hash2output[thr_id], 8, pdata[19]));
         actualNumberOfValuesInNonceVectorGPU = (uint32_t)(devNoncePtrEnd - devNoncePtr);
         if(actualNumberOfValuesInNonceVectorGPU == 0)
             goto emptyNonceVector;
 
         keccak512_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19]);
-        //cudaThreadSynchronize();
 
         ////// Compaction
         t = (uint64_t*) target3;
@@ -233,7 +236,6 @@ int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned l
             goto emptyNonceVector;
 
         blake512_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19]);
-        //cudaThreadSynchronize();
 
         ////// Compaction
         t = (uint64_t*) target5;
@@ -243,12 +245,15 @@ int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned l
             goto emptyNonceVector;
 
         groestl512_cpu_hash(thr_id, actualNumberOfValuesInNonceVectorGPU, pdata[19]);
-        //cudaThreadSynchronize();
 
         ////// Compaction
         t = (uint64_t*) target4;
         devNoncePtrEnd = thrust::remove_if(devNoncePtr, devNoncePtrEnd, check_nonce_for_remove(*t, d_hash4output[thr_id], 16, pdata[19]));
         actualNumberOfValuesInNonceVectorGPU = (uint32_t)(devNoncePtrEnd - devNoncePtr);
+#else
+        // todo
+        actualNumberOfValuesInNonceVectorGPU = 0;
+#endif
         if(actualNumberOfValuesInNonceVectorGPU == 0)
             goto emptyNonceVector;
 
