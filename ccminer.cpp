@@ -659,13 +659,16 @@ static int share_result(int result, int pooln, double sharediff, const char *rea
 	struct pool_infos *p = &pools[pooln];
 
 	pthread_mutex_lock(&stats_lock);
-
 	for (int i = 0; i < opt_n_threads; i++) {
 		hashrate += stats_get_speed(i, thr_hashrates[i]);
 	}
+	pthread_mutex_unlock(&stats_lock);
 
 	result ? p->accepted_count++ : p->rejected_count++;
-	pthread_mutex_unlock(&stats_lock);
+
+	p->last_share_time = time(NULL);
+	if (sharediff > p->best_share)
+		p->best_share = sharediff;
 
 	global_hashrate = llround(hashrate);
 

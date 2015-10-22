@@ -47,13 +47,14 @@ function translateField($key)
 	$intl['ACCMN'] = 'Accepted / mn';
 	$intl['REJ'] = 'Rejected';
 	$intl['SOLV'] = 'Solved';
+	$intl['BEST'] = 'Best share';
+	$intl['LAST'] = 'Last share';
 	$intl['DIFF'] = 'Difficulty';
 	$intl['NETKHS'] = 'Net Rate';
 	$intl['UPTIME'] = 'Miner up time';
 	$intl['TS'] = 'Last update';
 	$intl['THR'] = 'Throughput';
 	$intl['WAIT'] = 'Wait time';
-
 
 	$intl['H'] = 'Bloc height';
 	$intl['I'] = 'Intensity';
