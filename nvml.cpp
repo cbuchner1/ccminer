@@ -845,6 +845,9 @@ int nvapi_getinfo(unsigned int devNum, uint16_t &vid, uint16_t &pid)
 
 	pid = pDeviceId >> 16;
 	vid = pDeviceId & 0xFFFF;
+	if (vid == 0x10DE) {
+		vid = pSubSystemId & 0xFFFF;
+	}
 
 	return 0;
 }
@@ -1154,6 +1157,15 @@ int gpu_vendor(uint8_t pci_bus_id, char *vendorname)
 				nvml_get_info(hnvml, id, vid, pid);
 			}
 		}
+	} else {
+#ifdef WIN32
+		for (unsigned id = 0; id < nvapi_dev_cnt; id++) {
+			if (device_bus_ids[id] == pci_bus_id) {
+				nvapi_getinfo(nvapi_dev_map[id], vid, pid);
+				break;
+			}
+		}
+#endif
 	}
 	return translate_vendor_id(vid, vendorname);
 #endif

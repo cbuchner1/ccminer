@@ -3243,8 +3243,10 @@ int main(int argc, char *argv[])
 		}
 	}
 #ifdef WIN32
-	if (!hnvml && nvapi_init() == 0)
+	if (!hnvml && nvapi_init() == 0) {
 		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
+		cuda_devicenames(); // refresh gpu vendor name
+	}
 #endif
 	else if (!hnvml)
 		applog(LOG_INFO, "GPU monitoring is not available.");
