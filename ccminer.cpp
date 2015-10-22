@@ -2463,6 +2463,13 @@ void parse_arg(int key, char *arg)
 		opt_statsavg = v;
 		break;
 	case 'n': /* --ndevs */
+		// to get gpu vendors...
+		#ifdef USE_WRAPNVML
+		hnvml = nvml_create();
+		#ifdef WIN32
+		if (!hnvml) nvapi_init();
+		#endif
+		#endif
 		cuda_print_devices();
 		proper_exit(EXIT_CODE_OK);
 		break;
