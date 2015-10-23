@@ -171,8 +171,8 @@ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outpu
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 	vectype state[4];
-	uint28 blake2b_IV[2];
-	uint28 padding[2];
+	vectype blake2b_IV[2];
+	vectype padding[2];
 
 	if (threadIdx.x == 0) {
 

@@ -307,7 +307,7 @@
     <ClInclude Include="cpuminer-config.h" />
     <ClInclude Include="cuda_groestlcoin.h" />
     <ClInclude Include="cuda_helper.h" />
-    <ClInclude Include="cuda_vector.h" />
+    <ClInclude Include="cuda_vector_uint2x4.h" />
     <ClInclude Include="elist.h" />
     <ClInclude Include="heavy\heavy.h" />
     <ClInclude Include="hefty1.h" />

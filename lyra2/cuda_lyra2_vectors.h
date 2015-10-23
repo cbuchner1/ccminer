@@ -81,7 +81,8 @@ typedef struct __align__(256) ulonglong16 {
 
 typedef struct __align__(16) uint28 {
 	uint2 x, y, z, w;
-} uint28;
+} uint2x4;
+typedef uint2x4 uint28; /* name deprecated */
 
 typedef struct __builtin_align__(32) uint48 {
 		uint4 s0,s1;

@@ -18,7 +18,6 @@
 
 #define Nrow 4
 #define Ncol 4
-#define uint2x4 uint28
 #define memshift 3
 
 __device__ uint2x4 *DMatrix;

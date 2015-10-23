@@ -18,9 +18,8 @@
 
 #if !defined(__CUDA_ARCH__) ||  __CUDA_ARCH__ >= 500
 
-#include "cuda_lyra2_vectors.h"
+#include "cuda_vector_uint2x4.h"
 
-#define uint2x4 uint28
 #define memshift 3
 
 #define Ncol 8

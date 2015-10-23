@@ -338,7 +338,7 @@
     <ClInclude Include="cuda_helper.h">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
-    <ClInclude Include="cuda_vector.h">
+    <ClInclude Include="cuda_vector_uint2x4.h">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_hamsi.h">
