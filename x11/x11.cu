@@ -59,6 +59,8 @@ extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t start
 // X11 CPU Hash
 extern "C" void x11hash(void *output, const void *input)
 {
+	unsigned char _ALIGN(128) hash[128] = { 0 };
+
 	// blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11
 
 	sph_blake512_context ctx_blake;
@@ -72,9 +74,6 @@ extern "C" void x11hash(void *output, const void *input)
 	sph_shavite512_context ctx_shavite;
 	sph_simd512_context ctx_simd;
 	sph_echo512_context ctx_echo;
-
-	unsigned char hash[128];
-	memset(hash, 0, sizeof hash);
 
 	sph_blake512_init(&ctx_blake);
 	sph_blake512 (&ctx_blake, input, 80);

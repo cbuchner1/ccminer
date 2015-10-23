@@ -1,8 +1,19 @@
+#define SP_KERNEL
+
+#ifdef SP_KERNEL
+#include "cuda_skein512_sp.cuh"
+#undef TFBIG_KINIT
+#undef TFBIG_ADDKEY
+#undef TFBIG_MIX
+#else
+
 #include <stdio.h>
 #include <stdint.h>
 #include <memory.h>
 
 #include "cuda_helper.h"
+
+#endif
 
 static __constant__ uint64_t c_PaddedMessage80[20]; // padded message (80 bytes + 72 bytes midstate + align)
 
@@ -890,6 +901,11 @@ void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 	int dev_id = device_map[thr_id];
 
 	// uint2 uint64 variants for SM 3.2+
+#ifdef SP_KERNEL
+	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500)
+		quark_skein512_cpu_hash_64(threads, startNounce, d_nonceVector, d_hash); /* sp.cuh */
+	else
+#endif
 	if (device_sm[dev_id] > 300 && cuda_arch[dev_id] > 300)
 		quark_skein512_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	else
