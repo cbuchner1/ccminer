@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include "cuda_helper.h"
-
 #include "cuda_vector_uint2x4.h"
 
 /* ******* SP to TP ******* */
@@ -33,16 +31,10 @@ __device__ __inline__ uint2 ROR8(const uint2 a) {
 /* ************************ */
 
 #ifdef WANT_SKEIN_80
-static __constant__ uint64_t c_PaddedMessage16[2];
 __constant__ uint2 precalcvalues[9];
 __constant__ uint32_t sha256_endingTable[64];
+static __constant__ uint64_t c_PaddedMessage16[2];
 static uint32_t *d_found[MAX_GPUS];
-
-// Take a look at: https://www.schneier.com/skein1.3.pdf
-
-#define SHL(x, n)			((x) << (n))
-#define SHR(x, n)			((x) >> (n))
-
 static uint32_t *d_nonce[MAX_GPUS];
 #endif
 
@@ -270,11 +262,6 @@ static uint32_t *d_nonce[MAX_GPUS];
 #define SKBI(k, s, i)   XCAT(k, XCAT(XCAT(XCAT(M9_, s), _), i))
 #define SKBT(t, s, v)   XCAT(t, XCAT(XCAT(XCAT(M3_, s), _), v))
 
-#define TFBIG_KINIT(k0, k1, k2, k3, k4, k5, k6, k7, k8, t0, t1, t2) { \
-		k8 = ((k0 ^ k1) ^ (k2 ^ k3)) ^ ((k4 ^ k5) ^ (k6 ^ k7)) \
-			^ make_uint2( 0xA9FC1A22UL,0x1BD11BDA); \
-		t2 = t0 ^ t1; \
-	}
 //vectorize(0x1BD11BDAA9FC1A22ULL);
 #define TFBIG_ADDKEY(w0, w1, w2, w3, w4, w5, w6, w7, k, t, s) { \
 		w0 = (w0 + SKBI(k, s, 0)); \
@@ -321,7 +308,7 @@ static uint32_t *d_nonce[MAX_GPUS];
 		k8 = ((k0 ^ k1) ^ (k2 ^ k3)) ^ ((k4 ^ k5) ^ (k6 ^ k7)) \
 			^ vectorize(SPH_C64(0x1BD11BDAA9FC1A22)); \
 		t2 = t0 ^ t1; \
-		}
+	}
 
 #define TFBIG_ADDKEY_UI2(w0, w1, w2, w3, w4, w5, w6, w7, k, t, s) { \
 		w0 = (w0 + SKBI(k, s, 0)); \
@@ -332,7 +319,7 @@ static uint32_t *d_nonce[MAX_GPUS];
 		w5 = (w5 + SKBI(k, s, 5) + SKBT(t, s, 0)); \
 		w6 = (w6 + SKBI(k, s, 6) + SKBT(t, s, 1)); \
 		w7 = (w7 + SKBI(k, s, 7) + vectorize(s)); \
-		}
+	}
 
 #define TFBIG_ADDKEY_PRE(w0, w1, w2, w3, w4, w5, w6, w7, k, t, s) { \
 		w0 = (w0 + SKBI(k, s, 0)); \
@@ -343,31 +330,31 @@ static uint32_t *d_nonce[MAX_GPUS];
 		w5 = (w5 + SKBI(k, s, 5) + SKBT(t, s, 0)); \
 		w6 = (w6 + SKBI(k, s, 6) + SKBT(t, s, 1)); \
 		w7 = (w7 + SKBI(k, s, 7) + (s)); \
-				}
+	}
 
 #define TFBIG_MIX_UI2(x0, x1, rc) { \
 		x0 = x0 + x1; \
 		x1 = ROL2(x1, rc) ^ x0; \
-		}
+	}
 
 #define TFBIG_MIX_PRE(x0, x1, rc) { \
 		x0 = x0 + x1; \
 		x1 = ROTL64(x1, rc) ^ x0; \
-				}
+	}
 
 #define TFBIG_MIX8_UI2(w0, w1, w2, w3, w4, w5, w6, w7, rc0, rc1, rc2, rc3) { \
 		TFBIG_MIX_UI2(w0, w1, rc0); \
 		TFBIG_MIX_UI2(w2, w3, rc1); \
 		TFBIG_MIX_UI2(w4, w5, rc2); \
 		TFBIG_MIX_UI2(w6, w7, rc3); \
-		}
+	}
 
 #define TFBIG_MIX8_PRE(w0, w1, w2, w3, w4, w5, w6, w7, rc0, rc1, rc2, rc3) { \
 		TFBIG_MIX_PRE(w0, w1, rc0); \
 		TFBIG_MIX_PRE(w2, w3, rc1); \
 		TFBIG_MIX_PRE(w4, w5, rc2); \
 		TFBIG_MIX_PRE(w6, w7, rc3); \
-				}
+	}
 
 #define TFBIG_4e_UI2(s)  { \
 		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, s); \
@@ -375,7 +362,7 @@ static uint32_t *d_nonce[MAX_GPUS];
 		TFBIG_MIX8_UI2(p[2], p[1], p[4], p[7], p[6], p[5], p[0], p[3], 33, 27, 14, 42); \
 		TFBIG_MIX8_UI2(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 17, 49, 36, 39); \
 		TFBIG_MIX8_UI2(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3], 44,  9, 54, 56); \
-		}
+	}
 
 #define TFBIG_4e_PRE(s)  { \
 		TFBIG_ADDKEY_PRE(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, s); \
@@ -383,7 +370,7 @@ static uint32_t *d_nonce[MAX_GPUS];
 		TFBIG_MIX8_PRE(p[2], p[1], p[4], p[7], p[6], p[5], p[0], p[3], 33, 27, 14, 42); \
 		TFBIG_MIX8_PRE(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 17, 49, 36, 39); \
 		TFBIG_MIX8_PRE(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3], 44,  9, 54, 56); \
-				}
+	}
 
 #define TFBIG_4o_UI2(s)  { \
 		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, s); \
@@ -391,7 +378,7 @@ static uint32_t *d_nonce[MAX_GPUS];
 		TFBIG_MIX8_UI2(p[2], p[1], p[4], p[7], p[6], p[5], p[0], p[3], 13, 50, 10, 17); \
 		TFBIG_MIX8_UI2(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 25, 29, 39, 43); \
 		TFBIG_MIX8_UI2(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3],  8, 35, 56, 22); \
-		}
+	}
 
 #define TFBIG_4o_PRE(s)  { \
 		TFBIG_ADDKEY_PRE(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, s); \
@@ -399,7 +386,8 @@ static uint32_t *d_nonce[MAX_GPUS];
 		TFBIG_MIX8_PRE(p[2], p[1], p[4], p[7], p[6], p[5], p[0], p[3], 13, 50, 10, 17); \
 		TFBIG_MIX8_PRE(p[4], p[1], p[6], p[3], p[0], p[5], p[2], p[7], 25, 29, 39, 43); \
 		TFBIG_MIX8_PRE(p[6], p[1], p[0], p[7], p[2], p[5], p[4], p[3],  8, 35, 56, 22); \
-		}
+	}
+
 __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(480, 3)
@@ -419,11 +407,10 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		const int hashPosition = nounce - startNounce;
 		uint64_t *Hash = &g_hash[8 * hashPosition];
 
-
 		uint2 msg[8];
 
-		uint28 *phash = (uint28*)Hash;
-		uint28 *outpt = (uint28*)msg;
+		uint2x4 *phash = (uint2x4*)Hash;
+		uint2x4 *outpt = (uint2x4*)msg;
 		outpt[0] = phash[0];
 		outpt[1] = phash[1];
 
