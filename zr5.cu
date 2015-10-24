@@ -316,6 +316,7 @@ extern void zr5_keccak512_cpu_hash_pok(int thr_id, uint32_t threads, uint32_t st
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void quark_blake512_cpu_free(int thr_id);
 
 extern void quark_groestl512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
@@ -496,6 +497,7 @@ extern "C" void free_zr5(int thr_id)
 
 	cudaFree(d_txs[thr_id]);
 
+	quark_blake512_cpu_free(thr_id);
 	quark_groestl512_cpu_free(thr_id);
 	cuda_check_cpu_free(thr_id);
 	init[thr_id] = false;
