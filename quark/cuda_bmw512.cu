@@ -9,7 +9,12 @@
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
 #endif
 
-#include "cuda_bmw512_30.cu"
+#include "cuda_bmw512_sm3.cuh"
+
+#ifdef __INTELLISENSE__
+/* just for vstudio code colors */
+#define __CUDA_ARCH__ 500
+#endif
 
 #undef SHL
 #undef SHR

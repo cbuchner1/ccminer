@@ -434,6 +434,9 @@
     <ClInclude Include="quark\cuda_skein512_sp.cuh">
       <Filter>Source Files\CUDA\quark</Filter>
     </ClInclude>
+    <ClInclude Include="quark\cuda_bmw512_sm3.cuh">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
