@@ -9,6 +9,7 @@
 
 #include "miner.h"
 #include "compat.h"
+#include "algos.h"
 
 // to move in miner.h
 extern bool allow_gbt;
@@ -50,6 +51,7 @@ struct opt_config_array {
 	{ CFG_POOL, "user", NULL },
 	{ CFG_POOL, "pass", NULL },
 	{ CFG_POOL, "userpass", NULL },
+	{ CFG_POOL, "algo", NULL },
 	{ CFG_POOL, "name", "pool-name" },
 	{ CFG_POOL, "scantime", "pool-scantime" },
 	{ CFG_POOL, "max-diff", "pool-max-diff" },
@@ -74,7 +76,8 @@ void pool_set_creds(int pooln)
 		p->id = pooln;
 		p->status |= POOL_ST_DEFINED;
 		// init pool options as "unset"
-		// until cmdline is not fully parsed...
+		// until cmdline is fully parsed...
+		p->algo = -1;
 		p->max_diff = -1.;
 		p->max_rate = -1.;
 		p->scantime = -1;
@@ -102,6 +105,7 @@ void pool_init_defaults()
 	struct pool_infos *p;
 	for (int i=0; i<num_pools; i++) {
 		p = &pools[i];
+		if (p->algo == -1) p->algo = (int) opt_algo;
 		if (p->max_diff == -1.) p->max_diff = opt_max_diff;
 		if (p->max_rate == -1.) p->max_rate = opt_max_rate;
 		if (p->scantime == -1) p->scantime = opt_scantime;
@@ -113,7 +117,10 @@ void pool_init_defaults()
 void pool_set_attr(int pooln, const char* key, char* arg)
 {
 	struct pool_infos *p = &pools[pooln];
-
+	if (!strcasecmp(key, "algo")) {
+		p->algo = algo_to_int(arg);
+		return;
+	}
 	if (!strcasecmp(key, "name")) {
 		snprintf(p->name, sizeof(p->name), "%s", arg);
 		return;
@@ -144,7 +151,7 @@ void pool_set_attr(int pooln, const char* key, char* arg)
 }
 
 // pool switching code
-bool pool_switch(int pooln)
+bool pool_switch(int thr_id, int pooln)
 {
 	int prevn = cur_pooln;
 	struct pool_infos *prev = &pools[cur_pooln];
@@ -255,11 +262,11 @@ int pool_get_first_valid(int startfrom)
 }
 
 // switch to next available pool
-bool pool_switch_next()
+bool pool_switch_next(int thr_id)
 {
 	if (num_pools > 1) {
 		int pooln = pool_get_first_valid(cur_pooln+1);
-		return pool_switch(pooln);
+		return pool_switch(thr_id, pooln);
 	} else {
 		// no switch possible
 		if (!opt_quiet)
@@ -279,7 +286,7 @@ bool pool_switch_url(char *params)
 	cur_pooln = prevn;
 	if (nextn == prevn)
 		return false;
-	return pool_switch(nextn);
+	return pool_switch(-1, nextn);
 }
 
 // Parse pools array in json config

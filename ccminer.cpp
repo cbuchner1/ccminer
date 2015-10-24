@@ -1181,7 +1181,7 @@ static void *workio_thread(void *userdata)
 		if (!ok && num_pools > 1 && opt_pool_failover) {
 			if (opt_debug_threads)
 				applog(LOG_DEBUG, "%s died, failover", __func__);
-			ok = pool_switch_next();
+			ok = pool_switch_next(-1);
 			tq_push(wc->thr->q, NULL); // get_work() will return false
 		}
 
@@ -1633,7 +1633,7 @@ static void *miner_thread(void *userdata)
 			// conditional pool switch
 			if (num_pools > 1 && conditional_pool_rotate) {
 				if (!pool_is_switching)
-					pool_switch_next();
+					pool_switch_next(thr_id);
 				else if (time(NULL) - firstwork_time > 35) {
 					if (!opt_quiet)
 						applog(LOG_WARNING, "Pool switching timed out...");
@@ -1670,7 +1670,7 @@ static void *miner_thread(void *userdata)
 					if (!pool_is_switching) {
 						if (!opt_quiet)
 							applog(LOG_INFO, "Pool mining timeout of %ds reached, rotate...", opt_time_limit);
-						pool_switch_next();
+						pool_switch_next(thr_id);
 					} else if (passed > 35) {
 						// ensure we dont stay locked if pool_is_switching is not reset...
 						applog(LOG_WARNING, "Pool switch to %d timed out...", cur_pooln);
@@ -2233,7 +2233,7 @@ wait_stratum_url:
 				if (opt_retries >= 0 && ++failures > opt_retries) {
 					if (num_pools > 1 && opt_pool_failover) {
 						applog(LOG_WARNING, "Stratum connect timeout, failover...");
-						pool_switch_next();
+						pool_switch_next(-1);
 					} else {
 						applog(LOG_ERR, "...terminating workio thread");
 						//tq_push(thr_info[work_thr_id].q, NULL);
@@ -3079,7 +3079,7 @@ int main(int argc, char *argv[])
 	if (opt_debug)
 		pool_dump_infos();
 	cur_pooln = pool_get_first_valid(0);
-	pool_switch(cur_pooln);
+	pool_switch(-1, cur_pooln);
 
 	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)
 	      ? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)

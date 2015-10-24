@@ -653,6 +653,7 @@ struct pool_infos {
 #define POOL_ST_DISABLED 4
 #define POOL_ST_REMOVED 8
 	uint16_t status;
+	int algo;
 	char name[64];
 	// credentials
 	char url[256];
@@ -691,8 +692,8 @@ void pool_init_defaults(void);
 void pool_set_creds(int pooln);
 void pool_set_attr(int pooln, const char* key, char* arg);
 bool pool_switch_url(char *params);
-bool pool_switch(int pooln);
-bool pool_switch_next(void);
+bool pool_switch(int thr_id, int pooln);
+bool pool_switch_next(int thr_id);
 int pool_get_first_valid(int startfrom);
 bool parse_pool_array(json_t *obj);
 void pool_dump_infos(void);

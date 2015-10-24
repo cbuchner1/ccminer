@@ -21,7 +21,6 @@ static pthread_barrier_t algo_barr;
 static pthread_mutex_t bench_lock = PTHREAD_MUTEX_INITIALIZER;
 
 extern double thr_hashrates[MAX_GPUS];
-extern volatile enum sha_algos opt_algo;
 
 void bench_init(int threads)
 {

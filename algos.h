@@ -45,6 +45,8 @@ enum sha_algos {
 	ALGO_COUNT
 };
 
+extern volatile enum sha_algos opt_algo;
+
 static const char *algo_names[] = {
 	"blakecoin",
 	"blake",
