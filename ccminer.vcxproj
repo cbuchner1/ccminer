@@ -314,6 +314,7 @@
     <ClInclude Include="algos.h" />
     <ClInclude Include="miner.h" />
     <ClInclude Include="nvml.h" />
+    <ClInclude Include="quark\cuda_quark_blake512_sp.cuh" />
     <ClInclude Include="quark\cuda_skein512_sp.cuh" />
     <ClInclude Include="res\resource.h" />
     <ClInclude Include="scrypt\salsa_kernel.h" />

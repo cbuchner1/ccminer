@@ -428,6 +428,9 @@
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </ClInclude>
+    <ClInclude Include="quark\cuda_quark_blake512_sp.cuh">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </ClInclude>
     <ClInclude Include="quark\cuda_skein512_sp.cuh">
       <Filter>Source Files\CUDA\quark</Filter>
     </ClInclude>

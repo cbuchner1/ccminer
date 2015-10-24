@@ -52,7 +52,7 @@ static uint64_t __align__(32) c_data[32];
 static uint32_t *d_hash[MAX_GPUS];
 static uint32_t *d_resNounce[MAX_GPUS];
 static uint32_t *h_resNounce[MAX_GPUS];
-static uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
+static __thread uint32_t extra_results[2] = { UINT32_MAX, UINT32_MAX };
 
 /* prefer uint32_t to prevent size conversions = speed +5/10 % */
 __constant__
@@ -375,16 +375,13 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000F;
+		ptarget[7] = 0x000F;
 
 	if (!init[thr_id]) {
-		if (active_gpus > 1) {
-			cudaSetDevice(device_map[thr_id]);
-		}
+		cudaSetDevice(device_map[thr_id]);
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 		CUDA_SAFE_CALL(cudaMallocHost(&h_resNounce[thr_id], 2*sizeof(uint32_t)));
 		CUDA_SAFE_CALL(cudaMalloc(&d_resNounce[thr_id], 2*sizeof(uint32_t)));
-
 		init[thr_id] = true;
 	}
 

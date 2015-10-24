@@ -23,6 +23,7 @@ extern void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen);
 extern void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
+extern void quark_blake512_cpu_free(int thr_id);
 extern void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_groestl512_cpu_init(int thr_id, uint32_t threads);
@@ -279,6 +280,7 @@ extern "C" void free_jackpot(int thr_id)
 	cudaFree(d_branch3Nonces[thr_id]);
 	cudaFree(d_jackpotNonces[thr_id]);
 
+	quark_blake512_cpu_free(thr_id);
 	quark_groestl512_cpu_free(thr_id);
 	jackpot_compactTest_cpu_free(thr_id);
 

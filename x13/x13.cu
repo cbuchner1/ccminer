@@ -26,6 +26,7 @@ extern "C"
 static uint32_t *d_hash[MAX_GPUS];
 
 extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
+extern void quark_blake512_cpu_free(int thr_id);
 extern void quark_blake512_cpu_setBlock_80(int thr_id, uint32_t *pdata);
 extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
@@ -263,6 +264,7 @@ extern "C" void free_x13(int thr_id)
 
 	cudaFree(d_hash[thr_id]);
 
+	quark_blake512_cpu_free(thr_id);
 	quark_groestl512_cpu_free(thr_id);
 	x11_simd512_cpu_free(thr_id);
 	x13_fugue512_cpu_free(thr_id);
