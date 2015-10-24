@@ -12,7 +12,9 @@
 	q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
 	q[i+12] + ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
 
-static __constant__ uint64_t d_constMem[16] = {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 500
+
+__constant__ uint64_t d_constMem[16] = {
 	SPH_C64(0x8081828384858687),
 	SPH_C64(0x88898A8B8C8D8E8F),
 	SPH_C64(0x9091929394959697),
@@ -213,6 +215,8 @@ void quark_bmw512_gpu_hash_64_30(uint32_t threads, uint32_t startNounce, uint64_
 	}
 }
 
+#ifdef WANT_BMW512_80
+
 __global__
 void quark_bmw512_gpu_hash_80_30(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
@@ -250,3 +254,11 @@ void quark_bmw512_gpu_hash_80_30(uint32_t threads, uint32_t startNounce, uint64_
 			outpHash[i] = ((uint2*)message)[i+8];
 	}
 }
+
+#endif
+
+#else /* stripped stubs for other archs */
+__global__ void quark_bmw512_gpu_hash_64_30(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector) {}
+__global__ void quark_bmw512_gpu_hash_80_30(uint32_t threads, uint32_t startNounce, uint64_t *g_hash) {}
+#endif
+
