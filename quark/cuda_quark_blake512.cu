@@ -225,12 +225,8 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 
 #define SP_KERNEL
 #ifdef SP_KERNEL
-void quark_blake512_cpu_setBlock_80_sp(uint64_t*);
-void quark_blake512_cpu_init_sp(int thr_id);
-void quark_blake512_cpu_free_sp(int thr_id);
-#endif
-
 #include "cuda_quark_blake512_sp.cuh"
+#endif
 
 __host__
 void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order)
@@ -274,21 +270,11 @@ __host__
 void quark_blake512_cpu_init(int thr_id, uint32_t threads)
 {
 	cuda_get_arch(thr_id);
-#ifdef SP_KERNEL
-	int dev_id = device_map[thr_id];
-	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500)
-		quark_blake512_cpu_init_sp(thr_id);
-#endif
 }
 
 __host__
 void quark_blake512_cpu_free(int thr_id)
 {
-#ifdef SP_KERNEL
-	int dev_id = device_map[thr_id];
-	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500)
-		quark_blake512_cpu_free_sp(thr_id);
-#endif
 }
 
 // ----------------------------- Host midstate for 80-bytes input ------------------------------------
@@ -308,7 +294,7 @@ void quark_blake512_cpu_setBlock_80(int thr_id, uint32_t *endiandata)
 #ifdef SP_KERNEL
 	int dev_id = device_map[thr_id];
 	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500)
-		quark_blake512_cpu_setBlock_80_sp((uint64_t*) endiandata);
+		quark_blake512_cpu_setBlock_80_sp(thr_id, (uint64_t*) endiandata);
 	else
 #endif
 	{

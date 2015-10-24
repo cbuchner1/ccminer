@@ -1,11 +1,15 @@
 /* sp implementation of blake */
 
-//#include <stdio.h>
-//#include <memory.h>
+#include <stdio.h>
+#include <memory.h>
+#include "miner.h"
 
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 500
-
+// Should stay outside the ifdef on WIN64 (wtf)
 #include "cuda_vector_uint2x4.h"
+__constant__ static uint2 c_PaddedM[16];
+__constant__ static uint2x4 c_Hostprecalc[4];
+
+#if __CUDA_ARCH__ >= 500  || !defined(__CUDA_ARCH__)
 
 #undef G
 #define vectorizelow(/* uint32_t*/ v) make_uint2(v,0)
@@ -23,10 +27,6 @@ static __device__ __forceinline__ uint2 eorswap32(uint2 u, uint2 v) {
 	result.x = u.y ^ v.y;
 	return result;
 }
-
-static uint2* d_PaddedMessage80[MAX_GPUS]; // padded message (80 bytes + padding)
-__constant__ uint2 c_PaddedM[16];
-__constant__ uint2x4 Hostprecalc[4];
 
 __constant__ uint2 c_512_u2[16] =
 {
@@ -325,7 +325,7 @@ void quark_blake512_gpu_hash_64_sp(uint32_t threads, uint32_t startNounce, uint3
 		v[7] = cuda_swap(h[7] ^ v[7] ^ v[15]);
 
 		phash = (uint2x4*)v;
-		outpt = (uint2x4*)&g_hash[hashPosition * 8];
+		outpt = (uint2x4*)&g_hash[hashPosition * 8U];
 		outpt[0] = phash[0];
 		outpt[1] = phash[1];
 	}
@@ -352,6 +352,7 @@ void quark_blake512_gpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint2
 		block[7] = c_PaddedM[7];
 		block[8] = c_PaddedM[8];
 		block[9].y = c_PaddedM[9].y;
+
 		block[10] = vectorizehigh(0x80000000);
 		block[11] = vectorizelow(0);
 		block[12] = vectorizelow(0);
@@ -373,10 +374,11 @@ void quark_blake512_gpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint2
 
 		uint2 v[16];
 		uint2x4 *outpt = (uint2x4*)v;
-		outpt[0] = Hostprecalc[0];
-		outpt[1] = Hostprecalc[1];
-		outpt[2] = Hostprecalc[2];
-		outpt[3] = Hostprecalc[3];
+
+		outpt[0] = c_Hostprecalc[0];
+		outpt[1] = c_Hostprecalc[1];
+		outpt[2] = c_Hostprecalc[2];
+		outpt[3] = c_Hostprecalc[3];
 
 		v[0] += (block[9] ^ c_512_u2[8]);
 		v[15] = ROR16(v[15] ^ v[0]);
@@ -564,26 +566,15 @@ void quark_blake512_gpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint2
 
 // ---------------------------- END CUDA quark_blake512 functions ------------------------------------
 
-__host__ void quark_blake512_cpu_init_sp(int thr_id)
+__host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata)
 {
-	CUDA_SAFE_CALL(cudaMalloc(&d_PaddedMessage80[thr_id], 10 * sizeof(uint2)));
-}
-
-__host__ void quark_blake512_cpu_free_sp(int thr_id)
-{
-	cudaFree(d_PaddedMessage80[thr_id]);
-}
-
-__host__ void quark_blake512_cpu_setBlock_80_sp(uint64_t *pdata)
-{
+	uint64_t block[16];
 	uint64_t PaddedMessage[10];
+	uint64_t *peker = (uint64_t*) &PaddedMessage[0];
 	for (int i = 0; i < 10; i++)
 		PaddedMessage[i] = cuda_swab64(pdata[i]);
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_PaddedM, PaddedMessage, 10 * sizeof(uint64_t), 0, cudaMemcpyHostToDevice));
 
-	uint64_t block[16];
-
-	uint64_t *peker = (uint64_t *)&PaddedMessage[0];
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol((c_PaddedM), PaddedMessage, 10 * sizeof(uint64_t)));
 
 	block[0] = peker[0];
 	block[1] = peker[1];
@@ -650,15 +641,12 @@ __host__ void quark_blake512_cpu_setBlock_80_sp(uint64_t *pdata)
 
 	v[3] += (block[0xd] ^ u512[6]) + v[7];
 
-	//applog_hash((unsigned char*) &v[0]);
-	//applog_hash((unsigned char*) &v[4]);
-	//applog_hash((unsigned char*) &v[8]);
-	//applog_hash((unsigned char*) &v[12]);
-
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(Hostprecalc, v, 128, 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_Hostprecalc, v, 128, 0, cudaMemcpyHostToDevice));
 }
+
 #else
 // __CUDA_ARCH__ < 500
+__host__ void quark_blake512_cpu_setBlock_80_sp(int thr_id, uint64_t *pdata) {}
 __global__ void quark_blake512_gpu_hash_64_sp(uint32_t, uint32_t startNounce, uint32_t *const __restrict__ g_nonceVector, uint2 *const __restrict__ g_hash) {}
 __global__ void quark_blake512_gpu_hash_80_sp(uint32_t, uint32_t startNounce, uint2 *outputHash) {}
 #endif
@@ -678,5 +666,5 @@ void quark_blake512_cpu_hash_80_sp(uint32_t threads, uint32_t startNounce, uint3
 	const uint32_t threadsperblock = 64;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	quark_blake512_gpu_hash_80_sp <<<grid, block>>>(threads, startNounce, (uint2 *)d_outputHash);
+	quark_blake512_gpu_hash_80_sp <<<grid, block>>>(threads, startNounce, (uint2*)d_outputHash);
 }
