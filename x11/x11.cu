@@ -1,12 +1,10 @@
-extern "C"
-{
+extern "C" {
 #include "sph/sph_blake.h"
 #include "sph/sph_bmw.h"
 #include "sph/sph_groestl.h"
 #include "sph/sph_skein.h"
 #include "sph/sph_jh.h"
 #include "sph/sph_keccak.h"
-
 #include "sph/sph_luffa.h"
 #include "sph/sph_cubehash.h"
 #include "sph/sph_shavite.h"
@@ -16,46 +14,12 @@ extern "C"
 
 #include "miner.h"
 #include "cuda_helper.h"
+#include "cuda_x11.h"
 
 #include <stdio.h>
 #include <memory.h>
 
 static uint32_t *d_hash[MAX_GPUS];
-
-extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_blake512_cpu_free(int thr_id);
-extern void quark_blake512_cpu_setBlock_80(int thr_id, uint32_t *pdata);
-extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-
-extern void quark_bmw512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_groestl512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void quark_groestl512_cpu_free(int thr_id);
-
-extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_keccak512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_jh512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void x11_luffaCubehash512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_luffaCubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int order);
-
-extern void x11_shavite512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void x11_simd512_cpu_free(int thr_id);
-
-extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 // X11 CPU Hash
 extern "C" void x11hash(void *output, const void *input)

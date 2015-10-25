@@ -293,6 +293,12 @@
     <ClInclude Include="cuda_groestlcoin.h">
       <Filter>Header Files\CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="quark\cuda_quark.h">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="x11\cuda_x11.h">
+      <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
     <ClInclude Include="sph\sph_blake.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>

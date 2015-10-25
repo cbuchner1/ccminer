@@ -10,27 +10,9 @@ extern "C"
 #include "miner.h"
 
 #include "cuda_helper.h"
+#include "quark/cuda_quark.h"
 
 static uint32_t *d_hash[MAX_GPUS];
-
-extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_blake512_cpu_free(int thr_id);
-extern void quark_blake512_cpu_setBlock_80(int thr_id, uint32_t *pdata);
-extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-
-extern void quark_groestl512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void quark_groestl512_cpu_free(int thr_id);
-
-extern void quark_jh512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_keccak512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
 
 // Original nist5hash Funktion aus einem miner Quelltext
 extern "C" void nist5hash(void *state, const void *input)

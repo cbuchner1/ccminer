@@ -16,52 +16,17 @@ extern "C"
 
 #include "miner.h"
 #include "cuda_helper.h"
+#include "cuda_x11.h"
 
 #include <stdio.h>
 #include <memory.h>
 
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void quark_blake512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_blake512_cpu_free(int thr_id);
-extern void quark_blake512_cpu_setBlock_80(int thr_id, uint32_t *pdata);
-extern void quark_blake512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-
-extern void quark_bmw512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_groestl512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void quark_groestl512_cpu_free(int thr_id);
-
-extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_keccak512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void quark_jh512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern void x11_luffaCubehash512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_luffaCubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, int order);
-
-extern void x11_shavite512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void x11_simd512_cpu_free(int thr_id);
-
-extern void x11_echo512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
-
-// Flax/C11 CPU Hash
+// Flax/Chaincoin C11 CPU Hash
 extern "C" void c11hash(void *output, const void *input)
 {
-	// blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11
+	unsigned char hash[128] = { 0 };
 
 	sph_blake512_context ctx_blake;
 	sph_bmw512_context ctx_bmw;
@@ -74,9 +39,6 @@ extern "C" void c11hash(void *output, const void *input)
 	sph_shavite512_context ctx_shavite;
 	sph_simd512_context ctx_simd;
 	sph_echo512_context ctx_echo;
-
-	unsigned char hash[128];
-	memset(hash, 0, sizeof hash);
 
 	sph_blake512_init(&ctx_blake);
 	sph_blake512 (&ctx_blake, input, 80);

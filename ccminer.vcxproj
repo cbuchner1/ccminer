@@ -343,6 +343,8 @@
     <ClInclude Include="lyra2\cuda_lyra2v2_sm3.cuh" />
     <ClInclude Include="quark\groestl_transf_quad.h" />
     <ClInclude Include="quark\groestl_functions_quad.h" />
+    <ClInclude Include="quark\cuda_quark.h" />
+    <ClInclude Include="x11\cuda_x11.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp" />

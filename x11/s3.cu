@@ -1,5 +1,5 @@
 /**
- * S3 Hash (Also called 3S - Used by 1Coin)
+ * S3 Hash (Also called Triple S - Used by 1Coin)
  */
 
 extern "C" {
@@ -10,21 +10,14 @@ extern "C" {
 
 #include "miner.h"
 #include "cuda_helper.h"
+#include "cuda_x11.h"
+
+extern void x11_shavite512_setBlock_80(void *pdata);
+extern void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 #include <stdint.h>
 
 static uint32_t *d_hash[MAX_GPUS];
-
-extern void x11_shavite512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_shavite512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern void x11_shavite512_setBlock_80(void *pdata);
-
-extern int  x11_simd512_cpu_init(int thr_id, uint32_t threads);
-extern void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void x11_simd512_cpu_free(int thr_id);
-
-extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 /* CPU HASH */
 extern "C" void s3hash(void *output, const void *input)
