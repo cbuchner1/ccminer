@@ -988,7 +988,7 @@ char *stratum_recv_line(struct stratum_ctx *sctx)
 		} while (time(NULL) - rstart < timeout && !strstr(sctx->sockbuf, "\n"));
 
 		if (!ret) {
-			applog(LOG_ERR, "stratum_recv_line failed");
+			if (opt_debug) applog(LOG_ERR, "stratum_recv_line failed");
 			goto out;
 		}
 	}

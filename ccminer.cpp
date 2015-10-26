@@ -149,6 +149,7 @@ struct pool_infos pools[MAX_POOLS] = { 0 };
 int num_pools = 1;
 volatile int cur_pooln = 0;
 bool opt_pool_failover = true;
+volatile bool pool_on_hold = false;
 volatile bool pool_is_switching = false;
 volatile int pool_switch_count = 0;
 bool conditional_pool_rotate = false;
@@ -1644,10 +1645,12 @@ static void *miner_thread(void *userdata)
 				continue;
 			}
 
+			pool_on_hold = true;
 			sleep(5);
 			if (!thr_id) pools[cur_pooln].wait_time += 5;
 			continue;
 		}
+		pool_on_hold = false;
 
 		work_restart[thr_id].restart = 0;
 
@@ -2294,7 +2297,8 @@ wait_stratum_url:
 
 		if (!s) {
 			stratum_disconnect(&stratum);
-			applog(LOG_WARNING, "Stratum connection interrupted");
+			if (!opt_quiet && !pool_on_hold)
+				applog(LOG_WARNING, "Stratum connection interrupted");
 			continue;
 		}
 		if (!stratum_handle_method(&stratum, s))
