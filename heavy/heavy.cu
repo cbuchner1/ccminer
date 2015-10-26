@@ -1,9 +1,15 @@
 #include <stdio.h>
 #include <openssl/sha.h>
+#include <cuda.h>
 #include <map>
 
-// include thrust
-#define USE_TRUST 1
+// include thrust if possible
+#if defined(__GNUC__) && __GNUC__ == 5 && __GNUC_MINOR__ >= 2 && CUDA_VERSION < 7000
+#warning "Heavy: incompatible GCC version!"
+#define USE_THRUST 0
+#else
+#define USE_THRUST 1
+#endif
 
 #if USE_THRUST
 #include <thrust/remove.h>
