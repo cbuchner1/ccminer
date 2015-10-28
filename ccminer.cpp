@@ -1646,6 +1646,7 @@ static void *miner_thread(void *userdata)
 			}
 
 			pool_on_hold = true;
+			global_hashrate = 0;
 			sleep(5);
 			if (!thr_id) pools[cur_pooln].wait_time += 5;
 			continue;

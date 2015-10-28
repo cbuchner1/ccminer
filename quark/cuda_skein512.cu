@@ -406,6 +406,7 @@ uint64_t skein_rotl64(const uint64_t x, const int offset)
 __global__
 void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t * const __restrict__ g_hash, uint32_t *g_nonceVector)
 {
+#if !defined(SP_KERNEL) || __CUDA_ARCH__ < 500
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -508,6 +509,7 @@ void quark_skein512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 		for(int i=0; i<8; i++)
 			outpHash[i] = devectorize(p[i]);
 	}
+#endif /* SM < 5.0 */
 }
 
 __global__

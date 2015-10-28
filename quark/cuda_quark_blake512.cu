@@ -7,6 +7,9 @@
 
 #define ROTR(x,n) ROTR64(x,n)
 
+// use sp kernel on SM 5+
+#define SP_KERNEL
+
 #define USE_SHUFFLE 0
 
 __constant__
@@ -111,16 +114,10 @@ void quark_blake512_compress(uint64_t *h, const uint64_t *block, const uint8_t (
 	h[7] ^= v[7] ^ v[15];
 }
 
-// Hash-Padding
-__device__ __constant__
-static const uint64_t d_constHashPadding[8] = {
-	0x0000000000000080ull, 0, 0, 0,
-	0, 0x0100000000000000ull, 0, 0x0002000000000000ull
-};
-
 __global__ __launch_bounds__(256, 4)
 void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_nonceVector, uint64_t *g_hash)
 {
+#if !defined(SP_KERNEL) || __CUDA_ARCH__ < 500
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
 #if USE_SHUFFLE
@@ -156,9 +153,15 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		for (int i=0; i < 8; ++i)
 			buf[i] = inpHash[i];
 
-		#pragma unroll 8
-		for (int i=0; i < 8; i++)
-			buf[i+8] = d_constHashPadding[i];
+		// Hash Pad
+		buf[8]  = 0x0000000000000080ull;
+		buf[9]  = 0;
+		buf[10] = 0;
+		buf[11] = 0;
+		buf[12] = 0;
+		buf[13] = 0x0100000000000000ull;
+		buf[14] = 0;
+		buf[15] = 0x0002000000000000ull;
 
 		// Ending round
 		quark_blake512_compress(h, buf, c_sigma_big, c_u512, 512);
@@ -177,11 +180,13 @@ void quark_blake512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t
 		}
 #endif
 	}
+#endif /* SP */
 }
 
 __global__ __launch_bounds__(256,4)
 void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outputHash)
 {
+//#if !defined(SP_KERNEL) || __CUDA_ARCH__ < 500
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
@@ -221,9 +226,9 @@ void quark_blake512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 		}
 #endif
 	}
+//#endif
 }
 
-#define SP_KERNEL
 #ifdef SP_KERNEL
 #include "cuda_quark_blake512_sp.cuh"
 #endif

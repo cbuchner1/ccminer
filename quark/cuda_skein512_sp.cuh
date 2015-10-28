@@ -1943,7 +1943,7 @@ __host__ void quark_skein512_setTarget(const void *ptarget)
 }
 __host__ void quark_skein512_cpu_free(int32_t thr_id)
 {
-	cudaFreeHost(&d_nonce[thr_id]);
+	cudaFree(d_nonce[thr_id]);
 }
 
 
