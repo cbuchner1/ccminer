@@ -90,10 +90,13 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 
 	if (!init[thr_id])
 	{
+		size_t matrix_sz = 16 * sizeof(uint64_t) * 4 * 3;
 		cudaSetDevice(dev_id);
-		//cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-		//if (gpu_threads == 1)
-		//	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		}
 		CUDA_LOG_ERROR();
 
 		blake256_cpu_init(thr_id, throughput);
@@ -102,8 +105,11 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 		bmw256_cpu_init(thr_id, throughput);
 		CUDA_LOG_ERROR();
 
-		// DMatrix (780Ti may prefer 16 instead of 12, cf djm34)
-		CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], (size_t)12 * sizeof(uint64_t) * 4 * 4 * throughput));
+		// SM 3 implentation requires a bit more memory
+		if (device_sm[dev_id] < 500 || cuda_arch[dev_id] < 500)
+			matrix_sz = 16 * sizeof(uint64_t) * 4 * 4;
+			
+		CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], matrix_sz * throughput));
 		lyra2v2_cpu_init(thr_id, throughput, d_matrix[thr_id]);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));
