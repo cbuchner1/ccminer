@@ -135,11 +135,17 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 			}
 		}
 
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
+
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
 out:
+	*hashes_done = pdata[19] - first_nonce;
 #ifdef USE_STREAMS
 	for (int i = 0; i < 5; i++)
 		cudaStreamDestroy(stream[i]);

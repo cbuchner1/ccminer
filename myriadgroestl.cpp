@@ -43,7 +43,7 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	uint32_t *outputHash = (uint32_t*)malloc(throughput * 64);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		ptarget[7] = 0x0000ff;
 
 	// init
 	if(!init[thr_id])
@@ -63,11 +63,11 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 		// GPU
 		uint32_t foundNounce = UINT32_MAX;
 
-		*hashes_done = pdata[19] - start_nonce + throughput;
-
 		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
 
-		if (foundNounce < UINT32_MAX)
+		*hashes_done = pdata[19] - start_nonce + throughput;
+
+		if (foundNounce < UINT32_MAX && bench_algo < 0)
 		{
 			uint32_t _ALIGN(64) vhash[8];
 			endiandata[19] = swab32(foundNounce);
@@ -82,14 +82,15 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > max_nonce) {
-			*hashes_done = pdata[19] - start_nonce;
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
 		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);
+
+	*hashes_done = max_nonce - start_nonce;
 
 	free(outputHash);
 	return 0;

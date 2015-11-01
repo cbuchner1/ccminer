@@ -39,7 +39,7 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 	uint32_t *outputHash = (uint32_t*)malloc((size_t) 64* throughput);
 
 	if (opt_benchmark)
-		ptarget[7] = 0x000ff;
+		ptarget[7] = 0x001f;
 
 	if (!init[thr_id])
 	{
@@ -62,7 +62,7 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 		// GPU hash
 		groestlcoin_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
 
-		if (foundNounce < UINT32_MAX)
+		if (foundNounce < UINT32_MAX && bench_algo < 0)
 		{
 			uint32_t _ALIGN(64) vhash[8];
 			endiandata[19] = swab32(foundNounce);
@@ -78,14 +78,15 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > max_nonce) {
-			*hashes_done = pdata[19] - start_nonce + 1;
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
+
+	*hashes_done = pdata[19] - start_nonce;
 
 	free(outputHash);
 	return 0;

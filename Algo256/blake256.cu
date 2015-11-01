@@ -439,7 +439,7 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 #endif
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		if (foundNonce != UINT32_MAX)
+		if (foundNonce != UINT32_MAX && bench_algo == -1)
 		{
 			uint32_t vhashcpu[8];
 			uint32_t Htarg = (uint32_t)targetHigh;
@@ -478,7 +478,8 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
 			break;
 		}
 

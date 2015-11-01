@@ -121,6 +121,9 @@ uint32_t cuda_check_hash(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
+	if (bench_algo >= 0) // dont interrupt the global benchmark
+		return UINT32_MAX;
+
 	if (!init_done) {
 		applog(LOG_ERR, "missing call to cuda_check_cpu_init");
 		return UINT32_MAX;
@@ -142,6 +145,9 @@ uint32_t cuda_check_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, 
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
+
+	if (bench_algo >= 0) // dont interrupt the global benchmark
+		return UINT32_MAX;
 
 	if (!init_done) {
 		applog(LOG_ERR, "missing call to cuda_check_cpu_init");
@@ -237,9 +243,12 @@ uint32_t cuda_check_hash_branch(int thr_id, uint32_t threads, uint32_t startNoun
 
 	uint32_t result = UINT32_MAX;
 
+	if (bench_algo >= 0) // dont interrupt the global benchmark
+		return result;
+
 	if (!init_done) {
 		applog(LOG_ERR, "missing call to cuda_check_cpu_init");
-		return UINT32_MAX;
+		return result;
 	}
 
 	cudaMemset(d_resNonces[thr_id], 0xff, sizeof(uint32_t));

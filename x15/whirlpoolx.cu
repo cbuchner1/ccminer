@@ -49,12 +49,12 @@ extern "C" int scanhash_whirlx(int thr_id,  struct work* work, uint32_t max_nonc
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		ptarget[7] = 0x000f;
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), -1);
 
 		whirlpoolx_cpu_init(thr_id, throughput);
 
@@ -70,14 +70,15 @@ extern "C" int scanhash_whirlx(int thr_id,  struct work* work, uint32_t max_nonc
 
 	do {
 		uint32_t foundNonce = whirlpoolx_cpu_hash(thr_id, throughput, pdata[19]);
-		if (foundNonce != UINT32_MAX)
+
+		*(hashes_done) = pdata[19] - first_nonce + throughput;
+
+		if (foundNonce != UINT32_MAX && bench_algo < 0)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash64[8];
 			be32enc(&endiandata[19], foundNonce);
 			whirlxHash(vhash64, endiandata);
-
-			*hashes_done = pdata[19] - first_nonce + throughput;
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				work_set_target_ratio(work, vhash64);
@@ -88,15 +89,16 @@ extern "C" int scanhash_whirlx(int thr_id,  struct work* work, uint32_t max_nonc
 			}
 		}
 
-		pdata[19] += throughput;
-
-		if (((uint64_t)pdata[19]+throughput) >= max_nonce) {
+		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
 			break;
 		}
 
+		pdata[19] += throughput;
+
 	} while (!work_restart[thr_id].restart);
 
-	*(hashes_done) = pdata[19] - first_nonce + 1;
+	*(hashes_done) = pdata[19] - first_nonce;
 
 	return 0;
 }

@@ -36,19 +36,21 @@ extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce,
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 22); // 256*256*8*8
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000f;
+		ptarget[7] = 0x0000f;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
-		CUDA_LOG_ERROR();
-		//if (opt_cudaschedule == -1) // to reduce cpu usage...
-		//	cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-		//CUDA_LOG_ERROR();
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 
@@ -65,10 +67,9 @@ extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce,
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
-		int order = 0;
-		*hashes_done = pdata[19] - first_nonce + throughput;
+		qubit_luffa512_cpu_hash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], 0);
 
-		qubit_luffa512_cpu_hash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], order++);
+		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
@@ -86,8 +87,8 @@ extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce,
 			}
 		}
 
-		if ((uint64_t) throughput + pdata[19] > max_nonce) {
-			// pdata[19] = max_nonce;
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
 			break;
 		}
 
@@ -95,7 +96,7 @@ extern "C" int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce,
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
 

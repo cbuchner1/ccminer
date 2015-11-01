@@ -65,7 +65,9 @@ int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigne
 		uint32_t foundNounce = UINT32_MAX;
 		fugue256_cpu_hash(thr_id, throughput, pdata[19], NULL, &foundNounce);
 
-		if (foundNounce < UINT32_MAX)
+		*hashes_done = pdata[19] - start_nonce + throughput;
+
+		if (foundNounce < UINT32_MAX && bench_algo < 0)
 		{
 			uint32_t vhash[8];
 			sph_fugue256_context ctx_fugue;
@@ -79,14 +81,13 @@ int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigne
 			{
 				work_set_target_ratio(work, vhash);
 				pdata[19] = foundNounce;
-				*hashes_done = foundNounce - start_nonce + 1;
 				return 1;
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
 			}
 		}
 
-		if ((uint64_t) pdata[19] + throughput > (uint64_t) max_nonce) {
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
@@ -95,7 +96,7 @@ int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigne
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - start_nonce + 1;
+	*hashes_done = pdata[19] - start_nonce;
 	return 0;
 }
 

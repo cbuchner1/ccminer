@@ -479,9 +479,11 @@ void proper_exit(int reason)
 		reason = app_exit_code;
 	}
 
+	pthread_mutex_lock(&stats_lock);
 	if (check_dups)
 		hashlog_purge_all();
 	stats_purge_all();
+	pthread_mutex_unlock(&stats_lock);
 
 #ifdef WIN32
 	timeEndPeriod(1); // else never executed
@@ -496,7 +498,7 @@ void proper_exit(int reason)
 #endif
 	free(opt_syslog_pfx);
 	free(opt_api_allow);
-	free(work_restart);
+	//free(work_restart);
 	//free(thr_info);
 	exit(reason);
 }
@@ -1709,18 +1711,22 @@ static void *miner_thread(void *userdata)
 		if (max64 < minmax) {
 			switch (opt_algo) {
 			case ALGO_BLAKECOIN:
-			case ALGO_BLAKE:
-			case ALGO_WHIRLPOOLX:
 				minmax = 0x80000000U;
 				break;
+			case ALGO_BLAKE:
 			case ALGO_BMW:
+			case ALGO_WHIRLPOOLX:
 				minmax = 0x40000000U;
 				break;
+			case ALGO_KECCAK:
 			case ALGO_LUFFA:
-				minmax = 0x2000000;
+			case ALGO_SKEIN:
+			case ALGO_SKEIN2:
+				minmax = 0x1000000;
 				break;
 			case ALGO_C11:
 			case ALGO_DEEP:
+			case ALGO_HEAVY:
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
 			case ALGO_X11:
@@ -1729,7 +1735,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_WHIRLPOOL:
 				minmax = 0x400000;
 				break;
-			case ALGO_KECCAK:
 			case ALGO_JACKPOT:
 			case ALGO_X14:
 			case ALGO_X15:

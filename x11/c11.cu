@@ -200,14 +200,20 @@ extern "C" int scanhash_c11(int thr_id, struct work* work, uint32_t max_nonce, u
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 				pdata[19] = foundNonce + 1;
+				continue;
 			}
+		}
+
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
+			break;
 		}
 
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
 

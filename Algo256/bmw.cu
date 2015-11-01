@@ -91,7 +91,7 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 			}
 		}
 
-		if ((uint64_t) throughput + pdata[19] > max_nonce) {
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}

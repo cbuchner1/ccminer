@@ -83,12 +83,14 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 		uint32_t foundNonce;
 		int order = 0;
 
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		foundNonce = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		if (foundNonce != UINT32_MAX)
+		if (foundNonce != UINT32_MAX && bench_algo < 0)
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t vhash[8];
@@ -97,7 +99,6 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				int res = 1;
-				*hashes_done = pdata[19] - first_nonce + throughput;
 				work_set_target_ratio(work, vhash);
 				#if 0
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
@@ -112,9 +113,13 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
 			}
 		}
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce;
 	return 0;

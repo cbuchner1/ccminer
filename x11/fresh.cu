@@ -78,17 +78,18 @@ extern "C" int scanhash_fresh(int thr_id, struct work* work, uint32_t max_nonce,
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x00ff;
+		ptarget[7] = 0x00ff;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		CUDA_LOG_ERROR();
+
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput + 4), -1);
 
 		x11_shavite512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
-
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput + 4), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -101,8 +102,6 @@ extern "C" int scanhash_fresh(int thr_id, struct work* work, uint32_t max_nonce,
 	x11_shavite512_setBlock_80((void*)endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 	do {
-		uint32_t Htarg = ptarget[7];
-
 		uint32_t foundNonce;
 		int order = 0;
 
@@ -128,7 +127,7 @@ extern "C" int scanhash_fresh(int thr_id, struct work* work, uint32_t max_nonce,
 			be32enc(&endiandata[19], foundNonce);
 			fresh_hash(vhash64, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
+			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				work_set_target_ratio(work, vhash64);

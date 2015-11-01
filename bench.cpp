@@ -89,6 +89,9 @@ bool bench_algo_switch_next(int thr_id)
 	int prev_algo = algo;
 	int dev_id = device_map[thr_id % MAX_GPUS];
 	int mfree, mused;
+	// doesnt seems enough to prevent device slow down
+	// after some algo switchs
+	bool need_reset = (gpu_threads == 1);
 
 	algo++;
 
@@ -143,6 +146,7 @@ bool bench_algo_switch_next(int thr_id)
 		gpulog(LOG_WARNING, thr_id, "possible %d MB memory leak in %s! %d MB free",
 			(device_mem_free[thr_id] - mfree), algo_names[prev_algo], mfree);
 		cuda_reset_device(thr_id, NULL); // force to free the leak
+		need_reset = false;
 		mfree = cuda_available_memory(thr_id);
 	}
 	// store used memory per algo
@@ -152,14 +156,13 @@ bool bench_algo_switch_next(int thr_id)
 	// store to dump a table per gpu later
 	algo_hashrates[thr_id][prev_algo] = hashrate;
 
-
 	// wait the other threads to display logs correctly
 	if (opt_n_threads > 1) {
 		pthread_barrier_wait(&algo_barr);
 	}
 
 	if (algo == ALGO_AUTO)
-		return false;
+		return false; // all algos done
 
 	// mutex primary used for the stats purge
 	pthread_mutex_lock(&bench_lock);
@@ -169,6 +172,9 @@ bool bench_algo_switch_next(int thr_id)
 	global_hashrate = 0;
 	thr_hashrates[thr_id] = 0; // reset for minmax64
 	pthread_mutex_unlock(&bench_lock);
+
+	if (need_reset)
+		cuda_reset_device(thr_id, NULL);
 
 	if (thr_id == 0)
 		applog(LOG_BLUE, "Benchmark algo %s...", algo_names[algo]);

@@ -453,9 +453,7 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 			}
 		}
 
-		if ((uint64_t) throughput + pdata[19] > max_nonce) {
-			//applog(LOG_DEBUG, "done... max=%u", max_nonce);
-			*hashes_done = pdata[19] - first_nonce;
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
@@ -463,6 +461,8 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);
+
+	*hashes_done = pdata[19] - first_nonce;
 
 	return 0;
 }

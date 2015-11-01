@@ -206,7 +206,7 @@ extern "C" int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, u
 			}
 		}
 
-		if ((uint64_t)pdata[19] + throughput > (uint64_t)max_nonce) {
+		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
@@ -214,7 +214,7 @@ extern "C" int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, u
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 
 	CUDA_LOG_ERROR();
 
