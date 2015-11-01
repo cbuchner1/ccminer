@@ -1953,6 +1953,9 @@ static void *miner_thread(void *userdata)
 				// to debug nonce ranges
 				gpulog(LOG_DEBUG, thr_id, "ends=%08x range=%08x", nonceptr[0], (nonceptr[0] - start_nonce));
 			}
+			// prevent low scan ranges on next loop on fast algos (blake)
+			if (nonceptr[0] > UINT32_MAX - 64)
+				nonceptr[0] = UINT32_MAX;
 		}
 
 		if (check_dups)

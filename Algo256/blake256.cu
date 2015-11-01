@@ -281,7 +281,7 @@ __global__
 void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce,
 	const uint64_t highTarget, const int rounds, const bool trace)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		const uint32_t nonce = startNonce + thread;
@@ -336,6 +336,8 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
+	cudaGetLastError();
+
 	/* Check error on Ctrl+C or kill to prevent segfaults on exit */
 	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;
@@ -347,6 +349,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 		for (int n=0; n < (NBN-1); n++)
 			extra_results[n] = h_resNonce[thr_id][n+1];
 	}
+	CUDA_LOG_ERROR();
 	return result;
 }
 
@@ -429,6 +432,9 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 #endif /* PRECALC64 */
 
 	do {
+
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		uint32_t foundNonce =
 #if PRECALC64
 		// GPU HASH (second block only, first is midstate)
@@ -437,8 +443,6 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 		// GPU FULL HASH
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], targetHigh, crcsum, blakerounds);
 #endif
-		*hashes_done = pdata[19] - first_nonce + throughput;
-
 		if (foundNonce != UINT32_MAX && bench_algo == -1)
 		{
 			uint32_t vhashcpu[8];
