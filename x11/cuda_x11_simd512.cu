@@ -5,10 +5,10 @@
 //
 // STEP8_IF and STEP8_MAJ beinhalten je 2x 8-fach parallel Operations
 
-#define TPB 128
-
 #include "miner.h"
 #include "cuda_helper.h"
+
+#define TPB 128
 
 uint32_t *d_state[MAX_GPUS];
 uint4 *d_temp4[MAX_GPUS];
@@ -34,7 +34,7 @@ const uint8_t h_perm[8][8] = {
 	{ 4, 5, 2, 3, 6, 7, 0, 1 }
 };
 
-/* for simd_functions.cu */
+/* for simd_functions.cuh */
 #ifdef DEVICE_DIRECT_CONSTANTS
 __constant__ uint32_t c_IV_512[32] = {
 #else
@@ -87,15 +87,23 @@ static const short h_FFT256_2_128_Twiddle[128] = {
 	-30,  55, -58, -65, -95, -40, -98,  94
 };
 
+#include "cuda_x11_simd512_sm2.cuh"
+
+#ifdef __INTELLISENSE__
+/* just for vstudio code colors */
+#define __CUDA_ARCH__ 500
+#endif
 
 /************* the round function ****************/
 
-
+#undef IF
+#undef MAJ
 #define IF(x, y, z) (((y ^ z) & x) ^ z)
 #define MAJ(x, y, z) ((z &y) | ((z|y) & x))
 
+#include "x11/cuda_x11_simd512_func.cuh"
 
-#include "x11/simd_functions.cu"
+#if __CUDA_ARCH__ >= 300
 
 /********************* Message expansion ************************/
 
@@ -346,7 +354,6 @@ void FFT_256_halfzero(int y[256])
 	FFT_128_full(y);
 	FFT_128_full(y+16);
 }
-
 
 /***************************************************/
 
@@ -643,10 +650,23 @@ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4,
 	}
 }
 
+#else
+__global__ void x11_simd512_gpu_expand_64(uint32_t threads, uint32_t *g_hash, uint4 *g_temp4) {}
+__global__ void x11_simd512_gpu_compress1_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state) {}
+__global__ void x11_simd512_gpu_compress2_64(uint32_t threads, uint4 *g_fft4, uint32_t *g_state) {}
+__global__ void x11_simd512_gpu_compress_64_maxwell(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state) {}
+__global__ void x11_simd512_gpu_final_64(uint32_t threads, uint32_t *g_hash, uint4 *g_fft4, uint32_t *g_state) {}
+#endif /* SM3+ */
+
 __host__
 int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 {
+	int dev_id = device_map[thr_id];
 	cuda_get_arch(thr_id);
+	if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300) {
+		x11_simd512_cpu_init_sm2(thr_id);
+		return 0;
+	}
 
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads), (int) err); /* todo: prevent -i 21 */
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads), (int) err);
@@ -656,10 +676,13 @@ int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 	cudaMemcpyToSymbol(c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
 #endif
+
+#if 0
 	cudaMemcpyToSymbol(d_cw0, h_cw0, sizeof(h_cw0), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cw1, h_cw1, sizeof(h_cw1), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cw2, h_cw2, sizeof(h_cw2), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cw3, h_cw3, sizeof(h_cw3), 0, cudaMemcpyHostToDevice);
+#endif
 
 	// Texture for 128-Bit Zugriffe
 	cudaChannelFormatDesc channelDesc128 = cudaCreateChannelDesc<uint4>();
@@ -675,27 +698,31 @@ int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 __host__
 void x11_simd512_cpu_free(int thr_id)
 {
-	cudaFree(d_temp4[thr_id]);
-	cudaFree(d_state[thr_id]);
+	int dev_id = device_map[thr_id];
+	if (device_sm[dev_id] >= 300 && cuda_arch[dev_id] >= 300) {
+		cudaFree(d_temp4[thr_id]);
+		cudaFree(d_state[thr_id]);
+	}
 }
 
 __host__
 void x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = TPB;
+	int dev_id = device_map[thr_id];
 
 	dim3 block(threadsperblock);
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 gridX8(grid.x * 8);
 
-	if (d_nonceVector != NULL) {
-		applog(LOG_ERR, "Sorry, nonce Vector param was removed!");
+	if (d_nonceVector != NULL || device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300) {
+		x11_simd512_cpu_hash_64_sm2(thr_id, threads, startNounce, d_nonceVector, d_hash, order);
 		return;
 	}
 
 	x11_simd512_gpu_expand_64 <<<gridX8, block>>> (threads, d_hash, d_temp4[thr_id]);
 
-	if (device_sm[device_map[thr_id]] >= 500 && cuda_arch[device_map[thr_id]] >= 500) {
+	if (device_sm[dev_id] >= 500 && cuda_arch[dev_id] >= 500) {
 		x11_simd512_gpu_compress_64_maxwell <<< grid, block >>> (threads, d_hash, d_temp4[thr_id], d_state[thr_id]);
 	} else {
 		x11_simd512_gpu_compress1_64 <<< grid, block >>> (threads, d_hash, d_temp4[thr_id], d_state[thr_id]);

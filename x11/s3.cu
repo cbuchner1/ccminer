@@ -43,6 +43,21 @@ extern "C" void s3hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+#ifdef _DEBUG
+#define TRACE(algo) { \
+	if (max_nonce == 1 && pdata[19] <= 1) { \
+		uint32_t* debugbuf = NULL; \
+		cudaMallocHost(&debugbuf, 32); \
+		cudaMemcpy(debugbuf, d_hash[thr_id], 32, cudaMemcpyDeviceToHost); \
+		printf("S3 %s %08x %08x %08x %08x...%08x\n", algo, swab32(debugbuf[0]), swab32(debugbuf[1]), \
+			swab32(debugbuf[2]), swab32(debugbuf[3]), swab32(debugbuf[7])); \
+		cudaFreeHost(debugbuf); \
+	} \
+}
+#else
+#define TRACE(algo) {}
+#endif
+
 static bool init[MAX_GPUS] = { 0 };
 
 /* Main S3 entry point */
@@ -60,17 +75,23 @@ extern "C" int scanhash_s3(int thr_id, struct work* work, uint32_t max_nonce, un
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0xF;
+		ptarget[7] = 0xF;
 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
+
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 
 		x11_shavite512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
-
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput), 0);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -90,8 +111,11 @@ extern "C" int scanhash_s3(int thr_id, struct work* work, uint32_t max_nonce, un
 		int order = 0;
 
 		x11_shavite512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		TRACE("shavite:");
 		x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("simd   :");
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE("skein  :");
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 

@@ -6,7 +6,7 @@
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
 
-#include "cuda_x11_aes.cu"
+#include "cuda_x11_aes.cuh"
 
 __device__ __forceinline__
 static void AES_ROUND_NOKEY(
@@ -1403,7 +1403,7 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 	{
 		const uint32_t nounce = startNounce + thread;
 
-		// kopiere init-state
+		// initial state
 		uint32_t state[16] = {
 			SPH_C32(0x72FCCDD8), SPH_C32(0x79CA4727), SPH_C32(0x128A077B), SPH_C32(0x40D55AEC),
 			SPH_C32(0xD1901A06), SPH_C32(0x430AE307), SPH_C32(0xB29F5CD1), SPH_C32(0xDF07FBFC),
@@ -1441,6 +1441,7 @@ void x11_shavite512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
+	// note: 128 threads minimum are required to init the shared memory array
 	x11_shavite512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
@@ -1465,8 +1466,8 @@ void x11_shavite512_cpu_init(int thr_id, uint32_t threads)
 __host__
 void x11_shavite512_setBlock_80(void *pdata)
 {
-	// Message mit Padding bereitstellen
-	// lediglich die korrekte Nonce ist noch ab Byte 76 einzusetzen.
+	// Message with Padding
+	// The nonce is at Byte 76.
 	unsigned char PaddedMessage[128];
 	memcpy(PaddedMessage, pdata, 80);
 	memset(PaddedMessage+80, 0, 48);

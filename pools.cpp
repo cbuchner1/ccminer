@@ -360,6 +360,7 @@ bool parse_pool_array(json_t *obj)
 void pool_dump_infos()
 {
 	struct pool_infos *p;
+	if (opt_benchmark) return;
 	for (int i=0; i<num_pools; i++) {
 		p = &pools[i];
 		applog(LOG_DEBUG, "POOL %01d: %s USER %s -s %d", i,

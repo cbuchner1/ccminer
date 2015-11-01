@@ -89,7 +89,7 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x000f;
+		ptarget[7] = 0x000f;
 
 	if (!init[thr_id])
 	{
@@ -99,7 +99,6 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 			gpulog(LOG_ERR, thr_id, "Sorry, This algo is not supported by this GPU arch (SM 3.0 required)");
 			proper_exit(EXIT_CODE_CUDA_ERROR);
 		}
-
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 

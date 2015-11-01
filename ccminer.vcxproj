@@ -251,6 +251,7 @@
     <ClCompile Include="neoscrypt\neoscrypt.cpp" />
     <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />
     <ClInclude Include="neoscrypt\cuda_vectors.h" />
+    <ClInclude Include="x11\cuda_x11_simd512_sm2.cuh" />
     <CudaCompile Include="Algo256\bmw.cu" />
     <CudaCompile Include="Algo256\cuda_bmw.cu">
       <MaxRegCount>76</MaxRegCount>
@@ -463,9 +464,7 @@
     <CudaCompile Include="cuda_skeincoin.cu">
       <MaxRegCount>48</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="x11\cuda_x11_aes.cu">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </CudaCompile>
+    <ClInclude Include="x11\cuda_x11_aes.cuh" />
     <CudaCompile Include="x11\cuda_x11_cubehash512.cu" />
     <CudaCompile Include="x11\cuda_x11_echo.cu">
     </CudaCompile>
@@ -476,15 +475,13 @@
     <CudaCompile Include="x11\cuda_x11_shavite512.cu">
       <MaxRegCount>128</MaxRegCount>
     </CudaCompile>
+    <ClInclude Include="x11\cuda_x11_simd512_func.cuh" />
     <CudaCompile Include="x11\cuda_x11_simd512.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x11\c11.cu" />
     <CudaCompile Include="x11\fresh.cu" />
     <CudaCompile Include="x11\s3.cu" />
-    <CudaCompile Include="x11\simd_functions.cu">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </CudaCompile>
     <CudaCompile Include="x11\x11.cu">
     </CudaCompile>
     <CudaCompile Include="x13\cuda_x13_hamsi512.cu">

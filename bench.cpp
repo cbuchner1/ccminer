@@ -100,16 +100,12 @@ bool bench_algo_switch_next(int thr_id)
 
 	if (device_sm[dev_id] && device_sm[dev_id] < 300) {
 		// incompatible SM 2.1 kernels...
-		if (algo == ALGO_FRESH) algo++;
 		if (algo == ALGO_GROESTL) algo++;
 		if (algo == ALGO_MYR_GR) algo++;
-		if (algo == ALGO_JACKPOT) algo++;
+		if (algo == ALGO_JACKPOT) algo++; // compact shuffle
 		if (algo == ALGO_LYRA2v2) algo++;
 		if (algo == ALGO_NEOSCRYPT) algo++;
-		if (algo == ALGO_QUARK) algo++;
-		if (algo == ALGO_QUBIT) algo++;
-		if (algo == ALGO_S3) algo++; // to check...
-		while (algo >= ALGO_X11 && algo <= ALGO_X17) algo++;
+		if (algo == ALGO_QUARK) algo++; // todo
 		if (algo == ALGO_WHIRLPOOLX) algo++;
 	}
 	// and unwanted ones...
