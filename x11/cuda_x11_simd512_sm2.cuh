@@ -1,3 +1,9 @@
+/***************************************************************************************************
+ * SM 2.x SIMD512 CUDA Implementation without shuffle
+ *
+ * cbuchner 2014 / tpruvot 2015
+ */
+
 #include "cuda_helper.h"
 
 #ifdef __INTELLISENSE__
@@ -9,7 +15,7 @@
 
 #define T32(x) (x)
 
-#ifndef DEVICE_DIRECT_CONSTANTS /* already made in SM 3+ implementation */
+#if 0 /* already declared in SM 3+ implementation */
 __constant__  uint32_t c_IV_512[32];
 const uint32_t h_IV_512[32] = {
 	0x0ba16b95, 0x72f999ad, 0x9fecc2ae, 0xba3264fc, 0x5e894929, 0x8e9f30e5, 0x2f1daa37, 0xf0f2c558,
@@ -51,9 +57,7 @@ static const int h_FFT256_2_128_Twiddle[128] = {
 };
 #endif
 
-__constant__ int c_FFT[256] = 
-//const int h_FFT[256] =
-{
+__constant__ int c_FFT[256] = {
 	// this is the FFT result in revbin permuted order
 	4, -4, 32, -32, -60, 60, 60, -60, 101, -101, 58, -58, 112, -112, -11, 11, -92, 92,
 	-119, 119, 42, -42, -82, 82, 32, -32, 32, -32, 121, -121, 17, -17, -47, 47, 63,
@@ -73,7 +77,6 @@ __constant__ int c_FFT[256] =
 };
 
 __constant__ int c_P8[32][8] = {
-//static const int h_P8[32][8] = {
 	{ 2, 66, 34, 98, 18, 82, 50, 114 },
 	{ 6, 70, 38, 102, 22, 86, 54, 118 },
 	{ 0, 64, 32, 96, 16, 80, 48, 112 },
@@ -109,7 +112,6 @@ __constant__ int c_P8[32][8] = {
 };
 
 __constant__ int c_Q8[32][8] = {
-//static const int h_Q8[32][8] = {
 	{ 130, 194, 162, 226, 146, 210, 178, 242 },
 	{ 134, 198, 166, 230, 150, 214, 182, 246 },
 	{ 128, 192, 160, 224, 144, 208, 176, 240 },
@@ -153,8 +155,8 @@ __constant__ int c_Q8[32][8] = {
 
 /************* the round function ****************/
 
-#define IF(x, y, z) ((((y) ^ (z)) & (x)) ^ (z))
-#define MAJ(x, y, z) (((z) & (y)) | (((z) | (y)) & (x)))
+//#define IF(x, y, z) ((((y) ^ (z)) & (x)) ^ (z))
+//#define MAJ(x, y, z) (((z) & (y)) | (((z) | (y)) & (x)))
 
 __device__ __forceinline__
 void STEP8_IF(const uint32_t *w, const int i, const int r, const int s, uint32_t *A, const uint32_t *B, const uint32_t *C, uint32_t *D)
@@ -193,7 +195,6 @@ void Round8(uint32_t A[32], const int y[256], int i, int r, int s, int t, int u)
 {
 	uint32_t w[8][8];
 	int code = i<2? 185: 233;
-	int a, b;
 
 	/*
 	 * The FFT output y is in revbin permuted order,
@@ -201,9 +202,9 @@ void Round8(uint32_t A[32], const int y[256], int i, int r, int s, int t, int u)
 	 */
 
 	#pragma unroll 8
-	for(a=0; a<8; a++) {
+	for(int a=0; a<8; a++) {
 		#pragma unroll 8
-		for(b=0; b<8; b++) {
+		for(int b=0; b<8; b++) {
 			w[a][b] = __byte_perm( (y[c_P8[8*i+a][b]] * code), (y[c_Q8[8*i+a][b]] * code), 0x5410);
 		}
 	}
@@ -244,27 +245,27 @@ void Round8(uint32_t A[32], const int y[256], int i, int r, int s, int t, int u)
 __device__ __forceinline__
 void FFT_8(int *y, int stripe)
 {
- /*
-	* FFT_8 using w=4 as 8th root of unity
-	* Unrolled decimation in frequency (DIF) radix-2 NTT.
-	* Output data is in revbin_permuted order.
-	*/
-#define X(i) y[stripe*i]
+	/*
+	 * FFT_8 using w=4 as 8th root of unity
+	 * Unrolled decimation in frequency (DIF) radix-2 NTT.
+	 * Output data is in revbin_permuted order.
+	 */
+	#define X(i) y[stripe*i]
 
-#define DO_REDUCE(i) \
-	X(i) = REDUCE(X(i))
+	#define DO_REDUCE(i) \
+		X(i) = REDUCE(X(i))
 
-#define DO_REDUCE_FULL_S(i) do { \
-	X(i) = REDUCE(X(i)); \
-	X(i) = EXTRA_REDUCE_S(X(i)); \
-} while(0)
+	#define DO_REDUCE_FULL_S(i) { \
+		X(i) = REDUCE(X(i)); \
+		X(i) = EXTRA_REDUCE_S(X(i)); \
+	}
 
-#define BUTTERFLY(i,j,n) do { \
-	int u= X(i); \
-	int v= X(j); \
-	X(i) = u+v; \
-	X(j) = (u-v) << (2*n); \
-} while(0)
+	#define BUTTERFLY(i,j,n) { \
+		int u= X(i); \
+		int v= X(j); \
+		X(i) = u+v; \
+		X(j) = (u-v) << (2*n); \
+	}
 
 	BUTTERFLY(0, 4, 0);
 	BUTTERFLY(1, 5, 1);
@@ -295,10 +296,10 @@ void FFT_8(int *y, int stripe)
 	DO_REDUCE_FULL_S(6);
 	DO_REDUCE_FULL_S(7);
 
-#undef X
-#undef DO_REDUCE
-#undef DO_REDUCE_FULL_S
-#undef BUTTERFLY
+	#undef X
+	#undef DO_REDUCE
+	#undef DO_REDUCE_FULL_S
+	#undef BUTTERFLY
 }
 
 __device__ __forceinline__
@@ -315,19 +316,17 @@ void FFT_16(int *y, int stripe)
 	#define DO_REDUCE(i) \
 		X(i) = REDUCE(X(i))
 
-	#define DO_REDUCE_FULL_S(i) \
-		do { \
+	#define DO_REDUCE_FULL_S(i) { \
 		X(i) = REDUCE(X(i)); \
 		X(i) = EXTRA_REDUCE_S(X(i)); \
-	} while(0)
+	}
 
-	#define BUTTERFLY(i,j,n) \
-		do { \
+	#define BUTTERFLY(i,j,n) { \
 		int u= X(i); \
 		int v= X(j); \
 		X(i) = u+v; \
 		X(j) = (u-v) << n; \
-	} while(0)
+	}
 
 	BUTTERFLY(0, 8, 0);
 	BUTTERFLY(1, 9, 1);
@@ -396,10 +395,10 @@ void FFT_16(int *y, int stripe)
 	DO_REDUCE_FULL_S(14);
 	DO_REDUCE_FULL_S(15);
 
-#undef X
-#undef DO_REDUCE
-#undef DO_REDUCE_FULL_S
-#undef BUTTERFLY
+	#undef X
+	#undef DO_REDUCE
+	#undef DO_REDUCE_FULL_S
+	#undef BUTTERFLY
 }
 
 __device__ __forceinline__
@@ -549,19 +548,16 @@ void x11_simd512_gpu_hash_64_sm2(const uint32_t threads, const uint32_t startNou
 
 #else
 __global__ void x11_simd512_gpu_hash_64_sm2(const uint32_t threads, const uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector) {}
-#endif /* __CUDA_ARCH__ */
+#endif /* __CUDA_ARCH__ < 300 */
 
 __host__
-static  void x11_simd512_cpu_init_sm2(int thr_id)
+static void x11_simd512_cpu_init_sm2(int thr_id)
 {
 #ifndef DEVICE_DIRECT_CONSTANTS
 	cudaMemcpyToSymbol( c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol( c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol( c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
 #endif
-//	cudaMemcpyToSymbol( c_FFT, h_FFT, sizeof(h_FFT), 0, cudaMemcpyHostToDevice);
-//	cudaMemcpyToSymbol( c_P8, h_P8, sizeof(h_P8), 0, cudaMemcpyHostToDevice);
-//	cudaMemcpyToSymbol( c_Q8, h_Q8, sizeof(h_Q8), 0, cudaMemcpyHostToDevice);
 }
 
 __host__

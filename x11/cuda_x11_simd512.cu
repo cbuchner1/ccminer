@@ -1,9 +1,6 @@
-// Parallelization:
-//
-// FFT_8  wird 2 times 8-fach parallel ausgeführt (in FFT_64)
-//        and  1 time 16-fach parallel (in FFT_128_full)
-//
-// STEP8_IF and STEP8_MAJ beinhalten je 2x 8-fach parallel Operations
+/***************************************************************************************************
+ * SIMD512 SM3+ CUDA IMPLEMENTATION (require cuda_x11_simd512_func.cuh)
+ */
 
 #include "miner.h"
 #include "cuda_helper.h"
@@ -34,7 +31,7 @@ const uint8_t h_perm[8][8] = {
 	{ 4, 5, 2, 3, 6, 7, 0, 1 }
 };
 
-/* for simd_functions.cuh */
+/* used in cuda_x11_simd512_func.cuh (SIMD_Compress2) */
 #ifdef DEVICE_DIRECT_CONSTANTS
 __constant__ uint32_t c_IV_512[32] = {
 #else
@@ -87,21 +84,17 @@ static const short h_FFT256_2_128_Twiddle[128] = {
 	-30,  55, -58, -65, -95, -40, -98,  94
 };
 
+/************* the round function ****************/
+#define IF(x, y, z) (((y ^ z) & x) ^ z)
+#define MAJ(x, y, z) ((z &y) | ((z|y) & x))
+
 #include "cuda_x11_simd512_sm2.cuh"
+#include "cuda_x11_simd512_func.cuh"
 
 #ifdef __INTELLISENSE__
 /* just for vstudio code colors */
 #define __CUDA_ARCH__ 500
 #endif
-
-/************* the round function ****************/
-
-#undef IF
-#undef MAJ
-#define IF(x, y, z) (((y ^ z) & x) ^ z)
-#define MAJ(x, y, z) ((z &y) | ((z|y) & x))
-
-#include "x11/cuda_x11_simd512_func.cuh"
 
 #if __CUDA_ARCH__ >= 300
 
@@ -126,6 +119,13 @@ static const short h_FFT256_2_128_Twiddle[128] = {
  */
 #define REDUCE_FULL_S(x) \
 	EXTRA_REDUCE_S(REDUCE(x))
+
+// Parallelization:
+//
+// FFT_8  wird 2 times 8-fach parallel ausgeführt (in FFT_64)
+//        and  1 time 16-fach parallel (in FFT_128_full)
+//
+// STEP8_IF and STEP8_MAJ beinhalten je 2x 8-fach parallel Operations
 
 /**
  * FFT_8 using w=4 as 8th root of unity
@@ -670,14 +670,13 @@ int x11_simd512_cpu_init(int thr_id, uint32_t threads)
 
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_temp4[thr_id], 64*sizeof(uint4)*threads), (int) err); /* todo: prevent -i 21 */
 	CUDA_CALL_OR_RET_X(cudaMalloc(&d_state[thr_id], 32*sizeof(int)*threads), (int) err);
+
 #ifndef DEVICE_DIRECT_CONSTANTS
 	cudaMemcpyToSymbol(c_perm, h_perm, sizeof(h_perm), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_IV_512, h_IV_512, sizeof(h_IV_512), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_FFT128_8_16_Twiddle, h_FFT128_8_16_Twiddle, sizeof(h_FFT128_8_16_Twiddle), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c_FFT256_2_128_Twiddle, h_FFT256_2_128_Twiddle, sizeof(h_FFT256_2_128_Twiddle), 0, cudaMemcpyHostToDevice);
-#endif
 
-#if 0
 	cudaMemcpyToSymbol(d_cw0, h_cw0, sizeof(h_cw0), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cw1, h_cw1, sizeof(h_cw1), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(d_cw2, h_cw2, sizeof(h_cw2), 0, cudaMemcpyHostToDevice);
