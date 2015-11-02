@@ -1636,6 +1636,8 @@ static void *miner_thread(void *userdata)
 
 			// free gpu resources
 			algo_free_all(thr_id);
+			// clear any free error (algo switch)
+			cuda_clear_lasterror();
 
 			// conditional pool switch
 			if (num_pools > 1 && conditional_pool_rotate) {

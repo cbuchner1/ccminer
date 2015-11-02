@@ -77,9 +77,6 @@ void algo_free_all(int thr_id)
 	//free_sha256d(thr_id);
 	free_scrypt(thr_id);
 	free_scrypt_jane(thr_id);
-
-	// warn on cuda error
-	CUDA_LOG_ERROR();
 }
 
 // benchmark all algos (called once per mining thread)
@@ -118,6 +115,7 @@ bool bench_algo_switch_next(int thr_id)
 	// free current algo memory and track mem usage
 	mused = cuda_available_memory(thr_id);
 	algo_free_all(thr_id);
+	CUDA_LOG_ERROR();
 
 	// device can take some time to free
 	mfree = cuda_available_memory(thr_id);

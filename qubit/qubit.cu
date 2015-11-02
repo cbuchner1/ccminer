@@ -23,6 +23,8 @@ extern void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t st
 
 extern "C" void qubithash(void *state, const void *input)
 {
+	uint8_t _ALIGN(128) hash[64];
+
 	// luffa1-cubehash2-shavite3-simd4-echo5
 
 	sph_luffa512_context ctx_luffa;
@@ -30,8 +32,6 @@ extern "C" void qubithash(void *state, const void *input)
 	sph_shavite512_context ctx_shavite;
 	sph_simd512_context ctx_simd;
 	sph_echo512_context ctx_echo;
-
-	uint8_t hash[64];
 
 	sph_luffa512_init(&ctx_luffa);
 	sph_luffa512 (&ctx_luffa, input, 80);
@@ -68,7 +68,7 @@ extern "C" int scanhash_qubit(int thr_id, struct work* work, uint32_t max_nonce,
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
-		((uint32_t*)ptarget)[7] = 0x0000ff;
+		ptarget[7] = 0x007f;
 
 	if (!init[thr_id])
 	{
@@ -133,11 +133,16 @@ extern "C" int scanhash_qubit(int thr_id, struct work* work, uint32_t max_nonce,
 			}
 		}
 
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
+
 		pdata[19] += throughput;
 
-	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
+	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
+	*hashes_done = pdata[19] - first_nonce;
 	return 0;
 }
 

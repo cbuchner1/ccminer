@@ -494,6 +494,7 @@ uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);
 #define device_intensity(t,f,d) cuda_default_throughput(t,d)
 
 void cuda_log_lasterror(int thr_id, const char* func, int line);
+void cuda_clear_lasterror();
 #define CUDA_LOG_ERROR() cuda_log_lasterror(thr_id, __func__, __LINE__)
 
 #define CL_N    "\x1B[0m"

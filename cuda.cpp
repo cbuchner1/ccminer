@@ -201,6 +201,12 @@ void cuda_log_lasterror(int thr_id, const char* func, int line)
 		gpulog(LOG_WARNING, thr_id, "%s:%d %s", func, line, cudaGetErrorString(err));
 }
 
+// Clear any cuda error in non-cuda unit (.c/.cpp)
+void cuda_clear_lasterror()
+{
+	cudaGetLastError();
+}
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
