@@ -38,6 +38,8 @@ extern volatile int pool_switch_count;
 extern volatile bool pool_is_switching;
 extern uint8_t conditional_state[MAX_GPUS];
 
+extern double thr_hashrates[MAX_GPUS];
+
 extern struct option options[];
 
 #define CFG_NULL 0
@@ -51,13 +53,12 @@ struct opt_config_array {
 	{ CFG_POOL, "user", NULL },
 	{ CFG_POOL, "pass", NULL },
 	{ CFG_POOL, "userpass", NULL },
-	{ CFG_POOL, "algo", NULL },
 	{ CFG_POOL, "name", "pool-name" },
+	{ CFG_POOL, "algo", "pool-algo" },
 	{ CFG_POOL, "scantime", "pool-scantime" },
 	{ CFG_POOL, "max-diff", "pool-max-diff" },
 	{ CFG_POOL, "max-rate", "pool-max-rate" },
-	{ CFG_POOL, "removed",  "pool-removed" },
-	{ CFG_POOL, "disabled", "pool-removed" }, // sample alias
+	{ CFG_POOL, "disabled", "pool-disabled" },
 	{ CFG_POOL, "time-limit", "pool-time-limit" },
 	{ CFG_NULL, NULL, NULL }
 };
@@ -117,12 +118,12 @@ void pool_init_defaults()
 void pool_set_attr(int pooln, const char* key, char* arg)
 {
 	struct pool_infos *p = &pools[pooln];
-	if (!strcasecmp(key, "algo")) {
-		p->algo = algo_to_int(arg);
-		return;
-	}
 	if (!strcasecmp(key, "name")) {
 		snprintf(p->name, sizeof(p->name), "%s", arg);
+		return;
+	}
+	if (!strcasecmp(key, "algo")) {
+		p->algo = algo_to_int(arg);
 		return;
 	}
 	if (!strcasecmp(key, "scantime")) {
@@ -141,7 +142,7 @@ void pool_set_attr(int pooln, const char* key, char* arg)
 		p->time_limit = atoi(arg);
 		return;
 	}
-	if (!strcasecmp(key, "removed")) {
+	if (!strcasecmp(key, "disabled")) {
 		int removed = atoi(arg);
 		if (removed) {
 			p->status |= POOL_ST_REMOVED;
@@ -154,6 +155,7 @@ void pool_set_attr(int pooln, const char* key, char* arg)
 bool pool_switch(int thr_id, int pooln)
 {
 	int prevn = cur_pooln;
+	bool algo_switch = false;
 	struct pool_infos *prev = &pools[cur_pooln];
 	struct pool_infos* p = NULL;
 
@@ -194,6 +196,16 @@ bool pool_switch(int thr_id, int pooln)
 	want_stratum = have_stratum = (p->type & POOL_STRATUM) != 0;
 
 	pthread_mutex_unlock(&stratum_work_lock);
+
+	// algo "blind" switch without free, not proper
+	if (p->algo != (int) opt_algo) {
+		opt_algo = (enum sha_algos) p->algo;
+		for (int n=0; n<opt_n_threads; n++)
+			thr_hashrates[n] = 0.;
+		// todo: a barrier is required to free algo resources
+		if (opt_algo != ALGO_AUTO)
+			algo_switch = true;
+	}
 
 	if (prevn != cur_pooln) {
 

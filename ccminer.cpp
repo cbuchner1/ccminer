@@ -340,11 +340,12 @@ struct option options[] = {
 	{ "max-rate", 1, NULL, 1062 },
 	{ "pass", 1, NULL, 'p' },
 	{ "pool-name", 1, NULL, 1100 },     // pool
-	{ "pool-removed", 1, NULL, 1101 },  // pool
+	{ "pool-algo", 1, NULL, 1101 },     // pool
 	{ "pool-scantime", 1, NULL, 1102 }, // pool
 	{ "pool-time-limit", 1, NULL, 1108 },
 	{ "pool-max-diff", 1, NULL, 1161 }, // pool
 	{ "pool-max-rate", 1, NULL, 1162 }, // pool
+	{ "pool-disabled", 1, NULL, 1199 }, // pool
 	{ "protocol-dump", 0, NULL, 'P' },
 	{ "proxy", 1, NULL, 'x' },
 	{ "quiet", 0, NULL, 'q' },
@@ -1633,6 +1634,9 @@ static void *miner_thread(void *userdata)
 		/* conditional mining */
 		if (!wanna_mine(thr_id)) {
 
+			// free gpu resources
+			algo_free_all(thr_id);
+
 			// conditional pool switch
 			if (num_pools > 1 && conditional_pool_rotate) {
 				if (!pool_is_switching)
@@ -2833,8 +2837,8 @@ void parse_arg(int key, char *arg)
 	case 1100: /* pool name */
 		pool_set_attr(cur_pooln, "name", arg);
 		break;
-	case 1101: /* pool removed */
-		pool_set_attr(cur_pooln, "removed", arg);
+	case 1101: /* pool algo */
+		pool_set_attr(cur_pooln, "algo", arg);
 		break;
 	case 1102: /* pool scantime */
 		pool_set_attr(cur_pooln, "scantime", arg);
@@ -2847,6 +2851,9 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1162: /* pool max-rate */
 		pool_set_attr(cur_pooln, "max-rate", arg);
+		break;
+	case 1199:
+		pool_set_attr(cur_pooln, "disabled", arg);
 		break;
 
 	case 'V':
