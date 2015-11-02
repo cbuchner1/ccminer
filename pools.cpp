@@ -29,6 +29,7 @@ extern char* short_url;
 extern struct work _ALIGN(64) g_work;
 extern struct stratum_ctx stratum;
 extern pthread_mutex_t stratum_work_lock;
+extern pthread_mutex_t stats_lock;
 extern bool get_work(struct thr_info *thr, struct work *work);
 extern bool stratum_need_reset;
 extern time_t firstwork_time;
@@ -198,18 +199,29 @@ bool pool_switch(int thr_id, int pooln)
 	pthread_mutex_unlock(&stratum_work_lock);
 
 	// algo "blind" switch without free, not proper
+	// todo: barrier required to free algo resources
 	if (p->algo != (int) opt_algo) {
-		opt_algo = (enum sha_algos) p->algo;
-		for (int n=0; n<opt_n_threads; n++)
-			thr_hashrates[n] = 0.;
-		// todo: a barrier is required to free algo resources
-		if (opt_algo != ALGO_AUTO)
+
+		if (opt_algo != ALGO_AUTO) {
+
 			algo_switch = true;
+
+			pthread_mutex_lock(&stats_lock);
+			for (int n=0; n<opt_n_threads; n++)
+				thr_hashrates[n] = 0.;
+			stats_purge_all();
+			if (check_dups)
+				hashlog_purge_all();
+			pthread_mutex_unlock(&stats_lock);
+		}
+
+		opt_algo = (enum sha_algos) p->algo;
 	}
 
 	if (prevn != cur_pooln) {
 
 		pool_switch_count++;
+		net_diff = 0;
 		g_work_time = 0;
 		g_work.data[0] = 0;
 		pool_is_switching = true;

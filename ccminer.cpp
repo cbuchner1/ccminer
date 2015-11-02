@@ -179,7 +179,7 @@ struct work_restart *work_restart = NULL;
 static int app_exit_code = EXIT_CODE_OK;
 
 pthread_mutex_t applog_lock;
-static pthread_mutex_t stats_lock;
+pthread_mutex_t stats_lock;
 double thr_hashrates[MAX_GPUS] = { 0 };
 uint64_t global_hashrate = 0;
 double   stratum_diff = 0.0;
