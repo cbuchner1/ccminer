@@ -283,15 +283,6 @@ void groestl256_cpu_init(int thr_id, uint32_t threads)
 __host__
 void groestl256_cpu_free(int thr_id)
 {
-	cudaUnbindTexture(t0up2);
-	cudaUnbindTexture(t0dn2);
-	cudaUnbindTexture(t1up2);
-	cudaUnbindTexture(t1dn2);
-	cudaUnbindTexture(t2up2);
-	cudaUnbindTexture(t2dn2);
-	cudaUnbindTexture(t3up2);
-	cudaUnbindTexture(t3dn2);
-
 	for (int i=0; i<8; i++)
 		cudaFree(d_textures[thr_id][i]);
 

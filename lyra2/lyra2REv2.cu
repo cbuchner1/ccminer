@@ -114,11 +114,12 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));
 
 		if (device_sm[dev_id] < 300) {
-			applog(LOG_ERR, "Device SM 3.0 or more recent required!");
+			gpulog(LOG_ERR, thr_id, "Device SM 3.0 or more recent required!");
 			proper_exit(1);
 			return -1;
 		}
 
+		api_set_throughput(thr_id, throughput);
 		init[thr_id] = true;
 	}
 

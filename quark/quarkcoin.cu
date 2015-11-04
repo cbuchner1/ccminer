@@ -121,6 +121,7 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
+	int dev_id = device_map[thr_id];
 
 	uint32_t throughput =  cuda_default_throughput(thr_id, 1U << 20); // 256*4096
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
@@ -132,6 +133,7 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 	{
 		cudaSetDevice(device_map[thr_id]);
 
+		cudaGetLastError();
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 
 		quark_blake512_cpu_init(thr_id, throughput);
@@ -146,6 +148,13 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 		cudaMalloc(&d_branch1Nonces[thr_id], sizeof(uint32_t)*throughput);
 		cudaMalloc(&d_branch2Nonces[thr_id], sizeof(uint32_t)*throughput);
 		cudaMalloc(&d_branch3Nonces[thr_id], sizeof(uint32_t)*throughput);
+		CUDA_SAFE_CALL(cudaGetLastError());
+
+		if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300) {
+			gpulog(LOG_ERR, thr_id, "Device SM 3.0 or more recent required!");
+			proper_exit(1);
+			return -1;
+		}
 
 		init[thr_id] = true;
 	}

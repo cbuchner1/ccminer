@@ -2793,12 +2793,13 @@ void parse_arg(int key, char *arg)
 		if (p) d *= 1e9;
 		opt_max_rate = d;
 		break;
-	case 'd': // CB
+	case 'd': // --device
 		{
+			int device_thr[MAX_GPUS] = { 0 };
 			int ngpus = cuda_num_devices();
 			char * pch = strtok (arg,",");
 			opt_n_threads = 0;
-			while (pch != NULL) {
+			while (pch != NULL && opt_n_threads < MAX_GPUS) {
 				if (pch[0] >= '0' && pch[0] <= '9' && pch[1] == '\0')
 				{
 					if (atoi(pch) < ngpus)
@@ -2817,6 +2818,14 @@ void parse_arg(int key, char *arg)
 					}
 				}
 				pch = strtok (NULL, ",");
+			}
+			// count threads per gpu
+			for (int n=0; n < opt_n_threads; n++) {
+				int device = device_map[n];
+				device_thr[device]++;
+			}
+			for (int n=0; n < ngpus; n++) {
+				gpu_threads = max(gpu_threads, device_thr[n]);
 			}
 		}
 		break;
@@ -3177,8 +3186,8 @@ int main(int argc, char *argv[])
 	else if (active_gpus > opt_n_threads)
 		active_gpus = opt_n_threads;
 
-	// generally doesn't work... let 1
-	gpu_threads = opt_n_threads / active_gpus;
+	// generally doesn't work well...
+	gpu_threads = max(gpu_threads, opt_n_threads / active_gpus);
 
 	if (opt_benchmark && opt_algo == ALGO_AUTO) {
 		bench_init(opt_n_threads);

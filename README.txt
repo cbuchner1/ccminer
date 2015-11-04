@@ -228,7 +228,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Nov. 02nd 2015  v1.7
+  Nov. 05th 2015  v1.7
                   Improve old devices compatibility (x11, lyra2, qubit...)
                   Add windows support for SM 2.1 and drop SM 3.5 (x86)
                   Improve lyra2 (v1/v2) cuda implementations

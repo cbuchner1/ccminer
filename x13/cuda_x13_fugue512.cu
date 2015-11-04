@@ -685,11 +685,6 @@ void x13_fugue512_cpu_init(int thr_id, uint32_t threads)
 __host__
 void x13_fugue512_cpu_free(int thr_id)
 {
-	cudaUnbindTexture(mixTab0Tex);
-	cudaUnbindTexture(mixTab1Tex);
-	cudaUnbindTexture(mixTab2Tex);
-	cudaUnbindTexture(mixTab3Tex);
-
 	for (int i=0; i<4; i++)
 		cudaFree(d_textures[thr_id][i]);
 }

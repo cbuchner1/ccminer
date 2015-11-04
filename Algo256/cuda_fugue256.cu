@@ -724,14 +724,13 @@ fugue256_gpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outp
 __host__
 void fugue256_cpu_init(int thr_id, uint32_t threads)
 {
-	// Kopiere die Hash-Tabellen in den GPU-Speicher
+	// Link the hash tables in the GPU
 	texDef(0, mixTab0Tex, mixTab0m, mixtab0_cpu, sizeof(uint32_t)*256);
 	texDef(1, mixTab1Tex, mixTab1m, mixtab1_cpu, sizeof(uint32_t)*256);
 	texDef(2, mixTab2Tex, mixTab2m, mixtab2_cpu, sizeof(uint32_t)*256);
 	texDef(3, mixTab3Tex, mixTab3m, mixtab3_cpu, sizeof(uint32_t)*256);
 
-	// Speicher für alle Ergebnisse belegen
-	cudaMalloc(&d_fugue256_hashoutput[thr_id], (size_t) 32 * threads);
+	CUDA_SAFE_CALL(cudaMalloc(&d_fugue256_hashoutput[thr_id], (size_t) 32 * threads));
 	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t));
 }
 
@@ -741,11 +740,6 @@ void fugue256_cpu_free(int thr_id)
 	cudaFree(d_fugue256_hashoutput[thr_id]);
 	cudaFree(d_resultNonce[thr_id]);
 
-	cudaUnbindTexture(mixTab0Tex);
-	cudaUnbindTexture(mixTab1Tex);
-	cudaUnbindTexture(mixTab2Tex);
-	cudaUnbindTexture(mixTab3Tex);
-
 	for (int i=0; i<4; i++)
 		cudaFree(d_textures[thr_id][i]);
 }
@@ -753,20 +747,18 @@ void fugue256_cpu_free(int thr_id)
 __host__
 void fugue256_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
-	// CPU-Vorbereitungen treffen
 	sph_fugue256_context ctx_fugue_const;
 	sph_fugue256_init(&ctx_fugue_const);
-	sph_fugue256 (&ctx_fugue_const, data, 80);	// State speichern
-
+	sph_fugue256 (&ctx_fugue_const, data, 80);
 	cudaMemcpyToSymbol(GPUstate, ctx_fugue_const.S, sizeof(uint32_t) * 30);
 
-	cudaMemcpyToSymbol(pTarget, pTargetIn, sizeof(uint32_t) * 8);
+	cudaMemcpyToSymbol(pTarget, pTargetIn, 32);
 
 	cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
 }
 
 __host__
-void fugue256_cpu_hash(int thr_id, uint32_t threads, int startNounce, void *outputHashes, uint32_t *nounce)
+void fugue256_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
 {
 #if USE_SHARED
 	const uint32_t threadsperblock = 256; // Alignment mit mixtab Grösse. NICHT ÄNDERN
