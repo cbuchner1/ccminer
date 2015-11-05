@@ -335,6 +335,7 @@ struct option options[] = {
 	{ "interactive", 1, NULL, 1050 },  // scrypt
 	{ "launch-config", 0, NULL, 'l' }, // scrypt
 	{ "lookup-gap", 0, NULL, 'L' },    // scrypt
+	{ "texture-cache", 1, NULL, 1051 },// scrypt
 	{ "max-temp", 1, NULL, 1060 },
 	{ "max-diff", 1, NULL, 1061 },
 	{ "max-rate", 1, NULL, 1062 },
@@ -389,6 +390,9 @@ Scrypt specific options:\n\
       --interactive     comma separated list of flags (0/1) specifying\n\
                         which of the CUDA device you need to run at inter-\n\
                         active frame rates (because it drives a display).\n\
+      --texture-cache   comma separated list of flags (0/1/2) specifying\n\
+                        which of the CUDA devices shall use the texture\n\
+                        cache for mining. Kepler devices may profit.\n\
       --no-autotune     disable auto-tuning of kernel launch parameters\n\
 ";
 
@@ -2672,6 +2676,18 @@ void parse_arg(int key, char *arg)
 			}
 			while (n < MAX_GPUS)
 				device_interactive[n++] = last;
+		}
+		break;
+	case 1051: /* scrypt --texture-cache */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0, last = atoi(arg);
+			while (pch != NULL) {
+				device_texturecache[n++] = last = atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+			while (n < MAX_GPUS)
+				device_texturecache[n++] = last;
 		}
 		break;
 	case 1070: /* --gpu-clock */
