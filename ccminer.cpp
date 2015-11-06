@@ -167,7 +167,7 @@ pthread_mutex_t stratum_work_lock;
 char *opt_cert;
 char *opt_proxy;
 long opt_proxy_type;
-struct thr_info *thr_info;
+struct thr_info *thr_info = NULL;
 static int work_thr_id;
 struct thr_api *thr_api;
 int longpoll_thr_id = -1;
@@ -473,6 +473,7 @@ void get_currentalgo(char* buf, int sz)
  */
 void proper_exit(int reason)
 {
+	restart_threads();
 	if (abort_flag) /* already called */
 		return;
 
@@ -3042,10 +3043,13 @@ int main(int argc, char *argv[])
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
 	rpc_url = strdup("");
-
 	jane_params = strdup("");
 
 	pthread_mutex_init(&applog_lock, NULL);
+	pthread_mutex_init(&stratum_sock_lock, NULL);
+	pthread_mutex_init(&stratum_work_lock, NULL);
+	pthread_mutex_init(&stats_lock, NULL);
+	pthread_mutex_init(&g_work_lock, NULL);
 
 	// number of cpus for thread affinity
 #if defined(WIN32)
@@ -3114,11 +3118,6 @@ int main(int argc, char *argv[])
 
 	/* init stratum data.. */
 	memset(&stratum.url, 0, sizeof(stratum));
-	pthread_mutex_init(&stratum_sock_lock, NULL);
-	pthread_mutex_init(&stratum_work_lock, NULL);
-
-	pthread_mutex_init(&stats_lock, NULL);
-	pthread_mutex_init(&g_work_lock, NULL);
 
 	// ensure default params are set
 	pool_init_defaults();

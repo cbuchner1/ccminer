@@ -995,7 +995,7 @@ void *api_thread(void *userdata)
 /* to be able to report the default value set in each algo */
 void api_set_throughput(int thr_id, uint32_t throughput)
 {
-	if (thr_id < MAX_GPUS) {
+	if (thr_id < MAX_GPUS && thr_info) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 		uint32_t ws = throughput;
 		uint8_t i = 0;
@@ -1007,9 +1007,8 @@ void api_set_throughput(int thr_id, uint32_t throughput)
 		if (i && (1U << i) < throughput) {
 			cgpu->intensity += ((float) (throughput-(1U << i)) / (1U << i));
 		}
-
-		// to display in bench results
-		if (opt_benchmark)
-			bench_set_throughput(thr_id, throughput);
 	}
+	// to display in bench results
+	if (opt_benchmark)
+		bench_set_throughput(thr_id, throughput);
 }

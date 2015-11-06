@@ -229,6 +229,8 @@ typedef struct { double value[8]; } tsumarray;
 cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id)
 {
 	cudaError_t result = cudaSuccess;
+	if (abort_flag)
+		return result;
 	if (situation >= 0)
 	{
 		static std::map<int, tsumarray> tsum;
