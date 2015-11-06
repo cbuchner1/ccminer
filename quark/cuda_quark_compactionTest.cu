@@ -79,7 +79,7 @@ void quark_compactTest_gpu_SCAN(uint32_t *data, const int width, uint32_t *parti
 	uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
 {
 #if __CUDA_ARCH__ >= 300
-	extern __shared__ uint32_t sums[];
+	__shared__ uint32_t sums[32];
 	int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
 	//int lane_id = id % warpSize;
 	int lane_id = id % width;
@@ -267,15 +267,15 @@ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t threads, uint32
 	bool callThrid = (thr2 > 0) ? true : false;
 
 	// Erster Initialscan
-	quark_compactTest_gpu_SCAN<<<thr1,blockSize, 32*sizeof(uint32_t)>>>(
+	quark_compactTest_gpu_SCAN <<<thr1,blockSize>>>(
 		d_tempBranch1Nonces[thr_id], 32, d_partSum[0][thr_id], function, orgThreads, startNounce, inpHashes, d_validNonceTable);	
 
 	// weitere Scans
 	if(callThrid) {
-		quark_compactTest_gpu_SCAN<<<thr2,blockSize, 32*sizeof(uint32_t)>>>(d_partSum[0][thr_id], 32, d_partSum[1][thr_id]);
-		quark_compactTest_gpu_SCAN<<<1, thr2, 32*sizeof(uint32_t)>>>(d_partSum[1][thr_id], (thr2>32) ? 32 : thr2);
+		quark_compactTest_gpu_SCAN<<<thr2,blockSize>>>(d_partSum[0][thr_id], 32, d_partSum[1][thr_id]);
+		quark_compactTest_gpu_SCAN<<<1, thr2>>>(d_partSum[1][thr_id], (thr2>32) ? 32 : thr2);
 	} else {
-		quark_compactTest_gpu_SCAN<<<thr3,blockSize2, 32*sizeof(uint32_t)>>>(d_partSum[0][thr_id], (blockSize2>32) ? 32 : blockSize2);
+		quark_compactTest_gpu_SCAN<<<thr3,blockSize2>>>(d_partSum[0][thr_id], (blockSize2>32) ? 32 : blockSize2);
 	}
 
 	// Sync + Anzahl merken
