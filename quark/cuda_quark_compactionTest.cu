@@ -1,24 +1,22 @@
-/*
- * REQUIRE SM 3.0 arch!
+/**
+ * __shfl_up require SM 3.0 arch!
+ *
+ * SM 2 alternative method by tpruvot@github 2015
  */
-
 #include <stdio.h>
 #include <memory.h>
 
 #include "cuda_helper.h"
-#include <sm_30_intrinsics.h>
+
+#ifdef __INTELLISENSE__
+/* just for vstudio code colors */
+#define __CUDA_ARCH__ 300
+#define __shfl_up(var, delta, width) (0)
+#endif
 
 static uint32_t *h_numValid[MAX_GPUS];
 static uint32_t *d_tempBranch1Nonces[MAX_GPUS];
 static uint32_t *d_partSum[2][MAX_GPUS]; // für bis zu vier partielle Summen
-
-#if __CUDA_ARCH__ < 300
-/**
- * __shfl_up() calculates a source lane ID by subtracting delta from the caller's lane ID, and clamping to the range 0..width-1
- */
-#undef __shfl_up
-#define __shfl_up(var, delta, width) (0)
-#endif
 
 // True/False tester
 typedef uint32_t(*cuda_compactTestFunction_t)(uint32_t *inpHash);
@@ -80,6 +78,7 @@ __global__
 void quark_compactTest_gpu_SCAN(uint32_t *data, const int width, uint32_t *partial_sums=NULL, cuda_compactTestFunction_t testFunc=NULL,
 	uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
 {
+#if __CUDA_ARCH__ >= 300
 	extern __shared__ uint32_t sums[];
 	int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
 	//int lane_id = id % warpSize;
@@ -182,6 +181,7 @@ void quark_compactTest_gpu_SCAN(uint32_t *data, const int width, uint32_t *parti
 	{
 		partial_sums[blockIdx.x] = value;
 	}
+#endif // SM3+
 }
 
 // Uniform add: add partial sums array
@@ -202,9 +202,9 @@ void quark_compactTest_gpu_ADD(uint32_t *data, uint32_t *partial_sums, int len)
 	data[id] += buf;
 }
 
-// Der Scatter
 __global__
-void quark_compactTest_gpu_SCATTER(uint32_t *sum, uint32_t *outp, cuda_compactTestFunction_t testFunc, uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
+void quark_compactTest_gpu_SCATTER(uint32_t *sum, uint32_t *outp, cuda_compactTestFunction_t testFunc,
+	uint32_t threads=0, uint32_t startNounce=0, uint32_t *inpHashes=NULL, uint32_t *d_validNonceTable=NULL)
 {
 	int id = ((blockIdx.x * blockDim.x) + threadIdx.x);
 	uint32_t actNounce = id;
@@ -254,7 +254,7 @@ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t threads, uint32
 	cuda_compactTestFunction_t function, uint32_t startNounce, uint32_t *inpHashes, uint32_t *d_validNonceTable)
 {
 	int orgThreads = threads;
-	threads = (int)quark_compactTest_roundUpExp((uint32_t)threads);
+	threads = quark_compactTest_roundUpExp(threads);
 	// threadsPerBlock ausrechnen
 	int blockSize = 256;
 	int nSummen = threads / blockSize;
@@ -286,14 +286,11 @@ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t threads, uint32
 	else
 		cudaMemcpy(nrm, &(d_partSum[0][thr_id])[nSummen-1], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-	
-	// Addieren
 	if(callThrid) {
 		quark_compactTest_gpu_ADD<<<thr2-1, blockSize>>>(d_partSum[0][thr_id]+blockSize, d_partSum[1][thr_id], blockSize*thr2);
 	}
 	quark_compactTest_gpu_ADD<<<thr1-1, blockSize>>>(d_tempBranch1Nonces[thr_id]+blockSize, d_partSum[0][thr_id], threads);
-	
-	// Scatter
+
 	quark_compactTest_gpu_SCATTER<<<thr1,blockSize,0>>>(d_tempBranch1Nonces[thr_id], d_nonces1, 
 		function, orgThreads, startNounce, inpHashes, d_validNonceTable);
 
@@ -301,12 +298,9 @@ void quark_compactTest_cpu_singleCompaction(int thr_id, uint32_t threads, uint32
 	cudaStreamSynchronize(NULL);
 }
 
-#ifdef __INTELLISENSE__
-#define atomicAdd(x,n) ( *(x)+=n )
-#endif
-
+#if __CUDA_ARCH__ < 300
 __global__ __launch_bounds__(128, 8)
-void quark_filter_gpu_sm2(const uint32_t threads, const uint32_t* d_hash, uint32_t* d_branch2, uint32_t* d_NonceBranch, uint32_t &count)
+void quark_filter_gpu_sm2(const uint32_t threads, const uint32_t* d_hash, uint32_t* d_branch2, uint32_t* d_NonceBranch)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -315,7 +309,6 @@ void quark_filter_gpu_sm2(const uint32_t threads, const uint32_t* d_hash, uint32
 		uint4 *psrc = (uint4*) (&d_hash[offset]);
 		d_NonceBranch[thread] = ((uint8_t*)psrc)[0] & 0x8;
 		if (d_NonceBranch[thread]) return;
-		//uint32_t off_br = atomicAdd(&count, 1) * 16U;
 		// uint4 = 4x uint32_t = 16 bytes
 		uint4 *pdst = (uint4*) (&d_branch2[offset]);
 		pdst[0] = psrc[0];
@@ -331,7 +324,7 @@ void quark_merge_gpu_sm2(const uint32_t threads, uint32_t* d_hash, uint32_t* d_b
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads && !d_NonceBranch[thread])
 	{
-		const uint32_t offset = thread * 16U; // 64U / sizeof(uint32_t);
+		const uint32_t offset = thread * 16U;
 		uint4 *pdst = (uint4*) (&d_hash[offset]);
 		uint4 *psrc = (uint4*) (&d_branch2[offset]);
 		pdst[0] = psrc[0];
@@ -340,17 +333,20 @@ void quark_merge_gpu_sm2(const uint32_t threads, uint32_t* d_hash, uint32_t* d_b
 		pdst[3] = psrc[3];
 	}
 }
+#else
+__global__ void quark_filter_gpu_sm2(const uint32_t threads, const uint32_t* d_hash, uint32_t* d_branch2, uint32_t* d_NonceBranch) {}
+__global__ void quark_merge_gpu_sm2(const uint32_t threads, uint32_t* d_hash, uint32_t* d_branch2, uint32_t* const d_NonceBranch) {}
+#endif
 
 __host__
 uint32_t quark_filter_cpu_sm2(const int thr_id, const uint32_t threads, const uint32_t *inpHashes, uint32_t* d_branch2)
 {
-	uint32_t branch2_nonces = 0;
 	const uint32_t threadsperblock = 128;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	// copy all hashes in the right branch buffer
-	quark_filter_gpu_sm2 <<<grid, block>>> (threads, inpHashes, d_branch2, d_tempBranch1Nonces[thr_id], branch2_nonces);
-	return branch2_nonces;
+	// extract algo permution hashes to a second branch buffer
+	quark_filter_gpu_sm2 <<<grid, block>>> (threads, inpHashes, d_branch2, d_tempBranch1Nonces[thr_id]);
+	return threads;
 }
 
 __host__
@@ -359,7 +355,7 @@ void quark_merge_cpu_sm2(const int thr_id, const uint32_t threads, uint32_t *out
 	const uint32_t threadsperblock = 128;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
-	// copy second branch hashes to d_hash
+	// put back second branch hashes to the common buffer d_hash
 	quark_merge_gpu_sm2 <<<grid, block>>> (threads, outpHashes, d_branch2, d_tempBranch1Nonces[thr_id]);
 }
 
