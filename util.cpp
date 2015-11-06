@@ -1852,7 +1852,6 @@ void do_gpu_tests(void)
 #ifdef _DEBUG
 	unsigned long done;
 	char s[128] = { '\0' };
-	uchar buf[160];
 	struct work work;
 	memset(&work, 0, sizeof(work));
 
@@ -1866,7 +1865,7 @@ void do_gpu_tests(void)
 	//scanhash_scrypt_jane(0, &work, NULL, 1, &done, &tv, &tv);
 
 	memset(work.data, 0, sizeof(work.data));
-	scanhash_lyra2(0, &work, 1, &done);
+	scanhash_quark(0, &work, 1, &done);
 
 	free(work_restart);
 	work_restart = NULL;

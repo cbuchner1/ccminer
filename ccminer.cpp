@@ -333,8 +333,8 @@ struct option options[] = {
 	{ "no-stratum", 0, NULL, 1007 },
 	{ "no-autotune", 0, NULL, 1004 },  // scrypt
 	{ "interactive", 1, NULL, 1050 },  // scrypt
-	{ "launch-config", 0, NULL, 'l' }, // scrypt
-	{ "lookup-gap", 0, NULL, 'L' },    // scrypt
+	{ "launch-config", 1, NULL, 'l' }, // scrypt
+	{ "lookup-gap", 1, NULL, 'L' },    // scrypt
 	{ "texture-cache", 1, NULL, 1051 },// scrypt
 	{ "max-temp", 1, NULL, 1060 },
 	{ "max-diff", 1, NULL, 1061 },

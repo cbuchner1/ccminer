@@ -17,7 +17,7 @@
 	q[i+8] + ROTL64(q[i+9], 37) + q[i+10] + ROTL64(q[i+11], 43) + \
 	q[i+12] + ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
 
-#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 200 && __CUDA_ARCH__ < 500)
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 200 && __CUDA_ARCH__ < 500) || defined(_DEBUG)
 __constant__ uint64_t d_constMem[16] = {
 	SPH_C64(0x8081828384858687),
 	SPH_C64(0x88898A8B8C8D8E8F),
@@ -42,7 +42,7 @@ __constant__ uint64_t d_constMem[16] = {
 # endif
 #endif
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 500
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 500 || defined(_DEBUG))
 
 __device__
 void Compression512_30(uint64_t *msg, uint64_t *hash)

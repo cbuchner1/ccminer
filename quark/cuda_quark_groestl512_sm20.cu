@@ -52,7 +52,7 @@ extern uint32_t T2dn_cpu[];
 extern uint32_t T3up_cpu[];
 extern uint32_t T3dn_cpu[];
 
-#if __CUDA_ARCH__ < 300
+#if __CUDA_ARCH__ < 300 || defined(_DEBUG)
 
 __device__ __forceinline__
 void quark_groestl512_perm_P(uint32_t *a, char *mixtabs)
@@ -206,7 +206,7 @@ void quark_groestl512_perm_Q(uint32_t *a, char *mixtabs)
 __global__
 void quark_groestl512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
-#if __CUDA_ARCH__ < 300
+#if __CUDA_ARCH__ < 300 || defined(_DEBUG)
 	extern __shared__ char mixtabs[];
 
 	if (threadIdx.x < 256)
