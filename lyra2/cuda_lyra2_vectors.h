@@ -12,6 +12,10 @@
 
 #include "cuda_helper.h"
 
+#if __CUDA_ARCH__ < 300
+#define __shfl(x, y) (x)
+#endif
+
 #if __CUDA_ARCH__ < 320 && !defined(__ldg4)
 #define __ldg4(x) (*(x))
 #endif
@@ -545,6 +549,7 @@ static __forceinline__ __device__ uint16 swapvec(const uint16 &buf)
 
 static __device__ __forceinline__ uint28 shuffle4(const uint28 &var, int lane)
 {
+#if __CUDA_ARCH__ >= 300
 	uint28 res;
 	res.x.x = __shfl(var.x.x, lane);
 	res.x.y = __shfl(var.x.y, lane);
@@ -555,10 +560,14 @@ static __device__ __forceinline__ uint28 shuffle4(const uint28 &var, int lane)
 	res.w.x = __shfl(var.w.x, lane);
 	res.w.y = __shfl(var.w.y, lane);
 	return res;
+#else
+	return var;
+#endif
 }
 
 static __device__ __forceinline__ ulonglong4 shuffle4(ulonglong4 var, int lane)
 {
+#if __CUDA_ARCH__ >= 300
 	ulonglong4 res;
     uint2 temp;
 	temp = vectorize(var.x);
@@ -578,6 +587,9 @@ static __device__ __forceinline__ ulonglong4 shuffle4(ulonglong4 var, int lane)
 	temp.y = __shfl(temp.y, lane);
 	res.w = devectorize(temp);
 	return res;
+#else
+	return var;
+#endif
 }
 
 #endif // #ifndef CUDA_LYRA_VECTOR_H

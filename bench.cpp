@@ -103,7 +103,6 @@ bool bench_algo_switch_next(int thr_id)
 		if (algo == ALGO_GROESTL) algo++;
 		if (algo == ALGO_MYR_GR) algo++;
 		if (algo == ALGO_JACKPOT) algo++; // compact shuffle
-		if (algo == ALGO_LYRA2v2) algo++;
 		if (algo == ALGO_NEOSCRYPT) algo++;
 		if (algo == ALGO_WHIRLPOOLX) algo++;
 	}

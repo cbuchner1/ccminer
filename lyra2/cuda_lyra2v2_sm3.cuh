@@ -1,4 +1,4 @@
-/* SM 3/3.5 Variant for lyra2REv2 */
+/* SM 2/3/3.5 Variant for lyra2REv2 */
 
 #ifdef __INTELLISENSE__
 /* just for vstudio code colors */
@@ -6,10 +6,11 @@
 #define __CUDA_ARCH__ 350
 #endif
 
-#define TPB30 16
+#define TPB20 64
+#define TPB30 64
 #define TPB35 64
 
-#if __CUDA_ARCH__ >= 300 && __CUDA_ARCH__ < 500
+#if __CUDA_ARCH__ >= 200 && __CUDA_ARCH__ < 500
 
 #include "cuda_lyra2_vectors.h"
 
@@ -165,6 +166,7 @@ void reduceDuplexRowtV3(const int rowIn, const int rowInOut, const int rowOut, v
 	}
 }
 
+#if __CUDA_ARCH__ >= 300
 __global__ __launch_bounds__(TPB35, 1)
 void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
 {
@@ -177,14 +179,14 @@ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outpu
 	if (threadIdx.x == 0) {
 
 		((uint16*)blake2b_IV)[0] = make_uint16(
-			0xf3bcc908, 0x6a09e667 , 0x84caa73b, 0xbb67ae85 ,
-			0xfe94f82b, 0x3c6ef372 , 0x5f1d36f1, 0xa54ff53a ,
-			0xade682d1, 0x510e527f , 0x2b3e6c1f, 0x9b05688c ,
+			0xf3bcc908, 0x6a09e667 , 0x84caa73b, 0xbb67ae85,
+			0xfe94f82b, 0x3c6ef372 , 0x5f1d36f1, 0xa54ff53a,
+			0xade682d1, 0x510e527f , 0x2b3e6c1f, 0x9b05688c,
 			0xfb41bd6b, 0x1f83d9ab , 0x137e2179, 0x5be0cd19
 		);
 		((uint16*)padding)[0] = make_uint16(
-			 0x20, 0x0 , 0x20, 0x0 , 0x20, 0x0 , 0x01, 0x0 ,
-			 0x04, 0x0 , 0x04, 0x0 , 0x80, 0x0 , 0x0, 0x01000000
+			0x20, 0x0 , 0x20, 0x0 , 0x20, 0x0 , 0x01, 0x0,
+			0x04, 0x0 , 0x04, 0x0 , 0x80, 0x0 , 0x0, 0x01000000
 		);
 	}
 
@@ -194,6 +196,7 @@ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outpu
 		((uint2*)state)[1] = __ldg(&outputHash[thread + threads]);
 		((uint2*)state)[2] = __ldg(&outputHash[thread + 2 * threads]);
 		((uint2*)state)[3] = __ldg(&outputHash[thread + 3 * threads]);
+
 		state[1] = state[0];
 		state[2] = shuffle4(((vectype*)blake2b_IV)[0], 0);
 		state[3] = shuffle4(((vectype*)blake2b_IV)[1], 0);
@@ -246,9 +249,90 @@ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outpu
 
 	} //thread
 }
+#elif __CUDA_ARCH__ >= 200
+__global__ __launch_bounds__(TPB20, 1)
+void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputHash)
+{
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
-#else
-/* if __CUDA_ARCH__ < 300 .. */
-__global__ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
+	vectype state[4];
+	vectype blake2b_IV[2];
+	vectype padding[2];
+
+	((uint16*)blake2b_IV)[0] = make_uint16(
+		0xf3bcc908, 0x6a09e667, 0x84caa73b, 0xbb67ae85,
+		0xfe94f82b, 0x3c6ef372, 0x5f1d36f1, 0xa54ff53a,
+		0xade682d1, 0x510e527f, 0x2b3e6c1f, 0x9b05688c,
+		0xfb41bd6b, 0x1f83d9ab, 0x137e2179, 0x5be0cd19
+	);
+	((uint16*)padding)[0] = make_uint16(
+		0x20, 0x0, 0x20, 0x0, 0x20, 0x0, 0x01, 0x0,
+		0x04, 0x0, 0x04, 0x0, 0x80, 0x0, 0x0, 0x01000000
+	);
+
+	if (thread < threads)
+	{
+
+		((uint2*)state)[0] = outputHash[thread];
+		((uint2*)state)[1] = outputHash[thread + threads];
+		((uint2*)state)[2] = outputHash[thread + 2 * threads];
+		((uint2*)state)[3] = outputHash[thread + 3 * threads];
+
+		state[1] = state[0];
+		state[2] = ((vectype*)blake2b_IV)[0];
+		state[3] = ((vectype*)blake2b_IV)[1];
+
+		for (int i = 0; i<12; i++)
+			round_lyra_v35(state);
+
+		state[0] ^= ((vectype*)padding)[0];
+		state[1] ^= ((vectype*)padding)[1];
+
+		for (int i = 0; i<12; i++)
+			round_lyra_v35(state);
+
+		uint32_t ps1 = (4 * memshift * 3 + 16 * memshift * thread);
+
+		//#pragma unroll 4
+		for (int i = 0; i < 4; i++)
+		{
+			uint32_t s1 = ps1 - 4 * memshift * i;
+			for (int j = 0; j < 3; j++)
+				(DMatrix + s1)[j] = (state)[j];
+
+			round_lyra_v35(state);
+		}
+
+		reduceDuplexV3(state, thread);
+		reduceDuplexRowSetupV3(1, 0, 2, state, thread);
+		reduceDuplexRowSetupV3(2, 1, 3, state, thread);
+
+		uint32_t rowa;
+		int prev = 3;
+		for (int i = 0; i < 4; i++)
+		{
+			rowa = ((uint2*)state)[0].x & 3;  reduceDuplexRowtV3(prev, rowa, i, state, thread);
+			prev = i;
+		}
+
+		uint32_t shift = (memshift * rowa + 16 * memshift * thread);
+
+		for (int j = 0; j < 3; j++)
+			state[j] ^= __ldg4(&(DMatrix + shift)[j]);
+
+		for (int i = 0; i < 12; i++)
+			round_lyra_v35(state);
+
+		outputHash[thread] = ((uint2*)state)[0];
+		outputHash[thread + threads] = ((uint2*)state)[1];
+		outputHash[thread + 2 * threads] = ((uint2*)state)[2];
+		outputHash[thread + 3 * threads] = ((uint2*)state)[3];
+
+	} //thread
+}
 #endif
 
+#else
+/* host & sm5+ */
+__global__ void lyra2v2_gpu_hash_32_v3(uint32_t threads, uint32_t startNounce, uint2 *outputHash) {}
+#endif

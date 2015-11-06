@@ -342,7 +342,7 @@ void lyra2v2_gpu_hash_32(const uint32_t threads, uint32_t startNounce, uint2 *g_
 }
 #else
 #include "cuda_helper.h"
-#if __CUDA_ARCH__ < 300
+#if __CUDA_ARCH__ < 200
 __device__ void* DMatrix;
 #endif
 __global__ void lyra2v2_gpu_hash_32(const uint32_t threads, uint32_t startNounce, uint2 *g_hash) {}
@@ -362,9 +362,10 @@ void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uin
 	int dev_id = device_map[thr_id % MAX_GPUS];
 	uint32_t tpb = TPB52;
 
-	if (device_sm[dev_id] == 500 || cuda_arch[dev_id] == 500) tpb = TPB50;
-	else if (device_sm[dev_id] == 350 || cuda_arch[dev_id] == 350) tpb = TPB35;
-	else if (device_sm[dev_id] < 350 || cuda_arch[dev_id] < 350) tpb = TPB30;
+	if (cuda_arch[dev_id] == 500) tpb = TPB50;
+	else if (cuda_arch[dev_id] >= 350) tpb = TPB35;
+	else if (cuda_arch[dev_id] >= 300) tpb = TPB30;
+	else if (cuda_arch[dev_id] >= 200) tpb = TPB20;
 
 	dim3 grid((threads + tpb - 1) / tpb);
 	dim3 block(tpb);
