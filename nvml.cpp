@@ -935,7 +935,7 @@ int nvapi_init()
 				if (ret == NVAPI_OK && busId == device_bus_ids[g]) {
 					nvapi_dev_map[g] = i;
 					if (opt_debug)
-						applog(LOG_DEBUG, "CUDA GPU#%d matches NVAPI GPU %d by busId %u",
+						applog(LOG_DEBUG, "CUDA GPU %d matches NVAPI GPU %d by busId %u",
 							g, i, busId);
 					break;
 				}
@@ -1099,7 +1099,7 @@ static int translate_vendor_id(uint16_t vid, char *vendorname)
 			return vid;
 		}
 	}
-	if (opt_debug)
+	if (opt_debug && vid != 0x10DE)
 		applog(LOG_DEBUG, "nvml: Unknown vendor %04x\n", vid);
 	return 0;
 }
@@ -1154,7 +1154,8 @@ int gpu_vendor(uint8_t pci_bus_id, char *vendorname)
 	if (hnvml) { // may not be initialized on start...
 		for (int id=0; id < hnvml->nvml_gpucount; id++) {
 			if (hnvml->nvml_pci_bus_id[id] == pci_bus_id) {
-				nvml_get_info(hnvml, id, vid, pid);
+				int dev_id = hnvml->nvml_cuda_device_id[id];
+				nvml_get_info(hnvml, dev_id, vid, pid);
 			}
 		}
 	} else {
