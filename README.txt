@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.0 (Nov 2015) "Mining Diff & basic MultiAlgo"
+ccMiner release 1.7.1 (Dec 2015) "Mining Diff & basic MultiAlgo"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -230,6 +230,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Dec. 03th 2015  v1.7.1
+                  Small bug fixes about device ids mapping (and vendor names)
 
   Nov. 06th 2015  v1.7
                   Improve old devices compatibility (x11, lyra2v2, quark, qubit...)

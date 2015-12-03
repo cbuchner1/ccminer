@@ -932,8 +932,7 @@ int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 					}
 
 					if (!good) {
-						applog(LOG_WARNING, "GPU #%d: %s result does not validate on CPU! (i=%d, s=%d)",
-							device_map[thr_id], device_name[thr_id], i, cur);
+						gpulog(LOG_WARNING, thr_id, "result does not validate on CPU! (i=%d, s=%d)", i, cur);
 					} else {
 						*hashes_done = n - pdata[19];
 						work_set_target_ratio(work, refhash);

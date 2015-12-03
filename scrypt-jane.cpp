@@ -638,8 +638,7 @@ int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsi
 					gettimeofday(tv_end, NULL);
 					return 1;
 				} else {
-					applog(LOG_WARNING, "GPU #%d: %s result does not validate on CPU! (i=%d, s=%d)",
-						device_map[thr_id], device_name[thr_id], i, cur);
+					gpulog(LOG_WARNING, thr_id, "result does not validate on CPU! (i=%d, s=%d)", i, cur);
 				}
 			}
 		}

@@ -1415,7 +1415,7 @@ void restart_threads(void)
 	if (opt_debug && !opt_quiet)
 		applog(LOG_DEBUG,"%s", __FUNCTION__);
 
-	for (int i = 0; i < opt_n_threads; i++)
+	for (int i = 0; i < opt_n_threads && work_restart; i++)
 		work_restart[i].restart = 1;
 }
 
