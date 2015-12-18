@@ -117,17 +117,17 @@ public:
 
     unsigned long getulong() const
     {
-        return BN_get_word(this);
+        return (unsigned long) BN_get_word(this);
     }
 
     unsigned int getuint() const
     {
-        return BN_get_word(this);
+        return (unsigned int) BN_get_word(this);
     }
 
     int getint() const
     {
-        unsigned long n = BN_get_word(this);
+        unsigned long n = (unsigned long) BN_get_word(this);
         if (!BN_is_negative(this))
             return (n > (unsigned long)std::numeric_limits<int>::max() ? std::numeric_limits<int>::max() : n);
         else
@@ -141,7 +141,7 @@ public:
         bool fNegative;
         uint64 n;
 
-        if (sn < (int64)0)
+        if (sn < 0LL)
         {
             // Since the minimum signed integer cannot be represented as positive so long as its type is signed,
             // and it's not well-defined what happens if you make it unsigned before negating it,
@@ -171,12 +171,12 @@ public:
             }
             *p++ = c;
         }
-        unsigned int nSize = p - (pch + 4);
+        unsigned int nSize = (unsigned int) (p - (pch + 4));
         pch[0] = (nSize >> 24) & 0xff;
         pch[1] = (nSize >> 16) & 0xff;
         pch[2] = (nSize >> 8) & 0xff;
         pch[3] = (nSize) & 0xff;
-        BN_mpi2bn(pch, p - pch, this);
+        BN_mpi2bn(pch, (int) (p - pch), this);
     }
 
     void setuint64(uint64 n)
@@ -198,12 +198,12 @@ public:
             }
             *p++ = c;
         }
-        unsigned int nSize = p - (pch + 4);
+        unsigned int nSize = (unsigned int) (p - (pch + 4));
         pch[0] = (nSize >> 24) & 0xff;
         pch[1] = (nSize >> 16) & 0xff;
         pch[2] = (nSize >> 8) & 0xff;
         pch[3] = (nSize) & 0xff;
-        BN_mpi2bn(pch, p - pch, this);
+        BN_mpi2bn(pch, (int) (p - pch), this);
     }
 
     void setuint256(uint256 n)
@@ -226,12 +226,12 @@ public:
             }
             *p++ = c;
         }
-        unsigned int nSize = p - (pch + 4);
+        unsigned int nSize = (unsigned int) (p - (pch + 4));
         pch[0] = (nSize >> 24) & 0xff;
         pch[1] = (nSize >> 16) & 0xff;
         pch[2] = (nSize >> 8) & 0xff;
         pch[3] = (nSize >> 0) & 0xff;
-        BN_mpi2bn(pch, p - pch, this);
+        BN_mpi2bn(pch, (int) (p - pch), this);
     }
 
     uint256 getuint256() const
@@ -244,7 +244,7 @@ public:
         if (vch.size() > 4)
             vch[4] &= 0x7f;
         uint256 n = 0;
-        for (unsigned int i = 0, j = vch.size()-1; i < sizeof(n) && j >= 4; i++, j--)
+        for (unsigned int i = 0, j = (unsigned int) vch.size()-1; i < sizeof(n) && j >= 4; i++, j--)
             ((unsigned char*)&n)[i] = vch[j];
         return n;
     }
@@ -252,7 +252,7 @@ public:
     void setvch(const std::vector<unsigned char>& vch)
     {
         std::vector<unsigned char> vch2(vch.size() + 4);
-        unsigned int nSize = vch.size();
+        unsigned int nSize = (unsigned int) vch.size();
         // BIGNUM's byte stream format expects 4 bytes of
         // big endian size data info at the front
         vch2[0] = (nSize >> 24) & 0xff;
@@ -261,7 +261,7 @@ public:
         vch2[3] = (nSize >> 0) & 0xff;
         // swap data to big endian
         reverse_copy(vch.begin(), vch.end(), vch2.begin() + 4);
-        BN_mpi2bn(&vch2[0], vch2.size(), this);
+        BN_mpi2bn(&vch2[0], (int) vch2.size(), this);
     }
 
     std::vector<unsigned char> getvch() const
@@ -322,12 +322,12 @@ public:
         unsigned int nSize = BN_num_bytes(this);
         unsigned int nCompact = 0;
         if (nSize <= 3)
-            nCompact = BN_get_word(this) << 8*(3-nSize);
+            nCompact = (unsigned int) BN_get_word(this) << 8*(3-nSize);
         else
         {
             CBigNum bn;
             BN_rshift(&bn, this, 8*(nSize-3));
-            nCompact = BN_get_word(&bn);
+            nCompact = (unsigned int) BN_get_word(&bn);
         }
         // The 0x00800000 bit denotes the sign.
         // Thus, if it is already set, divide the mantissa by 256 and increase the exponent.

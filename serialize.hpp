@@ -398,7 +398,7 @@ public:
 
     unsigned int GetSerializeSize(int, int=0) const
     {
-        return pend - pbegin;
+        return (unsigned int) (pend - pbegin);
     }
 
     template<typename Stream>
@@ -593,7 +593,8 @@ void Unserialize(Stream& is, std::basic_string<C>& str, int, int)
 template<typename T, typename A>
 unsigned int GetSerializeSize_impl(const std::vector<T, A>& v, int nType, int nVersion, const unsigned char&)
 {
-    return (GetSizeOfCompactSize(v.size()) + v.size() * sizeof(T));
+    size_t sz = v.size() + v.size() * sizeof(T);
+    return (GetSizeOfCompactSize((uint64_t)sz));
 }
 
 template<typename T, typename A, typename V>
