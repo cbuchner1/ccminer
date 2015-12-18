@@ -191,6 +191,9 @@ uint8_t conditional_state[MAX_GPUS] = { 0 };
 double opt_max_temp = 0.0;
 double opt_max_diff = -1.;
 double opt_max_rate = -1.;
+double opt_resume_temp = 0.;
+double opt_resume_diff = 0.;
+double opt_resume_rate = -1.;
 
 int opt_statsavg = 30;
 
@@ -281,7 +284,8 @@ Options:\n\
       --api-remote      Allow remote control, like pool switching\n\
       --max-temp=N      Only mine if gpu temp is less than specified value\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
-      --max-diff=N      Only mine if net difficulty is less than specified value\n"
+      --max-diff=N      Only mine if net difficulty is less than specified value\n\
+                        Can be tuned with --resume-diff=N to set a resume value\n"
 #if defined(USE_WRAPNVML) && (defined(__linux) || defined(_WIN64)) /* via nvml */
 "\
       --mem-clock=3505  Set the gpu memory max clock (346.72+ driver)\n\
@@ -339,6 +343,9 @@ struct option options[] = {
 	{ "max-temp", 1, NULL, 1060 },
 	{ "max-diff", 1, NULL, 1061 },
 	{ "max-rate", 1, NULL, 1062 },
+	{ "resume-diff", 1, NULL, 1063 },
+	{ "resume-rate", 1, NULL, 1064 },
+	{ "resume-temp", 1, NULL, 1065 },
 	{ "pass", 1, NULL, 'p' },
 	{ "pool-name", 1, NULL, 1100 },     // pool
 	{ "pool-algo", 1, NULL, 1101 },     // pool
@@ -1432,20 +1439,30 @@ static bool wanna_mine(int thr_id)
 			if (!conditional_state[thr_id] && !opt_quiet)
 				gpulog(LOG_INFO, thr_id, "temperature too high (%.0f°c), waiting...", temp);
 			state = false;
+		} else if (opt_max_temp > 0. && opt_resume_temp > 0. && conditional_state[thr_id] && temp > opt_resume_temp) {
+			if (!thr_id && opt_debug)
+				applog(LOG_DEBUG, "temperature did not reach resume value %.1f...", opt_resume_temp);
+			state = false;
 		}
 #endif
 	}
+	// Network Difficulty
 	if (opt_max_diff > 0.0 && net_diff > opt_max_diff) {
 		int next = pool_get_first_valid(cur_pooln+1);
-		if (num_pools > 1 && pools[next].max_diff != pools[cur_pooln].max_diff)
+		if (num_pools > 1 && pools[next].max_diff != pools[cur_pooln].max_diff && opt_resume_diff <= 0.)
 			conditional_pool_rotate = allow_pool_rotate;
 		if (!thr_id && !conditional_state[thr_id] && !opt_quiet)
 			applog(LOG_INFO, "network diff too high, waiting...");
 		state = false;
+	} else if (opt_max_diff > 0. && opt_resume_diff > 0. && conditional_state[thr_id] && net_diff > opt_resume_diff) {
+		if (!thr_id && opt_debug)
+			applog(LOG_DEBUG, "network diff did not reach resume value %.3f...", opt_resume_diff);
+		state = false;
 	}
+	// Network hashrate
 	if (opt_max_rate > 0.0 && net_hashrate > opt_max_rate) {
 		int next = pool_get_first_valid(cur_pooln+1);
-		if (pools[next].max_rate != pools[cur_pooln].max_rate)
+		if (pools[next].max_rate != pools[cur_pooln].max_rate && opt_resume_rate <= 0.)
 			conditional_pool_rotate = allow_pool_rotate;
 		if (!thr_id && !conditional_state[thr_id] && !opt_quiet) {
 			char rate[32];
@@ -1453,8 +1470,12 @@ static bool wanna_mine(int thr_id)
 			applog(LOG_INFO, "network hashrate too high, waiting %s...", rate);
 		}
 		state = false;
+	} else if (opt_max_rate > 0. && opt_resume_rate > 0. && conditional_state[thr_id] && net_hashrate > opt_resume_rate) {
+		if (!thr_id && opt_debug)
+			applog(LOG_DEBUG, "network rate did not reach resume value %.3f...", opt_resume_rate);
+		state = false;
 	}
-	conditional_state[thr_id] = (uint8_t) !state;
+	conditional_state[thr_id] = (uint8_t) !state; // only one wait message in logs
 	return state;
 }
 
@@ -2809,6 +2830,24 @@ void parse_arg(int key, char *arg)
 		p = strstr(arg, "G");
 		if (p) d *= 1e9;
 		opt_max_rate = d;
+		break;
+	case 1063: // resume-diff
+		d = atof(arg);
+		opt_resume_diff = d;
+		break;
+	case 1064: // resume-rate
+		d = atof(arg);
+		p = strstr(arg, "K");
+		if (p) d *= 1e3;
+		p = strstr(arg, "M");
+		if (p) d *= 1e6;
+		p = strstr(arg, "G");
+		if (p) d *= 1e9;
+		opt_resume_rate = d;
+		break;
+	case 1065: // resume-temp
+		d = atof(arg);
+		opt_resume_temp = d;
 		break;
 	case 'd': // --device
 		{
