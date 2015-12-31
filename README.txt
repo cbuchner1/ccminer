@@ -43,6 +43,7 @@ Pentablake (Blake 512 x5)
 Neoscrypt (FeatherCoin)
 Scrypt and Scrypt:N
 Scrypt-Jane (Chacha)
+Sibcoin (sib)
 Skein (Skein + SHA)
 Woodcoin (Double Skein)
 Vertcoin Lyra2RE
@@ -90,6 +91,7 @@ its command line interface and options.
                           scrypt:N    use to mine Scrypt-N (:10 for 2048 iterations)
                           scrypt-jane use to mine Chacha coins like Cache and Ultracoin
                           s3          use to mine 1coin
+                          sib         use to mine Sibcoin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
                           x11         use to mine DarkCoin
@@ -231,7 +233,8 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Dec. 03th 2015  v1.7.1
+  Dec. 31th 2015  v1.7.1
+                  Implement sib algo (X11 + Russian Streebog-512/GOST)
                   Small bug fixes about device ids mapping (and vendor names)
 
   Nov. 06th 2015  v1.7

@@ -186,6 +186,9 @@
     <ClCompile Include="sph\sha2big.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="sph\streebog.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
     <ClCompile Include="compat\winansi.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -351,6 +354,9 @@
       <Filter>Header Files\sph</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_shabal.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\sph_streebog.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_whirlpool.h">
@@ -603,6 +609,12 @@
     </CudaCompile>
     <CudaCompile Include="pentablake.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\sib.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_streebog.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
     <CudaCompile Include="x11\s3.cu">
       <Filter>Source Files\CUDA\x11</Filter>
