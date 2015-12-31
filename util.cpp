@@ -1865,7 +1865,7 @@ void do_gpu_tests(void)
 	//scanhash_scrypt_jane(0, &work, NULL, 1, &done, &tv, &tv);
 
 	memset(work.data, 0, sizeof(work.data));
-	scanhash_quark(0, &work, 1, &done);
+	scanhash_sib(0, &work, 1, &done);
 
 	free(work_restart);
 	work_restart = NULL;
@@ -1953,6 +1953,9 @@ void print_hash_tests(void)
 
 	scryptjane_hash(&hash[0], &buf[0]);
 	printpfx("scrypt-jane", hash);
+
+	sibhash(&hash[0], &buf[0]);
+	printpfx("sib", hash);
 
 	skeincoinhash(&hash[0], &buf[0]);
 	printpfx("skein", hash);

@@ -229,6 +229,7 @@ Options:\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
+			sib         Sibcoin (X11+Streebog)\n\
 			scrypt      Scrypt\n\
 			scrypt-jane Scrypt-jane Chacha\n\
 			skein       Skein SHA2 (Skeincoin)\n\
@@ -1774,6 +1775,7 @@ static void *miner_thread(void *userdata)
 				break;
 			case ALGO_LYRA2:
 			case ALGO_NEOSCRYPT:
+			case ALGO_SIB:
 			case ALGO_SCRYPT:
 				minmax = 0x80000;
 				break;
@@ -1900,6 +1902,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_SKEIN2:
 			rc = scanhash_skein2(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_SIB:
+			rc = scanhash_sib(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_S3:
 			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);
