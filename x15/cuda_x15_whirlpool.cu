@@ -7,27 +7,29 @@
 
 #define threadsperblock 256
 
-#define USE_SHARED 1
+//#define __DEV_STORAGE__ __constant__
+#define __DEV_STORAGE__ __device__
 
 #include "cuda_helper.h"
+extern __device__ __device_builtin__ void __threadfence_block(void);
 
-__constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
-__constant__ uint32_t pTarget[8];
+__DEV_STORAGE__ static uint64_t c_PaddedMessage80[16]; // input end block after midstate
+__DEV_STORAGE__ static uint32_t pTarget[8];
 
 static uint32_t *h_wnounce[MAX_GPUS] = { 0 };
 static uint32_t *d_WNonce[MAX_GPUS] = { 0 };
 
 #define USE_ALL_TABLES 1
 
-__constant__ static uint64_t mixTob0Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob0Tox[256];
 #if USE_ALL_TABLES
-__constant__ static uint64_t mixTob1Tox[256];
-__constant__ static uint64_t mixTob2Tox[256];
-__constant__ static uint64_t mixTob3Tox[256];
-__constant__ static uint64_t mixTob4Tox[256];
-__constant__ static uint64_t mixTob5Tox[256];
-__constant__ static uint64_t mixTob6Tox[256];
-__constant__ static uint64_t mixTob7Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob1Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob2Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob3Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob4Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob5Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob6Tox[256];
+__DEV_STORAGE__ static uint64_t mixTob7Tox[256];
 #endif
 
 /**
@@ -193,7 +195,7 @@ static const uint64_t old1_T0[256] = {
 	SPH_C64(0x3F6B933FF815F8F8), SPH_C64(0xA4C244A486978686)
 };
 
-
+#if USE_ALL_TABLES
 static const uint64_t old1_T1[256] = {
 	SPH_C64(0xD8C0781828181878), SPH_C64(0x2605AF23652323AF),
 	SPH_C64(0xB87EF9C657C6C6F9), SPH_C64(0xFB136FE825E8E86F),
@@ -1110,6 +1112,7 @@ static const uint64_t old1_T7[256] = {
 	SPH_C64(0x2888755D88287828), SPH_C64(0x5C3186DA315CE45C),
 	SPH_C64(0xF83F6B933FF815F8), SPH_C64(0x86A4C244A4869786)
 };
+#endif /* USE_ALL_TABLES */
 
 static const uint64_t old1_RC[10] = {
 	SPH_C64(0x4F01B887E8C62318),
@@ -1255,6 +1258,7 @@ static const uint64_t plain_T0[256] = {
 	SPH_C64(0x6BED3F93F8C7F8F8), SPH_C64(0xC211A44486228686)
 };
 
+#if USE_ALL_TABLES
 static const uint64_t plain_T1[256] = {
 	SPH_C64(0x3078C018601818D8), SPH_C64(0x46AF05238C232326),
 	SPH_C64(0x91F97EC63FC6C6B8), SPH_C64(0xCD6F13E887E8E8FB),
@@ -2171,11 +2175,13 @@ static const uint64_t plain_T7[256] = {
 	SPH_C64(0x287550885D28A028), SPH_C64(0x5C86B831DA5C6D5C),
 	SPH_C64(0xF86BED3F93F8C7F8), SPH_C64(0x86C211A444862286)
 };
+#endif /* USE_ALL_TABLES */
+
 
 /**
  * Round constants.
  */
-__constant__ uint64_t InitVector_RC[10];
+__DEV_STORAGE__ uint64_t InitVector_RC[10];
 
 static const uint64_t plain_RC[10] = {
 	SPH_C64(0x4F01B887E8C62318),
@@ -2312,7 +2318,6 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 			uint64_t h8[8];
 		} hash;
 
-		uint64_t state[8];
 		uint64_t n[8];
 		uint64_t h[8];
 
@@ -2322,13 +2327,16 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 			h[i] = 0;                     // read state
 		}
 
-		#pragma unroll 10
+		__threadfence_block(); // ensure shared mem is ready
+
+//		#pragma unroll 10
 		for (unsigned r=0; r < 10; r++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
 			ROUND_WENC(sharedMemory, n, h, tmp);
 		}
 
+		uint64_t state[8];
 		#pragma unroll 8
 		for (int i=0; i < 8; i++) {
 			state[i] = xor1(n[i],c_PaddedMessage80[i]);
@@ -2351,7 +2359,7 @@ void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *outp
 			n[i] = xor1(n[i],h[i]);
 		}
 
-		#pragma unroll 10
+//		#pragma unroll 10
 		for (unsigned r=0; r < 10; r++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
@@ -2410,7 +2418,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 		for (i=0; i<8; i++)
 			n[i] = hash[i] = g_hash[hashPosition + i];
 
-		#pragma unroll 10
+//		#pragma unroll 10
 		for (i=0; i < 10; i++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[i]);
@@ -2434,7 +2442,7 @@ void x15_whirlpool_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t 
 			n[i] = xor1(n[i], h[i]);
 		}
 
-		#pragma unroll 10
+//		#pragma unroll 10
 		for (i=0; i < 10; i++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[i]);
@@ -2499,7 +2507,7 @@ void oldwhirlpool_gpu_finalhash_64(uint32_t threads, uint32_t startNounce, uint6
 			h[i] = 0;
 		}
 
-		#pragma unroll 10
+//		#pragma unroll 10
 		for (unsigned r=0; r < 10; r++) {
 			uint64_t tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 			ROUND_KSCHED(sharedMemory, h, tmp, InitVector_RC[r]);
@@ -2564,6 +2572,7 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 	case 1: /* old whirlpool */
 		cudaMemcpyToSymbol(InitVector_RC, old1_RC, sizeof(plain_RC), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob0Tox, old1_T0, sizeof(plain_T0), 0, cudaMemcpyHostToDevice);
+#if USE_ALL_TABLES
 		cudaMemcpyToSymbol(mixTob1Tox, old1_T1, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob2Tox, old1_T2, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob3Tox, old1_T3, (256*8), 0, cudaMemcpyHostToDevice);
@@ -2571,6 +2580,7 @@ extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode)
 		cudaMemcpyToSymbol(mixTob5Tox, old1_T5, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob6Tox, old1_T6, (256*8), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(mixTob7Tox, old1_T7, (256*8), 0, cudaMemcpyHostToDevice);
+#endif
 		break;
 	}
 
@@ -2591,11 +2601,9 @@ extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
+	x15_whirlpool_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 
-	x15_whirlpool_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-
-	MyStreamSynchronize(NULL, order, thr_id);
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
 __host__
@@ -2623,13 +2631,10 @@ extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint
 __host__
 void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_outputHash, int order)
 {
-	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 0;
-
-	oldwhirlpool_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNounce, d_outputHash);
+	oldwhirlpool_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_outputHash);
 
 	MyStreamSynchronize(NULL, order, thr_id);
 }

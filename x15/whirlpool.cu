@@ -66,8 +66,13 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
-
-		cudaMalloc(&d_hash[thr_id], 16 * sizeof(uint32_t) * throughput);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 		x15_whirlpool_cpu_init(thr_id, throughput, 1 /* old whirlpool */);
 
 		init[thr_id] = true;
