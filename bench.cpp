@@ -65,6 +65,7 @@ void algo_free_all(int thr_id)
 	free_qubit(thr_id);
 	free_skeincoin(thr_id);
 	free_skein2(thr_id);
+	free_sib(thr_id);
 	free_s3(thr_id);
 	free_whirl(thr_id);
 	free_whirlx(thr_id);

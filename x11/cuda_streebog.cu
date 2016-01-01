@@ -1064,7 +1064,7 @@ void streebog_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
 	if (thread < threads)
 	{
 		uint64_t* inout = (&g_hash[thread * 8U]);
-#if 1
+#if 0
 		uint64_t hash[8] = { 0 };
 		GOST_hash_X(hash, (uchar*) inout, 512);
 		GOST_Copy512(inout, hash);
