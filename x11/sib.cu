@@ -22,8 +22,6 @@ extern void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNou
 #include <stdio.h>
 #include <memory.h>
 
-//#define _DEBUG
-
 static uint32_t *d_hash[MAX_GPUS];
 
 // Sibcoin CPU Hash
@@ -71,7 +69,6 @@ extern "C" void sibhash(void *output, const void *input)
 	sph_gost512_init(&ctx_gost);
 	sph_gost512(&ctx_gost, (const void*) hash, 64);
 	sph_gost512_close(&ctx_gost, (void*) hash);
-	//applog_hash64(hash);
 
 	sph_luffa512_init(&ctx_luffa);
 	sph_luffa512 (&ctx_luffa, (const void*) hash, 64);
@@ -96,24 +93,9 @@ extern "C" void sibhash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-#ifdef _DEBUG
-#define TRACE(algo) { \
-	if (max_nonce == 1 && pdata[19] <= 1 && !opt_benchmark) { \
-		uint32_t oft = 0; \
-		uint32_t* debugbuf = NULL; \
-		cudaMallocHost(&debugbuf, 16*sizeof(uint32_t)); \
-		cudaMemcpy(debugbuf, d_hash[thr_id] + oft, 16*sizeof(uint32_t), cudaMemcpyDeviceToHost); \
-		printf("SIB %s %08x %08x %08x %08x %08x %08x %08x %08x  %08x %08x %08x %08x %08x %08x %08x %08x\n", algo, \
-			swab32(debugbuf[0]), swab32(debugbuf[1]), swab32(debugbuf[2]), swab32(debugbuf[3]), \
-			swab32(debugbuf[4]), swab32(debugbuf[5]), swab32(debugbuf[6]), swab32(debugbuf[7]), \
-			swab32(debugbuf[8]), swab32(debugbuf[9]), swab32(debugbuf[10]),swab32(debugbuf[11]), \
-			swab32(debugbuf[12]),swab32(debugbuf[13]),swab32(debugbuf[14]),swab32(debugbuf[15])); \
-		cudaFreeHost(debugbuf); \
-	} \
-}
-#else
-#define TRACE(algo) {}
-#endif
+//#define _DEBUG
+#define _DEBUG_PREFIX "sib"
+#include "cuda_debug.cuh"
 
 static bool init[MAX_GPUS] = { 0 };
 

@@ -19,6 +19,9 @@ extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
 extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
+//#define _DEBUG
+#define _DEBUG_PREFIX "whirl"
+#include "cuda_debug.cuh"
 
 // CPU Hash function
 extern "C" void wcoinhash(void *state, const void *input)
@@ -49,6 +52,16 @@ extern "C" void wcoinhash(void *state, const void *input)
 	memcpy(state, hash, 32);
 }
 
+void whirl_midstate(void *state, const void *input)
+{
+	sph_whirlpool_context ctx;
+
+	sph_whirlpool1_init(&ctx);
+	sph_whirlpool1(&ctx, input, 64);
+
+	memcpy(state, ctx.state, 64);
+}
+
 static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
@@ -60,6 +73,7 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 
 	uint32_t throughput =  cuda_default_throughput(thr_id, 1U << 19); // 19=256*256*8;
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
+	if (init[thr_id]) throughput = max(throughput, 256); // shared mem requirement
 
 	if (opt_benchmark)
 		((uint32_t*)ptarget)[7] = 0x0000ff;
@@ -91,8 +105,11 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		TRACE64(" 80 :", d_hash);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE64(" 64 :", d_hash);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		TRACE64(" 64 :", d_hash);
 
 		foundNonce = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		if (foundNonce != UINT32_MAX && bench_algo < 0)
@@ -115,7 +132,7 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 				pdata[19] = foundNonce;
 				return res;
 			} else {
-				applog(LOG_WARNING, "GPU #%d: result for %08x does not validate on CPU!", device_map[thr_id], foundNonce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 			}
 		}
 		if ((uint64_t) throughput + pdata[19] >= max_nonce) {

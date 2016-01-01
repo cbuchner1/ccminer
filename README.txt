@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.1 (Dec 2015) "Mining Diff & basic MultiAlgo"
+ccMiner release 1.7.1 (Dec 2015) "Sibcoin & Whirlpool midstate"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -235,6 +235,7 @@ features.
 
   Dec. 31th 2015  v1.7.1
                   Implement sib algo (X11 + Russian Streebog-512/GOST)
+                  Whirlpool speed x2 with the midstate precompute
                   Small bug fixes about device ids mapping (and vendor names)
 
   Nov. 06th 2015  v1.7

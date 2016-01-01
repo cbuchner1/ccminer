@@ -87,20 +87,9 @@ extern "C" void x11hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-#ifdef _DEBUG
-#define TRACE(algo) { \
-	if (max_nonce == 1 && pdata[19] <= 1) { \
-		uint32_t* debugbuf = NULL; \
-		cudaMallocHost(&debugbuf, 8*sizeof(uint32_t)); \
-		cudaMemcpy(debugbuf, d_hash[thr_id], 8*sizeof(uint32_t), cudaMemcpyDeviceToHost); \
-		printf("X11 %s %08x %08x %08x %08x...\n", algo, swab32(debugbuf[0]), swab32(debugbuf[1]), \
-			swab32(debugbuf[2]), swab32(debugbuf[3])); \
-		cudaFreeHost(debugbuf); \
-	} \
-}
-#else
-#define TRACE(algo) {}
-#endif
+//#define _DEBUG
+#define _DEBUG_PREFIX "x11"
+#include "cuda_debug.cuh"
 
 static bool init[MAX_GPUS] = { 0 };
 
