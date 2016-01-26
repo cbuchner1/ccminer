@@ -139,6 +139,12 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(dev_id);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		cudaGetLastError();
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));

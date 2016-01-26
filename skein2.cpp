@@ -53,6 +53,12 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 	if (!init[thr_id])
 	{
 		cudaSetDevice(dev_id);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput);
 

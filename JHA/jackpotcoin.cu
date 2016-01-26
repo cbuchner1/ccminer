@@ -94,6 +94,12 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 	if (!init[thr_id])
 	{
 		cudaSetDevice(dev_id);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 		cuda_get_arch(thr_id);
 		if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300) {
 			gpulog(LOG_ERR, thr_id, "Sorry, This algo is not supported by this GPU arch (SM 3.0 required)");

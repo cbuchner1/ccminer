@@ -22,7 +22,7 @@ extern void skeincoin_free(int thr_id);
 extern void skeincoin_setBlock_80(int thr_id, void *pdata);
 extern uint32_t skeincoin_hash_sm5(int thr_id, uint32_t threads, uint32_t startNounce, int swap, uint64_t target64, uint32_t *secNonce);
 
-static __device__ __constant__ uint32_t sha256_hashTable[] = {
+static __device__ uint32_t sha256_hashTable[] = {
 	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
 };
 
@@ -372,6 +372,12 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		if (sm5) {
 			skeincoin_init(thr_id);

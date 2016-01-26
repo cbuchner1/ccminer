@@ -351,6 +351,12 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 	if (!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		// constants
 		cudaMemcpyToSymbol(c_permut, permut, 24*4, 0, cudaMemcpyHostToDevice);

@@ -63,7 +63,12 @@ extern "C" int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_n
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
-		CUDA_LOG_ERROR();
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 

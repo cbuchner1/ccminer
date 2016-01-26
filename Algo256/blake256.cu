@@ -256,7 +256,7 @@ uint32_t blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const ui
 		return result;
 
 	blake256_gpu_hash_80<<<grid, block, shared_size>>>(threads, startNonce, d_resNonce[thr_id], highTarget, crcsum, (int) rounds);
-	MyStreamSynchronize(NULL, 0, thr_id);
+	//MyStreamSynchronize(NULL, 0, thr_id);
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		result = h_resNonce[thr_id][0];
 		for (int n=0; n < (NBN-1); n++)
@@ -343,7 +343,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 		return result;
 
 	blake256_gpu_hash_16 <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget, (int) rounds, opt_tracegpu);
-	MyStreamSynchronize(NULL, 0, thr_id);
+	//MyStreamSynchronize(NULL, 0, thr_id);
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		result = h_resNonce[thr_id][0];
 		for (int n=0; n < (NBN-1); n++)
@@ -413,7 +413,12 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 
 	if (!init[thr_id]) {
 		cudaSetDevice(device_map[thr_id]);
-		CUDA_LOG_ERROR();
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage (linux)
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t));
 		cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t));
