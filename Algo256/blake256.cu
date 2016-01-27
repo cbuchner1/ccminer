@@ -516,7 +516,10 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 	const uint32_t first_nonce = pdata[19];
 	uint64_t targetHigh = ((uint64_t*)ptarget)[3];
 
-	uint32_t intensity = (device_sm[device_map[thr_id]] > 500) ? 31 : 28;
+	int dev_id = device_map[thr_id];
+	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 30 : 26;
+	if (device_sm[dev_id] < 350) intensity = 22;
+
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
@@ -536,7 +539,7 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(dev_id);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
 			cudaDeviceReset();
 			// reduce cpu usage (linux)
