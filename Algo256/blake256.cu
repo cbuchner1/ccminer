@@ -261,23 +261,12 @@ void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uin
 
 		if (h[7] == 0 && cuda_swab32(h[6]) <= highTarget) {
 #if NBN == 2
-			/* keep the smallest nonce, + extra one if found */
-			if (resNonce[0] > nonce) {
-				resNonce[1] = resNonce[0];
-				resNonce[0] = nonce;
-			}
-			else
+			if (resNonce[0] != UINT32_MAX)
 				resNonce[1] = nonce;
+			else
+				resNonce[0] = nonce;
 #else
 			resNonce[0] = nonce;
-#endif
-#ifdef _DEBUG
-			if (trace) {
-				uint64_t high64 = ((uint64_t*)h)[3];
-				printf("gpu:  %16llx\n", high64);
-				printf("gpu: %08x.%08x\n", h[7], h[6]);
-				printf("tgt:  %16llx\n", highTarget);
-			}
 #endif
 		}
 	}
@@ -420,33 +409,26 @@ const uint64_t highTarget, const int rounds, const bool trace)
 		GSPREC(0, 5, 0xA, 0xF, 5, 0);
 		GSPREC(1, 6, 0xB, 0xC, 15, 4);
 		GSPREC(2, 7, 0x8, 0xD, 8, 6);
-		GSPREC(3, 4, 0x9, 0xE, 2, 10);
+		//GSPREC(3, 4, 0x9, 0xE, 2, 10);
 		//	{ 6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5 },
 
 		// only compute h6 & 7
-		h[6U] ^= v[6U] ^ v[14U];
-		h[7U] ^= v[7U] ^ v[15U];
+		//h[6] ^= v[6] ^ v[14];
+		//h[7] ^= v[7] ^ v[15];
 
-		if (h[7] == 0 && cuda_swab32(h[6]) <= highTarget) {
+		if ((h[7]^v[7]^v[15]) == 0) // h7
+		{
+			GSPREC(3, 4, 0x9, 0xE, 2, 10);
+			if (cuda_swab32(h[6]^v[6]^v[14]) <= highTarget) {
 #if NBN == 2
-			/* keep the smallest nonce, + extra one if found */
-			if (resNonce[0] > nonce) {
-				resNonce[1] = resNonce[0];
-				resNonce[0] = nonce;
-			}
-			else
-				resNonce[1] = nonce;
+				if (resNonce[0] != UINT32_MAX)
+					resNonce[1] = nonce;
+				else
+					resNonce[0] = nonce;
 #else
-			resNonce[0] = nonce;
+				resNonce[0] = nonce;
 #endif
-#ifdef _DEBUG
-			if (trace) {
-				uint64_t high64 = ((uint64_t*)h)[3];
-				printf("gpu:  %16llx\n", high64);
-				printf("gpu: %08x.%08x\n", h[7], h[6]);
-				printf("tgt:  %16llx\n", highTarget);
 			}
-#endif
 		}
 	}
 }
@@ -469,9 +451,7 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 	else
 		blake256_gpu_hash_16  <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget, (int)rounds, opt_tracegpu);
 
-	//	cudaDeviceSynchronize();
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		//cudaDeviceSynchronize(); /* seems no more required */
 		result = h_resNonce[thr_id][0];
 		for (int n=0; n < (NBN-1); n++)
 			extra_results[n] = h_resNonce[thr_id][n+1];
@@ -586,7 +566,10 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 					blake256hash(vhashcpu, endiandata, blakerounds);
 					if (vhashcpu[6] <= Htarg /* && fulltest(vhashcpu, ptarget) */) {
 						pdata[21] = extra_results[0];
-						applog(LOG_BLUE, "1:%x 2:%x", foundNonce, extra_results[0]);
+						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
+							work_set_target_ratio(work, vhashcpu);
+							xchg(pdata[21], pdata[19]);
+						}
 						rc = 2;
 					}
 					extra_results[0] = UINT32_MAX;
