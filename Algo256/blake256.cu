@@ -54,9 +54,8 @@ static uint32_t extra_results[NBN] = { UINT32_MAX };
 	v[b] = SPH_ROTR32(v[b] ^ v[c], 7); \
 	}
 
-/* Second part (64-80) msg never change, store it */
 __device__ __forceinline__
-void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, const int rounds)
+void blake256_compress_14(uint32_t *h, const uint32_t *block, const uint32_t T0)
 {
 	uint32_t /*_ALIGN(8)*/ m[16];
 	uint32_t v[16];
@@ -73,16 +72,15 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, co
 		0xC0AC29B7, 0xC97C50DD, 0x3F84D5B5, 0xB5470917
 	};
 
-	const uint32_t c_Padding[16] = {
-		0, 0, 0, 0,
+	const uint32_t c_Padding[12] = {
 		0x80000000UL, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 1, 0, 640,
 	};
 
 	#pragma unroll
-	for (uint32_t i = 4; i < 16; i++) {
-		m[i] = c_Padding[i];
+	for (uint32_t i = 0; i < 12; i++) {
+		m[i+4] = c_Padding[i];
 	}
 
 	//#pragma unroll 8
@@ -235,8 +233,7 @@ void blake256_compress(uint32_t *h, const uint32_t *block, const uint32_t T0, co
 /* Precalculated 1st 64-bytes block (midstate) method */
 
 __global__ __launch_bounds__(1024,1)
-void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce,
-	const uint64_t highTarget, const int rounds, const bool trace)
+void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce, const uint64_t highTarget)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -257,7 +254,7 @@ void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uin
 		ending[2] = d_data[10];
 		ending[3] = nonce; /* our tested value */
 
-		blake256_compress(h, ending, 640, rounds);
+		blake256_compress_14(h, ending, 640);
 
 		if (h[7] == 0 && cuda_swab32(h[6]) <= highTarget) {
 #if NBN == 2
@@ -273,14 +270,16 @@ void blake256_gpu_hash_16(const uint32_t threads, const uint32_t startNonce, uin
 }
 
 __global__
-void blake256_gpu_hash_16_8(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce,
-const uint64_t highTarget, const int rounds, const bool trace)
+#if __CUDA_ARCH__ >= 500
+__launch_bounds__(512, 3) /* 40 regs */
+#endif
+void blake256_gpu_hash_16_8(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce, const uint64_t highTarget)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
+		uint32_t h[8];
 		const uint32_t nonce = startNonce + thread;
-		uint32_t _ALIGN(16) h[8];
 
 		#pragma unroll
 		for (int i = 0; i < 8; i++) {
@@ -289,21 +288,12 @@ const uint64_t highTarget, const int rounds, const bool trace)
 
 		// ------ Close: Bytes 64 to 80 ------
 
-		uint32_t _ALIGN(16) block[4];
-		block[0] = d_data[8];
-		block[1] = d_data[9];
-		block[2] = d_data[10];
-		block[3] = nonce; /* our tested value */
-
-//		blake256_compress_8(h, block, 640, rounds);
-
-		uint32_t /*_ALIGN(8)*/ m[16];
-		uint32_t v[16];
-
-		m[0] = block[0];
-		m[1] = block[1];
-		m[2] = block[2];
-		m[3] = block[3];
+		uint32_t m[16] = {
+			d_data[8], d_data[9], d_data[10], nonce,
+			0x80000000UL, 0, 0, 0,
+			0, 0, 0, 0,
+			0, 1, 0, 640,
+		};
 
 		const uint32_t c_u256[16] = {
 			0x243F6A88, 0x85A308D3, 0x13198A2E, 0x03707344,
@@ -312,29 +302,19 @@ const uint64_t highTarget, const int rounds, const bool trace)
 			0xC0AC29B7, 0xC97C50DD, 0x3F84D5B5, 0xB5470917
 		};
 
-		const uint32_t c_Padding[16] = {
-			0, 0, 0, 0,
-			0x80000000UL, 0, 0, 0,
-			0, 0, 0, 0,
-			0, 1, 0, 640,
-		};
+		uint32_t v[16];
 
 		#pragma unroll
-		for (uint32_t i = 4; i < 16; i++) {
-			m[i] = c_Padding[i];
-		}
-
-		//#pragma unroll 8
 		for (uint32_t i = 0; i < 8; i++)
 			v[i] = h[i];
 
-		v[8] = c_u256[0];
-		v[9] = c_u256[1];
+		v[8]  = c_u256[0];
+		v[9]  = c_u256[1];
 		v[10] = c_u256[2];
 		v[11] = c_u256[3];
 
-		v[12] = c_u256[4] ^ 640;
-		v[13] = c_u256[5] ^ 640;
+		v[12] = c_u256[4] ^ 640U;
+		v[13] = c_u256[5] ^ 640U;
 		v[14] = c_u256[6];
 		v[15] = c_u256[7];
 
@@ -447,9 +427,9 @@ static uint32_t blake256_cpu_hash_16(const int thr_id, const uint32_t threads, c
 		return result;
 
 	if (rounds == 8)
-		blake256_gpu_hash_16_8 <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget, (int)rounds, opt_tracegpu);
+		blake256_gpu_hash_16_8 <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget);
 	else
-		blake256_gpu_hash_16  <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget, (int)rounds, opt_tracegpu);
+		blake256_gpu_hash_16  <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget);
 
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		result = h_resNonce[thr_id][0];
@@ -510,13 +490,6 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 		ptarget[6] = swab32(0x00ff);
 	}
 
-	if (opt_tracegpu) {
-		/* test call from util.c */
-		throughput = 1;
-		for (int k = 0; k < 20; k++)
-			pdata[k] = swab32(pdata[k]);
-	}
-
 	if (!init[thr_id])
 	{
 		cudaSetDevice(dev_id);
@@ -564,7 +537,7 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 				if (extra_results[0] != UINT32_MAX) {
 					be32enc(&endiandata[19], extra_results[0]);
 					blake256hash(vhashcpu, endiandata, blakerounds);
-					if (vhashcpu[6] <= Htarg /* && fulltest(vhashcpu, ptarget) */) {
+					if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget)) {
 						pdata[21] = extra_results[0];
 						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
 							work_set_target_ratio(work, vhashcpu);
@@ -586,7 +559,7 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 
 		pdata[19] += throughput;
 
-	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > (uint64_t)throughput + pdata[19]));
+	} while (!work_restart[thr_id].restart && max_nonce > (uint64_t)throughput + pdata[19]);
 
 	*hashes_done = pdata[19] - first_nonce;
 
