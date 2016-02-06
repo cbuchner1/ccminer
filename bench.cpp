@@ -47,6 +47,7 @@ void algo_free_all(int thr_id)
 	free_blake256(thr_id);
 	free_bmw(thr_id);
 	free_c11(thr_id);
+	free_decred(thr_id);
 	free_deep(thr_id);
 	free_keccak256(thr_id);
 	free_fresh(thr_id);

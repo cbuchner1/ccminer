@@ -10,6 +10,7 @@ enum sha_algos {
 	ALGO_BMW,
 	ALGO_C11,
 	ALGO_DEEP,
+	ALGO_DECRED,
 	ALGO_DMD_GR,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
@@ -55,6 +56,7 @@ static const char *algo_names[] = {
 	"bmw",
 	"c11",
 	"deep",
+	"decred",
 	"dmd-gr",
 	"fresh",
 	"fugue256",

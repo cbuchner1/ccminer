@@ -264,6 +264,7 @@ struct work;
 extern int scanhash_blake256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds);
 extern int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_c11(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_deep(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_fresh(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -305,6 +306,7 @@ void algo_free_all(int thr_id);
 extern void free_blake256(int thr_id);
 extern void free_bmw(int thr_id);
 extern void free_c11(int thr_id);
+extern void free_decred(int thr_id);
 extern void free_deep(int thr_id);
 extern void free_keccak256(int thr_id);
 extern void free_fresh(int thr_id);
@@ -536,7 +538,7 @@ extern void gpulog(int prio, int thr_id, const char *fmt, ...);
 void get_defconfig_path(char *out, size_t bufsize, char *argv0);
 extern void cbin2hex(char *out, const char *in, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);
-extern bool hex2bin(unsigned char *p, const char *hexstr, size_t len);
+extern bool hex2bin(void *output, const char *hexstr, size_t len);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
@@ -612,7 +614,7 @@ struct tx {
 };
 
 struct work {
-	uint32_t data[32];
+	uint32_t data[48];
 	uint32_t target[8];
 	uint32_t maxvote;
 
@@ -624,6 +626,8 @@ struct work {
 		uint32_t u32[2];
 		uint64_t u64[1];
 	} noncerange;
+
+	uint32_t nonces[2];
 
 	double targetdiff;
 	double shareratio;
@@ -761,13 +765,16 @@ void restart_threads(void);
 size_t time2str(char* buf, time_t timer);
 char* atime2str(time_t timer);
 
-void applog_hash(unsigned char *hash);
-void applog_compare_hash(unsigned char *hash, unsigned char *hash2);
+void applog_hex(void *data, int len);
+void applog_hash(void *hash);
+void applog_hash64(void *hash);
+void applog_compare_hash(void *hash, void *hash_ref);
 
 void print_hash_tests(void);
 void blake256hash(void *output, const void *input, int8_t rounds);
 void bmw_hash(void *state, const void *input);
 void c11hash(void *output, const void *input);
+void decred_hash(void *state, const void *input);
 void deephash(void *state, const void *input);
 void luffa_hash(void *state, const void *input);
 void fresh_hash(void *state, const void *input);

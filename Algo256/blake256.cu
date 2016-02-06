@@ -487,7 +487,7 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 
 	if (opt_benchmark) {
 		targetHigh = 0x1ULL << 32;
-		ptarget[6] = swab32(0x00ff);
+		ptarget[6] = swab32(0xff);
 	}
 
 	if (!init[thr_id])
@@ -519,9 +519,9 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t vhashcpu[8];
-			uint32_t Htarg = (uint32_t)targetHigh;
+			uint32_t Htarg = ptarget[6];
 
-			for (int k=0; k < 19; k++)
+			for (int k=16; k < 19; k++)
 				be32enc(&endiandata[k], pdata[k]);
 
 			be32enc(&endiandata[19], foundNonce);

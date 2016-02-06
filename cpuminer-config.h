@@ -66,7 +66,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the <syslog.h> header file. */
-/* #undef HAVE_SYSLOG_H */
+#define HAVE_SYSLOG_H 1
 
 /* Define to 1 if you have the <sys/endian.h> header file. */
 /* #undef HAVE_SYS_ENDIAN_H */
@@ -87,7 +87,7 @@
 #define HAVE_UNISTD_H 1
 
 /* Defined if libcurl supports AsynchDNS */
-/* #undef LIBCURL_FEATURE_ASYNCHDNS */
+#define LIBCURL_FEATURE_ASYNCHDNS 1
 
 /* Defined if libcurl supports IDN */
 #define LIBCURL_FEATURE_IDN 1
@@ -111,7 +111,7 @@
 /* #undef LIBCURL_FEATURE_SSPI */
 
 /* Defined if libcurl supports DICT */
-/* #undef LIBCURL_PROTOCOL_DICT */
+#define LIBCURL_PROTOCOL_DICT 1
 
 /* Defined if libcurl supports FILE */
 #define LIBCURL_PROTOCOL_FILE 1
@@ -126,31 +126,28 @@
 #define LIBCURL_PROTOCOL_HTTP 1
 
 /* Defined if libcurl supports HTTPS */
-/* #undef LIBCURL_PROTOCOL_HTTPS */
+#define LIBCURL_PROTOCOL_HTTPS 1
 
 /* Defined if libcurl supports IMAP */
-/* #undef LIBCURL_PROTOCOL_IMAP */
+#define LIBCURL_PROTOCOL_IMAP 1
 
 /* Defined if libcurl supports LDAP */
-/* #undef LIBCURL_PROTOCOL_LDAP */
+#define LIBCURL_PROTOCOL_LDAP 1
 
 /* Defined if libcurl supports POP3 */
-/* #undef LIBCURL_PROTOCOL_POP3 */
+#define LIBCURL_PROTOCOL_POP3 1
 
 /* Defined if libcurl supports RTSP */
-/* #undef LIBCURL_PROTOCOL_RTSP */
+#define LIBCURL_PROTOCOL_RTSP 1
 
 /* Defined if libcurl supports SMTP */
-/* #undef LIBCURL_PROTOCOL_SMTP */
+#define LIBCURL_PROTOCOL_SMTP 1
 
 /* Defined if libcurl supports TELNET */
-/* #undef LIBCURL_PROTOCOL_TELNET */
+#define LIBCURL_PROTOCOL_TELNET 1
 
 /* Defined if libcurl supports TFTP */
-/* #undef LIBCURL_PROTOCOL_TFTP */
-
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-/* #undef NO_MINUS_C_MINUS_O */
+#define LIBCURL_PROTOCOL_TFTP 1
 
 /* Name of package */
 #define PACKAGE "ccminer"
@@ -191,4 +188,4 @@
 /* #undef curl_free */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
-//#define size_t unsigned int
+/* #undef size_t */
