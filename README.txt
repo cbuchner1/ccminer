@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.1 (Jan 2015) "Sibcoin & Whirlpool midstate"
+ccMiner release 1.7.2 (Feb 2015) "Vanilla and Decred Blake-256"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -24,6 +24,7 @@ cbuchner v1.2:
 
 This is a CUDA accelerated mining application which handle :
 
+Decred
 HeavyCoin & MjollnirCoin
 FugueCoin
 GroestlCoin & Myriad-Groestl
@@ -71,6 +72,7 @@ its command line interface and options.
                           blakecoin   use to mine Old Blake 256
                           bmw         use to mine Midnight
                           c11/flax    use to mine Chaincoin and Flax
+                          decred      use to mine Decred
                           deep        use to mine Deepcoin
                           dmd-gr      use to mine Diamond-Groestl
                           fresh       use to mine Freshcoin
@@ -102,7 +104,6 @@ its command line interface and options.
                           x17         use to mine X17
                           vanilla     use to mine Vanilla (Blake256)
                           whirlpool   use to mine Joincoin
-                          whirlpoolx  use to mine Vanilla (Whirlpoolx)
                           zr5         use to mine ZiftrCoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
@@ -235,6 +236,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Feb. 2015       v1.7.2
+                  Decred Algo (longpoll only)
+                  Blake256 improvements/cleanup
 
   Jan. 26th 2015  v1.7.1
                   Implement sib algo (X11 + Russian Streebog-512/GOST)
