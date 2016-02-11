@@ -237,7 +237,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Feb. 2015       v1.7.2
+  Feb. 11th 2015  v1.7.2
                   Decred Algo (longpoll only)
                   Blake256 improvements/cleanup
 
