@@ -3369,12 +3369,6 @@ int main(int argc, char *argv[])
 	/* real start of the stratum work */
 	if (want_stratum && have_stratum) {
 		tq_push(thr_info[stratum_thr_id].q, strdup(rpc_url));
-	} else {
-		// hmm, weird on Multicoin.co
-		//char lpurl[512];
-		//sprintf(lpurl, "%s/LP", rpc_url);
-		//if (opt_algo == ALGO_DECRED)
-		//	tq_push(thr_info[longpoll_thr_id].q, strdup(lpurl));
 	}
 
 #ifdef USE_WRAPNVML
