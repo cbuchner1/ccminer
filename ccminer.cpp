@@ -1396,7 +1396,8 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[37] = (rand()*4) << 8;
 		for (int i=39; i < 45; i++)
 			work->data[i] = 0;
-		applog_hex(work->data, 180);
+		sctx->job.height = work->data[32];
+		//applog_hex(work->data, 180);
 	} else {
 		work->data[17] = le32dec(sctx->job.ntime);
 		work->data[18] = le32dec(sctx->job.nbits);
@@ -1695,12 +1696,14 @@ static void *miner_thread(void *userdata)
 			#endif
 			memcpy(&work, &g_work, sizeof(struct work));
 			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
-			if (opt_algo == ALGO_DECRED) nonceptr[0] = 0;
 		} else
 			nonceptr[0]++; //??
 
 		if (opt_algo == ALGO_DECRED) {
-			end_nonce = 0xF0000000UL;
+			// use the full range per loop
+			nonceptr[0] = 0;
+			end_nonce = UINT32_MAX;
+			// and make an unique work (extradata)
 			nonceptr[1] += 1;
 			nonceptr[2] |= thr_id;
 		}
@@ -1723,6 +1726,7 @@ static void *miner_thread(void *userdata)
 		loopcnt++;
 
 		/* prevent gpu scans before a job is received */
+		//if (opt_algo != ALGO_DECRED) // uncomment to allow testnet
 		if (have_stratum && work.data[0] == 0 && !opt_benchmark) {
 			sleep(1);
 			if (!thr_id) pools[cur_pooln].wait_time += 1;
@@ -1910,8 +1914,8 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_c11(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_DECRED:
-			if (opt_debug) applog(LOG_BLUE, "version %x, nbits %x, ntime %x extra %x",
-				work.data[0], work.data[29], work.data[34], work.data[38]);
+			//applog(LOG_BLUE, "version %x, nbits %x, ntime %x extra %x",
+			//	work.data[0], work.data[29], work.data[34], work.data[38]);
 			rc = scanhash_decred(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_DEEP:
