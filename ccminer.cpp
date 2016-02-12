@@ -792,6 +792,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			be32enc(&nonce, work->data[19]);
 			break;
 		case ALGO_DECRED:
+			be32enc(&ntime, work->data[34]);
+			be32enc(&nonce, work->data[35]);
 			break;
 		case ALGO_BLAKE:
 		case ALGO_BLAKECOIN:
@@ -821,7 +823,12 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		}
 
 		ntimestr = bin2hex((const uchar*)(&ntime), 4);
-		xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
+
+		if (opt_algo == ALGO_DECRED) {
+			xnonce2str = bin2hex((const uchar*)&work->data[36], stratum.xnonce1_size);
+		} else {
+			xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
+		}
 
 		// store to keep/display the solved ratio/diff
 		stratum.sharediff = work->sharediff;
@@ -833,17 +840,19 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_DEBUG, "share diff: %.5f (x %.1f)",
 				stratum.sharediff, work->shareratio);
 
-		if (opt_algo == ALGO_HEAVY) {
+		switch (opt_algo) {
+		case ALGO_HEAVY:
 			be16enc(&nvote, *((uint16_t*)&work->data[20]));
 			nvotestr = bin2hex((const uchar*)(&nvote), 2);
-			sprintf(s,
-				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
-				pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr);
+			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
+					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
+					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr);
 			free(nvotestr);
-		} else {
-			sprintf(s,
-				"{\"method\": \"mining.submit\", \"params\": [\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
-				pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr);
+			break;
+		default:
+			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
+					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
+					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr);
 		}
 		free(xnonce2str);
 		free(ntimestr);
@@ -1311,7 +1320,8 @@ err_out:
 static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
 	uchar merkle_root[64];
-	int i;
+	uchar extraheader[256] = { 0 };
+	int i, headersize = 0;
 
 	if (!sctx->job.job_id) {
 		// applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
@@ -1333,6 +1343,11 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	/* Generate merkle root */
 	switch (opt_algo) {
+		case ALGO_DECRED:
+			memcpy(merkle_root, sctx->job.coinbase, 32);
+			memcpy(extraheader, &sctx->job.coinbase[32], (int)sctx->job.coinbase_size - 32);
+			headersize = (int)sctx->job.coinbase_size - 32;
+			break;
 		case ALGO_HEAVY:
 		case ALGO_MJOLLNIR:
 			heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -1353,7 +1368,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 			heavycoin_hash(merkle_root, merkle_root, 64);
-		else
+		else if (opt_algo != ALGO_DECRED)
 			sha256d(merkle_root, merkle_root, 64);
 	}
 	
@@ -1367,8 +1382,25 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[1 + i] = le32dec((uint32_t *)sctx->job.prevhash + i);
 	for (i = 0; i < 8; i++)
 		work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
-	work->data[17] = le32dec(sctx->job.ntime);
-	work->data[18] = le32dec(sctx->job.nbits);
+
+	if (opt_algo == ALGO_DECRED) {
+		uint32_t* extradata = (uint32_t*) sctx->xnonce1;
+		for (i = 0; i < 8; i++)
+			work->data[1 + i] = swab32(work->data[1 + i]);
+		for (i = 0; i < 8; i++)
+			work->data[9 + i] = swab32(work->data[9 + i]);
+		for (i = 0; i < headersize/4; i++)
+			work->data[17 + i] = le32dec((uint32_t*)extraheader + i);
+		for (i = 0; i < sctx->xnonce1_size/4; i++)
+			work->data[36 + i] = extradata[i];
+		work->data[37] = (rand()*4) << 8;
+		for (int i=39; i < 45; i++)
+			work->data[i] = 0;
+		applog_hex(work->data, 180);
+	} else {
+		work->data[17] = le32dec(sctx->job.ntime);
+		work->data[18] = le32dec(sctx->job.nbits);
+	}
 
 	if (opt_showdiff || opt_max_diff > 0.)
 		calc_network_diff(work);
@@ -1878,6 +1910,8 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_c11(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_DECRED:
+			if (opt_debug) applog(LOG_BLUE, "version %x, nbits %x, ntime %x extra %x",
+				work.data[0], work.data[29], work.data[34], work.data[38]);
 			rc = scanhash_decred(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_DEEP:
@@ -2086,9 +2120,9 @@ static void *miner_thread(void *userdata)
 				continue;
 			}
 
-			// second nonce found, submit too (on pool only!)
+			// second nonce found, submit too (on pool only!) todo: work.nonces
 			if (rc > 1 && work.data[21]) {
-				work.data[19] = work.data[21];
+				work.data[19] = work.data[21]; // nonceptr[0]
 				work.data[21] = 0;
 				if (opt_algo == ALGO_ZR5) {
 					// todo: use + 4..6 index for pok to allow multiple nonces
@@ -3219,13 +3253,6 @@ int main(int argc, char *argv[])
 		pool_dump_infos();
 	cur_pooln = pool_get_first_valid(0);
 	pool_switch(-1, cur_pooln);
-
-	if (opt_algo == ALGO_DECRED) {
-		allow_gbt = false;
-		want_stratum = have_stratum = false;
-		allow_mininginfo = false;
-		want_longpoll = true;
-	}
 
 	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)
 	      ? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)
