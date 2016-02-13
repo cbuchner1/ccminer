@@ -1320,7 +1320,7 @@ err_out:
 static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
 	uchar merkle_root[64];
-	uchar extraheader[256] = { 0 };
+	uchar extraheader[128] = { 0 };
 	int i, headersize = 0;
 
 	if (!sctx->job.job_id) {
@@ -1623,6 +1623,7 @@ static void *miner_thread(void *userdata)
 
 		if (have_stratum) {
 			uint32_t sleeptime = 0;
+			if (opt_algo != ALGO_DECRED) // decred use extradata...
 			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
 				usleep(100*1000);
 				if (sleeptime > 4) {
