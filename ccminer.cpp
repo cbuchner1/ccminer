@@ -1344,9 +1344,16 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	/* Generate merkle root */
 	switch (opt_algo) {
 		case ALGO_DECRED:
-			memcpy(merkle_root, sctx->job.coinbase, 32);
-			memcpy(extraheader, &sctx->job.coinbase[32], (int)sctx->job.coinbase_size - 32);
-			headersize = (int)sctx->job.coinbase_size - 32;
+			//applog(LOG_BLUE, "block version %x", le32dec(sctx->job.version));
+			if (le32dec(sctx->job.version) & 0xFF) {
+				// getwork over stratum
+				memcpy(merkle_root, sctx->job.coinbase, 32);
+				memcpy(extraheader, &sctx->job.coinbase[32], (int)sctx->job.coinbase_size - 32);
+				headersize = (int)sctx->job.coinbase_size - 32;
+			} else {
+				// future stratum with coinbase
+				sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+			}
 			break;
 		case ALGO_HEAVY:
 		case ALGO_MJOLLNIR:
@@ -1368,7 +1375,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 			heavycoin_hash(merkle_root, merkle_root, 64);
-		else if (opt_algo != ALGO_DECRED)
+		else if (!headersize)
 			sha256d(merkle_root, merkle_root, 64);
 	}
 	
@@ -1384,13 +1391,25 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 
 	if (opt_algo == ALGO_DECRED) {
+		// all is reversed to keep same endian as ocminer getwork pool (same as ZR5)
 		uint32_t* extradata = (uint32_t*) sctx->xnonce1;
-		for (i = 0; i < 8; i++)
-			work->data[1 + i] = swab32(work->data[1 + i]);
-		for (i = 0; i < 8; i++)
-			work->data[9 + i] = swab32(work->data[9 + i]);
-		for (i = 0; i < headersize/4; i++)
-			work->data[17 + i] = le32dec((uint32_t*)extraheader + i);
+		if (headersize) {
+			// getwork over stratum
+			for (i = 0; i < 8; i++)
+				work->data[1 + i] = swab32(work->data[1 + i]);
+			for (i = 0; i < 8; i++)
+				work->data[9 + i] = swab32(work->data[9 + i]);
+			for (i = 0; i < headersize/4; i++)
+				work->data[17 + i] = le32dec((uint32_t*)extraheader + i);
+		} else {
+			work->data[0] = swab32(work->data[0]);
+			for (i = 0; i < 8; i++)
+				work->data[9 + i] = swab32(work->data[9 + i]);
+			// todo work->data[17..33], but how ? :p
+			work->data[29] = be32dec(sctx->job.nbits);
+			work->data[32] = sctx->job.height;
+			work->data[34] = be32dec(sctx->job.ntime);
+		}
 		for (i = 0; i < sctx->xnonce1_size/4; i++)
 			work->data[36 + i] = extradata[i];
 		work->data[37] = (rand()*4) << 8;
@@ -1398,6 +1417,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			work->data[i] = 0;
 		sctx->job.height = work->data[32];
 		//applog_hex(work->data, 180);
+		//applog_hex(&work->data[17], 64);
 	} else {
 		work->data[17] = le32dec(sctx->job.ntime);
 		work->data[18] = le32dec(sctx->job.nbits);
@@ -3258,6 +3278,10 @@ int main(int argc, char *argv[])
 		pool_dump_infos();
 	cur_pooln = pool_get_first_valid(0);
 	pool_switch(-1, cur_pooln);
+
+	if (opt_algo == ALGO_DECRED) {
+		allow_gbt = false;
+	}
 
 	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)
 	      ? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)
