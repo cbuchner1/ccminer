@@ -555,6 +555,7 @@ static void calc_network_diff(struct work *work)
 
 	for (int m=shift; m < 29; m++) d *= 256.0;
 	for (int m=29; m < shift; m++) d /= 256.0;
+	if (opt_algo == ALGO_DECRED && shift == 28) d *= 256.0;
 	if (opt_debug_diff)
 		applog(LOG_DEBUG, "net diff: %f -> shift %u, bits %08x", d, shift, bits);
 
