@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.2 (Feb 2015) "Vanilla and Decred Blake-256"
+ccMiner release 1.7.3 (Feb 2015) "Decred Stratum and MrM4D VNL"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -24,7 +24,7 @@ cbuchner v1.2:
 
 This is a CUDA accelerated mining application which handle :
 
-Decred
+Decred (Blake256 14-rounds - 180 bytes)
 HeavyCoin & MjollnirCoin
 FugueCoin
 GroestlCoin & Myriad-Groestl
@@ -68,11 +68,11 @@ This code is based on the pooler cpuminer and inherits
 its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
-                          blake       use to mine Saffroncoin (Blake 256)
+                          blake       use to mine Saffroncoin (Blake256)
                           blakecoin   use to mine Old Blake 256
                           bmw         use to mine Midnight
                           c11/flax    use to mine Chaincoin and Flax
-                          decred      use to mine Decred
+                          decred      use to mine Decred 180 bytes Blake256-14
                           deep        use to mine Deepcoin
                           dmd-gr      use to mine Diamond-Groestl
                           fresh       use to mine Freshcoin
@@ -236,6 +236,11 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Feb. 19th 2015  v1.7.3
+                  Decred simplified stratum (getwork over stratum)
+                  Vanilla kernel by MrMad
+                  Drop/Disable WhirlpoolX
 
   Feb. 11th 2015  v1.7.2
                   Decred Algo (longpoll only)
