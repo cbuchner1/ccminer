@@ -1320,8 +1320,8 @@ err_out:
 
 static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
-	uchar merkle_root[64];
-	uchar extraheader[128] = { 0 };
+	uint32_t extraheader[32] = { 0 };
+	uchar merkle_root[64] = { 0 };
 	int i, headersize = 0;
 
 	if (!sctx->job.job_id) {
@@ -1345,9 +1345,10 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	/* Generate merkle root */
 	switch (opt_algo) {
 		case ALGO_DECRED:
-			memcpy(merkle_root, sctx->job.coinbase, 32);
-			memcpy(extraheader, &sctx->job.coinbase[32], (int)sctx->job.coinbase_size - 32);
+			// getwork over stratum, getwork merkle + header passed in coinb1
 			headersize = (int)sctx->job.coinbase_size - 32;
+			memcpy(merkle_root, sctx->job.coinbase, 32);
+			memcpy(extraheader, &sctx->job.coinbase[32], headersize);
 			break;
 		case ALGO_HEAVY:
 		case ALGO_MJOLLNIR:
@@ -1369,7 +1370,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 			heavycoin_hash(merkle_root, merkle_root, 64);
-		else if (opt_algo != ALGO_DECRED)
+		else if (!headersize)
 			sha256d(merkle_root, merkle_root, 64);
 	}
 	
@@ -1386,13 +1387,13 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	if (opt_algo == ALGO_DECRED) {
 		uint32_t* extradata = (uint32_t*) sctx->xnonce1;
-		for (i = 0; i < 8; i++)
+		for (i = 0; i < 8; i++) // prevhash
 			work->data[1 + i] = swab32(work->data[1 + i]);
-		for (i = 0; i < 8; i++)
+		for (i = 0; i < 8; i++) // merkle
 			work->data[9 + i] = swab32(work->data[9 + i]);
-		for (i = 0; i < headersize/4; i++)
-			work->data[17 + i] = le32dec((uint32_t*)extraheader + i);
-		for (i = 0; i < sctx->xnonce1_size/4; i++)
+		for (i = 0; i < headersize/4; i++) // header
+			work->data[17 + i] = le32dec(&extraheader[i]);
+		for (i = 0; i < sctx->xnonce1_size/4; i++) // extradata
 			work->data[36 + i] = extradata[i];
 		work->data[37] = (rand()*4) << 8;
 		for (int i=39; i < 45; i++)
@@ -1416,11 +1417,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		break;
 	}
 
-	if (opt_algo == ALGO_DECRED) {
-		work->data[45] = 0x80000001;
-		work->data[46] = 0;
-		work->data[47] = 0x000005a0;
-	} else {
+	if (opt_algo != ALGO_DECRED) {
 		work->data[20] = 0x80000000;
 		work->data[31] = (opt_algo == ALGO_MJOLLNIR) ? 0x000002A0 : 0x00000280;
 	}
@@ -2034,10 +2031,16 @@ static void *miner_thread(void *userdata)
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 
+		// todo: update all algos to use work->nonces
+		work.nonces[0] = nonceptr[0];
+		if (opt_algo != ALGO_DECRED) {
+			work.nonces[1] = nonceptr[2];
+		}
+
 		if (rc > 0 && opt_debug)
-			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[0], swab32(nonceptr[0])); // data[19]
+			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", work.nonces[0], swab32(work.nonces[0]));
 		if (rc > 1 && opt_debug)
-			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", nonceptr[2], swab32(nonceptr[2])); // data[21]
+			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", work.nonces[1], swab32(work.nonces[1]));
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
 
@@ -2065,10 +2068,10 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
+		if (rc > 0)
+			work.scanned_to = work.nonces[0];
 		if (rc > 1)
-			work.scanned_to = nonceptr[2];
-		else if (rc > 0)
-			work.scanned_to = nonceptr[0];
+			work.scanned_to = max(work.nonces[0], work.nonces[1]);
 		else {
 			work.scanned_to = max_nonce;
 			if (opt_debug && opt_benchmark) {
@@ -2126,10 +2129,9 @@ static void *miner_thread(void *userdata)
 				continue;
 			}
 
-			// second nonce found, submit too (on pool only!) todo: work.nonces
-			if (rc > 1 && work.data[21]) {
-				work.data[19] = work.data[21]; // nonceptr[0]
-				work.data[21] = 0;
+			// second nonce found, submit too (on pool only!)
+			if (rc > 1 && work.nonces[1]) {
+				nonceptr[0] = work.nonces[1];
 				if (opt_algo == ALGO_ZR5) {
 					// todo: use + 4..6 index for pok to allow multiple nonces
 					work.data[0] = work.data[22]; // pok

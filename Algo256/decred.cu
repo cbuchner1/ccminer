@@ -41,7 +41,7 @@ static uint32_t *d_resNonce[MAX_GPUS];
 static uint32_t *h_resNonce[MAX_GPUS];
 
 /* max count of found nonces in one call */
-#define NBN 1
+#define NBN 2
 #if NBN > 1
 static uint32_t extra_results[NBN] = { UINT32_MAX };
 #endif
@@ -282,6 +282,7 @@ static uint32_t decred_cpu_hash_nonce(const int thr_id, const uint32_t threads, 
 		return result;
 
 	blake256_gpu_hash_nonce <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], highTarget);
+	cudaThreadSynchronize();
 
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
 		result = h_resNonce[thr_id][0];
@@ -420,8 +421,6 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 	} while (!work_restart[thr_id].restart && max_nonce > (uint64_t)throughput + (*pnonce));
 
 	*hashes_done = (*pnonce) - first_nonce;
-
-	MyStreamSynchronize(NULL, 0, dev_id);
 	return rc;
 }
 
