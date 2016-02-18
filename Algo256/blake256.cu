@@ -33,6 +33,10 @@ extern "C" void blake256hash(void *output, const void *input, int8_t rounds = 14
 
 #include "cuda_helper.h"
 
+#ifdef __INTELLISENSE__
+#define __byte_perm(x, y, b) x
+#endif
+
 __constant__ uint32_t _ALIGN(32) d_data[12];
 
 /* 8 adapters max */

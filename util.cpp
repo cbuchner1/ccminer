@@ -1997,8 +1997,8 @@ void print_hash_tests(void)
 	wcoinhash(&hash[0], &buf[0]);
 	printpfx("whirlpool", hash);
 
-	whirlxHash(&hash[0], &buf[0]);
-	printpfx("whirlpoolx", hash);
+	//whirlxHash(&hash[0], &buf[0]);
+	//printpfx("whirlpoolx", hash);
 
 	x11hash(&hash[0], &buf[0]);
 	printpfx("X11", hash);

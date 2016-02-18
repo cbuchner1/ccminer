@@ -240,10 +240,9 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17\n\
-			vanilla     Blake256 (VNL)\n\
+			vanilla     Blake256-8 (VNL)\n\
 			whirlcoin   Old Whirlcoin (Whirlpool algo)\n\
 			whirlpool   Whirlpool algo\n\
-			whirlpoolx  WhirlpoolX (VNL)\n\
 			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
@@ -1824,7 +1823,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_BLAKE:
 			case ALGO_BMW:
 			case ALGO_DECRED:
-			case ALGO_WHIRLPOOLX:
+			//case ALGO_WHIRLPOOLX:
 				minmax = 0x40000000U;
 				break;
 			case ALGO_KECCAK:
@@ -1900,7 +1899,6 @@ static void *miner_thread(void *userdata)
 		switch (opt_algo) {
 
 		case ALGO_BLAKECOIN:
-		case ALGO_VANILLA:
 			rc = scanhash_blake256(thr_id, &work, max_nonce, &hashes_done, 8);
 			break;
 		case ALGO_BLAKE:
@@ -1991,13 +1989,16 @@ static void *miner_thread(void *userdata)
 		case ALGO_S3:
 			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);
 			break;
+		case ALGO_VANILLA:
+			rc = scanhash_vanilla(thr_id, &work, max_nonce, &hashes_done, 8);
+			break;
 		case ALGO_WHIRLCOIN:
 		case ALGO_WHIRLPOOL:
 			rc = scanhash_whirl(thr_id, &work, max_nonce, &hashes_done);
 			break;
-		case ALGO_WHIRLPOOLX:
-			rc = scanhash_whirlx(thr_id, &work, max_nonce, &hashes_done);
-			break;
+		//case ALGO_WHIRLPOOLX:
+		//	rc = scanhash_whirlx(thr_id, &work, max_nonce, &hashes_done);
+		//	break;
 		case ALGO_X11:
 			rc = scanhash_x11(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -3225,8 +3226,8 @@ int main(int argc, char *argv[])
 	parse_cmdline(argc, argv);
 
 	// extra credits..
-	if (opt_algo == ALGO_WHIRLPOOLX) {
-		printf("  Whirlpoolx support by Alexis Provos.\n");
+	if (opt_algo == ALGO_VANILLA) {
+		printf("  Vanilla blake optimized by Alexis Provos.\n");
 		printf("VNL donation address: Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W\n\n");
 	}
 
