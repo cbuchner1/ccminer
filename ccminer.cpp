@@ -1400,6 +1400,8 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	} else {
 		work->data[17] = le32dec(sctx->job.ntime);
 		work->data[18] = le32dec(sctx->job.nbits);
+		work->data[20] = 0x80000000;
+		work->data[31] = (opt_algo == ALGO_MJOLLNIR) ? 0x000002A0 : 0x00000280;
 	}
 
 	if (opt_showdiff || opt_max_diff > 0.)
@@ -1414,11 +1416,6 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		break;
 	}
 
-	if (opt_algo != ALGO_DECRED) {
-		work->data[20] = 0x80000000;
-		work->data[31] = (opt_algo == ALGO_MJOLLNIR) ? 0x000002A0 : 0x00000280;
-	}
-
 	// HeavyCoin (vote / reward)
 	if (opt_algo == ALGO_HEAVY) {
 		work->maxvote = 2048;
@@ -1430,7 +1427,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	pthread_mutex_unlock(&stratum_work_lock);
 
-	if (opt_debug) {
+	if (opt_debug && opt_algo != ALGO_DECRED) {
 		uint32_t utm = work->data[17];
 		if (opt_algo != ALGO_ZR5) utm = swab32(utm);
 		char *tm = atime2str(utm - sctx->srvtime_diff);
