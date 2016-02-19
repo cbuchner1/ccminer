@@ -1345,8 +1345,8 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	switch (opt_algo) {
 		case ALGO_DECRED:
 			// getwork over stratum, getwork merkle + header passed in coinb1
-			headersize = (int)sctx->job.coinbase_size - 32;
 			memcpy(merkle_root, sctx->job.coinbase, 32);
+			headersize = min((int)sctx->job.coinbase_size - 32, sizeof(extraheader));
 			memcpy(extraheader, &sctx->job.coinbase[32], headersize);
 			break;
 		case ALGO_HEAVY:
@@ -1385,18 +1385,16 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 
 	if (opt_algo == ALGO_DECRED) {
-		uint32_t* extradata = (uint32_t*) sctx->xnonce1;
 		for (i = 0; i < 8; i++) // prevhash
 			work->data[1 + i] = swab32(work->data[1 + i]);
 		for (i = 0; i < 8; i++) // merkle
 			work->data[9 + i] = swab32(work->data[9 + i]);
-		for (i = 0; i < headersize/4; i++) // header
-			work->data[17 + i] = le32dec(&extraheader[i]);
-		for (i = 0; i < sctx->xnonce1_size/4; i++) // extradata
-			work->data[36 + i] = extradata[i];
-		work->data[37] = (rand()*4) << 8;
-		for (int i=39; i < 45; i++)
+		for (i = 0; i < headersize/4; i++) // header + extradata
+			work->data[17 + i] = extraheader[i];
+		// allow custom extranonce sizes
+		for (i = 36 + sctx->xnonce1_size/4; i < 45; i++)
 			work->data[i] = 0;
+		work->data[37] = (rand()*4) << 8;
 		sctx->job.height = work->data[32];
 		//applog_hex(work->data, 180);
 	} else {

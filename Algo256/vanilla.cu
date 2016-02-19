@@ -393,6 +393,7 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 					}
 					rc = 2;
 				}
+				pdata[21] = work->nonces[1];
 #endif
 				pdata[19] = work->nonces[0];
 				return rc;
