@@ -391,7 +391,7 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 				rc = 1;
 				work_set_target_ratio(work, vhashcpu);
 				*hashes_done = (*pnonce) - first_nonce + throughput;
-				work->nonces[0] = *pnonce = swab32(foundNonce);
+				work->nonces[0] = swab32(foundNonce);
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
 					be32enc(&endiandata[DCR_NONCE_OFT32], extra_results[0]);
@@ -400,13 +400,14 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 						work->nonces[1] = swab32(extra_results[0]);
 						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
 							work_set_target_ratio(work, vhashcpu);
-							xchg(work->nonces[1], *pnonce);
+							xchg(work->nonces[1], work->nonces[0]);
 						}
 						rc = 2;
 					}
 					extra_results[0] = UINT32_MAX;
 				}
 #endif
+				*pnonce = work->nonces[0];
 				return rc;
 			}
 			else if (opt_debug) {

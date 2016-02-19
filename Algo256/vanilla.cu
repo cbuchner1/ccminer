@@ -381,14 +381,20 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 				rc = 1;
 				work_set_target_ratio(work, vhashcpu);
 				*hashes_done = pdata[19] - first_nonce + throughput;
-				pdata[19] = h_resNonce[thr_id][0];
+				work->nonces[0] = h_resNonce[thr_id][0];
 #if NBN > 1
 				if (h_resNonce[thr_id][1] != UINT32_MAX) {
-					pdata[21] = h_resNonce[thr_id][1];
-					applog(LOG_BLUE, "1:%x 2:%x", h_resNonce[thr_id][0], h_resNonce[thr_id][1]);
+					work->nonces[1] = h_resNonce[thr_id][1];
+					be32enc(&endiandata[19], work->nonces[1]);
+					vanillahash(vhashcpu, endiandata, blakerounds);
+					if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
+						work_set_target_ratio(work, vhashcpu);
+						xchg(work->nonces[1], work->nonces[0]);
+					}
 					rc = 2;
 				}
 #endif
+				pdata[19] = work->nonces[0];
 				return rc;
 			}
 			else {
