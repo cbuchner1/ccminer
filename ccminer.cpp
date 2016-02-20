@@ -869,8 +869,8 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 	} else {
 
-		int data_size = sizeof(work->data);
-		int adata_sz = ARRAY_SIZE(work->data);
+		int data_size = 128;
+		int adata_sz = data_size / sizeof(uint32_t);
 
 		/* build hex string */
 		char *str = NULL;
