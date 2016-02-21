@@ -1389,9 +1389,12 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			work->data[1 + i] = swab32(work->data[1 + i]);
 		for (i = 0; i < 8; i++) // merkle
 			work->data[9 + i] = swab32(work->data[9 + i]);
-		for (i = 0; i < headersize/4; i++) // header + extradata
+		for (i = 0; i < headersize/4; i++) // header
 			work->data[17 + i] = extraheader[i];
-		// allow custom extranonce sizes
+		// extradata
+		uint32_t* extradata = (uint32_t*) sctx->xnonce1;
+		for (i = 0; i < sctx->xnonce1_size/4; i++)
+			work->data[36 + i] = extradata[i];
 		for (i = 36 + sctx->xnonce1_size/4; i < 45; i++)
 			work->data[i] = 0;
 		work->data[37] = (rand()*4) << 8;
