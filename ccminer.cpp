@@ -93,6 +93,7 @@ bool have_stratum = false;
 bool allow_gbt = true;
 bool allow_mininginfo = true;
 bool check_dups = false;
+bool check_stratum_jobs = false;
 
 static bool submit_old = false;
 bool use_syslog = false;
@@ -727,12 +728,13 @@ static int share_result(int result, int pooln, double sharediff, const char *rea
 			p->accepted_count + p->rejected_count,
 			suppl, s, flag);
 	if (reason) {
+		if (strncasecmp(reason, "Invalid job id", 14) == 0) {
+			applog(LOG_WARNING, "reject reason: %s", reason);
+			if (!opt_quiet) applog(LOG_WARNING, "stratum jobs check enabled");
+			check_stratum_jobs = true;
+			return 1;
+		}
 		applog(LOG_WARNING, "reject reason: %s", reason);
-		/* if (strncasecmp(reason, "low difficulty", 14) == 0) {
-			opt_difficulty = (opt_difficulty * 2.0) / 3.0;
-			applog(LOG_WARNING, "difficulty factor reduced to : %0.2f", opt_difficulty);
-			return 0;
-		} */
 		if (!check_dups && strncasecmp(reason, "duplicate", 9) == 0) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
 			check_dups = true;
@@ -755,6 +757,15 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		pthread_mutex_lock(&g_work_lock);
 		if (strlen(work->job_id + 8))
 			stale_work = strncmp(work->job_id + 8, g_work.job_id + 8, sizeof(g_work.job_id) - 8);
+		if (stale_work) {
+			pool->stales_count++;
+			if (opt_debug) applog(LOG_DEBUG, "outdated job %s, new %s stales=%d",
+				work->job_id + 8 , g_work.job_id + 8, pool->stales_count);
+			if (!check_stratum_jobs && strstr(pool->url, "suprnova")) {
+				if (!opt_quiet) applog(LOG_WARNING, "Enabled stratum stale jobs workaround");
+				check_stratum_jobs = true;
+			}
+		}
 		pthread_mutex_unlock(&g_work_lock);
 	}
 
@@ -1618,7 +1629,9 @@ static void *miner_thread(void *userdata)
 
 		if (have_stratum) {
 			uint32_t sleeptime = 0;
-			if (opt_algo != ALGO_DECRED) // decred use extradata...
+
+			if (opt_algo == ALGO_DECRED)
+				work_done = true; // force "regen" hash
 			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
 				usleep(100*1000);
 				if (sleeptime > 4) {
@@ -1696,6 +1709,12 @@ static void *miner_thread(void *userdata)
 			nonceptr[0]++; //??
 
 		if (opt_algo == ALGO_DECRED) {
+			// suprnova job_id check without data/target/height change...
+			if (check_stratum_jobs && strcmp(work.job_id, g_work.job_id)) {
+				pthread_mutex_unlock(&g_work_lock);
+				continue;
+			}
+
 			// use the full range per loop
 			nonceptr[0] = 0;
 			end_nonce = UINT32_MAX;
@@ -2082,7 +2101,7 @@ static void *miner_thread(void *userdata)
 				nonceptr[0] = UINT32_MAX;
 		}
 
-		if (check_dups)
+		if (check_dups && opt_algo != ALGO_DECRED)
 			hashlog_remember_scan_range(&work);
 
 		/* output */

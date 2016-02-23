@@ -686,6 +686,7 @@ struct pool_infos {
 	uint32_t accepted_count;
 	uint32_t rejected_count;
 	uint32_t solved_count;
+	uint32_t stales_count;
 	time_t last_share_time;
 	double best_share;
 	uint32_t disconnects;
