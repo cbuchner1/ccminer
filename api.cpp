@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.7"
+#define APIVERSION "1.8"
 
 #ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -33,6 +33,7 @@
 
 #include "miner.h"
 #include "nvml.h"
+#include "algos.h"
 
 #ifndef WIN32
 # include <errno.h>
@@ -165,7 +166,7 @@ static char *getthreads(char *params)
 */
 static char *getsummary(char *params)
 {
-	char algo[64]; *algo = '\0';
+	char algo[64] = { 0 };
 	time_t ts = time(NULL);
 	double accps, uptime = difftime(ts, startup);
 	uint32_t wait_time = 0, solved_count = 0;
@@ -200,7 +201,7 @@ static char *getpoolnfo(char *params)
 {
 	char *s = buffer;
 	char jobid[128] = { 0 };
-	char nonce[128] = { 0 };
+	char extra[96] = { 0 };
 	int pooln = params ? atoi(params) % num_pools : cur_pooln;
 	struct pool_infos *p = &pools[pooln];
 	uint32_t last_share = 0;
@@ -213,16 +214,24 @@ static char *getpoolnfo(char *params)
 		strncpy(jobid, stratum.job.job_id, sizeof(stratum.job.job_id));
 	if (stratum.job.xnonce2) {
 		/* used temporary to be sure all is ok */
-		sprintf(nonce, "0x");
-		cbin2hex(&nonce[2], (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
+		sprintf(extra, "0x");
+		if (p->algo == ALGO_DECRED) {
+			char compat[32] = { 0 };
+			cbin2hex(&extra[2], (const char*) stratum.xnonce1, min(36, stratum.xnonce2_size));
+			cbin2hex(compat, (const char*) stratum.job.xnonce2, 4);
+			memcpy(&extra[2], compat, 8); // compat extranonce
+		} else {
+			cbin2hex(&extra[2], (const char*) stratum.job.xnonce2, stratum.xnonce2_size);
+		}
 	}
 
-	snprintf(s, MYBUFSIZ, "URL=%s;USER=%s;SOLV=%d;ACC=%d;REJ=%d;H=%u;JOB=%s;DIFF=%.6f;"
+	snprintf(s, MYBUFSIZ, "POOL=%s;ALGO=%s;URL=%s;USER=%s;SOLV=%d;ACC=%d;REJ=%d;STALE=%u;H=%u;JOB=%s;DIFF=%.6f;"
 		"BEST=%.6f;N2SZ=%d;N2=%s;PING=%u;DISCO=%u;WAIT=%u;UPTIME=%u;LAST=%u|",
+		strlen(p->name) ? p->name : p->short_url, algo_names[p->algo],
 		p->url, p->type & POOL_STRATUM ? p->user : "",
-		p->solved_count, p->accepted_count, p->rejected_count,
+		p->solved_count, p->accepted_count, p->rejected_count, p->stales_count,
 		stratum.job.height, jobid, stratum_diff, p->best_share,
-		(int) stratum.xnonce2_size, nonce, stratum.answer_msec,
+		(int) stratum.xnonce2_size, extra, stratum.answer_msec,
 		p->disconnects, p->wait_time, p->work_time, last_share);
 
 	return s;

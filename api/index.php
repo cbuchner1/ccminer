@@ -28,7 +28,7 @@ function ignoreField($key)
 {
 	$ignored = array(
 		'API','VER','GPU','BUS','POOLS',
-		'CARD','GPUS','CPU','TS',
+		'CARD','GPUS','CPU','TS','URL',
 	);
 	return in_array($key, $ignored);
 }
@@ -48,6 +48,7 @@ function translateField($key)
 	$intl['REJ'] = 'Rejected';
 	$intl['SOLV'] = 'Solved';
 	$intl['BEST'] = 'Best share';
+	$intl['STALE'] = 'Stale shares';
 	$intl['LAST'] = 'Last share';
 	$intl['DIFF'] = 'Difficulty';
 	$intl['NETKHS'] = 'Net Rate';
@@ -59,6 +60,7 @@ function translateField($key)
 	$intl['H'] = 'Bloc height';
 	$intl['I'] = 'Intensity';
 	$intl['HWF'] = 'Failures';
+	$intl['POOL'] = 'Pool';
 	$intl['POOLS'] = 'Pools';
 
 	$intl['TEMP'] = 'T°c';

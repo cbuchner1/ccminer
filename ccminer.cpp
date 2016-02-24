@@ -728,12 +728,6 @@ static int share_result(int result, int pooln, double sharediff, const char *rea
 			p->accepted_count + p->rejected_count,
 			suppl, s, flag);
 	if (reason) {
-		if (strncasecmp(reason, "Invalid job id", 14) == 0) {
-			applog(LOG_WARNING, "reject reason: %s", reason);
-			if (!opt_quiet) applog(LOG_WARNING, "stratum jobs check enabled");
-			check_stratum_jobs = true;
-			return 1;
-		}
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		if (!check_dups && strncasecmp(reason, "duplicate", 9) == 0) {
 			applog(LOG_WARNING, "enabling duplicates check feature");
@@ -761,7 +755,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			pool->stales_count++;
 			if (opt_debug) applog(LOG_DEBUG, "outdated job %s, new %s stales=%d",
 				work->job_id + 8 , g_work.job_id + 8, pool->stales_count);
-			if (!check_stratum_jobs && strstr(pool->url, "suprnova")) {
+			if (!check_stratum_jobs && pool->stales_count > 5) {
 				if (!opt_quiet) applog(LOG_WARNING, "Enabled stratum stale jobs workaround");
 				check_stratum_jobs = true;
 			}
