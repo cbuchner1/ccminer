@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.3 (Feb 2015) "Decred Stratum and MrM4D VNL"
+ccMiner release 1.7.4 (Feb 2015) "Decred Stratum and MrM4D VNL"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -237,7 +237,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Feb. 19th 2015  v1.7.3
+  Feb. 28th 2015  v1.7.4 (1.7.3 was a preview, not official)
                   Decred simplified stratum (getwork over stratum)
                   Vanilla kernel by MrMad
                   Drop/Disable WhirlpoolX
