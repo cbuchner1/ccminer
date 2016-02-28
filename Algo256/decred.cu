@@ -36,7 +36,7 @@ extern "C" void decred_hash(void *output, const void *input)
 
 __constant__ uint32_t _ALIGN(4) d_data[24];
 
-/* 8 adapters max */
+/* 16 adapters max */
 static uint32_t *d_resNonce[MAX_GPUS];
 static uint32_t *h_resNonce[MAX_GPUS];
 

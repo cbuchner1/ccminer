@@ -32,7 +32,7 @@ extern "C" {
 
 __constant__ uint32_t d_data[16];
 
-/* 8 adapters max */
+/* 16 gpu threads max */
 static uint32_t *d_resNonce[MAX_GPUS];
 static uint32_t *h_resNonce[MAX_GPUS];
 
