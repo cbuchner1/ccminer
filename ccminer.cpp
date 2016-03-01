@@ -212,6 +212,7 @@ Options:\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
 			bmw         BMW 256\n\
 			c11/flax    X11 variant\n\
+			decred      Decred Blake256\n\
 			deep        Deepcoin\n\
 			dmd-gr      Diamond-Groestl\n\
 			fresh       Freshcoin (shavite 80)\n\
