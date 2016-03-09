@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.4 (Feb 2015) "Decred Stratum and MrM4D VNL"
+ccMiner release 1.7.5 (Mar 2015) "Blake2-S"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -70,6 +70,7 @@ its command line interface and options.
   -a, --algo=ALGO       specify the algorithm to use
                           blake       use to mine Saffroncoin (Blake256)
                           blakecoin   use to mine Old Blake 256
+                          blake2s     use to mine Nevacoin (Blake2-S 256)
                           bmw         use to mine Midnight
                           c11/flax    use to mine Chaincoin and Flax
                           decred      use to mine Decred 180 bytes Blake256-14
@@ -236,6 +237,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Mar. 12th 2015  v1.7.5
+                  Blake2S Algo
+                  ...
 
   Feb. 28th 2015  v1.7.4 (1.7.3 was a preview, not official)
                   Decred simplified stratum (getwork over stratum)

@@ -209,6 +209,7 @@ Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
 			blake       Blake 256 (SFR)\n\
+			blake2s     Blake2-S 256 (NEVA)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
 			bmw         BMW 256\n\
 			c11/flax    X11 variant\n\
@@ -803,6 +804,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			break;
 		case ALGO_BLAKE:
 		case ALGO_BLAKECOIN:
+		case ALGO_BLAKE2S:
 		case ALGO_BMW:
 		case ALGO_VANILLA:
 			// fast algos require that...
@@ -1828,6 +1830,7 @@ static void *miner_thread(void *userdata)
 				minmax = 0x80000000U;
 				break;
 			case ALGO_BLAKE:
+			case ALGO_BLAKE2S:
 			case ALGO_BMW:
 			case ALGO_DECRED:
 			//case ALGO_WHIRLPOOLX:
@@ -1910,6 +1913,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_BLAKE:
 			rc = scanhash_blake256(thr_id, &work, max_nonce, &hashes_done, 14);
+			break;
+		case ALGO_BLAKE2S:
+			rc = scanhash_blake2s(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_BMW:
 			rc = scanhash_bmw(thr_id, &work, max_nonce, &hashes_done);
@@ -2041,7 +2047,7 @@ static void *miner_thread(void *userdata)
 
 		// todo: update all algos to use work->nonces
 		work.nonces[0] = nonceptr[0];
-		if (opt_algo != ALGO_DECRED) {
+		if (opt_algo != ALGO_DECRED && opt_algo != ALGO_BLAKE2S) {
 			work.nonces[1] = nonceptr[2];
 		}
 

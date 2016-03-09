@@ -45,6 +45,7 @@ void algo_free_all(int thr_id)
 {
 	// only initialized algos will be freed
 	free_blake256(thr_id);
+	free_blake2s(thr_id);
 	free_bmw(thr_id);
 	free_c11(thr_id);
 	free_decred(thr_id);

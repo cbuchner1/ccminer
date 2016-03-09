@@ -258,6 +258,9 @@
     <ClCompile Include="bignum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sph\blake2s.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="algos.h">
@@ -705,6 +708,9 @@
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2REv2.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Algo256\blake2s.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1915,6 +1915,9 @@ void print_hash_tests(void)
 	blake256hash(&hash[0], &buf[0], 14);
 	printpfx("blake", hash);
 
+	blake2s_hash(&hash[0], &buf[0]);
+	printpfx("blake2s", hash);
+
 	bmw_hash(&hash[0], &buf[0]);
 	printpfx("bmw", hash);
 

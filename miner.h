@@ -262,6 +262,7 @@ void sha256d(unsigned char *hash, const unsigned char *data, int len);
 struct work;
 
 extern int scanhash_blake256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds);
+extern int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_c11(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -304,6 +305,7 @@ extern int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonc
 void algo_free_all(int thr_id);
 
 extern void free_blake256(int thr_id);
+extern void free_blake2s(int thr_id);
 extern void free_bmw(int thr_id);
 extern void free_c11(int thr_id);
 extern void free_decred(int thr_id);
@@ -773,6 +775,7 @@ void applog_compare_hash(void *hash, void *hash_ref);
 
 void print_hash_tests(void);
 void blake256hash(void *output, const void *input, int8_t rounds);
+void blake2s_hash(void *output, const void *input);
 void bmw_hash(void *state, const void *input);
 void c11hash(void *output, const void *input);
 void decred_hash(void *state, const void *input);
