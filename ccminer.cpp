@@ -1713,6 +1713,9 @@ static void *miner_thread(void *userdata)
 			// and make an unique work (extradata)
 			nonceptr[1] += 1;
 			nonceptr[2] |= thr_id;
+		} else if (opt_benchmark) {
+			// randomize work
+			nonceptr[-1] += 1;
 		}
 
 		pthread_mutex_unlock(&g_work_lock);
@@ -1826,11 +1829,11 @@ static void *miner_thread(void *userdata)
 		if (max64 < minmax) {
 			switch (opt_algo) {
 			case ALGO_BLAKECOIN:
+			case ALGO_BLAKE2S:
 			case ALGO_VANILLA:
 				minmax = 0x80000000U;
 				break;
 			case ALGO_BLAKE:
-			case ALGO_BLAKE2S:
 			case ALGO_BMW:
 			case ALGO_DECRED:
 			//case ALGO_WHIRLPOOLX:

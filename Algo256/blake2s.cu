@@ -1,3 +1,7 @@
+/**
+ * Blake2-S 256 CUDA implementation
+ * @author tpruvot@github March 2016
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -5,18 +9,17 @@
 
 #include "miner.h"
 
-#define NATIVE_LITTLE_ENDIAN
-
 extern "C" {
+#define NATIVE_LITTLE_ENDIAN
 #include <sph/blake2s.h>
 }
-
-static __thread blake2s_state ALIGN(64) s_midstate;
-static __thread blake2s_state ALIGN(64) s_ctx;
 
 //#define GPU_MIDSTATE
 #define MIDLEN 76
 #define A 64
+
+static __thread blake2s_state ALIGN(A) s_midstate;
+static __thread blake2s_state ALIGN(A) s_ctx;
 
 #include "cuda_helper.h"
 
@@ -63,7 +66,7 @@ inline void blake2s_hash_end(uint32_t *output, const uint32_t *input)
 }
 
 __host__
-void blake2s_cpu_setBlock(uint32_t *penddata, blake2s_state *pstate)
+void blake2s_setBlock(uint32_t *penddata, blake2s_state *pstate)
 {
 #ifndef GPU_MIDSTATE
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_data, penddata, 80, 0, cudaMemcpyHostToDevice));
@@ -73,31 +76,18 @@ void blake2s_cpu_setBlock(uint32_t *penddata, blake2s_state *pstate)
 }
 
 __device__ __forceinline__
-uint32_t gpu_load32(const void *src) {
-	return *(uint32_t *)(src);
+uint64_t gpu_load64(void *src) {
+	return *(uint64_t*)(src);
 }
 
 __device__ __forceinline__
 void gpu_store32(void *dst, uint32_t dw) {
-	*(uint32_t *)(dst) = dw;
+	*(uint32_t*)(dst) = dw;
 }
 
 __device__ __forceinline__
 void gpu_store64(void *dst, uint64_t lw) {
-	*(uint64_t *)(dst) = lw;
-}
-
-__device__ __forceinline__
-uint64_t gpu_load48(const void *src)
-{
-	const uint8_t *p = (const uint8_t *)src;
-	uint64_t w = *p++;
-	w |= (uint64_t)(*p++) << 8;
-	w |= (uint64_t)(*p++) << 16;
-	w |= (uint64_t)(*p++) << 24;
-	w |= (uint64_t)(*p++) << 32;
-	w |= (uint64_t)(*p++) << 40;
-	return w;
+	*(uint64_t*)(dst) = lw;
 }
 
 __device__ __forceinline__
@@ -202,10 +192,11 @@ void gpu_blake2s_compress(blake2s_state *S, const uint32_t *block)
 	for(int i = 0; i < 8; i++)
 		S->h[i] = S->h[i] ^ v[i] ^ v[i + 8];
 
-#undef G
-#undef ROUND
+	#undef G
+	#undef ROUND
 }
 
+/* unused but kept as reference */
 __device__ __forceinline__
 void gpu_blake2s_update(blake2s_state *S, const uint8_t *in, uint64_t inlen)
 {
@@ -236,10 +227,10 @@ void gpu_blake2s_update(blake2s_state *S, const uint8_t *in, uint64_t inlen)
 }
 
 __device__ __forceinline__
-void gpu_blake2s_update76(blake2s_state *S, const void *in)
+void gpu_blake2s_update76(blake2s_state *S, const void *input)
 {
 	uint64_t *b64 = (uint64_t*) S->buf;
-	uint64_t *i64 = (uint64_t*) in;
+	uint64_t *i64 = (uint64_t*) input;
 	#pragma unroll
 	for (int i=0; i < 80/8; i++)
 		b64[i] = i64[i];
@@ -295,14 +286,14 @@ void gpu_blake2s_init_param(blake2s_state *S, const blake2s_param *P)
 	S->buflen = 0;
 
 	#pragma unroll
-	for (int i = 0; i < sizeof(S->buf)/4; i++)
-		gpu_store32(S->buf + (4*i), 0);
+	for (int i = 0; i < sizeof(S->buf)/8; i++)
+		gpu_store64(S->buf + (8*i), 0);
 
-	uint32_t *p = (uint32_t*) P;
+	uint64_t *p = (uint64_t*) P;
 
 	/* IV XOR ParamBlock */
-	for (int i = 0; i < 8; i++)
-		S->h[i] ^= gpu_load32(&p[i]);
+	for (int i = 0; i < 4; i++)
+		S->h[i] ^= gpu_load64(&p[i]);
 }
 
 // Sequential blake2s initialization
@@ -373,7 +364,7 @@ void blake2s_gpu_hash(const uint32_t threads, const uint32_t startNonce, uint32_
 }
 
 __host__
-uint32_t blake2s_host_hash(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint2 target2)
+uint32_t blake2s_hash_cuda(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint2 target2)
 {
 	uint32_t result = UINT32_MAX;
 
@@ -406,14 +397,15 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 	const uint32_t first_nonce = pdata[19];
 
 	int dev_id = device_map[thr_id];
-	int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 26 : 22;
+	int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 28 : 25;
 	if (device_sm[dev_id] < 350) intensity = 22;
 
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark) {
-		ptarget[7] = swab32(0xff);
+		ptarget[6] = swab32(0xFFFF0);
+		ptarget[7] = 0;
 	}
 
 	if (!init[thr_id])
@@ -442,13 +434,14 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 	blake2s_update(&s_midstate, (uint8_t*) endiandata, MIDLEN);
 	memcpy(&s_ctx, &s_midstate, sizeof(blake2s_state));
 
-	blake2s_cpu_setBlock(endiandata, &s_midstate);
+	blake2s_setBlock(endiandata, &s_midstate);
 
-	uint2 gpu_target = make_uint2(ptarget[7], ptarget[6]);
-	const uint32_t Htarg = ptarget[7];
+	const uint2 target = make_uint2(ptarget[7], ptarget[6]);
 
 	do {
-		uint32_t foundNonce = blake2s_host_hash(thr_id, throughput, pdata[19], gpu_target);
+		uint32_t foundNonce = blake2s_hash_cuda(thr_id, throughput, pdata[19], target);
+
+		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		if (foundNonce != UINT32_MAX)
 		{
@@ -458,15 +451,14 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 			le32enc(&endiandata[19], foundNonce);
 			blake2s_hash_end(vhashcpu, endiandata);
 
-			if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
+			if (vhashcpu[7] <= target.x && fulltest(vhashcpu, ptarget)) {
 				work_set_target_ratio(work, vhashcpu);
-				*hashes_done = pdata[19] + throughput - first_nonce + 1;
 				pdata[19] = work->nonces[0] = swab32(foundNonce);
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
 					le32enc(&endiandata[19], extra_results[0]);
 					blake2s_hash_end(vhashcpu, endiandata);
-					if (vhashcpu[7] <= Htarg && fulltest(vhashcpu, ptarget)) {
+					if (vhashcpu[7] <= target.x && fulltest(vhashcpu, ptarget)) {
 						work->nonces[1] = swab32(extra_results[0]);
 						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
 							work_set_target_ratio(work, vhashcpu);
@@ -490,9 +482,7 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 
 	} while (!work_restart[thr_id].restart && max_nonce > (uint64_t)throughput + pdata[19]);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
-
-	MyStreamSynchronize(NULL, 0, device_map[thr_id]);
+	*hashes_done = pdata[19] - first_nonce;
 
 	return 0;
 }
