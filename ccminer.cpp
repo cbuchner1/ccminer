@@ -256,7 +256,7 @@ Options:\n\
       --cuda-schedule   Set device threads scheduling mode (default: auto)\n\
   -f, --diff-factor     Divide difficulty by this factor (default 1.0) \n\
   -m, --diff-multiplier Multiply difficulty by this value (default 1.0) \n\
-      --vote=VOTE       block reward vote (for HeavyCoin)\n\
+      --vote=VOTE       vote (for decred and HeavyCoin)\n\
       --trust-pool      trust the max block reward vote (maxvote) sent by the pool\n\
   -o, --url=URL         URL of mining server\n\
   -O, --userpass=U:P    username:password pair for mining server\n\
@@ -659,6 +659,8 @@ static bool work_decode(const json_t *val, struct work *work)
 	cbin2hex(work->job_id, (const char*)&work->data[17], 4);
 
 	if (opt_algo == ALGO_DECRED) {
+		uint16_t vote = (opt_vote << 1) | 1;
+		memcpy(&work->data[25], &vote, 2);
 		// some random extradata to make it unique
 		work->data[36] = (rand()*4);
 		work->data[37] = (rand()*4) << 8;
@@ -789,26 +791,32 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	if (pool->type & POOL_STRATUM) {
 		uint32_t sent = 0;
 		uint32_t ntime, nonce;
-		uint16_t nvote;
 		char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
+		uint16_t nvote = 0;
 
 		switch (opt_algo) {
-		case ALGO_ZR5:
-			check_dups = true;
-			be32enc(&ntime, work->data[17]);
-			be32enc(&nonce, work->data[19]);
-			break;
-		case ALGO_DECRED:
-			be32enc(&ntime, work->data[34]);
-			be32enc(&nonce, work->data[35]);
-			break;
 		case ALGO_BLAKE:
 		case ALGO_BLAKECOIN:
 		case ALGO_BLAKE2S:
 		case ALGO_BMW:
 		case ALGO_VANILLA:
-			// fast algos require that...
+			// fast algos require that... (todo: regen hash)
 			check_dups = true;
+		case ALGO_DECRED:
+			be16enc(&nvote, *((uint16_t*)&work->data[25]));
+			be32enc(&ntime, work->data[34]);
+			be32enc(&nonce, work->data[35]);
+			break;
+		case ALGO_HEAVY:
+			le32enc(&ntime, work->data[17]);
+			le32enc(&nonce, work->data[19]);
+			be16enc(&nvote, *((uint16_t*)&work->data[20]));
+			break;
+		case ALGO_ZR5:
+			check_dups = true;
+			be32enc(&ntime, work->data[17]);
+			be32enc(&nonce, work->data[19]);
+			break;
 		default:
 			le32enc(&ntime, work->data[17]);
 			le32enc(&nonce, work->data[19]);
@@ -848,16 +856,13 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			applog(LOG_DEBUG, "share diff: %.5f (x %.1f)",
 				stratum.sharediff, work->shareratio);
 
-		switch (opt_algo) {
-		case ALGO_HEAVY:
-			be16enc(&nvote, *((uint16_t*)&work->data[20]));
+		if (nvote) { // ALGO_HEAVY ALGO_DECRED
 			nvotestr = bin2hex((const uchar*)(&nvote), 2);
 			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
 					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
 					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr);
 			free(nvotestr);
-			break;
-		default:
+		} else {
 			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
 					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
 					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr);
@@ -1387,10 +1392,12 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[1 + i] = le32dec((uint32_t *)sctx->job.prevhash + i);
 
 	if (opt_algo == ALGO_DECRED) {
+		uint16_t vote = (opt_vote << 1) | 1;
 		for (i = 0; i < 8; i++) // reversed prevhash
 			work->data[1 + i] = swab32(work->data[1 + i]);
 		// decred header (coinb1) [merkle...nonce]
-		memcpy(&work->data[9], sctx->job.coinbase, 112);
+		memcpy(&work->data[9], sctx->job.coinbase, 108);
+		memcpy(&work->data[25], &vote, 2);
 		// extradata
 		if (sctx->xnonce1_size > sizeof(work->data)-(36*4)) {
 			// should never happen...
@@ -1398,6 +1405,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			sctx->xnonce1_size = sizeof(work->data)-(36*4);
 		}
 		memcpy(&work->data[36], sctx->xnonce1, sctx->xnonce1_size);
+		// work->data[36] = swab32(vote); // alt vote submission method
 		work->data[37] = (rand()*4) << 8; // random work data
 		sctx->job.height = work->data[32];
 		//applog_hex(work->data, 180);
@@ -3127,6 +3135,10 @@ static void parse_cmdline(int argc, char *argv[])
 		fprintf(stderr, "%s: Heavycoin hash requires block reward vote parameter (see --vote)\n",
 			argv[0]);
 		show_usage_and_exit(1);
+	}
+
+	if (opt_algo == ALGO_DECRED && opt_vote == 9999) {
+		opt_vote = 0; // default, don't vote
 	}
 }
 
