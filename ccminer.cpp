@@ -802,6 +802,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		case ALGO_VANILLA:
 			// fast algos require that... (todo: regen hash)
 			check_dups = true;
+			le32enc(&ntime, work->data[17]);
+			le32enc(&nonce, work->data[19]);
+			break;
 		case ALGO_DECRED:
 			be16enc(&nvote, *((uint16_t*)&work->data[25]));
 			be32enc(&ntime, work->data[34]);
