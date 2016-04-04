@@ -144,7 +144,7 @@ uint32_t blake256_compress_14(uint32_t *m, uint32_t *v_init, uint32_t d_data6, u
 	// round 7
 	GSPREC4(0, 4, 0x8, 0xC, 12, 5, 1, 5, 0x9, 0xD, 1, 15, 2, 6, 0xA, 0xE, 14,13, 3, 7, 0xB, 0xF, 4, 10);
 	GSPREC4(0, 5, 0xA, 0xF, 0,  7, 1, 6, 0xB, 0xC, 6,  3, 2, 7, 0x8, 0xD, 9,  2, 3, 4, 0x9, 0xE, 8, 11);
-	/*
+#ifdef FULL_4WAY
 	// round 8
 	GSPREC4(0, 4, 0x8, 0xC, 13,11, 1, 5, 0x9, 0xD, 7, 14, 2, 6, 0xA, 0xE, 12, 1, 3, 7, 0xB, 0xF, 3,  9);
 	GSPREC4(0, 5, 0xA, 0xF, 5,  0, 1, 6, 0xB, 0xC, 15, 4, 2, 7, 0x8, 0xD, 8,  6, 3, 4, 0x9, 0xE, 2, 10);
@@ -163,7 +163,7 @@ uint32_t blake256_compress_14(uint32_t *m, uint32_t *v_init, uint32_t d_data6, u
 	// round 13
 	GSPREC4(0, 4, 0x8, 0xC, 11, 8, 1, 5, 0x9, 0xD, 12, 0, 2, 6, 0xA, 0xE, 5,  2, 3, 7, 0xB, 0xF, 15,13);
 	GSPREC4(0, 5, 0xA, 0xF, 10,14, 1, 6, 0xB, 0xC, 3,  6, 2, 7, 0x8, 0xD, 7,  1, 3, 4, 0x9, 0xE, 9,  4);
-	*/
+#else
 	// round 8
 	GSPREC(0, 4, 0x8, 0xC, 13,11);
 	GSPREC(1, 5, 0x9, 0xD, 7, 14);
@@ -218,6 +218,7 @@ uint32_t blake256_compress_14(uint32_t *m, uint32_t *v_init, uint32_t d_data6, u
 	GSPREC(1, 6, 0xB, 0xC, 3,  6);
 	GSPREC(2, 7, 0x8, 0xD, 7,  1);
 	GSPREC(3, 4, 0x9, 0xE, 9,  4);
+#endif
 	// round 14
 	GSPREC(0, 4, 0x8, 0xC, 7,  9);
 	GSPREC(1, 5, 0x9, 0xD, 3,  1);
@@ -279,11 +280,16 @@ void blake256_gpu_hash_nonce(const uint32_t threads, const uint32_t startNonce, 
 				#else
 					resNonce[0] = m[3];
 				#endif
+				// from alexis78:
+				// return statement allows CUDA7.5 to :
+				// 1. Store the values fetched from constant memory in registers.
+				// 2. Perform more precomputations on the outside of the for loop.
+				// 3. Stop the continuous fetches from the constant memory while iterating
+				return;
 			}
 		}
 	}
 }
-
 
 __host__
 static uint32_t decred_cpu_hash_nonce(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint64_t highTarget)
