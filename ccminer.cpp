@@ -659,7 +659,10 @@ static bool work_decode(const json_t *val, struct work *work)
 	cbin2hex(work->job_id, (const char*)&work->data[17], 4);
 
 	if (opt_algo == ALGO_DECRED) {
-		uint16_t vote = (opt_vote << 1) | 1;
+		uint16_t vote;
+		// always keep last bit of votebits
+		memcpy(&vote, &work->data[25], 2);
+		vote = (opt_vote << 1) | (vote & 1);
 		memcpy(&work->data[25], &vote, 2);
 		// some random extradata to make it unique
 		work->data[36] = (rand()*4);
@@ -1395,11 +1398,14 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[1 + i] = le32dec((uint32_t *)sctx->job.prevhash + i);
 
 	if (opt_algo == ALGO_DECRED) {
-		uint16_t vote = (opt_vote << 1) | 1;
+		uint16_t vote;
 		for (i = 0; i < 8; i++) // reversed prevhash
 			work->data[1 + i] = swab32(work->data[1 + i]);
 		// decred header (coinb1) [merkle...nonce]
 		memcpy(&work->data[9], sctx->job.coinbase, 108);
+		// last vote bit should never be changed
+		memcpy(&vote, &work->data[25], 2);
+		vote = (opt_vote << 1) | (vote & 1);
 		memcpy(&work->data[25], &vote, 2);
 		// extradata
 		if (sctx->xnonce1_size > sizeof(work->data)-(36*4)) {
