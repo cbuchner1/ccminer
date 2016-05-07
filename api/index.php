@@ -235,7 +235,7 @@ div#footer {
 #header h1 { padding: 12px; font-size: 20px; }
 #footer p { margin: 12px 24px; }
 
-table.stats { width: 280px; margin: 4px 16px; display: inline-block; }
+table.stats { width: 280px; margin: 4px 16px; display: inline-block; vertical-align: top; }
 th.machine { color: darkcyan; padding: 16px 0px 0px 0px; text-align: left; border-bottom: 1px solid gray; }
 th.gpu { color: white; padding: 3px 3px; font: bolder; text-align: left; background: rgba(65, 65, 65, 0.85); }
 td.key { width: 99px; max-width: 180px; }
