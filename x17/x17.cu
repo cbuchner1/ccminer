@@ -49,10 +49,10 @@ extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t sta
 extern void x15_whirlpool_cpu_free(int thr_id);
 
 extern void x17_sha512_cpu_init(int thr_id, uint32_t threads);
-extern void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 extern void x17_haval256_cpu_init(int thr_id, uint32_t threads);
-extern void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
 
 
 // X17 Hashfunktion
@@ -206,6 +206,8 @@ extern "C" int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, u
 	quark_blake512_cpu_setBlock_80(thr_id, endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
+	int warn = 0;
+
 	do {
 		int order = 0;
 
@@ -224,8 +226,8 @@ extern "C" int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, u
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x17_sha512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x17_haval256_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+		x17_sha512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		x17_haval256_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
@@ -252,7 +254,13 @@ extern "C" int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, u
 				pdata[19] = foundNonce;
 				return res;
 			} else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+				// x11+ coins could do some random error, but not on retry
+				if (!warn) {
+					warn++; continue;
+				} else {
+					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+					warn = 0;
+				}
 			}
 		}
 

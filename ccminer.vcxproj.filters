@@ -595,7 +595,7 @@
     <CudaCompile Include="x15\whirlpool.cu">
       <Filter>Source Files\CUDA\x15</Filter>
     </CudaCompile>
-    <CudaCompile Include="x17\cuda_x17_haval512.cu">
+    <CudaCompile Include="x17\cuda_x17_haval256.cu">
       <Filter>Source Files\CUDA\x17</Filter>
     </CudaCompile>
     <CudaCompile Include="x17\cuda_x17_sha512.cu">

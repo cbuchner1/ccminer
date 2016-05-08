@@ -508,7 +508,7 @@
     <CudaCompile Include="x15\whirlpool.cu" />
     <CudaCompile Include="x17\x17.cu">
     </CudaCompile>
-    <CudaCompile Include="x17\cuda_x17_haval512.cu">
+    <CudaCompile Include="x17\cuda_x17_haval256.cu">
     </CudaCompile>
     <CudaCompile Include="x17\cuda_x17_sha512.cu">
       <MaxRegCount>80</MaxRegCount>
