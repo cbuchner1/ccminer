@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.5 (Mar 2015) "Blake2-S"
+ccMiner release 1.7.6 (May 2016) "Under dev..."
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -238,19 +238,24 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Mar. 13th 2015  v1.7.5
+  May  XXth 2016  v1.7.6
+                  Decred vote support
+                  X17 cleanup and improvement
+                  ...
+
+  Mar. 13th 2016  v1.7.5
                   Blake2S Algo (NEVA/OXEN)
 
-  Feb. 28th 2015  v1.7.4 (1.7.3 was a preview, not official)
+  Feb. 28th 2016  v1.7.4 (1.7.3 was a preview, not official)
                   Decred simplified stratum (getwork over stratum)
                   Vanilla kernel by MrMad
                   Drop/Disable WhirlpoolX
 
-  Feb. 11th 2015  v1.7.2
+  Feb. 11th 2016  v1.7.2
                   Decred Algo (longpoll only)
                   Blake256 improvements/cleanup
 
-  Jan. 26th 2015  v1.7.1
+  Jan. 26th 2016  v1.7.1
                   Implement sib algo (X11 + Russian Streebog-512/GOST)
                   Whirlpool speed x2 with the midstate precompute
                   Small bug fixes about device ids mapping (and vendor names)
