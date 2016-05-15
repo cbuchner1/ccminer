@@ -695,6 +695,7 @@ int nvml_get_info(nvml_handle *nvmlh, int cudaindex, uint16_t &vid, uint16_t &pi
 		return -ENODEV;
 
 	subids = nvmlh->nvml_pci_subsys_id[gpuindex];
+	if (!subids) subids = nvmlh->nvml_pci_device_id[gpuindex];
 	pid = subids >> 16;
 	vid = subids & 0xFFFF;
 	return 0;
@@ -845,8 +846,9 @@ int nvapi_getinfo(unsigned int devNum, uint16_t &vid, uint16_t &pid)
 
 	pid = pDeviceId >> 16;
 	vid = pDeviceId & 0xFFFF;
-	if (vid == 0x10DE) {
+	if (vid == 0x10DE && pSubSystemId) {
 		vid = pSubSystemId & 0xFFFF;
+		pid = pSubSystemId >> 16;
 	}
 
 	return 0;
