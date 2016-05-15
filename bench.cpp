@@ -200,4 +200,3 @@ void bench_display_results()
 		}
 	}
 }
-

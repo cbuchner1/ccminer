@@ -196,6 +196,9 @@ bool pool_switch(int thr_id, int pooln)
 
 	want_stratum = have_stratum = (p->type & POOL_STRATUM) != 0;
 
+	// yiimp stats reporting
+	opt_stratum_stats = (strstr(p->pass, "stats") != NULL) || (strcmp(p->user, "test") == 0);
+
 	pthread_mutex_unlock(&stratum_work_lock);
 
 	// algo "blind" switch without free, not proper

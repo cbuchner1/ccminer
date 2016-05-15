@@ -52,6 +52,11 @@ int cuda_num_devices()
 	return GPU_N;
 }
 
+int cuda_version()
+{
+	return (int) CUDART_VERSION;
+}
+
 void cuda_devicenames()
 {
 	cudaError_t err;

@@ -459,6 +459,7 @@ extern bool want_longpoll;
 extern bool have_longpoll;
 extern bool want_stratum;
 extern bool have_stratum;
+extern bool opt_stratum_stats;
 extern char *opt_cert;
 extern char *opt_proxy;
 extern long opt_proxy_type;
@@ -493,7 +494,9 @@ void cuda_devicenames();
 void cuda_reset_device(int thr_id, bool *init);
 void cuda_shutdown();
 int cuda_finddevice(char *name);
+int cuda_version();
 void cuda_print_devices();
+int cuda_gpu_clocks(struct cgpu_info *gpu);
 int cuda_available_memory(int thr_id);
 
 uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);

@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.6 (May 2016) "Under dev..."
+ccMiner release 1.7.6 (May 2016) "DCR vote & pool device stats"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -238,10 +238,11 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  May  XXth 2016  v1.7.6
+  May  15th 2016  v1.7.6
                   Decred vote support
                   X17 cleanup and improvement
-                  ...
+                  Add mining.ping stratum method and handle unknown methods
+                  Implement a pool stats/benchmark mode (-p stats on yiimp)
 
   Mar. 13th 2016  v1.7.5
                   Blake2S Algo (NEVA/OXEN)

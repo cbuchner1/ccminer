@@ -104,10 +104,10 @@ void applog(int prio, const char *fmt, ...)
 #endif
 	else {
 		const char* color = "";
+		const time_t now = time(NULL);
 		char *f;
 		int len;
 		struct tm tm;
-		time_t now = time(NULL);
 
 		localtime_r(&now, &tm);
 
@@ -1561,21 +1561,166 @@ static bool stratum_reconnect(struct stratum_ctx *sctx, json_t *params)
 	return true;
 }
 
-static bool stratum_get_version(struct stratum_ctx *sctx, json_t *id)
+static bool stratum_pong(struct stratum_ctx *sctx, json_t *id)
+{
+	char buf[64];
+	bool ret = false;
+
+	if (!id || json_is_null(id))
+		return ret;
+
+	sprintf(buf, "{\"id\":%d,\"result\":\"pong\",\"error\":null}",
+		(int) json_integer_value(id));
+	ret = stratum_send_line(sctx, buf);
+
+	return ret;
+}
+
+static bool stratum_get_algo(struct stratum_ctx *sctx, json_t *id, json_t *params)
+{
+	char algo[64] = { 0 };
+	char *s;
+	json_t *val;
+	bool ret = true;
+
+	if (!id || json_is_null(id))
+		return false;
+
+	get_currentalgo(algo, sizeof(algo));
+
+	val = json_object();
+	json_object_set(val, "id", id);
+	json_object_set_new(val, "error", json_null());
+	json_object_set_new(val, "result", json_string(algo));
+
+	s = json_dumps(val, 0);
+	ret = stratum_send_line(sctx, s);
+	json_decref(val);
+	free(s);
+
+	return ret;
+}
+
+#include "nvml.h"
+extern char driver_version[32];
+
+static bool json_object_set_error(json_t *result, int code, const char *msg)
+{
+	json_t *val = json_object();
+	json_object_set_new(val, "code", json_integer(code));
+	json_object_set_new(val, "message", json_string(msg));
+	return json_object_set_new(result, "error", val) != -1;
+}
+
+/* allow to report algo/device perf to the pool for algo stats */
+static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
+{
+	char algo[64] = { 0 };
+	char vid[32], arch[8], driver[32];
+	char *card;
+	char os[8];
+	int dev_id = device_map[thr_id];
+	int cuda_ver = cuda_version();
+	struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
+	json_t *val;
+
+	if (!cgpu) return false;
+
+#if defined(WIN32) && (defined(_M_X64) || defined(__x86_64__))
+	strcpy(os, "win64");
+#else
+	strcpy(os, is_windows() ? "win32" : "linux");
+#endif
+
+#ifdef USE_WRAPNVML
+	cgpu->has_monitoring = true;
+	cgpu->gpu_power = gpu_power(cgpu); // Watts
+	gpu_info(cgpu);
+#endif
+	cuda_gpu_clocks(cgpu);
+	get_currentalgo(algo, sizeof(algo));
+
+	card = device_name[dev_id];
+	cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
+
+	sprintf(vid, "%04hx:%04hx", cgpu->gpu_vid, cgpu->gpu_pid);
+	sprintf(arch, "%d", (int) cgpu->gpu_arch);
+	snprintf(driver, 32, "CUDA %d.%d %s", cuda_ver/1000, (cuda_ver%1000) / 10, driver_version);
+	driver[31] = '\0';
+
+	val = json_object();
+	json_object_set_new(val, "algo", json_string(algo));
+	json_object_set_new(val, "type", json_string("gpu"));
+	json_object_set_new(val, "device", json_string(card));
+	json_object_set_new(val, "vendorid", json_string(vid));
+	json_object_set_new(val, "arch", json_string(arch));
+	json_object_set_new(val, "freq", json_integer(cgpu->gpu_clock/1000));
+	json_object_set_new(val, "memf", json_integer(cgpu->gpu_memclock/1000));
+	json_object_set_new(val, "power", json_integer(cgpu->gpu_power/1000));
+	json_object_set_new(val, "khashes", json_real(cgpu->khashes));
+	json_object_set_new(val, "intensity", json_integer(cgpu->intensity));
+	json_object_set_new(val, "throughput", json_integer(cgpu->throughput));
+	json_object_set_new(val, "client", json_string(PACKAGE_NAME "/" PACKAGE_VERSION));
+	json_object_set_new(val, "os", json_string(os));
+	json_object_set_new(val, "driver", json_string(driver));
+
+	json_object_set_new(result, "result", val);
+
+	return true;
+}
+
+static bool stratum_get_stats(struct stratum_ctx *sctx, json_t *id, json_t *params)
 {
 	char *s;
 	json_t *val;
 	bool ret;
-	
+
 	if (!id || json_is_null(id))
 		return false;
 
 	val = json_object();
 	json_object_set(val, "id", id);
-	json_object_set_new(val, "error", json_null());
-	json_object_set_new(val, "result", json_string(USER_AGENT));
+
+	ret = stratum_benchdata(val, params, 0);
+
+	if (!opt_stratum_stats || !ret) {
+		json_object_set_error(val, 1, "disabled"); //EPERM
+	} else {
+		json_object_set_new(val, "error", json_null());
+	}
+
 	s = json_dumps(val, 0);
 	ret = stratum_send_line(sctx, s);
+	json_decref(val);
+	free(s);
+
+	return ret;
+}
+
+static bool stratum_get_version(struct stratum_ctx *sctx, json_t *id, json_t *params)
+{
+	char *s;
+	json_t *val;
+	bool ret = true;
+
+	if (!id || json_is_null(id))
+		return false;
+
+	val = json_object();
+	json_object_set(val, "id", id);
+
+	if (opt_stratum_stats && params) {
+		// linked here as transition, miners without get_stats method could fail
+		ret = stratum_benchdata(val, params, 0);
+		if (!ret) json_object_set_error(val, 1, "disabled"); // EPERM
+	} else {
+		json_object_set_new(val, "result", json_string(USER_AGENT));
+	}
+	if (ret) json_object_set_new(val, "error", json_null());
+
+	s = json_dumps(val, 0);
+	ret = stratum_send_line(sctx, s);
+
 	json_decref(val);
 	free(s);
 
@@ -1607,6 +1752,28 @@ static bool stratum_show_message(struct stratum_ctx *sctx, json_t *id, json_t *p
 	return ret;
 }
 
+static bool stratum_unknown_method(struct stratum_ctx *sctx, json_t *id)
+{
+	char *s;
+	json_t *val;
+	bool ret = false;
+
+	if (!id || json_is_null(id))
+		return ret;
+
+	val = json_object();
+	json_object_set(val, "id", id);
+	json_object_set_new(val, "result", json_false());
+	json_object_set_error(val, 38, "unknown method"); // ENOSYS
+
+	s = json_dumps(val, 0);
+	ret = stratum_send_line(sctx, s);
+	json_decref(val);
+	free(s);
+
+	return ret;
+}
+
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 {
 	json_t *val, *id, *params;
@@ -1630,6 +1797,11 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		ret = stratum_notify(sctx, params);
 		goto out;
 	}
+	if (!strcasecmp(method, "mining.ping")) { // cgminer 4.7.1+
+		if (opt_debug) applog(LOG_DEBUG, "Pool ping");
+		ret = stratum_pong(sctx, id);
+		goto out;
+	}
 	if (!strcasecmp(method, "mining.set_difficulty")) {
 		ret = stratum_set_difficulty(sctx, params);
 		goto out;
@@ -1642,13 +1814,30 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		ret = stratum_reconnect(sctx, params);
 		goto out;
 	}
-	if (!strcasecmp(method, "client.get_version")) {
-		ret = stratum_get_version(sctx, id);
+	if (!strcasecmp(method, "client.get_algo")) { // ccminer only yet!
+		// will prevent wrong algo parameters on a pool, will be used as test on rejects
+		if (!opt_quiet) applog(LOG_NOTICE, "Pool asked your algo parameter");
+		ret = stratum_get_algo(sctx, id, params);
 		goto out;
 	}
-	if (!strcasecmp(method, "client.show_message")) {
+	if (!strcasecmp(method, "client.get_stats")) { // ccminer/yiimp only yet!
+		// optional to fill device benchmarks
+		ret = stratum_get_stats(sctx, id, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.get_version")) { // common
+		ret = stratum_get_version(sctx, id, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.show_message")) { // common
 		ret = stratum_show_message(sctx, id, params);
 		goto out;
+	}
+
+	if (!ret) {
+		// don't fail = disconnect stratum on unknown (and optional?) methods
+		if (opt_debug) applog(LOG_WARNING, "unknown stratum method %s!", method);
+		ret = stratum_unknown_method(sctx, id);
 	}
 
 out:

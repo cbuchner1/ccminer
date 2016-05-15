@@ -204,6 +204,8 @@ char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
 int opt_api_remote = 0;
 int opt_api_listen = 4068; /* 0 to disable */
 
+bool opt_stratum_stats = false;
+
 static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\

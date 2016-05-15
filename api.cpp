@@ -101,8 +101,6 @@ extern struct stratum_ctx stratum;
 extern int num_cpus;
 extern float cpu_temp(int);
 extern uint32_t cpu_clock(int);
-// cuda.cpp
-extern int cuda_gpu_clocks(struct cgpu_info *gpu);
 
 char driver_version[32] = { 0 };
 
