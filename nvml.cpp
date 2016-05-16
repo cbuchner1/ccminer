@@ -1106,52 +1106,8 @@ static int translate_vendor_id(uint16_t vid, char *vendorname)
 	return 0;
 }
 
-#ifdef HAVE_PCIDEV
-extern "C" {
-#include <pci/pci.h>
-}
-static int linux_gpu_vendor(uint8_t pci_bus_id, char* vendorname, uint16_t &pid)
-{
-	uint16_t subvendor = 0;
-	struct pci_access *pci;
-	struct pci_dev *dev;
-	uint16_t subdevice;
-
-	if (!vendorname)
-		return -EINVAL;
-
-	pci = pci_alloc();
-	if (!pci)
-		return -ENODEV;
-
-	pci_init(pci);
-	pci_scan_bus(pci);
-
-	for(dev = pci->devices; dev; dev = dev->next)
-	{
-		if (dev->bus == pci_bus_id  && dev->vendor_id == 0x10DE)
-		{
-			if (!(dev->known_fields & PCI_FILL_CLASS))
-				pci_fill_info(dev, PCI_FILL_CLASS);
-			if (dev->device_class != PCI_CLASS_DISPLAY_VGA)
-				continue;
-			subvendor = pci_read_word(dev, PCI_SUBSYSTEM_VENDOR_ID);
-			subdevice = pci_read_word(dev, PCI_SUBSYSTEM_ID); // model
-
-			translate_vendor_id(subvendor, vendorname);
-		}
-	}
-	pci_cleanup(pci);
-	return (int) subvendor;
-}
-#endif
-
 int gpu_vendor(uint8_t pci_bus_id, char *vendorname)
 {
-#ifdef HAVE_PCIDEV
-	uint16_t pid = 0;
-	return linux_gpu_vendor(pci_bus_id, vendorname, pid);
-#else
 	uint16_t vid = 0, pid = 0;
 	if (hnvml) { // may not be initialized on start...
 		for (int id=0; id < hnvml->nvml_gpucount; id++) {
@@ -1171,7 +1127,6 @@ int gpu_vendor(uint8_t pci_bus_id, char *vendorname)
 #endif
 	}
 	return translate_vendor_id(vid, vendorname);
-#endif
 }
 
 int gpu_info(struct cgpu_info *gpu)
@@ -1188,13 +1143,7 @@ int gpu_info(struct cgpu_info *gpu)
 
 	if (hnvml) {
 		gpu->nvml_id = (int8_t) hnvml->cuda_nvml_device_id[id];
-#ifdef HAVE_PCIDEV
-		gpu->gpu_vid = linux_gpu_vendor(hnvml->nvml_pci_bus_id[id], vendorname, gpu->gpu_pid);
-		if (!gpu->gpu_vid || !gpu->gpu_pid)
-			nvml_get_info(hnvml, id, gpu->gpu_vid, gpu->gpu_pid);
-#else
 		nvml_get_info(hnvml, id, gpu->gpu_vid, gpu->gpu_pid);
-#endif
 		nvml_get_serial(hnvml, id, gpu->gpu_sn, sizeof(gpu->gpu_sn));
 		nvml_get_bios(hnvml, id, gpu->gpu_desc, sizeof(gpu->gpu_desc));
 	}
