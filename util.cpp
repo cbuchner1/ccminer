@@ -1624,7 +1624,7 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 	struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
 	json_t *val;
 
-	if (!cgpu) return false;
+	if (!cgpu || !opt_stratum_stats) return false;
 
 #if defined(WIN32) && (defined(_M_X64) || defined(__x86_64__))
 	strcpy(os, "win64");
@@ -1683,7 +1683,7 @@ static bool stratum_get_stats(struct stratum_ctx *sctx, json_t *id, json_t *para
 
 	ret = stratum_benchdata(val, params, 0);
 
-	if (!opt_stratum_stats || !ret) {
+	if (!ret) {
 		json_object_set_error(val, 1, "disabled"); //EPERM
 	} else {
 		json_object_set_new(val, "error", json_null());
@@ -1708,14 +1708,7 @@ static bool stratum_get_version(struct stratum_ctx *sctx, json_t *id, json_t *pa
 
 	val = json_object();
 	json_object_set(val, "id", id);
-
-	if (opt_stratum_stats && params) {
-		// linked here as transition, miners without get_stats method could fail
-		ret = stratum_benchdata(val, params, 0);
-		if (!ret) json_object_set_error(val, 1, "disabled"); // EPERM
-	} else {
-		json_object_set_new(val, "result", json_string(USER_AGENT));
-	}
+	json_object_set_new(val, "result", json_string(USER_AGENT));
 	if (ret) json_object_set_new(val, "error", json_null());
 
 	s = json_dumps(val, 0);
