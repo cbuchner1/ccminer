@@ -1619,6 +1619,7 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 	char vid[32], arch[8], driver[32];
 	char *card;
 	char os[8];
+	uint32_t watts = 0;
 	int dev_id = device_map[thr_id];
 	int cuda_ver = cuda_version();
 	struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
@@ -1634,7 +1635,8 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 
 #ifdef USE_WRAPNVML
 	cgpu->has_monitoring = true;
-	cgpu->gpu_power = gpu_power(cgpu); // Watts
+	cgpu->gpu_power = gpu_power(cgpu); // mWatts
+	watts = (cgpu->gpu_power >= 1000) ? cgpu->gpu_power / 1000 : 0; // ignore nvapi %
 	gpu_info(cgpu);
 #endif
 	cuda_gpu_clocks(cgpu);
@@ -1656,9 +1658,9 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 	json_object_set_new(val, "arch", json_string(arch));
 	json_object_set_new(val, "freq", json_integer(cgpu->gpu_clock/1000));
 	json_object_set_new(val, "memf", json_integer(cgpu->gpu_memclock/1000));
-	json_object_set_new(val, "power", json_integer(cgpu->gpu_power/1000));
+	json_object_set_new(val, "power", json_integer(watts));
 	json_object_set_new(val, "khashes", json_real(cgpu->khashes));
-	json_object_set_new(val, "intensity", json_integer(cgpu->intensity));
+	json_object_set_new(val, "intensity", json_real(cgpu->intensity));
 	json_object_set_new(val, "throughput", json_integer(cgpu->throughput));
 	json_object_set_new(val, "client", json_string(PACKAGE_NAME "/" PACKAGE_VERSION));
 	json_object_set_new(val, "os", json_string(os));

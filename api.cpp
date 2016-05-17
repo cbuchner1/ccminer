@@ -122,7 +122,7 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_temp = gpu_temp(cgpu);
 		cgpu->gpu_fan = (uint16_t) gpu_fanpercent(cgpu);
 		cgpu->gpu_fan_rpm = (uint16_t) gpu_fanrpm(cgpu);
-		cgpu->gpu_power = gpu_power(cgpu);
+		cgpu->gpu_power = gpu_power(cgpu); // mWatts
 #endif
 		cuda_gpu_clocks(cgpu);
 
