@@ -675,6 +675,7 @@ struct pool_infos {
 	// config options
 	double max_diff;
 	double max_rate;
+	int shares_limit;
 	int time_limit;
 	int scantime;
 	// connection

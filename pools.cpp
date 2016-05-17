@@ -19,6 +19,7 @@ extern bool check_dups;
 extern double opt_max_diff;
 extern double opt_max_rate;
 extern int opt_scantime;
+extern int opt_shares_limit;
 extern int opt_time_limit;
 
 extern char* rpc_url;
@@ -83,6 +84,7 @@ void pool_set_creds(int pooln)
 		p->max_diff = -1.;
 		p->max_rate = -1.;
 		p->scantime = -1;
+		p->shares_limit = -1;
 		p->time_limit = -1;
 
 		p->allow_mininginfo = allow_mininginfo;
@@ -111,6 +113,7 @@ void pool_init_defaults()
 		if (p->max_diff == -1.) p->max_diff = opt_max_diff;
 		if (p->max_rate == -1.) p->max_rate = opt_max_rate;
 		if (p->scantime == -1) p->scantime = opt_scantime;
+		if (p->shares_limit == -1) p->shares_limit = opt_shares_limit;
 		if (p->time_limit == -1) p->time_limit = opt_time_limit;
 	}
 }
@@ -137,6 +140,10 @@ void pool_set_attr(int pooln, const char* key, char* arg)
 	}
 	if (!strcasecmp(key, "max-rate")) {
 		p->max_rate = atof(arg);
+		return;
+	}
+	if (!strcasecmp(key, "shares-limit")) {
+		p->shares_limit = atoi(arg);
 		return;
 	}
 	if (!strcasecmp(key, "time-limit")) {
@@ -192,6 +199,7 @@ bool pool_switch(int thr_id, int pooln)
 	opt_scantime = p->scantime;
 	opt_max_diff = p->max_diff;
 	opt_max_rate = p->max_rate;
+	opt_shares_limit = p->shares_limit;
 	opt_time_limit = p->time_limit;
 
 	want_stratum = have_stratum = (p->type & POOL_STRATUM) != 0;

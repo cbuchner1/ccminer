@@ -129,6 +129,7 @@ its command line interface and options.
   -r, --retries=N       number of times to retry if a network call fails
                           (default: retry indefinitely)
   -R, --retry-pause=N   time to pause between retries, in seconds (default: 15)
+      --shares-limit    maximum shares to mine before exiting the program.
       --time-limit      maximum time [s] to mine before exiting the program.
   -T, --timeout=N       network timeout, in seconds (default: 300)
   -s, --scantime=N      upper bound on time spent scanning current work when
@@ -238,11 +239,12 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  May  15th 2016  v1.7.6
+  May  18th 2016  v1.7.6
                   Decred vote support
                   X17 cleanup and improvement
                   Add mining.ping stratum method and handle unknown methods
                   Implement a pool stats/benchmark mode (-p stats on yiimp)
+                  Add --shares-limit parameter, can be used for benchmarks
 
   Mar. 13th 2016  v1.7.5
                   Blake2S Algo (NEVA/OXEN)
