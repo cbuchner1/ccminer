@@ -1603,6 +1603,7 @@ static bool stratum_get_algo(struct stratum_ctx *sctx, json_t *id, json_t *param
 
 #include "nvml.h"
 extern char driver_version[32];
+extern int cuda_arch[MAX_GPUS];
 
 static bool json_object_set_error(json_t *result, int code, const char *msg)
 {
@@ -1647,6 +1648,10 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 
 	sprintf(vid, "%04hx:%04hx", cgpu->gpu_vid, cgpu->gpu_pid);
 	sprintf(arch, "%d", (int) cgpu->gpu_arch);
+	if (cuda_arch[dev_id] > 0 && cuda_arch[dev_id] != cgpu->gpu_arch) {
+		// if binary was not compiled for the highest cuda arch, add it
+		snprintf(arch, 8, "%d@%d", (int) cgpu->gpu_arch, cuda_arch[dev_id]);
+	}
 	snprintf(driver, 32, "CUDA %d.%d %s", cuda_ver/1000, (cuda_ver%1000) / 10, driver_version);
 	driver[31] = '\0';
 
