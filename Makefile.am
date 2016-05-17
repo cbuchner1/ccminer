@@ -158,6 +158,3 @@ scrypt/titan_kernel.o: scrypt/titan_kernel.cu
 skein.o: skein.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
 
-skein2.o: skein2.cu
-	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
-
