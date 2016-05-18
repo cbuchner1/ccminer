@@ -614,7 +614,7 @@ err_out:
 json_t *json_rpc_call_pool(CURL *curl, struct pool_infos *pool, const char *req,
 	bool longpoll_scan, bool longpoll, int *curl_err)
 {
-	char userpass[256];
+	char userpass[512];
 	// todo, malloc and store that in pool array
 	snprintf(userpass, sizeof(userpass), "%s%c%s", pool->user,
 		strlen(pool->pass)?':':'\0', pool->pass);
@@ -625,7 +625,7 @@ json_t *json_rpc_call_pool(CURL *curl, struct pool_infos *pool, const char *req,
 /* called only from longpoll thread, we have the lp_url */
 json_t *json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos *pool, const char *req, int *curl_err)
 {
-	char userpass[256];
+	char userpass[512];
 	snprintf(userpass, sizeof(userpass), "%s%c%s", pool->user,
 		strlen(pool->pass)?':':'\0', pool->pass);
 

@@ -668,10 +668,10 @@ struct pool_infos {
 	int algo;
 	char name[64];
 	// credentials
-	char url[256];
+	char url[512];
 	char short_url[64];
 	char user[64];
-	char pass[128];
+	char pass[384];
 	// config options
 	double max_diff;
 	double max_rate;
