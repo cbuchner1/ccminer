@@ -37,12 +37,17 @@ void skein2hash(void *output, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
+static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
+	return iftrue ? swab32(val) : val;
+}
+
 int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	int dev_id = device_map[thr_id];
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
+	const int swap = 1; // to toggle nonce endian
 
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 19); // 256*256*8
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
@@ -81,7 +86,7 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 		int order = 0;
 
 		// Hash with CUDA
-		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], 0);
+		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], swap);
 		quark_skein512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
@@ -91,7 +96,7 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 		{
 			uint32_t _ALIGN(64) vhash64[8];
 
-			endiandata[19] = foundNonce;
+			endiandata[19] = swab32_if(foundNonce, swap);
 			skein2hash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
@@ -102,14 +107,14 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 					if (!opt_quiet)
 						applog(LOG_BLUE, "GPU #%d: found second nonce %08x !", dev_id, swab32(secNonce));
 
-					endiandata[19] = secNonce;
+					endiandata[19] = swab32_if(secNonce, swap);
 					skein2hash(vhash64, endiandata);
 					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
 						work_set_target_ratio(work, vhash64);
-					pdata[21] = swab32(secNonce);
+					pdata[21] = swab32_if(secNonce, !swap);
 					res++;
 				}
-				pdata[19] = swab32(foundNonce);
+				pdata[19] = swab32_if(foundNonce, !swap);
 				return res;
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);

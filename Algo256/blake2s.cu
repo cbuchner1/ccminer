@@ -28,7 +28,7 @@ static __thread blake2s_state ALIGN(A) s_ctx;
 #endif
 
 #ifndef GPU_MIDSTATE
-__constant__ uint32_t d_data[20];
+__constant__ uint2 d_data[10];
 #else
 __constant__ blake2s_state ALIGN(8) d_state[1];
 #endif
@@ -42,7 +42,9 @@ static uint32_t *h_resNonce[MAX_GPUS];
 
 /* max count of found nonces in one call */
 #define NBN 2
+#if NBN > 1
 static uint32_t extra_results[NBN] = { UINT32_MAX };
+#endif
 
 extern "C" void blake2s_hash(void *output, const void *input)
 {
@@ -196,6 +198,7 @@ void gpu_blake2s_compress(blake2s_state *S, const uint32_t *block)
 	#undef ROUND
 }
 
+#if 0
 /* unused but kept as reference */
 __device__ __forceinline__
 void gpu_blake2s_update(blake2s_state *S, const uint8_t *in, uint64_t inlen)
@@ -225,17 +228,21 @@ void gpu_blake2s_update(blake2s_state *S, const uint8_t *in, uint64_t inlen)
 		}
 	}
 }
+#endif
 
+#ifndef GPU_MIDSTATE
 __device__ __forceinline__
-void gpu_blake2s_update76(blake2s_state *S, const void *input)
+void gpu_blake2s_fill_data(blake2s_state *S, const uint32_t nonce)
 {
-	uint64_t *b64 = (uint64_t*) S->buf;
-	uint64_t *i64 = (uint64_t*) input;
+	uint2 *b2 = (uint2*) S->buf;
 	#pragma unroll
-	for (int i=0; i < 80/8; i++)
-		b64[i] = i64[i];
-	//S->buflen = 76;
+	for (int i=0; i < 9; i++)
+		b2[i] = d_data[i];
+	b2[9].x = d_data[9].x;
+	b2[9].y = nonce;
+	S->buflen = 80;
 }
+#endif
 
 __device__ __forceinline__
 void gpu_blake2s_update_nonce(blake2s_state *S, const uint32_t nonce)
@@ -245,7 +252,7 @@ void gpu_blake2s_update_nonce(blake2s_state *S, const uint32_t nonce)
 }
 
 __device__ __forceinline__
-void gpu_blake2s_final(blake2s_state *S, uint32_t *out)
+uint2 gpu_blake2s_final(blake2s_state *S)
 {
 	//if (S->buflen > BLAKE2S_BLOCKBYTES)
 	{
@@ -260,9 +267,10 @@ void gpu_blake2s_final(blake2s_state *S, uint32_t *out)
 	//memset(&S->buf[S->buflen], 0, 2 * BLAKE2S_BLOCKBYTES - S->buflen); /* Padding */
 	gpu_blake2s_compress(S, (uint32_t*) (S->buf + BLAKE2S_BLOCKBYTES));
 
-	#pragma unroll
-	for (int i = 0; i < 8; i++)
-		out[i] = S->h[i];
+	//#pragma unroll
+	//for (int i = 0; i < 8; i++)
+	//	out[i] = S->h[i];
+	return make_uint2(S->h[6], S->h[7]);
 }
 
 /* init2 xors IV with input parameter block */
@@ -286,12 +294,13 @@ void gpu_blake2s_init_param(blake2s_state *S, const blake2s_param *P)
 	S->buflen = 0;
 
 	#pragma unroll
-	for (int i = 0; i < sizeof(S->buf)/8; i++)
+	for (int i = 8; i < sizeof(S->buf)/8; i++)
 		gpu_store64(S->buf + (8*i), 0);
 
 	uint64_t *p = (uint64_t*) P;
 
 	/* IV XOR ParamBlock */
+	#pragma unroll
 	for (int i = 0; i < 4; i++)
 		S->h[i] ^= gpu_load64(&p[i]);
 }
@@ -333,25 +342,23 @@ void gpu_copystate(blake2s_state *dst, blake2s_state *src)
 }
 
 __global__
-void blake2s_gpu_hash(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce, const uint2 target2)
+void blake2s_gpu_hash(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonce, const uint2 target2, const int swap)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	const uint32_t nonce = startNonce + thread;
+	const uint32_t nonce = swap ? cuda_swab32(startNonce + thread) : startNonce + thread;
 	blake2s_state ALIGN(8) blake2_ctx;
 
 #ifndef GPU_MIDSTATE
 	gpu_blake2s_init(&blake2_ctx, BLAKE2S_OUTBYTES);
 	//gpu_blake2s_update(&blake2_ctx, (uint8_t*) d_data, 76);
-	gpu_blake2s_update76(&blake2_ctx, (uint64_t*) d_data);
+	gpu_blake2s_fill_data(&blake2_ctx, nonce);
 #else
 	gpu_copystate(&blake2_ctx, &d_state[0]);
-#endif
 	gpu_blake2s_update_nonce(&blake2_ctx, nonce);
+#endif
 
-	uint32_t hash[8];
-	gpu_blake2s_final(&blake2_ctx, hash);
-
-	if (hash[7] <= target2.x && hash[6] <= target2.y) {
+	uint2 h2 = gpu_blake2s_final(&blake2_ctx);
+	if (h2.y <= target2.y && h2.x <= target2.x) {
 #if NBN == 2
 		if (resNonce[0] != UINT32_MAX)
 			resNonce[1] = nonce;
@@ -363,8 +370,12 @@ void blake2s_gpu_hash(const uint32_t threads, const uint32_t startNonce, uint32_
 	}
 }
 
+static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
+	return iftrue ? swab32(val) : val;
+}
+
 __host__
-uint32_t blake2s_hash_cuda(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint2 target2)
+uint32_t blake2s_hash_cuda(const int thr_id, const uint32_t threads, const uint32_t startNonce, const uint2 target2, const int swap)
 {
 	uint32_t result = UINT32_MAX;
 
@@ -375,13 +386,15 @@ uint32_t blake2s_hash_cuda(const int thr_id, const uint32_t threads, const uint3
 	if (cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t)) != cudaSuccess)
 		return result;
 
-	blake2s_gpu_hash <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], target2);
+	blake2s_gpu_hash <<<grid, block>>> (threads, startNonce, d_resNonce[thr_id], target2, swap);
 	cudaThreadSynchronize();
 
 	if (cudaSuccess == cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost)) {
-		result = h_resNonce[thr_id][0];
+		result = swab32_if(h_resNonce[thr_id][0], swap);
+#if NBN > 1
 		for (int n=0; n < (NBN-1); n++)
-			extra_results[n] = h_resNonce[thr_id][n+1];
+			extra_results[n] = swab32_if(h_resNonce[thr_id][n+1], swap);
+#endif
 	}
 	return result;
 }
@@ -393,6 +406,7 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 	uint32_t _ALIGN(64) endiandata[20];
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
+	const int swap = 1; // to toggle nonce endian
 
 	const uint32_t first_nonce = pdata[19];
 
@@ -436,10 +450,10 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 
 	blake2s_setBlock(endiandata, &s_midstate);
 
-	const uint2 target = make_uint2(ptarget[7], ptarget[6]);
+	const uint2 target = make_uint2(ptarget[6], ptarget[7]);
 
 	do {
-		uint32_t foundNonce = blake2s_hash_cuda(thr_id, throughput, pdata[19], target);
+		uint32_t foundNonce = blake2s_hash_cuda(thr_id, throughput, pdata[19], target, swap);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
@@ -448,18 +462,18 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 			uint32_t _ALIGN(A) vhashcpu[8];
 
 			//blake2s_hash(vhashcpu, endiandata);
-			le32enc(&endiandata[19], foundNonce);
+			endiandata[19] = swab32_if(foundNonce, swap);
 			blake2s_hash_end(vhashcpu, endiandata);
 
-			if (vhashcpu[7] <= target.x && fulltest(vhashcpu, ptarget)) {
+			if (vhashcpu[7] <= target.y && fulltest(vhashcpu, ptarget)) {
 				work_set_target_ratio(work, vhashcpu);
-				pdata[19] = work->nonces[0] = swab32(foundNonce);
+				pdata[19] = work->nonces[0] = swab32_if(foundNonce, !swap);
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
-					le32enc(&endiandata[19], extra_results[0]);
+					endiandata[19] = swab32_if(extra_results[0], swap);
 					blake2s_hash_end(vhashcpu, endiandata);
-					if (vhashcpu[7] <= target.x && fulltest(vhashcpu, ptarget)) {
-						work->nonces[1] = swab32(extra_results[0]);
+					if (vhashcpu[7] <= target.y && fulltest(vhashcpu, ptarget)) {
+						work->nonces[1] = swab32_if(extra_results[0], !swap);
 						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
 							work_set_target_ratio(work, vhashcpu);
 							xchg(work->nonces[1], pdata[19]);
@@ -472,9 +486,6 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 				return 1;
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
-				applog_hex(pdata, 80);
-				applog_hex(ptarget, 32);
-				applog_hex(vhashcpu, 32);
 			}
 		}
 
