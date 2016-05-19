@@ -52,3 +52,17 @@ x64/Release/
 
 compat/curl-for-windows/
 
+*.ptx
+*.i
+*.ii
+*.gpu
+*.cubin
+*.stub.c
+*.module_id
+*.hash
+*.fatbin.c
+*.fatbin
+*.cudafe1.cpp
+*.cudafe1.c
+*.cudafe2.c
+
