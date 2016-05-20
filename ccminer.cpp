@@ -3186,7 +3186,7 @@ static void parse_cmdline(int argc, char *argv[])
 		show_usage_and_exit(1);
 	}
 
-	if (opt_algo == ALGO_DECRED && opt_vote == 9999) {
+	if (opt_vote == 9999) {
 		opt_vote = 0; // default, don't vote
 	}
 }
