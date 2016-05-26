@@ -15,7 +15,7 @@ depcomp
 missing
 install-sh
 stamp-h1
-cpuminer-config.h*
+ccminer-config.h*
 compile
 config.log
 config.status
@@ -41,6 +41,8 @@ x64/Release/
 *.opensdf
 *.sdf
 *.pdb
+*.VC.opendb
+*.VC.db
 
 .settings/
 .project

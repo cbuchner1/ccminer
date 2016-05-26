@@ -1,5 +1,4 @@
-/* cpuminer-config.h.  Generated from cpuminer-config.h.in by configure.  */
-/* cpuminer-config.h.in.  Generated from configure.ac by autoheader.  */
+/* CONFIG ONLY FOR MS VC++ BUILD */
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.
@@ -161,17 +160,11 @@
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "ccminer"
 
-/* Define to the full name and version of this package. */
-#define PACKAGE_STRING "ccminer 1.7.6"
-
-/* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "ccminer"
-
 /* Define to the home page for this package. */
 #define PACKAGE_URL "http://github.com/tpruvot/ccminer"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.7.6"
+#define PACKAGE_VERSION "1.8-dev"
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -184,11 +177,12 @@
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
-/* Version number of package */
-#define VERSION "1.7.6"
-
 /* Define curl_free() as free() if our version of curl lacks curl_free. */
 /* #undef curl_free */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 //#define size_t unsigned int
+
+#if !defined(HAVE_STRUCT_TIMESPEC) && _MSC_VER >= 1900
+#define HAVE_STRUCT_TIMESPEC
+#endif

@@ -219,6 +219,9 @@
     <ClCompile Include="compat\jansson\error.c">
       <Filter>Source Files\jansson</Filter>
     </ClCompile>
+    <ClInclude Include="compat\pthreads\pthread.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
     <ClCompile Include="lyra2\Lyra2.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
@@ -267,7 +270,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="compat.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\compat</Filter>
     </ClInclude>
     <ClInclude Include="elist.h">
       <Filter>Header Files</Filter>
@@ -290,8 +293,8 @@
     <ClInclude Include="compat\stdbool.h">
       <Filter>Header Files\compat</Filter>
     </ClInclude>
-    <ClInclude Include="cpuminer-config.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="compat\ccminer-config.h">
+      <Filter>Header Files\compat</Filter>
     </ClInclude>
     <ClInclude Include="uint256.h">
       <Filter>Header Files</Filter>

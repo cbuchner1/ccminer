@@ -9,7 +9,7 @@
  * any later version.  See COPYING for more details.
  */
 
-#include "cpuminer-config.h"
+#include <ccminer-config.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3244,7 +3244,7 @@ int main(int argc, char *argv[])
 
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by tpruvot@github ***\n");
 #ifdef _MSC_VER
-	printf("    Built with VC++ 2013 and nVidia CUDA SDK %d.%d\n\n",
+	printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d\n\n", msver(),
 #else
 	printf("    Built with the nVidia CUDA Toolkit %d.%d\n\n",
 #endif
