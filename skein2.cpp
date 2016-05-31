@@ -11,8 +11,6 @@
 
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
-
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
 

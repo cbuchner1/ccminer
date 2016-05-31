@@ -1,5 +1,5 @@
 
-ccMiner release 1.7.6 (May 2016) "DCR vote & pool device stats"
+ccMiner preview 1.8-dev (May 2016) "Pascal and x11evo algo"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -98,6 +98,7 @@ its command line interface and options.
                           sib         use to mine Sibcoin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
+                          x11evo      use to mine Revolver
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
@@ -238,6 +239,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  June 2016       v1.8.0
+                  Pascal support with cuda 8
+                  x11evo algo (XRE)
 
   May  18th 2016  v1.7.6
                   Decred vote support

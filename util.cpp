@@ -2192,6 +2192,9 @@ void print_hash_tests(void)
 	//whirlxHash(&hash[0], &buf[0]);
 	//printpfx("whirlpoolx", hash);
 
+	x11evo_hash(&hash[0], &buf[0]);
+	printpfx("x11evo", hash);
+
 	x11hash(&hash[0], &buf[0]);
 	printpfx("X11", hash);
 

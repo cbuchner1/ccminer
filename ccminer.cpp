@@ -241,6 +241,7 @@ Options:\n\
 			skein       Skein SHA2 (Skeincoin)\n\
 			skein2      Double Skein (Woodcoin)\n\
 			s3          S3 (1Coin)\n\
+			x11evo      Permuted x11 (Revolver)\n\
 			x11         X11 (DarkCoin)\n\
 			x13         X13 (MaruCoin)\n\
 			x14         X14\n\
@@ -1901,6 +1902,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_HEAVY:
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
+			case ALGO_X11EVO:
 			case ALGO_X11:
 			case ALGO_X13:
 			case ALGO_WHIRLCOIN:
@@ -2066,6 +2068,9 @@ static void *miner_thread(void *userdata)
 		//case ALGO_WHIRLPOOLX:
 		//	rc = scanhash_whirlx(thr_id, &work, max_nonce, &hashes_done);
 		//	break;
+		case ALGO_X11EVO:
+			rc = scanhash_x11evo(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_X11:
 			rc = scanhash_x11(thr_id, &work, max_nonce, &hashes_done);
 			break;
