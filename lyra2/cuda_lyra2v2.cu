@@ -1,3 +1,8 @@
+/**
+ * Lyra2 (v2) CUDA Implementation
+ *
+ * Based on djm34/VTC sources and incredible 2x boost by Nanashi Meiyo-Meijin (May 2016)
+ */
 #include <stdio.h>
 #include <stdint.h>
 #include <memory.h>
@@ -16,6 +21,8 @@
 #define Nrow 4
 #define Ncol 4
 #define memshift 3
+
+#define TPB 32
 
 __device__ uint2x4 *DMatrix;
 
@@ -303,7 +310,7 @@ void reduceDuplexRowt2x4(const int rowInOut, uint2 state[4])
 }
 
 __global__
-__launch_bounds__(32, 1)
+__launch_bounds__(TPB, 1)
 void lyra2v2_gpu_hash_32_1(uint32_t threads, uint2 *inputHash)
 {
 	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
@@ -342,15 +349,15 @@ void lyra2v2_gpu_hash_32_1(uint32_t threads, uint2 *inputHash)
 		for (int i = 0; i<12; i++)
 			round_lyra_v5(state);
 
-		DMatrix[blockDim.x * gridDim.x * 0 + blockDim.x * blockIdx.x + threadIdx.x] = state[0];
-		DMatrix[blockDim.x * gridDim.x * 1 + blockDim.x * blockIdx.x + threadIdx.x] = state[1];
-		DMatrix[blockDim.x * gridDim.x * 2 + blockDim.x * blockIdx.x + threadIdx.x] = state[2];
-		DMatrix[blockDim.x * gridDim.x * 3 + blockDim.x * blockIdx.x + threadIdx.x] = state[3];
+		DMatrix[blockDim.x * gridDim.x * 0 + thread] = state[0];
+		DMatrix[blockDim.x * gridDim.x * 1 + thread] = state[1];
+		DMatrix[blockDim.x * gridDim.x * 2 + thread] = state[2];
+		DMatrix[blockDim.x * gridDim.x * 3 + thread] = state[3];
 	}
 }
 
 __global__
-__launch_bounds__(32, 1)
+__launch_bounds__(TPB, 1)
 void lyra2v2_gpu_hash_32_2(uint32_t threads)
 {
 	const uint32_t thread = blockDim.y * blockIdx.x + threadIdx.y;
@@ -386,7 +393,7 @@ void lyra2v2_gpu_hash_32_2(uint32_t threads)
 }
 
 __global__
-__launch_bounds__(32, 1)
+__launch_bounds__(TPB, 1)
 void lyra2v2_gpu_hash_32_3(uint32_t threads, uint2 *outputHash)
 {
 	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
@@ -395,10 +402,10 @@ void lyra2v2_gpu_hash_32_3(uint32_t threads, uint2 *outputHash)
 
 	if (thread < threads)
 	{
-		state[0] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 0 + blockDim.x * blockIdx.x + threadIdx.x]);
-		state[1] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 1 + blockDim.x * blockIdx.x + threadIdx.x]);
-		state[2] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 2 + blockDim.x * blockIdx.x + threadIdx.x]);
-		state[3] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 3 + blockDim.x * blockIdx.x + threadIdx.x]);
+		state[0] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 0 + thread]);
+		state[1] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 1 + thread]);
+		state[2] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 2 + thread]);
+		state[3] = __ldg4(&DMatrix[blockDim.x * gridDim.x * 3 + thread]);
 
 		for (int i = 0; i < 12; i++)
 			round_lyra_v5(state);
@@ -436,7 +443,7 @@ void lyra2v2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uin
 
 	if (device_sm[dev_id] >= 500) {
 
-		const uint32_t tpb = 32;
+		const uint32_t tpb = TPB;
 
 		dim3 grid2((threads + tpb - 1) / tpb);
 		dim3 block2(tpb);
