@@ -14,6 +14,8 @@
 #define __CUDA_ARCH__ 500
 #endif
 
+#define TPB 32
+
 #if __CUDA_ARCH__ >= 500
 
 #include "cuda_lyra2_vectors.h"
@@ -21,8 +23,6 @@
 #define Nrow 4
 #define Ncol 4
 #define memshift 3
-
-#define TPB 32
 
 __device__ uint2x4 *DMatrix;
 
