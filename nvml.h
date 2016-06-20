@@ -57,13 +57,32 @@ enum nvmlReturn_t {
 	NVML_ERROR_INSUFFICIENT_POWER = 8,
 	NVML_ERROR_DRIVER_NOT_LOADED = 9,
 	NVML_ERROR_TIMEOUT = 10,
+	NVML_ERROR_IRQ_ISSUE = 11,
+	NVML_ERROR_LIBRARY_NOT_FOUND = 12,
+	NVML_ERROR_FUNCTION_NOT_FOUND = 13,
+	NVML_ERROR_CORRUPTED_INFOROM = 14,
+	NVML_ERROR_GPU_IS_LOST = 15,
+	NVML_ERROR_RESET_REQUIRED = 16,
+	NVML_ERROR_OPERATING_SYSTEM = 17,
+	NVML_ERROR_LIB_RM_VERSION_MISMATCH = 18,
+	NVML_ERROR_IN_USE = 19,
 	NVML_ERROR_UNKNOWN = 999
 };
 
 enum nvmlClockType_t {
 	NVML_CLOCK_GRAPHICS = 0,
 	NVML_CLOCK_SM = 1,
-	NVML_CLOCK_MEM = 2
+	NVML_CLOCK_MEM = 2,
+	NVML_CLOCK_VIDEO = 3,
+	NVML_CLOCK_COUNT
+};
+
+enum nvmlClockId_t {
+	NVML_CLOCK_ID_CURRENT = 0,
+	NVML_CLOCK_ID_APP_CLOCK_TARGET = 1,
+	NVML_CLOCK_ID_APP_CLOCK_DEFAULT = 2,
+	NVML_CLOCK_ID_CUSTOMER_BOOST_MAX = 3,
+	NVML_CLOCK_ID_COUNT
 };
 
 enum nvmlPcieUtilCounter_t {
@@ -79,6 +98,11 @@ enum nvmlValueType_t {
 	NVML_VALUE_TYPE_UNSIGNED_LONG_LONG = 3,
 	NVML_VALUE_TYPE_COUNT
 };
+
+typedef int nvmlGpuTopologyLevel_t;
+typedef int nvmlNvLinkCapability_t;
+typedef int nvmlNvLinkErrorCounter_t;
+typedef int nvmlNvLinkUtilizationControl_t;
 
 #define NVML_DEVICE_SERIAL_BUFFER_SIZE 30
 #define NVML_DEVICE_UUID_BUFFER_SIZE 80
@@ -136,21 +160,44 @@ typedef struct {
 	// v331
 	nvmlReturn_t (*nvmlDeviceGetEnforcedPowerLimit)(nvmlDevice_t, unsigned int *limit);
 	// v340
-	//nvmlReturn_t (*nvmlDeviceGetCpuAffinity)(nvmlDevice_t, unsigned int cpuSetSize, unsigned long* cpuSet);
-	//nvmlReturn_t (*nvmlDeviceSetCpuAffinity)(nvmlDevice_t);
-	//nvmlReturn_t (*nvmlDeviceGetAutoBoostedClocksEnabled)(nvmlDevice_t, nvmlEnableState_t *isEnabled, nvmlEnableState_t *defaultIsEnabled);
-	//nvmlReturn_t (*nvmlDeviceSetAutoBoostedClocksEnabled)(nvmlDevice_t, nvmlEnableState_t enabled);
+#ifdef __linux__
+	nvmlReturn_t (*nvmlDeviceClearCpuAffinity)(nvmlDevice_t);
+	nvmlReturn_t (*nvmlDeviceGetCpuAffinity)(nvmlDevice_t, unsigned int cpuSetSize, unsigned long* cpuSet);
+	nvmlReturn_t (*nvmlDeviceSetCpuAffinity)(nvmlDevice_t);
+#endif
+	nvmlReturn_t (*nvmlDeviceGetAutoBoostedClocksEnabled)(nvmlDevice_t, nvmlEnableState_t *isEnabled, nvmlEnableState_t *defaultIsEnabled);
+	nvmlReturn_t (*nvmlDeviceSetAutoBoostedClocksEnabled)(nvmlDevice_t, nvmlEnableState_t enabled);
 	// v346
 	nvmlReturn_t (*nvmlDeviceGetPcieThroughput)(nvmlDevice_t, nvmlPcieUtilCounter_t, unsigned int *value);
-} nvml_handle;
+	// v36x (API 8)
+	nvmlReturn_t (*nvmlDeviceGetClock)(nvmlDevice_t, nvmlClockType_t clockType, nvmlClockId_t clockId, unsigned int *clockMHz);
+	nvmlReturn_t (*nvmlDeviceGetMaxCustomerBoostClock)(nvmlDevice_t, nvmlClockType_t clockType, unsigned int *clockMHz);
+#ifdef __linux__
+	nvmlReturn_t (*nvmlSystemGetTopologyGpuSet)(unsigned int cpuNumber, unsigned int *count, nvmlDevice_t *deviceArray);
+	nvmlReturn_t (*nvmlDeviceGetTopologyNearestGpus)(nvmlDevice_t, nvmlGpuTopologyLevel_t level, unsigned int *count, nvmlDevice_t *deviceArray);
+	nvmlReturn_t (*nvmlDeviceGetTopologyCommonAncestor)(nvmlDevice_t device1, nvmlDevice_t device2, nvmlGpuTopologyLevel_t *pathInfo);
+#endif
+	nvmlReturn_t (*nvmlDeviceGetNvLinkState)(nvmlDevice_t, unsigned int link, nvmlEnableState_t *isActive);
+	nvmlReturn_t (*nvmlDeviceGetNvLinkVersion)(nvmlDevice_t, unsigned int link, unsigned int *version);
+	nvmlReturn_t (*nvmlDeviceGetNvLinkCapability)(nvmlDevice_t, unsigned int link, nvmlNvLinkCapability_t capability, unsigned int *capResult);
+	nvmlReturn_t (*nvmlDeviceGetNvLinkRemotePciInfo)(nvmlDevice_t, unsigned int link, nvmlPciInfo_t *pci);
+	nvmlReturn_t (*nvmlDeviceGetNvLinkErrorCounter)(nvmlDevice_t, unsigned int link, nvmlNvLinkErrorCounter_t counter, unsigned long long *counterValue);
+	nvmlReturn_t (*nvmlDeviceResetNvLinkErrorCounters)(nvmlDevice_t, unsigned int link);
+	nvmlReturn_t (*nvmlDeviceSetNvLinkUtilizationControl)(nvmlDevice_t, unsigned int link, unsigned int counter, nvmlNvLinkUtilizationControl_t *control, unsigned int reset);
+	nvmlReturn_t (*nvmlDeviceGetNvLinkUtilizationControl)(nvmlDevice_t, unsigned int link, unsigned int counter, nvmlNvLinkUtilizationControl_t *control);
+	nvmlReturn_t (*nvmlDeviceGetNvLinkUtilizationCounter)(nvmlDevice_t, unsigned int link, unsigned int counter, unsigned long long *rxcounter, unsigned long long *txcounter);
+	nvmlReturn_t (*nvmlDeviceFreezeNvLinkUtilizationCounter)(nvmlDevice_t, unsigned int link, unsigned int counter, nvmlEnableState_t freeze);
+	nvmlReturn_t (*nvmlDeviceResetNvLinkUtilizationCounter)(nvmlDevice_t, unsigned int link, unsigned int counter);
 
+} nvml_handle;
 
 nvml_handle * nvml_create();
 int nvml_destroy(nvml_handle *nvmlh);
 
-/*
- * Query the number of GPUs seen by NVML
- */
+// Debug informations
+void nvml_print_device_info(int dev_id);
+
+// Query the number of GPUs seen by NVML
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount);
 
 int nvml_set_plimit(nvml_handle *nvmlh, int dev_id);
@@ -168,8 +215,9 @@ unsigned int gpu_power(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
 
-/* pid/vid, sn and bios rev */
+// pid/vid, sn and bios rev
 int gpu_info(struct cgpu_info *gpu);
+
 int gpu_vendor(uint8_t pci_bus_id, char *vendorname);
 
 

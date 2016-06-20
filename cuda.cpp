@@ -106,6 +106,9 @@ void cuda_print_devices()
 		cudaGetDeviceProperties(&props, dev_id);
 		if (!opt_n_threads || n < opt_n_threads) {
 			fprintf(stderr, "GPU #%d: SM %d.%d %s\n", dev_id, props.major, props.minor, device_name[dev_id]);
+#ifdef USE_WRAPNVML
+			if (opt_debug) nvml_print_device_info(dev_id);
+#endif
 		}
 	}
 }

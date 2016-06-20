@@ -188,6 +188,14 @@ nvml_handle * nvml_create()
 	nvmlh->nvmlDeviceGetEnforcedPowerLimit = (nvmlReturn_t (*)(nvmlDevice_t, unsigned int *limit))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetEnforcedPowerLimit");
 	// v340
+#ifdef __linux__
+	nvmlh->nvmlDeviceClearCpuAffinity = (nvmlReturn_t (*)(nvmlDevice_t))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceClearCpuAffinity");
+	nvmlh->nvmlDeviceGetCpuAffinity = (nvmlReturn_t (*)(nvmlDevice_t, unsigned int sz, unsigned long *cpuSet))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetCpuAffinity");
+	nvmlh->nvmlDeviceSetCpuAffinity = (nvmlReturn_t (*)(nvmlDevice_t))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceSetCpuAffinity");
+#endif
 	/* NVML_ERROR_NOT_SUPPORTED
 	nvmlh->nvmlDeviceGetAutoBoostedClocksEnabled = (nvmlReturn_t (*)(nvmlDevice_t, nvmlEnableState_t *isEnabled, nvmlEnableState_t *defaultIsEnabled))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetAutoBoostedClocksEnabled");
@@ -196,6 +204,11 @@ nvml_handle * nvml_create()
 	// v346
 	nvmlh->nvmlDeviceGetPcieThroughput = (nvmlReturn_t (*)(nvmlDevice_t, nvmlPcieUtilCounter_t, unsigned int *value))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPcieThroughput");
+	// v36x (API 8 / Pascal)
+	nvmlh->nvmlDeviceGetClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t clockType, nvmlClockId_t clockId, unsigned int *clockMHz))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetClock");
+	nvmlh->nvmlDeviceGetMaxCustomerBoostClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t clockType, unsigned int *clockMHz))
+		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetMaxCustomerBoostClock");
 
 	if (nvmlh->nvmlInit == NULL ||
 			nvmlh->nvmlShutdown == NULL ||
@@ -526,6 +539,53 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 
 	limit_prev[dev_id] = prev_limit;
 	return 1;
+}
+
+// ccminer -D -n
+#define LSTDEV_PFX "        "
+void nvml_print_device_info(int dev_id)
+{
+	if (!hnvml) return;
+
+	int n = hnvml->cuda_nvml_device_id[dev_id];
+	if (n < 0 || n >= hnvml->nvml_gpucount)
+		return;
+
+	nvmlReturn_t rc;
+
+	if (hnvml->nvmlDeviceGetClock) {
+		uint32_t gpu_clk = 0, mem_clk = 0;
+
+		fprintf(stderr, "------- Clocks -------\n");
+
+		hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_APP_CLOCK_DEFAULT, &gpu_clk);
+		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_APP_CLOCK_DEFAULT, &mem_clk);
+		if (rc == NVML_SUCCESS) {
+			fprintf(stderr, LSTDEV_PFX "DEFAULT MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
+		}
+		hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_APP_CLOCK_TARGET, &gpu_clk);
+		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_APP_CLOCK_TARGET, &mem_clk);
+		if (rc == NVML_SUCCESS) {
+			fprintf(stderr, LSTDEV_PFX "TARGET  MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
+		}
+		hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_CURRENT, &gpu_clk);
+		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_CURRENT, &mem_clk);
+		if (rc == NVML_SUCCESS) {
+			fprintf(stderr, LSTDEV_PFX "CURRENT MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
+		}
+		// NVML_ERROR_NOT_SUPPORTED on Maxwell (361.62)
+		hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_CUSTOMER_BOOST_MAX, &gpu_clk);
+		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_CUSTOMER_BOOST_MAX, &mem_clk);
+		if (rc == NVML_SUCCESS) {
+			fprintf(stderr, LSTDEV_PFX "BOOSTED MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
+		}
+		// NVML_ERROR_NOT_SUPPORTED on Maxwell (361.62)
+		hnvml->nvmlDeviceGetMaxCustomerBoostClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, &gpu_clk);
+		rc = hnvml->nvmlDeviceGetMaxCustomerBoostClock(hnvml->devs[n], NVML_CLOCK_MEM, &mem_clk);
+		if (rc == NVML_SUCCESS) {
+			fprintf(stderr, LSTDEV_PFX "MXBOOST MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
+		}
+	}
 }
 
 int nvml_get_gpucount(nvml_handle *nvmlh, int *gpucount)
