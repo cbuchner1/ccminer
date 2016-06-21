@@ -295,12 +295,15 @@ Options:\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n\
                         Can be tuned with --resume-diff=N to set a resume value\n"
-#if defined(USE_WRAPNVML) && (defined(__linux) || defined(_WIN64)) /* via nvml */
+#if defined(__linux) || defined(_WIN64) /* via nvml */
 "\
       --mem-clock=3505  Set the gpu memory max clock (346.72+ driver)\n\
       --gpu-clock=1150  Set the gpu engine max clock (346.72+ driver)\n\
       --pstate=0[,2]    Set the gpu power state (352.21+ driver)\n\
       --plimit=100W     Set the gpu power limit (352.21+ driver)\n"
+#else /* via nvapi.dll */
+"\
+      --plimit=100      Set the gpu power limit in percentage\n"
 #endif
 #ifdef HAVE_SYSLOG_H
 "\

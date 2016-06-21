@@ -264,6 +264,9 @@
     <ClCompile Include="sph\blake2s.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="nvapi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="algos.h">

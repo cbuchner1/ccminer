@@ -460,7 +460,7 @@ int nvml_set_pstate(nvml_handle *nvmlh, int dev_id)
 	nclocks = min(nclocks, 32);
 	if (nclocks)
 		nvmlh->nvmlDeviceGetSupportedMemoryClocks(nvmlh->devs[n], &nclocks, mem_clocks);
-	if (wanted_pstate+1 > nclocks) {
+	if ((uint32_t) wanted_pstate+1 > nclocks) {
 		applog(LOG_WARNING, "GPU #%d: only %u mem clocks available (p-states)", dev_id, nclocks);
 	}
 	for (uint8_t u=0; u < nclocks; u++) {
@@ -789,6 +789,8 @@ int nvml_destroy(nvml_handle *nvmlh)
 	return 0;
 }
 
+// ----------------------------------------------------------------------------
+
 /**
  * nvapi alternative for windows x86 binaries
  * nvml api doesn't exists as 32bit dll :///
@@ -800,6 +802,7 @@ static int nvapi_dev_map[MAX_GPUS] = { 0 };
 static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };
 static NvPhysicalGpuHandle phys[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 static NvU32 nvapi_dev_cnt = 0;
+extern bool nvapi_dll_loaded;
 
 int nvapi_temperature(unsigned int devNum, unsigned int *temperature)
 {
@@ -967,6 +970,52 @@ int nvapi_getbios(unsigned int devNum, char *desc, unsigned int maxlen)
 	return 0;
 }
 
+uint8_t nvapi_getplimit(unsigned int devNum)
+{
+	NvAPI_Status ret = NVAPI_OK;
+	NVAPI_GPU_POWER_STATUS pol = { 0 };
+	pol.version = NVAPI_GPU_POWER_STATUS_VER;
+	if ((ret = NvAPI_DLL_ClientPowerPoliciesGetStatus(phys[devNum], &pol)) != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI GetPowerPoliciesStatus: %s", string);
+		return 0;
+	}
+	return (uint8_t) (pol.entries[0].power / 1000); // in percent
+}
+
+int nvapi_setplimit(unsigned int devNum, uint16_t percent)
+{
+	NvAPI_Status ret = NVAPI_OK;
+	uint32_t val = percent * 1000;
+
+	NVAPI_GPU_POWER_INFO nfo = { 0 };
+	nfo.version = NVAPI_GPU_POWER_INFO_VER;
+	ret = NvAPI_DLL_ClientPowerPoliciesGetInfo(phys[devNum], &nfo);
+	if (ret == NVAPI_OK) {
+		if (val == 0)
+			val = nfo.entries[0].def_power;
+		else if (val < nfo.entries[0].min_power)
+			val = nfo.entries[0].min_power;
+		else if (val > nfo.entries[0].max_power)
+			val = nfo.entries[0].max_power;
+	}
+
+	NVAPI_GPU_POWER_STATUS pol = { 0 };
+	pol.version = NVAPI_GPU_POWER_STATUS_VER;
+	pol.flags = 1;
+	pol.entries[0].power = val;
+	if ((ret = NvAPI_DLL_ClientPowerPoliciesSetStatus(phys[devNum], &pol)) != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_DEBUG, "NVAPI SetPowerPoliciesStatus: %s", string);
+		return -1;
+	}
+	return ret;
+}
+
 int nvapi_init()
 {
 	int num_gpus = cuda_num_devices();
@@ -1017,11 +1066,12 @@ int nvapi_init()
 			applog(LOG_DEBUG, "NVAPI NvAPI_GPU_GetFullName: %s", string);
 		}
 	}
-
 #if 0
-	NvAPI_ShortString ver;
-	NvAPI_GetInterfaceVersionString(ver);
-	applog(LOG_DEBUG, "NVAPI Version: %s", ver);
+	if (opt_debug) {
+		NvAPI_ShortString ver;
+		NvAPI_GetInterfaceVersionString(ver);
+		applog(LOG_DEBUG, "%s", ver);
+	}
 #endif
 
 	NvU32 udv;
@@ -1029,6 +1079,19 @@ int nvapi_init()
 	ret = NvAPI_SYS_GetDriverAndBranchVersion(&udv, str);
 	if (ret == NVAPI_OK) {
 		sprintf(driver_version,"%d.%02d", udv / 100, udv % 100);
+	}
+
+	// nvapi.dll
+	ret = nvapi_dll_init();
+	if (ret == NVAPI_OK) {
+		for (int n=0; n < opt_n_threads; n++) {
+			int dev_id = device_map[n % MAX_GPUS];
+			if (device_plimit[dev_id]) {
+				nvapi_setplimit(nvapi_dev_map[dev_id], device_plimit[dev_id]); // 0=default
+				uint32_t res = nvapi_getplimit(nvapi_dev_map[dev_id]);
+				gpulog(LOG_INFO, n, "NVAPI power limit is set to %u%%", res);
+			}
+		}
 	}
 
 	return 0;
