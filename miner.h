@@ -67,7 +67,8 @@ typedef char *  va_list;
 
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>
-#define LOG_BLUE 0x10 /* unique value */
+#define LOG_BLUE 0x10
+#define LOG_RAW  0x99
 #else
 enum {
 	LOG_ERR,
@@ -77,6 +78,7 @@ enum {
 	LOG_DEBUG,
 	/* custom notices */
 	LOG_BLUE = 0x10,
+	LOG_RAW  = 0x99
 };
 #endif
 

@@ -108,6 +108,9 @@ void cuda_print_devices()
 			fprintf(stderr, "GPU #%d: SM %d.%d %s\n", dev_id, props.major, props.minor, device_name[dev_id]);
 #ifdef USE_WRAPNVML
 			if (opt_debug) nvml_print_device_info(dev_id);
+#ifdef WIN32
+			if (opt_debug) nvapi_pstateinfo(dev_id);
+#endif
 #endif
 		}
 	}

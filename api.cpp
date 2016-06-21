@@ -263,6 +263,9 @@ static void gpuhwinfos(int gpu_id)
 	cgpu->gpu_pstate = (int16_t) gpu_pstate(cgpu);
 	cgpu->gpu_power = gpu_power(cgpu);
 	gpu_info(cgpu);
+#ifdef WIN32
+	if (opt_debug) nvapi_pstateinfo(cgpu->gpu_id);
+#endif
 #endif
 
 	cuda_gpu_clocks(cgpu);
@@ -273,7 +276,7 @@ static void gpuhwinfos(int gpu_id)
 
 	card = device_name[gpu_id];
 
-	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%u;MEM=%lu;"
+	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%hu;MEM=%lu;"
 		"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;MEMFREQ=%d;PST=%s;POWER=%u;"
 		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;SN=%s;BIOS=%s|",
 		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_arch, cgpu->gpu_mem,

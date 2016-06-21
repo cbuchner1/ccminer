@@ -217,6 +217,9 @@ int gpu_info(struct cgpu_info *gpu);
 
 int gpu_vendor(uint8_t pci_bus_id, char *vendorname);
 
+// to debug clocks..
+int nvapi_pstateinfo(unsigned int devNum);
+uint8_t nvapi_getplimit(unsigned int devNum);
 
 /* nvapi functions */
 #ifdef WIN32

@@ -139,6 +139,10 @@ void applog(int prio, const char *fmt, ...)
 			fmt,
 			use_colors ? CL_N : ""
 		);
+		if (prio == LOG_RAW) {
+			// no time prefix, for ccminer -n
+			sprintf(f, "%s%s\n", fmt, CL_N);
+		}
 		pthread_mutex_lock(&applog_lock);
 		vfprintf(stdout, f, ap);	/* atomic write to stdout */
 		fflush(stdout);

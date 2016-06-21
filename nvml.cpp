@@ -1,4 +1,4 @@
-/*
+﻿/*
  * A trivial little dlopen()-based wrapper library for the
  * NVIDIA NVML library, to allow runtime discovery of NVML on an
  * arbitrary system.  This is all very hackish and simple-minded, but
@@ -830,7 +830,7 @@ int nvapi_fanspeed(unsigned int devNum, unsigned int *speed)
 	return 0;
 }
 
-int nvapi_getpstate(unsigned int devNum, unsigned int *power)
+int nvapi_getpstate(unsigned int devNum, unsigned int *pstate)
 {
 	NvAPI_Status ret;
 
@@ -848,7 +848,7 @@ int nvapi_getpstate(unsigned int devNum, unsigned int *power)
 	}
 	else {
 		// get pstate for the moment... often 0 = P0
-		(*power) = (unsigned int)CurrentPstate;
+		(*pstate) = (unsigned int)CurrentPstate;
 	}
 
 	return 0;
@@ -909,25 +909,27 @@ int nvapi_getinfo(unsigned int devNum, uint16_t &vid, uint16_t &pid)
 
 int nvapi_getserial(unsigned int devNum, char *serial, unsigned int maxlen)
 {
-//	NvAPI_Status ret;
+	NvAPI_Status ret;
 	if (devNum >= nvapi_dev_cnt)
 		return -ENODEV;
 
-	sprintf(serial, "");
+	memset(serial, 0, maxlen);
 
-	if (maxlen < 64) // Short String
-		return -1;
+	if (maxlen < 11)
+		return -EINVAL;
 
-#if 0
-	ret = NvAPI_GPU_Get..(phys[devNum], serial);
+	NvAPI_ShortString ser = { 0 };
+	ret = NvAPI_DLL_GetSerialNumber(phys[devNum], ser);
 	if (ret != NVAPI_OK) {
 		NvAPI_ShortString string;
 		NvAPI_GetErrorMessage(ret, string);
 		if (opt_debug)
-			applog(LOG_DEBUG, "NVAPI ...: %s", string);
+			applog(LOG_DEBUG, "NVAPI GetSerialNumber: %s", string);
 		return -1;
 	}
-#endif
+
+	uint8_t *bytes = (uint8_t*) ser;
+	for (int n=0; n<5; n++) sprintf(&serial[n*2], "%02X", bytes[n]);
 	return 0;
 }
 
@@ -951,6 +953,133 @@ int nvapi_getbios(unsigned int devNum, char *desc, unsigned int maxlen)
 	return 0;
 }
 
+#define FREQ_GETVAL(clk) (clk.typeId == 0 ? clk.data.single.freq_kHz : clk.data.range.maxFreq_kHz)
+
+int nvapi_pstateinfo(unsigned int devNum)
+{
+	uint32_t n;
+	NvAPI_Status ret;
+
+	unsigned int current = 0xFF;
+	// useless on init but...
+	nvapi_getpstate(devNum, &current);
+
+	NV_GPU_PERF_PSTATES20_INFO info = { 0 };
+	info.version = NV_GPU_PERF_PSTATES20_INFO_VER;
+	if ((ret = NvAPI_GPU_GetPstates20(phys[devNum], &info)) != NVAPI_OK) {
+		NvAPI_ShortString string;
+		NvAPI_GetErrorMessage(ret, string);
+		if (opt_debug)
+			applog(LOG_RAW, "NVAPI GetPstates20: %s", string);
+		return -1;
+	}
+	applog(LOG_RAW, "%u P-states with %u clocks %s",
+		info.numPstates, info.numClocks, info.numBaseVoltages ? "and voltage":"");
+	for (n=0; n < info.numPstates; n++) {
+		NV_GPU_PSTATE20_CLOCK_ENTRY_V1* clocks = info.pstates[n].clocks;
+		applog(LOG_RAW, "%sP%d: MEM %4u MHz%s GPU %3u-%4u MHz%s %4u mV%s \x7F %d/%d",
+			info.pstates[n].pstateId == current ? ">":" ", info.pstates[n].pstateId,
+			FREQ_GETVAL(clocks[1])/1000, clocks[1].bIsEditable ? "*":" ",
+			clocks[0].data.range.minFreq_kHz/1000, FREQ_GETVAL(clocks[0])/1000, clocks[0].bIsEditable ? "*":" ",
+			info.pstates[n].baseVoltages[0].volt_uV/1000, info.pstates[n].baseVoltages[0].bIsEditable ? "*": " ",
+			info.pstates[n].baseVoltages[0].voltDelta_uV.valueRange.min/1000, // range if editable
+			info.pstates[n].baseVoltages[0].voltDelta_uV.valueRange.max/1000);
+	}
+	// boost over volting (GTX 9xx) ?
+	for (n=0; n < info.ov.numVoltages; n++) {
+		applog(LOG_RAW, " OV: %u mV%s + %d/%d",
+			info.ov.voltages[n].volt_uV/1000, info.ov.voltages[n].bIsEditable ? "*":" ",
+			info.ov.voltages[n].voltDelta_uV.valueRange.min/1000, info.ov.voltages[n].voltDelta_uV.valueRange.max/1000);
+	}
+
+	NV_GPU_CLOCK_FREQUENCIES freqs = { 0 };
+	freqs.version = NV_GPU_CLOCK_FREQUENCIES_VER;
+	freqs.ClockType = NV_GPU_CLOCK_FREQUENCIES_CURRENT_FREQ;
+	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &freqs);
+	applog(LOG_RAW, "     MEM %4.0f MHz  GPU %8.2f MHz    >Current",
+		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_MEMORY].frequency / 1000,
+		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency / 1000);
+
+	freqs.ClockType = NV_GPU_CLOCK_FREQUENCIES_BASE_CLOCK;
+	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &freqs);
+	applog(LOG_RAW, "     MEM %4.0f MHz  GPU %8.2f MHz     Base Clocks",
+		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_MEMORY].frequency / 1000,
+		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency / 1000);
+
+	freqs.ClockType = NV_GPU_CLOCK_FREQUENCIES_BOOST_CLOCK;
+	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &freqs);
+	applog(LOG_RAW, "     MEM %4.0f MHz  GPU %8.2f MHz     Boost Clocks",
+		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_MEMORY].frequency / 1000,
+		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency / 1000);
+	
+#if 1
+	NV_GPU_THERMAL_SETTINGS tset = { 0 };
+	NVAPI_GPU_THERMAL_INFO tnfo = { 0 };
+	NVAPI_GPU_THERMAL_LIMIT tlim = { 0 };
+	tset.version = NV_GPU_THERMAL_SETTINGS_VER;
+	NvAPI_GPU_GetThermalSettings(phys[devNum], 0, &tset);
+	tnfo.version = NVAPI_GPU_THERMAL_INFO_VER;
+	NvAPI_DLL_ClientThermalPoliciesGetInfo(phys[devNum], &tnfo);
+	tlim.version = NVAPI_GPU_THERMAL_LIMIT_VER;
+	if ((ret = NvAPI_DLL_ClientThermalPoliciesGetLimit(phys[devNum], &tlim)) == NVAPI_OK) {
+		applog(LOG_RAW, " Thermal limit is set to %u, current Tc %d, range [%u-%u]",
+			tlim.entries[0].value >> 8, tset.sensor[0].currentTemp,
+			tnfo.entries[0].min_temp >> 8, tnfo.entries[0].max_temp >> 8);
+		// ok
+		//tlim.entries[0].value = 80 << 8;
+		//tlim.flags = 1;
+		//ret = NvAPI_DLL_ClientThermalPoliciesSetLimit(phys[devNum], &tlim);
+	}
+#endif
+	uint8_t plim = nvapi_getplimit(devNum);
+	applog(LOG_RAW, " Power limit coef. is set to %u%%", (uint32_t) plim);
+
+#if 1
+	// seems empty..
+	NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS volts = { 0 };
+	volts.version = NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS_VER;
+	ret = NvAPI_DLL_GetVoltageDomainsStatus(phys[devNum], &volts);
+#endif
+
+#if 1
+	// Read pascal Clocks Table, Empty on 9xx
+	NVAPI_CLOCKS_RANGE ranges = { 0 };
+	ranges.version = NVAPI_CLOCKS_RANGE_VER;
+	ret = NvAPI_DLL_GetClockBoostRanges(phys[devNum], &ranges);
+	NVAPI_CLOCK_MASKS boost = { 0 };
+	boost.version = NVAPI_CLOCK_MASKS_VER;
+	ret = NvAPI_DLL_GetClockBoostMask(phys[devNum], &boost);
+	int gpuClocks = 0, memClocks = 0;
+	for (n=0; n < 80+23; n++) {
+		if (boost.clocks[n].memDelta) memClocks++;
+		if (boost.clocks[n].gpuDelta) gpuClocks++;
+	}
+
+	if (gpuClocks || memClocks) {
+		applog(LOG_RAW, "Boost table contains %d gpu clocks and %d mem clocks.", gpuClocks, memClocks);
+		NVAPI_CLOCK_TABLE table = { 0 };
+		table.version = NVAPI_CLOCK_TABLE_VER;
+		memcpy(table.mask, boost.mask, 12);
+		ret = NvAPI_DLL_GetClockBoostTable(phys[devNum], &table);
+		for (n=0; n < 12; n++) {
+			if (table.buf0[n] != 0) applog(LOG_RAW, "boost table 0[%u] not empty (%u)", n, table.buf0[n]);
+		}
+		for (n=0; n < 80; n++) {
+			if (table.gpuDeltas[n].freqDelta)
+				applog(LOG_RAW, "boost gpu clock delta %u set to %d MHz", n, table.gpuDeltas[n].freqDelta/1000);
+		}
+		for (n=0; n < 23; n++) {
+			if (table.memFilled[n])
+				applog(LOG_RAW, "boost mem clock delta %u set to %d MHz", n, table.memDeltas[n]/1000);
+		}
+		for (n=0; n < 1529; n++) {
+			if (table.buf1[n] != 0) applog(LOG_RAW, "boost table 1[%u] not empty (%u)", n, table.buf1[n]);
+		}
+	}
+#endif
+	return 0;
+}
+
 uint8_t nvapi_getplimit(unsigned int devNum)
 {
 	NvAPI_Status ret = NVAPI_OK;
@@ -960,7 +1089,7 @@ uint8_t nvapi_getplimit(unsigned int devNum)
 		NvAPI_ShortString string;
 		NvAPI_GetErrorMessage(ret, string);
 		if (opt_debug)
-			applog(LOG_DEBUG, "NVAPI GetPowerPoliciesStatus: %s", string);
+			applog(LOG_DEBUG, "NVAPI PowerPoliciesGetStatus: %s", string);
 		return 0;
 	}
 	return (uint8_t) (pol.entries[0].power / 1000); // in percent
@@ -991,7 +1120,7 @@ int nvapi_setplimit(unsigned int devNum, uint16_t percent)
 		NvAPI_ShortString string;
 		NvAPI_GetErrorMessage(ret, string);
 		if (opt_debug)
-			applog(LOG_DEBUG, "NVAPI SetPowerPoliciesStatus: %s", string);
+			applog(LOG_DEBUG, "NVAPI PowerPoliciesSetStatus: %s", string);
 		return -1;
 	}
 	return ret;
@@ -1071,6 +1200,10 @@ int nvapi_init()
 				nvapi_setplimit(nvapi_dev_map[dev_id], device_plimit[dev_id]); // 0=default
 				uint32_t res = nvapi_getplimit(nvapi_dev_map[dev_id]);
 				gpulog(LOG_INFO, n, "NVAPI power limit is set to %u%%", res);
+			}
+			if (device_pstate[dev_id]) {
+				if (opt_debug) nvapi_pstateinfo(nvapi_dev_map[dev_id]);
+				// todo...
 			}
 		}
 	}
@@ -1174,6 +1307,8 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 	if (support == -1) {
 		unsigned int pct = 0;
 		nvapi_getusage(nvapi_dev_map[gpu->gpu_id], &pct);
+		pct *= nvapi_getplimit(nvapi_dev_map[gpu->gpu_id]);
+		pct /= 100;
 		mw = pct; // to fix
 	}
 #endif
