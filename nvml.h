@@ -41,7 +41,7 @@ enum nvmlEnableState_t {
 
 enum nvmlRestrictedAPI_t {
 	NVML_RESTRICTED_API_SET_APPLICATION_CLOCKS = 0,
-	NVML_RESTRICTED_API_SET_AUTO_BOOSTED_CLOCKS = 1,
+	NVML_RESTRICTED_API_SET_AUTO_BOOSTED_CLOCKS = 1, // not for GTX cards
 	NVML_RESTRICTED_API_COUNT = 2
 };
 
@@ -165,13 +165,10 @@ typedef struct {
 	nvmlReturn_t (*nvmlDeviceGetCpuAffinity)(nvmlDevice_t, unsigned int cpuSetSize, unsigned long* cpuSet);
 	nvmlReturn_t (*nvmlDeviceSetCpuAffinity)(nvmlDevice_t);
 #endif
-	nvmlReturn_t (*nvmlDeviceGetAutoBoostedClocksEnabled)(nvmlDevice_t, nvmlEnableState_t *isEnabled, nvmlEnableState_t *defaultIsEnabled);
-	nvmlReturn_t (*nvmlDeviceSetAutoBoostedClocksEnabled)(nvmlDevice_t, nvmlEnableState_t enabled);
 	// v346
 	nvmlReturn_t (*nvmlDeviceGetPcieThroughput)(nvmlDevice_t, nvmlPcieUtilCounter_t, unsigned int *value);
 	// v36x (API 8)
 	nvmlReturn_t (*nvmlDeviceGetClock)(nvmlDevice_t, nvmlClockType_t clockType, nvmlClockId_t clockId, unsigned int *clockMHz);
-	nvmlReturn_t (*nvmlDeviceGetMaxCustomerBoostClock)(nvmlDevice_t, nvmlClockType_t clockType, unsigned int *clockMHz);
 #ifdef __linux__
 	nvmlReturn_t (*nvmlSystemGetTopologyGpuSet)(unsigned int cpuNumber, unsigned int *count, nvmlDevice_t *deviceArray);
 	nvmlReturn_t (*nvmlDeviceGetTopologyNearestGpus)(nvmlDevice_t, nvmlGpuTopologyLevel_t level, unsigned int *count, nvmlDevice_t *deviceArray);

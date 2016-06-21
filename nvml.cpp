@@ -196,19 +196,12 @@ nvml_handle * nvml_create()
 	nvmlh->nvmlDeviceSetCpuAffinity = (nvmlReturn_t (*)(nvmlDevice_t))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceSetCpuAffinity");
 #endif
-	/* NVML_ERROR_NOT_SUPPORTED
-	nvmlh->nvmlDeviceGetAutoBoostedClocksEnabled = (nvmlReturn_t (*)(nvmlDevice_t, nvmlEnableState_t *isEnabled, nvmlEnableState_t *defaultIsEnabled))
-		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetAutoBoostedClocksEnabled");
-	nvmlh->nvmlDeviceSetAutoBoostedClocksEnabled = (nvmlReturn_t (*)(nvmlDevice_t, nvmlEnableState_t enabled))
-		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceSetAutoBoostedClocksEnabled"); */
 	// v346
 	nvmlh->nvmlDeviceGetPcieThroughput = (nvmlReturn_t (*)(nvmlDevice_t, nvmlPcieUtilCounter_t, unsigned int *value))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetPcieThroughput");
 	// v36x (API 8 / Pascal)
 	nvmlh->nvmlDeviceGetClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t clockType, nvmlClockId_t clockId, unsigned int *clockMHz))
 		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetClock");
-	nvmlh->nvmlDeviceGetMaxCustomerBoostClock = (nvmlReturn_t (*)(nvmlDevice_t, nvmlClockType_t clockType, unsigned int *clockMHz))
-		wrap_dlsym(nvmlh->nvml_dll, "nvmlDeviceGetMaxCustomerBoostClock");
 
 	if (nvmlh->nvmlInit == NULL ||
 			nvmlh->nvmlShutdown == NULL ||
@@ -572,18 +565,6 @@ void nvml_print_device_info(int dev_id)
 		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_CURRENT, &mem_clk);
 		if (rc == NVML_SUCCESS) {
 			fprintf(stderr, LSTDEV_PFX "CURRENT MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
-		}
-		// NVML_ERROR_NOT_SUPPORTED on Maxwell (361.62)
-		hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_CUSTOMER_BOOST_MAX, &gpu_clk);
-		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_CUSTOMER_BOOST_MAX, &mem_clk);
-		if (rc == NVML_SUCCESS) {
-			fprintf(stderr, LSTDEV_PFX "BOOSTED MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
-		}
-		// NVML_ERROR_NOT_SUPPORTED on Maxwell (361.62)
-		hnvml->nvmlDeviceGetMaxCustomerBoostClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, &gpu_clk);
-		rc = hnvml->nvmlDeviceGetMaxCustomerBoostClock(hnvml->devs[n], NVML_CLOCK_MEM, &mem_clk);
-		if (rc == NVML_SUCCESS) {
-			fprintf(stderr, LSTDEV_PFX "MXBOOST MEM %4u GPU %4u MHz\n", mem_clk, gpu_clk);
 		}
 	}
 }
