@@ -9,5 +9,5 @@
 extracflags="-march=native -D_REENTRANT -falign-functions=16 -falign-jumps=16 -falign-labels=16"
 
 CUDA_CFLAGS="-O3 -lineno -Xcompiler -Wall  -D_FORCE_INLINES" \
-	./configure CXXFLAGS="-O3 $extracflags" --with-cuda=/usr/local/cuda --with-nvml=libnvidia-ml.so
+	./configure CXXFLAGS="-O3 $extracflags" --with-cuda=/usr/local/cuda-6.5 --with-nvml=libnvidia-ml.so
 

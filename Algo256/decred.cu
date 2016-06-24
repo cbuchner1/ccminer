@@ -367,9 +367,6 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 	const dim3 grid((throughput + TPB-1)/(TPB));
 	const dim3 block(TPB);
 
-	if (opt_benchmark) {
-		ptarget[6] = swab32(0xff);
-	}
 	if (!init[thr_id]){
 		cudaSetDevice(dev_id);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
@@ -431,6 +428,8 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 					}
 					*pnonce = work->nonces[0];
 					return rc;
+				} else {
+					gpulog(LOG_WARNING, thr_id, "result %u for %08x does not validate on CPU!", i, h_resNonce[thr_id][i]);
 				}
 			}
 		}

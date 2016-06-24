@@ -1202,7 +1202,6 @@ int nvapi_init()
 				gpulog(LOG_INFO, n, "NVAPI power limit is set to %u%%", res);
 			}
 			if (device_pstate[dev_id]) {
-				if (opt_debug) nvapi_pstateinfo(nvapi_dev_map[dev_id]);
 				// todo...
 			}
 		}
