@@ -964,6 +964,23 @@ int nvapi_pstateinfo(unsigned int devNum)
 	nvapi_getpstate(devNum, &current);
 
 #if 0
+	// try :p
+	uint32_t* buf = (uint32_t*) calloc(1, 0x8000);
+	for (int i=8; i < 0x8000 && buf; i+=4) {
+		buf[0] = 0x10000 + i;
+		if ((ret = NvAPI_DLL_XXX(phys[devNum], buf)) != NVAPI_INCOMPATIBLE_STRUCT_VERSION) {
+			NvAPI_ShortString string;
+			NvAPI_GetErrorMessage(ret, string);
+			applog(LOG_BLUE, "struct size is %06x : %s", buf[0], string);
+			for (int n=0; n < i/32; n++)
+				applog_hex(&buf[n*(32/4)], 80);
+			break;
+		}
+	}
+	free(buf);
+#endif
+
+#if 0
 	// Unsure of the meaning of these values
 	NVAPI_GPU_POWER_TOPO topo = { 0 };
 	topo.version = NVAPI_GPU_POWER_TOPO_VER;
@@ -1056,13 +1073,6 @@ int nvapi_pstateinfo(unsigned int devNum)
 			tnfo.entries[0].min_temp >> 8, tnfo.entries[0].max_temp >> 8);
 	}
 
-#if 0
-	// seems empty..
-	NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS volts = { 0 };
-	volts.version = NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS_VER;
-	ret = NvAPI_DLL_GetVoltageDomainsStatus(phys[devNum], &volts);
-#endif
-
 #if 1
 	// Read pascal Clocks Table, Empty on 9xx
 	NVAPI_CLOCKS_RANGE ranges = { 0 };
@@ -1078,7 +1088,7 @@ int nvapi_pstateinfo(unsigned int devNum)
 	}
 
 	// PASCAL GTX ONLY
-	//if (gpuClocks || memClocks) {
+	if (gpuClocks || memClocks) {
 		NVAPI_CLOCK_TABLE table = { 0 };
 		table.version = NVAPI_CLOCK_TABLE_VER;
 		memcpy(table.mask, boost.mask, 12);
@@ -1126,7 +1136,20 @@ int nvapi_pstateinfo(unsigned int devNum)
 			if (table.buf1[n] != 0) applog(LOG_RAW, "volt table buf1[%u] not empty (%u)", n, curve.buf1[n]);
 		}
 		applog(LOG_RAW, " Volts table contains %d gpu and %d mem levels.", gpuClocks, memClocks);
-	//}
+	}
+
+	// Maxwell
+	else {
+		NVAPI_VOLTAGES_TABLE volts = { 0 };
+		volts.version = NVAPI_VOLTAGES_TABLE_VER;
+		int entries = 0;
+		ret = NvAPI_DLL_GetVoltages(phys[devNum], &volts);
+		for (n=0; n < 128; n++) {
+			if (volts.entries[n].volt_uV)
+				entries++;
+		}
+		applog(LOG_RAW, " Volts table contains %d gpu levels.", entries);
+	}
 #endif
 	return 0;
 }
@@ -1214,17 +1237,43 @@ int nvapi_set_tlimit(unsigned int devNum, uint8_t limit)
 int nvapi_set_gpuclock(unsigned int devNum, uint32_t clock)
 {
 	NvAPI_Status ret;
+	NvS32 delta = 0;
 
 	if (devNum >= nvapi_dev_cnt)
 		return -ENODEV;
-
+#if 0
+	// wrong api to get default base clock when modified, cuda props seems fine
 	NV_GPU_CLOCK_FREQUENCIES freqs = { 0 };
 	freqs.version = NV_GPU_CLOCK_FREQUENCIES_VER;
 	freqs.ClockType = NV_GPU_CLOCK_FREQUENCIES_BASE_CLOCK;
 	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &freqs);
-	if (ret) return ret;
+	if (ret == NVAPI_OK)  {
+		delta = (clock * 1000) - freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency;
+	}
 
-	NvS32 diff = (clock * 1000) - freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency;
+	NV_GPU_PERF_PSTATES_INFO deffreqs = { 0 };
+	deffreqs.version = NV_GPU_PERF_PSTATES_INFO_VER;
+	ret = NvAPI_GPU_GetPstatesInfoEx(phys[devNum], &deffreqs, 0); // we want default clock grr!
+	if (ret == NVAPI_OK) {
+		if (deffreqs.pstates[0].clocks[1].domainId == NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS)
+			delta = (clock * 1000) - deffreqs.pstates[0].clocks[1].freq*2;
+	}
+#endif
+
+	cudaDeviceProp props = { 0 };
+	NvU32 busId = 0xFFFF;
+	ret = NvAPI_GPU_GetBusId(phys[devNum], &busId);
+	for (int d=0; d<nvapi_dev_cnt; d++) {
+		 // unsure about devNum, so be safe
+		cudaGetDeviceProperties(&props, d);
+		if (props.pciBusID == busId) {
+			delta = (clock * 1000) - props.clockRate;
+			break;
+		}
+	}
+
+	if (delta == (clock * 1000))
+		return ret;
 
 	NV_GPU_PERF_PSTATES20_INFO_V1 pset1 = { 0 };
 	pset1.version = NV_GPU_PERF_PSTATES20_INFO_VER1;
@@ -1232,10 +1281,10 @@ int nvapi_set_gpuclock(unsigned int devNum, uint32_t clock)
 	pset1.numClocks = 1;
 	// Ok on both 1080 and 970
 	pset1.pstates[0].clocks[0].domainId = NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS;
-	pset1.pstates[0].clocks[0].freqDelta_kHz.value = diff;
+	pset1.pstates[0].clocks[0].freqDelta_kHz.value = delta;
 	ret = NvAPI_DLL_SetPstates20v1(phys[devNum], &pset1);
 	if (ret == NVAPI_OK) {
-		applog(LOG_INFO, "GPU #%u: boost gpu clock set to %u (delta %d)", devNum, clock, diff/1000);
+		applog(LOG_INFO, "GPU #%u: boost gpu clock set to %u (delta %d)", devNum, clock, delta/1000);
 	}
 	return ret;
 }
@@ -1243,28 +1292,43 @@ int nvapi_set_gpuclock(unsigned int devNum, uint32_t clock)
 int nvapi_set_memclock(unsigned int devNum, uint32_t clock)
 {
 	NvAPI_Status ret;
+	NvS32 delta = 0;
 
 	if (devNum >= nvapi_dev_cnt)
 		return -ENODEV;
 
+	// wrong to get default base clock (when modified) on maxwell (same as cuda props one)
 	NV_GPU_CLOCK_FREQUENCIES freqs = { 0 };
 	freqs.version = NV_GPU_CLOCK_FREQUENCIES_VER;
 	freqs.ClockType = NV_GPU_CLOCK_FREQUENCIES_BASE_CLOCK;
-	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &freqs);
-	if (ret) return ret;
+	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], &freqs); // wrong base clocks, useless
+	if (ret == NVAPI_OK)  {
+		delta = (clock * 1000) - freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_MEMORY].frequency;
+	}
 
-	NvS32 diff = (clock * 1000) - freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_MEMORY].frequency;
+	// seems ok on maxwell and pascal for the mem clocks
+	NV_GPU_PERF_PSTATES_INFO deffreqs = { 0 };
+	deffreqs.version = NV_GPU_PERF_PSTATES_INFO_VER;
+	ret = NvAPI_GPU_GetPstatesInfoEx(phys[devNum], &deffreqs, 0x1); // wrong def clocks, useless
+	if (ret == NVAPI_OK) {
+		if (deffreqs.pstates[0].clocks[0].domainId == NVAPI_GPU_PUBLIC_CLOCK_MEMORY)
+			delta = (clock * 1000) - deffreqs.pstates[0].clocks[0].freq;
+	}
+
+	if (delta == (clock * 1000))
+		return ret;
+
+	// todo: bounds check with GetPstates20
 
 	NV_GPU_PERF_PSTATES20_INFO_V1 pset1 = { 0 };
 	pset1.version = NV_GPU_PERF_PSTATES20_INFO_VER1;
 	pset1.numPstates = 1;
 	pset1.numClocks = 1;
-	// Memory boost clock seems only ok on pascal with this api
 	pset1.pstates[0].clocks[0].domainId = NVAPI_GPU_PUBLIC_CLOCK_MEMORY;
-	pset1.pstates[0].clocks[0].freqDelta_kHz.value = diff;
+	pset1.pstates[0].clocks[0].freqDelta_kHz.value = delta;
 	ret = NvAPI_DLL_SetPstates20v1(phys[devNum], &pset1);
 	if (ret == NVAPI_OK) {
-		applog(LOG_INFO, "GPU #%u: Boost mem clock set to %u (delta %d)", devNum, clock, diff/1000);
+		applog(LOG_INFO, "GPU #%u: Boost mem clock set to %u (delta %d)", devNum, clock, delta/1000);
 	}
 	return ret;
 }

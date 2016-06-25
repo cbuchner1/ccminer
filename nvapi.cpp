@@ -239,7 +239,7 @@ NvAPI_Status NvAPI_DLL_GetPerfClocks(NvPhysicalGpuHandle handle, void* pFreqs){
 	return (*pointer)(handle, pFreqs);
 }
 
-#define NVAPI_ID_PSTATE20_SET 0x0F4DAE6B // Need struct v1 of 7316 bytes (v2 semms unsupported)
+#define NVAPI_ID_PSTATE20_SET 0x0F4DAE6B
 // allow to set gpu/mem core freq delta
 NvAPI_Status NvAPI_DLL_SetPstates20v1(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO_V1 *pSet) {
 	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATES20_INFO_V1*) = NULL;
@@ -258,6 +258,17 @@ NvAPI_Status NvAPI_DLL_SetPstates20v2(NvPhysicalGpuHandle handle, NV_GPU_PERF_PS
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATES20_INFO_V2*))nvidia_handle->query(NVAPI_ID_PSTATE20_SET);
 	}
 	return (*pointer)(handle, pSet);
+}
+
+// maxwell voltage table
+#define NVAPI_ID_VOLTAGES 0x7D656244 // 1-40cc
+NvAPI_Status NvAPI_DLL_GetVoltages(NvPhysicalGpuHandle handle, NVAPI_VOLTAGES_TABLE *pInfo) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_VOLTAGES_TABLE*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTAGES_TABLE*))nvidia_handle->query(NVAPI_ID_VOLTAGES);
+	}
+	return (*pointer)(handle, pInfo);
 }
 
 #define NVAPI_ID_UNLOAD 0xD22BDD7E
