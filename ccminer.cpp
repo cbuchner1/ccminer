@@ -128,7 +128,8 @@ uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 uint32_t device_gpu_clocks[MAX_GPUS] = { 0 };
 uint32_t device_mem_clocks[MAX_GPUS] = { 0 };
 uint32_t device_plimit[MAX_GPUS] = { 0 };
-int8_t device_pstate[MAX_GPUS] = { -1 };
+uint8_t device_tlimit[MAX_GPUS] = { 0 };
+int8_t device_pstate[MAX_GPUS] = { -1, -1 };
 int opt_cudaschedule = -1;
 static bool opt_keep_clocks = false;
 
@@ -303,7 +304,10 @@ Options:\n\
       --plimit=100W     Set the gpu power limit (352.21+ driver)\n"
 #else /* via nvapi.dll */
 "\
-      --plimit=100      Set the gpu power limit in percentage\n"
+      --mem-clock=3505  Set the gpu memory boost clock\n\
+      --gpu-clock=1150  Set the gpu engine boost clock\n\
+      --plimit=100      Set the gpu power limit in percentage\n\
+      --tlimit=80       Set the gpu thermal limit in degrees\n"
 #endif
 #ifdef HAVE_SYSLOG_H
 "\
@@ -380,6 +384,7 @@ struct option options[] = {
 	{ "pstate", 1, NULL, 1072 },
 	{ "plimit", 1, NULL, 1073 },
 	{ "keep-clocks", 0, NULL, 1074 },
+	{ "tlimit", 1, NULL, 1075 },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
 	{ "syslog-prefix", 1, NULL, 1018 },
@@ -2687,7 +2692,8 @@ void parse_arg(int key, char *arg)
 		#ifdef USE_WRAPNVML
 		hnvml = nvml_create();
 		#ifdef WIN32
-		if (!hnvml) nvapi_init();
+		nvapi_init();
+		nvapi_init_settings();
 		#endif
 		#endif
 		cuda_print_devices();
@@ -2930,6 +2936,17 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1074: /* --keep-clocks */
 		opt_keep_clocks = true;
+		break;
+	case 1075: /* --tlimit */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0;
+			while (pch != NULL && n < MAX_GPUS) {
+				int dev_id = device_map[n++];
+				device_tlimit[dev_id] = (uint8_t) atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+		}
 		break;
 	case 1005:
 		opt_benchmark = true;
@@ -3504,13 +3521,14 @@ int main(int argc, char *argv[])
 	if (hnvml) {
 		bool gpu_reinit = (opt_cudaschedule >= 0); //false
 		cuda_devicenames(); // refresh gpu vendor name
-		applog(LOG_INFO, "NVML GPU monitoring enabled.");
+		if (!opt_quiet)
+			applog(LOG_INFO, "NVML GPU monitoring enabled.");
 		for (int n=0; n < active_gpus; n++) {
 			if (nvml_set_pstate(hnvml, device_map[n]) == 1)
 				gpu_reinit = true;
 			if (nvml_set_plimit(hnvml, device_map[n]) == 1)
 				gpu_reinit = true;
-			if (nvml_set_clocks(hnvml, device_map[n]) == 1)
+			if (!is_windows() && nvml_set_clocks(hnvml, device_map[n]) == 1)
 				gpu_reinit = true;
 			if (gpu_reinit) {
 				cuda_reset_device(n, NULL);
@@ -3518,20 +3536,25 @@ int main(int argc, char *argv[])
 		}
 	}
 #endif
+#ifdef WIN32
+	if (nvapi_init() == 0) {
+		if (!opt_quiet)
+			applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
+		if (!hnvml) {
+			cuda_devicenames(); // refresh gpu vendor name
+		}
+		nvapi_init_settings();
+	}
+#endif
+	else if (!hnvml && !opt_quiet)
+		applog(LOG_INFO, "GPU monitoring is not available.");
+
 	// force reinit to set default device flags
 	if (opt_cudaschedule >= 0 && !hnvml) {
 		for (int n=0; n < active_gpus; n++) {
 			cuda_reset_device(n, NULL);
 		}
 	}
-#ifdef WIN32
-	if (!hnvml && nvapi_init() == 0) {
-		applog(LOG_INFO, "NVAPI GPU monitoring enabled.");
-		cuda_devicenames(); // refresh gpu vendor name
-	}
-#endif
-	else if (!hnvml)
-		applog(LOG_INFO, "GPU monitoring is not available.");
 #endif
 
 	if (opt_api_listen) {

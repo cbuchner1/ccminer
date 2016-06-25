@@ -243,6 +243,8 @@ features.
   June 2016       v1.8.0
                   Pascal support with cuda 8
                   x11evo algo (XRE)
+                  Lyra2v2 and Decred hashrate improvements
+                  Enhance windows NVAPI clock and power limits
 
   May  18th 2016  v1.7.6
                   Decred vote support

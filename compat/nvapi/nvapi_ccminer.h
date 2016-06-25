@@ -35,6 +35,18 @@ typedef struct {
 
 typedef struct {
 	NvU32 version;
+	NvU32 count;
+	struct {
+		NvU32 unknown1;
+		NvU32 unknown2;
+		NvU32 power; // unsure ?? 85536 to 95055 on 1080, 104825+ on 970
+		NvU32 unknown4;
+	} entries[4];
+} NVAPI_GPU_POWER_TOPO;
+#define NVAPI_GPU_POWER_TOPO_VER MAKE_NVAPI_VERSION(NVAPI_GPU_POWER_TOPO, 1)
+
+typedef struct {
+	NvU32 version;
 	NvU32 flags;
 	struct {
 		NvU32 controller;
@@ -134,11 +146,48 @@ typedef struct {
 } NVAPI_CLOCK_TABLE; // 9248 bytes
 #define NVAPI_CLOCK_TABLE_VER MAKE_NVAPI_VERSION(NVAPI_CLOCK_TABLE, 1)
 
+typedef struct {
+	NvU32 version;
+	NvU32 mask[4]; // 80 bits mask
+	NvU32 buf0[12];
+	struct {
+		NvU32 a; // 0
+		NvU32 freq_kHz;
+		NvU32 volt_uV;
+		NvU32 d;
+		NvU32 e;
+		NvU32 f;
+		NvU32 g;
+	} gpuEntries[80];
+	struct {
+		NvU32 a;  // 1 for idle values ?
+		NvU32 freq_kHz;
+		NvU32 volt_uV;
+		NvU32 d;
+		NvU32 e;
+		NvU32 f;
+		NvU32 g;
+	} memEntries[23];
+	NvU32 buf1[1064];
+} NVAPI_VFP_CURVE; // 7208 bytes (1-1c28)
+#define NVAPI_VFP_CURVE_VER MAKE_NVAPI_VERSION(NVAPI_VFP_CURVE, 1)
+
+typedef struct {
+	NvU32 version;
+	NvU32 flags;
+	NvU32 count; // unsure
+	NvU32 unknown;
+	NvU32 value_uV;
+	NvU32 buf1[30];
+} NVAPI_VOLT_STATUS; // 140 bytes (1-008c)
+#define NVAPI_VOLT_STATUS_VER MAKE_NVAPI_VERSION(NVAPI_VOLT_STATUS, 1)
+
 NvAPI_Status NvAPI_DLL_GetInterfaceVersionString(NvAPI_ShortString string);
 
 NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetInfo(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_INFO*);
 NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_STATUS*);
 NvAPI_Status NvAPI_DLL_ClientPowerPoliciesSetStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_STATUS*);
+NvAPI_Status NvAPI_DLL_ClientPowerTopologyGetStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_TOPO*); // EDCF624E 1-0048
 
 NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetInfo(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_THERMAL_INFO*);
 NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetLimit(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_THERMAL_LIMIT*);
@@ -146,17 +195,21 @@ NvAPI_Status NvAPI_DLL_ClientThermalPoliciesSetLimit(NvPhysicalGpuHandle hPhysic
 
 NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle hPhysicalGpu, NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS*);
 
-// to dig...
+// Pascal GTX only
 NvAPI_Status NvAPI_DLL_GetClockBoostRanges(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCKS_RANGE*);
 NvAPI_Status NvAPI_DLL_GetClockBoostMask(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_MASKS*); // 0x507B4B59
 NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_TABLE*); // 0x23F1B133
+NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VFP_CURVE*); // 0x21537AD4
 
+// Maxwell ?
+NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VOLT_STATUS*); // 0xC16C7E2C
 
 NvAPI_Status NvAPI_DLL_GetPerfClocks(NvPhysicalGpuHandle hPhysicalGpu, void* pFreqs);
 
 NvAPI_Status NvAPI_DLL_GetSerialNumber(NvPhysicalGpuHandle handle, NvAPI_ShortString serial);
 
-NvAPI_Status NvAPI_DLL_SetPstates20(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO *pPerfPstatesInfo);
+NvAPI_Status NvAPI_DLL_SetPstates20v1(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO_V1 *pSet);
+NvAPI_Status NvAPI_DLL_SetPstates20v2(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO_V2 *pSet);
 
 NvAPI_Status NvAPI_DLL_Unload();
 

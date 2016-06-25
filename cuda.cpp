@@ -199,9 +199,19 @@ void cuda_reset_device(int thr_id, bool *init)
 int cuda_available_memory(int thr_id)
 {
 	int dev_id = device_map[thr_id % MAX_GPUS];
-	size_t mtotal, mfree = 0;
+	size_t mtotal = 0, mfree = 0;
+	cudaDeviceProp props;
 	cudaSetDevice(dev_id);
-	cudaMemGetInfo(&mfree, &mtotal);
+	cudaDeviceSynchronize();
+	if (cudaGetDeviceProperties(&props, dev_id) == cudaSuccess) {
+#if defined(_WIN32) && CUDART_VERSION == 6050 && defined(_DEBUG)
+		if (!strstr(props.name, "GTX 10"))
+			// seems to crash in vstudio on 8GB cards (pascal ?) with cuda 6.5
+			cudaMemGetInfo(&mfree, &mtotal);
+#else
+		cudaMemGetInfo(&mfree, &mtotal);
+#endif
+	}
 	return (int) (mfree / (1024 * 1024));
 }
 
