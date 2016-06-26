@@ -70,15 +70,26 @@ typedef struct {
 } NVAPI_GPU_THERMAL_LIMIT;
 #define NVAPI_GPU_THERMAL_LIMIT_VER MAKE_NVAPI_VERSION(NVAPI_GPU_THERMAL_LIMIT, 2)
 
+// Maxwell gpu core voltage reading
 typedef struct {
 	NvU32 version;
 	NvU32 flags;
-	struct {
-		NvU32 voltage_domain;
-		NvU32 current_voltage;
-	} entries[16];
-} NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS;
-#define NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS_VER MAKE_NVAPI_VERSION(NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS, 1)
+	NvU32 count; // unsure
+	NvU32 unknown;
+	NvU32 value_uV;
+	NvU32 buf1[30];
+} NVAPI_VOLT_STATUS; // 140 bytes (1-008c)
+#define NVAPI_VOLT_STATUS_VER MAKE_NVAPI_VERSION(NVAPI_VOLT_STATUS, 1)
+
+// Pascal gpu core voltage reading
+typedef struct {
+	NvU32 version;
+	NvU32 flags;
+	NvU32 nul[8];
+	NvU32 value_uV;
+	NvU32 buf1[8];
+} NVAPI_VOLTAGE_STATUS; // 76 bytes (1-004c)
+#define NVAPI_VOLTAGE_STATUS_VER MAKE_NVAPI_VERSION(NVAPI_VOLTAGE_STATUS, 1)
 
 typedef struct {
 	NvU32 version;
@@ -127,7 +138,7 @@ typedef struct {
 // contains the gpu/mem clocks deltas
 typedef struct {
 	NvU32 version;
-	NvU32 mask[4]; // 80 bits mask
+	NvU32 mask[4]; // 80 bits mask (could be 8x 32bits)
 	NvU32 buf0[12];
 	struct {
 		NvU32 a;
@@ -175,16 +186,6 @@ typedef struct {
 typedef struct {
 	NvU32 version;
 	NvU32 flags;
-	NvU32 count; // unsure
-	NvU32 unknown;
-	NvU32 value_uV;
-	NvU32 buf1[30];
-} NVAPI_VOLT_STATUS; // 140 bytes (1-008c)
-#define NVAPI_VOLT_STATUS_VER MAKE_NVAPI_VERSION(NVAPI_VOLT_STATUS, 1)
-
-typedef struct {
-	NvU32 version;
-	NvU32 flags;
 	NvU32 filled; // 1
 	struct {
 		NvU32 volt_uV;
@@ -195,7 +196,31 @@ typedef struct {
 } NVAPI_VOLTAGES_TABLE; // 16588 bytes (1-40cc)
 #define NVAPI_VOLTAGES_TABLE_VER MAKE_NVAPI_VERSION(NVAPI_VOLTAGES_TABLE, 1)
 
+typedef struct {
+	NvU32 version;
+	NvU32 val1; // 7
+	NvU32 val2; // 0x3F (63.)
+	NvU32 pad[16];
+} NVAPI_GPU_PERF_INFO; // 76 bytes (1-004c)
+#define NVAPI_GPU_PERF_INFO_VER MAKE_NVAPI_VERSION(NVAPI_GPU_PERF_INFO, 1)
+
+typedef struct {
+	NvU32 version;
+	NvU32 flags;     // 0
+	NvU64 timeRef;   // increment with time
+	NvU64 val1;      // seen 1 4 5 while mining, 16 else
+	NvU64 val2;      // seen 7 and 3
+	NvU64 values[3]; // increment with time
+	NvU32 pad[326];  // empty
+}
+NVAPI_GPU_PERF_STATUS; // 1360 bytes (1-0550)
+#define NVAPI_GPU_PERF_STATUS_VER MAKE_NVAPI_VERSION(NVAPI_GPU_PERF_STATUS, 1)
+
+
 NvAPI_Status NvAPI_DLL_GetInterfaceVersionString(NvAPI_ShortString string);
+
+NvAPI_Status NvAPI_DLL_PerfPoliciesGetInfo(NvPhysicalGpuHandle, NVAPI_GPU_PERF_INFO*); // 409D9841 1-004c
+NvAPI_Status NvAPI_DLL_PerfPoliciesGetStatus(NvPhysicalGpuHandle, NVAPI_GPU_PERF_STATUS*); // 3D358A0C 1-0550
 
 NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetInfo(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_INFO*);
 NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_STATUS*);
@@ -206,13 +231,13 @@ NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetInfo(NvPhysicalGpuHandle hPhysica
 NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetLimit(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_THERMAL_LIMIT*);
 NvAPI_Status NvAPI_DLL_ClientThermalPoliciesSetLimit(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_THERMAL_LIMIT*);
 
-NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle hPhysicalGpu, NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS*);
-
 // Pascal GTX only
 NvAPI_Status NvAPI_DLL_GetClockBoostRanges(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCKS_RANGE*);
 NvAPI_Status NvAPI_DLL_GetClockBoostMask(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_MASKS*); // 0x507B4B59
 NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_TABLE*); // 0x23F1B133
+NvAPI_Status NvAPI_DLL_SetClockBoostTable(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_TABLE*); // 0x0733E009
 NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VFP_CURVE*); // 0x21537AD4
+NvAPI_Status NvAPI_DLL_GetCurrentVoltage(NvPhysicalGpuHandle handle, NVAPI_VOLTAGE_STATUS* status); // 0x465F9BCF 1-004c
 
 // Maxwell only
 NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VOLT_STATUS*); // 0xC16C7E2C

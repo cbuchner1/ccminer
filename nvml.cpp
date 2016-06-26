@@ -968,12 +968,12 @@ int nvapi_pstateinfo(unsigned int devNum)
 	uint32_t* buf = (uint32_t*) calloc(1, 0x8000);
 	for (int i=8; i < 0x8000 && buf; i+=4) {
 		buf[0] = 0x10000 + i;
-		if ((ret = NvAPI_DLL_XXX(phys[devNum], buf)) != NVAPI_INCOMPATIBLE_STRUCT_VERSION) {
+		if ((ret = NvAPI_DLL_GetXXX(phys[devNum], buf)) != NVAPI_INCOMPATIBLE_STRUCT_VERSION) {
 			NvAPI_ShortString string;
 			NvAPI_GetErrorMessage(ret, string);
 			applog(LOG_BLUE, "struct size is %06x : %s", buf[0], string);
 			for (int n=0; n < i/32; n++)
-				applog_hex(&buf[n*(32/4)], 80);
+				applog_hex(&buf[n*(32/4)], 32);
 			break;
 		}
 	}
@@ -1049,9 +1049,16 @@ int nvapi_pstateinfo(unsigned int devNum)
 		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency / 1000);
 
 	// Maxwell only
-	NVAPI_VOLT_STATUS pvdom = { 0 };
-	pvdom.version = NVAPI_VOLT_STATUS_VER;
-	if ((ret = NvAPI_DLL_GetVoltageDomainsStatus(phys[devNum], &pvdom)) == NVAPI_OK) {
+	NVAPI_VOLT_STATUS mvdom = { 0 };
+	mvdom.version = NVAPI_VOLT_STATUS_VER;
+	if ((ret = NvAPI_DLL_GetVoltageDomainsStatus(phys[devNum], &mvdom)) == NVAPI_OK) {
+		if (mvdom.value_uV)
+			applog(LOG_RAW, " GPU Voltage is %u mV", mvdom.value_uV/1000);
+	}
+	// Pascal only
+	NVAPI_VOLTAGE_STATUS pvdom = { 0 };
+	pvdom.version = NVAPI_VOLTAGE_STATUS_VER;
+	if ((ret = NvAPI_DLL_GetCurrentVoltage(phys[devNum], &pvdom)) == NVAPI_OK) {
 		if (pvdom.value_uV)
 			applog(LOG_RAW, " GPU Voltage is %u mV", pvdom.value_uV/1000);
 	}
@@ -1150,6 +1157,24 @@ int nvapi_pstateinfo(unsigned int devNum)
 		}
 		applog(LOG_RAW, " Volts table contains %d gpu levels.", entries);
 	}
+
+	NV_DISPLAY_DRIVER_MEMORY_INFO mem = { 0 };
+	mem.version = NV_DISPLAY_DRIVER_MEMORY_INFO_VER;
+	if ((ret = NvAPI_GPU_GetMemoryInfo(phys[devNum], &mem)) == NVAPI_OK) {
+		applog(LOG_RAW, " Memory: %u MB, %.1f used", mem.dedicatedVideoMemory/1024,
+			(double) (mem.availableDedicatedVideoMemory - mem.curAvailableDedicatedVideoMemory)/1024);
+	}
+#if 0 /* some undetermined stats */
+	NVAPI_GPU_PERF_INFO pi = { 0 };
+	pi.version = NVAPI_GPU_PERF_INFO_VER;
+	ret = NvAPI_DLL_PerfPoliciesGetInfo(phys[devNum], &pi);
+
+	NVAPI_GPU_PERF_STATUS ps = { 0 };
+	ps.version = NVAPI_GPU_PERF_STATUS_VER;
+	ret = NvAPI_DLL_PerfPoliciesGetStatus(phys[devNum], &ps);
+	applog(LOG_BLUE, "%llx %lld. %lld. %llx %llx %llx", ps.timeRef, ps.val1, ps.val2, ps.values[0], ps.values[1], ps.values[2]);
+#endif
+
 #endif
 	return 0;
 }
@@ -1263,7 +1288,7 @@ int nvapi_set_gpuclock(unsigned int devNum, uint32_t clock)
 	cudaDeviceProp props = { 0 };
 	NvU32 busId = 0xFFFF;
 	ret = NvAPI_GPU_GetBusId(phys[devNum], &busId);
-	for (int d=0; d<nvapi_dev_cnt; d++) {
+	for (int d=0; d < (int) nvapi_dev_cnt; d++) {
 		 // unsure about devNum, so be safe
 		cudaGetDeviceProperties(&props, d);
 		if (props.pciBusID == busId) {

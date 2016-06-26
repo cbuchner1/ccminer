@@ -89,6 +89,26 @@ NvAPI_Status NvAPI_DLL_GetInterfaceVersionString(NvAPI_ShortString string) {
 	return (*pointer)(string);
 }
 
+#define NVAPI_ID_PERF_INFO 0x409D9841
+NvAPI_Status NvAPI_DLL_PerfPoliciesGetInfo(NvPhysicalGpuHandle handle, NVAPI_GPU_PERF_INFO* pInfo) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_GPU_PERF_INFO*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_PERF_INFO*))nvidia_handle->query(NVAPI_ID_PERF_INFO);
+	}
+	return (*pointer)(handle, pInfo);
+}
+
+#define NVAPI_ID_PERF_STATS 0x3D358A0C
+NvAPI_Status NvAPI_DLL_PerfPoliciesGetStatus(NvPhysicalGpuHandle handle, NVAPI_GPU_PERF_STATUS* pStatus) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_GPU_PERF_STATUS*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_PERF_STATUS*))nvidia_handle->query(NVAPI_ID_PERF_STATS);
+	}
+	return (*pointer)(handle, pStatus);
+}
+
 #define NVAPI_ID_POWER_INFO 0x34206D86
 NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetInfo(NvPhysicalGpuHandle handle, NVAPI_GPU_POWER_INFO* pInfo) {
 	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_GPU_POWER_INFO*) = NULL;
@@ -169,14 +189,24 @@ NvAPI_Status NvAPI_DLL_GetSerialNumber(NvPhysicalGpuHandle handle, NvAPI_ShortSt
 	return (*pointer)(handle, serial);
 }
 
-#define NVAPI_ID_VDOMAINS_GET 0xC16C7E2C
-NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle handle, NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS* status) {
-	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS*) = NULL;
+#define NVAPI_ID_VOLTAGE_GET 0x465F9BCF
+NvAPI_Status NvAPI_DLL_GetCurrentVoltage(NvPhysicalGpuHandle handle, NVAPI_VOLTAGE_STATUS* status) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_VOLTAGE_STATUS*) = NULL;
 	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
 	if(!pointer) {
-		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVIDIA_GPU_VOLTAGE_DOMAINS_STATUS*))nvidia_handle->query(NVAPI_ID_SERIALNUM_GET);
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTAGE_STATUS*))nvidia_handle->query(NVAPI_ID_VOLTAGE_GET);
 	}
 	return (*pointer)(handle, status);
+}
+
+#define NVAPI_ID_VOLT_STATUS_GET 0xC16C7E2C
+NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle handle, NVAPI_VOLT_STATUS* data) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_VOLT_STATUS*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*))nvidia_handle->query(NVAPI_ID_VOLT_STATUS_GET);
+	}
+	return (*pointer)(handle, data);
 }
 
 #define NVAPI_ID_CLK_RANGE_GET 0x64B43A6A // Pascal
@@ -199,14 +229,24 @@ NvAPI_Status NvAPI_DLL_GetClockBoostMask(NvPhysicalGpuHandle handle, NVAPI_CLOCK
 	return (*pointer)(handle, range);
 }
 
-#define NVAPI_ID_CLK_BOOST_TABLE 0x23F1B133 // Pascal
-NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle handle, NVAPI_CLOCK_TABLE* range) {
+#define NVAPI_ID_CLK_BOOST_TABLE_GET 0x23F1B133 // Pascal
+NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle handle, NVAPI_CLOCK_TABLE* table) {
 	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_CLOCK_TABLE*) = NULL;
 	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
 	if(!pointer) {
-		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_CLOCK_TABLE*))nvidia_handle->query(NVAPI_ID_CLK_BOOST_TABLE);
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_CLOCK_TABLE*))nvidia_handle->query(NVAPI_ID_CLK_BOOST_TABLE_GET);
 	}
-	return (*pointer)(handle, range);
+	return (*pointer)(handle, table);
+}
+
+#define NVAPI_ID_CLK_BOOST_TABLE_SET 0x0733E009 // Pascal
+NvAPI_Status NvAPI_DLL_SetClockBoostTable(NvPhysicalGpuHandle handle, NVAPI_CLOCK_TABLE* table) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_CLOCK_TABLE*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_CLOCK_TABLE*))nvidia_handle->query(NVAPI_ID_CLK_BOOST_TABLE_SET);
+	}
+	return (*pointer)(handle, table);
 }
 
 #define NVAPI_ID_VFP_CURVE_GET 0x21537AD4 // Pascal 39442CFB to check also, Set ?
@@ -217,16 +257,6 @@ NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle handle, NVAPI_VFP_CURVE* 
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VFP_CURVE*))nvidia_handle->query(NVAPI_ID_VFP_CURVE_GET);
 	}
 	return (*pointer)(handle, curve);
-}
-
-#define NVAPI_ID_VOLT_STATUS_GET 0xC16C7E2C
-NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle handle, NVAPI_VOLT_STATUS* data) {
-	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_VOLT_STATUS*) = NULL;
-	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
-	if(!pointer) {
-		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*))nvidia_handle->query(NVAPI_ID_VOLT_STATUS_GET);
-	}
-	return (*pointer)(handle, data);
 }
 
 #define NVAPI_ID_PERFCLOCKS_GET 0x1EA54A3B
