@@ -1017,13 +1017,13 @@ int nvapi_pstateinfo(unsigned int devNum)
 			info.pstates[n].baseVoltages[0].voltDelta_uV.valueRange.min/1000, // range if editable
 			info.pstates[n].baseVoltages[0].voltDelta_uV.valueRange.max/1000);
 		if (clocks[1].freqDelta_kHz.value || clocks[0].freqDelta_kHz.value) {
-			applog(LOG_RAW, "      OC %4d MHz      %6.1f MHz",
+			applog(LOG_RAW, "      OC %+4d MHz      %+6.1f MHz",
 				clocks[1].freqDelta_kHz.value/1000, (double) clocks[0].freqDelta_kHz.value/1000);
 		}
 	}
 	// boost over volting (GTX 9xx only ?)
 	for (n=0; n < info.ov.numVoltages; n++) {
-		applog(LOG_RAW, " OV: %u+%u mV%s \x7F %d/%d",
+		applog(LOG_RAW, " OV: %u%+u mV%s \x7F %d/%d",
 			info.ov.voltages[n].volt_uV/1000, info.ov.voltages[n].voltDelta_uV.value/1000, info.ov.voltages[n].bIsEditable ? "*":" ",
 			info.ov.voltages[n].voltDelta_uV.valueRange.min/1000, info.ov.voltages[n].voltDelta_uV.valueRange.max/1000);
 	}
@@ -1048,19 +1048,25 @@ int nvapi_pstateinfo(unsigned int devNum)
 		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_MEMORY].frequency / 1000,
 		(double) freqs.domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency / 1000);
 
-	// Maxwell only
-	NVAPI_VOLT_STATUS mvdom = { 0 };
-	mvdom.version = NVAPI_VOLT_STATUS_VER;
-	if ((ret = NvAPI_DLL_GetVoltageDomainsStatus(phys[devNum], &mvdom)) == NVAPI_OK) {
-		if (mvdom.value_uV)
-			applog(LOG_RAW, " GPU Voltage is %u mV", mvdom.value_uV/1000);
-	}
 	// Pascal only
-	NVAPI_VOLTAGE_STATUS pvdom = { 0 };
-	pvdom.version = NVAPI_VOLTAGE_STATUS_VER;
-	if ((ret = NvAPI_DLL_GetCurrentVoltage(phys[devNum], &pvdom)) == NVAPI_OK) {
+	NVAPI_VOLTBOOST_PERCENT pvb = { 0 };
+	pvb.version = NVAPI_VOLTBOOST_PERCENT_VER;
+	if ((ret = NvAPI_DLL_GetCoreVoltageBoostPercent(phys[devNum], &pvb)) == NVAPI_OK) {
+		NVAPI_VOLTAGE_STATUS pvdom = { 0 };
+		pvdom.version = NVAPI_VOLTAGE_STATUS_VER;
+		NvAPI_DLL_GetCurrentVoltage(phys[devNum], &pvdom);
 		if (pvdom.value_uV)
+			applog(LOG_RAW, " GPU Voltage is %u mV %+d%% boost", pvdom.value_uV/1000, pvb.percent);
+		else
 			applog(LOG_RAW, " GPU Voltage is %u mV", pvdom.value_uV/1000);
+	} else {
+		// Maxwell 9xx
+		NVAPI_VOLT_STATUS mvdom = { 0 };
+		mvdom.version = NVAPI_VOLT_STATUS_VER;
+		if ((ret = NvAPI_DLL_GetVoltageDomainsStatus(phys[devNum], &mvdom)) == NVAPI_OK) {
+			if (mvdom.value_uV)
+				applog(LOG_RAW, " GPU Voltage is %u mV", mvdom.value_uV/1000);
+		}
 	}
 
 	uint8_t plim = nvapi_get_plimit(devNum);
@@ -1334,7 +1340,7 @@ int nvapi_set_memclock(unsigned int devNum, uint32_t clock)
 	// seems ok on maxwell and pascal for the mem clocks
 	NV_GPU_PERF_PSTATES_INFO deffreqs = { 0 };
 	deffreqs.version = NV_GPU_PERF_PSTATES_INFO_VER;
-	ret = NvAPI_GPU_GetPstatesInfoEx(phys[devNum], &deffreqs, 0x1); // wrong def clocks, useless
+	ret = NvAPI_GPU_GetPstatesInfoEx(phys[devNum], &deffreqs, 0x1); // deprecated but req for def clocks
 	if (ret == NVAPI_OK) {
 		if (deffreqs.pstates[0].clocks[0].domainId == NVAPI_GPU_PUBLIC_CLOCK_MEMORY)
 			delta = (clock * 1000) - deffreqs.pstates[0].clocks[0].freq;
@@ -1356,6 +1362,20 @@ int nvapi_set_memclock(unsigned int devNum, uint32_t clock)
 		applog(LOG_INFO, "GPU #%u: Boost mem clock set to %u (delta %d)", devNum, clock, delta/1000);
 	}
 	return ret;
+}
+
+// Replacement for WIN32 CUDA 6.5 on pascal
+int nvapiMemGetInfo(int dev_id, size_t *free, size_t *total)
+{
+	NvAPI_Status ret = NVAPI_OK;
+	NV_DISPLAY_DRIVER_MEMORY_INFO mem = { 0 };
+	mem.version = NV_DISPLAY_DRIVER_MEMORY_INFO_VER;
+	unsigned int devNum = nvapi_dev_map[dev_id % MAX_GPUS];
+	if ((ret = NvAPI_GPU_GetMemoryInfo(phys[devNum], &mem)) == NVAPI_OK) {
+		*total = mem.availableDedicatedVideoMemory;
+		*free  = mem.curAvailableDedicatedVideoMemory;
+	}
+	return (int) ret;
 }
 
 int nvapi_init()

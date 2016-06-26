@@ -105,7 +105,8 @@ void cuda_print_devices()
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, dev_id);
 		if (!opt_n_threads || n < opt_n_threads) {
-			fprintf(stderr, "GPU #%d: SM %d.%d %s\n", dev_id, props.major, props.minor, device_name[dev_id]);
+			fprintf(stderr, "GPU #%d: SM %d.%d %s @ %.0f MHz (MEM %.0f)\n", dev_id, props.major, props.minor,
+				device_name[dev_id], (double) props.clockRate/1000, (double) props.memoryClockRate/1000);
 #ifdef USE_WRAPNVML
 			if (opt_debug) nvml_print_device_info(dev_id);
 #ifdef WIN32
@@ -200,18 +201,14 @@ int cuda_available_memory(int thr_id)
 {
 	int dev_id = device_map[thr_id % MAX_GPUS];
 	size_t mtotal = 0, mfree = 0;
-	cudaDeviceProp props;
+#if defined(_WIN32) && defined(USE_WRAPNVML)
+	// cuda (6.5) one can crash on pascal and dont handle 8GB
+	nvapiMemGetInfo(dev_id, &mfree, &mtotal);
+#else
 	cudaSetDevice(dev_id);
 	cudaDeviceSynchronize();
-	if (cudaGetDeviceProperties(&props, dev_id) == cudaSuccess) {
-#if defined(_WIN32) && CUDART_VERSION == 6050 && defined(_DEBUG)
-		if (!strstr(props.name, "GTX 10"))
-			// seems to crash in vstudio on 8GB cards (pascal ?) with cuda 6.5
-			cudaMemGetInfo(&mfree, &mtotal);
-#else
-		cudaMemGetInfo(&mfree, &mtotal);
+	cudaMemGetInfo(&mfree, &mtotal);
 #endif
-	}
 	return (int) (mfree / (1024 * 1024));
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#define NVAPI_INTERNAL
 #include "nvapi.h"
 
 NvAPI_Status nvapi_dll_init();
@@ -185,6 +186,13 @@ typedef struct {
 
 typedef struct {
 	NvU32 version;
+	NvS32 percent;
+	NvU32 pad[8];
+} NVAPI_VOLTBOOST_PERCENT; // 40 bytes (1-0028)
+#define NVAPI_VOLTBOOST_PERCENT_VER MAKE_NVAPI_VERSION(NVAPI_VOLTBOOST_PERCENT, 1)
+
+typedef struct {
+	NvU32 version;
 	NvU32 flags;
 	NvU32 filled; // 1
 	struct {
@@ -238,6 +246,8 @@ NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle hPhysicalGpu, NVAP
 NvAPI_Status NvAPI_DLL_SetClockBoostTable(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_TABLE*); // 0x0733E009
 NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VFP_CURVE*); // 0x21537AD4
 NvAPI_Status NvAPI_DLL_GetCurrentVoltage(NvPhysicalGpuHandle handle, NVAPI_VOLTAGE_STATUS* status); // 0x465F9BCF 1-004c
+NvAPI_Status NvAPI_DLL_GetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NVAPI_VOLTBOOST_PERCENT*);
+NvAPI_Status NvAPI_DLL_SetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NVAPI_VOLTBOOST_PERCENT*);
 
 // Maxwell only
 NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VOLT_STATUS*); // 0xC16C7E2C

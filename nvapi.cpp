@@ -249,7 +249,7 @@ NvAPI_Status NvAPI_DLL_SetClockBoostTable(NvPhysicalGpuHandle handle, NVAPI_CLOC
 	return (*pointer)(handle, table);
 }
 
-#define NVAPI_ID_VFP_CURVE_GET 0x21537AD4 // Pascal 39442CFB to check also, Set ?
+#define NVAPI_ID_VFP_CURVE_GET 0x21537AD4 // Pascal
 NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle handle, NVAPI_VFP_CURVE* curve) {
 	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_VFP_CURVE*) = NULL;
 	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
@@ -257,6 +257,28 @@ NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle handle, NVAPI_VFP_CURVE* 
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VFP_CURVE*))nvidia_handle->query(NVAPI_ID_VFP_CURVE_GET);
 	}
 	return (*pointer)(handle, curve);
+}
+
+#define NVAPI_ID_CURVE_GET 0xE440B867 // Pascal 2-030c struct 0C 03 02 00 00 00 00 00 01 00 00 00 06 00 00 00
+#define NVAPI_ID_CURVE_SET 0x39442CFB // Pascal 2-030c struct 0C 03 02 00 00 00 00 00 01 00 00 00 06 00 00 00
+
+#define NVAPI_ID_VOLTBOOST_GET 0x9DF23CA1 // Pascal 1-0028
+NvAPI_Status NvAPI_DLL_GetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NVAPI_VOLTBOOST_PERCENT* boost) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_VOLTBOOST_PERCENT*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTBOOST_PERCENT*))nvidia_handle->query(NVAPI_ID_VOLTBOOST_GET);
+	}
+	return (*pointer)(handle, boost);
+}
+#define NVAPI_ID_VOLTBOOST_SET 0xB9306D9B // Pascal 1-0028
+NvAPI_Status NvAPI_DLL_SetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NVAPI_VOLTBOOST_PERCENT* boost) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_VOLTBOOST_PERCENT*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTBOOST_PERCENT*))nvidia_handle->query(NVAPI_ID_VOLTBOOST_SET);
+	}
+	return (*pointer)(handle, boost);
 }
 
 #define NVAPI_ID_PERFCLOCKS_GET 0x1EA54A3B
