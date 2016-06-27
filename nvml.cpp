@@ -1608,9 +1608,11 @@ static int translate_vendor_id(uint16_t vid, char *vendorname)
 		// { 0x10DE, "NVIDIA" },
 		{ 0x1458, "Gigabyte" },
 		{ 0x1462, "MSI" },
-		{ 0x154B, "PNY" },
+		{ 0x154B, "PNY" }, // maybe storage devices
+		{ 0x1569, "Palit" },
 		{ 0x1682, "XFX" },
 		{ 0x196D, "Club3D" },
+		{ 0x196E, "PNY" },
 		{ 0x19DA, "Zotac" },
 		{ 0x19F1, "BFG" },
 		{ 0x1ACC, "PoV" },
