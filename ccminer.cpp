@@ -130,6 +130,7 @@ uint32_t device_mem_clocks[MAX_GPUS] = { 0 };
 uint32_t device_plimit[MAX_GPUS] = { 0 };
 uint8_t device_tlimit[MAX_GPUS] = { 0 };
 int8_t device_pstate[MAX_GPUS] = { -1, -1 };
+int32_t device_led[MAX_GPUS] = { -1, -1 };
 int opt_cudaschedule = -1;
 static bool opt_keep_clocks = false;
 
@@ -307,7 +308,8 @@ Options:\n\
       --mem-clock=3505  Set the gpu memory boost clock\n\
       --gpu-clock=1150  Set the gpu engine boost clock\n\
       --plimit=100      Set the gpu power limit in percentage\n\
-      --tlimit=80       Set the gpu thermal limit in degrees\n"
+      --tlimit=80       Set the gpu thermal limit in degrees\n\
+      --led=100         Set the logo led level (0=disable, 0xFF00FF for RVB)\n"
 #endif
 #ifdef HAVE_SYSLOG_H
 "\
@@ -385,6 +387,7 @@ struct option options[] = {
 	{ "plimit", 1, NULL, 1073 },
 	{ "keep-clocks", 0, NULL, 1074 },
 	{ "tlimit", 1, NULL, 1075 },
+	{ "led", 1, NULL, 1080 },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
 	{ "syslog-prefix", 1, NULL, 1018 },
@@ -2693,6 +2696,7 @@ void parse_arg(int key, char *arg)
 		hnvml = nvml_create();
 		#ifdef WIN32
 		nvapi_init();
+		cuda_devicenames(); // req for leds
 		nvapi_init_settings();
 		#endif
 		#endif
@@ -2944,6 +2948,18 @@ void parse_arg(int key, char *arg)
 			while (pch != NULL && n < MAX_GPUS) {
 				int dev_id = device_map[n++];
 				device_tlimit[dev_id] = (uint8_t) atoi(pch);
+				pch = strtok(NULL, ",");
+			}
+		}
+		break;
+	case 1080: /* --led */
+		{
+			char *pch = strtok(arg,",");
+			int n = 0;
+			while (pch != NULL && n < MAX_GPUS) {
+				int dev_id = device_map[n++];
+				char * p = strstr(pch, "0x");
+				device_led[dev_id] = p ? (int32_t) strtoul(p, NULL, 16) : atoi(arg);
 				pch = strtok(NULL, ",");
 			}
 		}
@@ -3320,6 +3336,7 @@ int main(int argc, char *argv[])
 		device_texturecache[i] = -1;
 		device_singlememory[i] = -1;
 		device_pstate[i] = -1;
+		device_led[i] = -1;
 	}
 
 	cuda_devicenames();

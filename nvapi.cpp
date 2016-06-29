@@ -347,6 +347,28 @@ NvAPI_Status NvAPI_DLL_GetVoltages(NvPhysicalGpuHandle handle, NVAPI_VOLTAGES_TA
 	return (*pointer)(handle, pInfo);
 }
 
+#define NVAPI_ID_I2CREADEX 0x4D7B0709 // 3-002c
+NvAPI_Status NvAPI_DLL_I2CReadEx(NvPhysicalGpuHandle handle, NV_I2C_INFO_EX *i2c, NvU32 *exData) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32*))nvidia_handle->query(NVAPI_ID_I2CREADEX);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, i2c, exData);
+}
+
+#define NVAPI_ID_I2CWRITEEX 0x283AC65A
+NvAPI_Status NvAPI_DLL_I2CWriteEx(NvPhysicalGpuHandle handle, NV_I2C_INFO_EX *i2c, NvU32 *exData) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32 *exData) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32 *exData))nvidia_handle->query(NVAPI_ID_I2CWRITEEX);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, i2c, exData);
+}
+
 #define NVAPI_ID_UNLOAD 0xD22BDD7E
 NvAPI_Status NvAPI_DLL_Unload() {
 	static NvAPI_Status (*pointer)() = NULL;

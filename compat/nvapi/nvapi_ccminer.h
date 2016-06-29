@@ -224,7 +224,6 @@ typedef struct {
 NVAPI_GPU_PERF_STATUS; // 1360 bytes (1-0550)
 #define NVAPI_GPU_PERF_STATUS_VER MAKE_NVAPI_VERSION(NVAPI_GPU_PERF_STATUS, 1)
 
-
 NvAPI_Status NvAPI_DLL_GetInterfaceVersionString(NvAPI_ShortString string);
 
 NvAPI_Status NvAPI_DLL_PerfPoliciesGetInfo(NvPhysicalGpuHandle, NVAPI_GPU_PERF_INFO*); // 409D9841 1-004c
@@ -260,7 +259,6 @@ NvAPI_Status NvAPI_DLL_GetSerialNumber(NvPhysicalGpuHandle handle, NvAPI_ShortSt
 NvAPI_Status NvAPI_DLL_SetPstates20v1(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO_V1 *pSet);
 NvAPI_Status NvAPI_DLL_SetPstates20v2(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO_V2 *pSet);
 
-
 NvAPI_Status NvAPI_DLL_Unload();
 
 #define NV_ASSERT(x) { NvAPI_Status ret = x; if(ret != NVAPI_OK) return ret; }
@@ -277,3 +275,25 @@ NvAPI_Status NvAPI_DLL_Unload();
 	var = (TYPE*) calloc(1, TYPE##_VER & 0xFFFF); \
 	if (var) var->version = TYPE##_VER; \
 }
+
+//! Used in NvAPI_I2CReadEx()
+typedef struct
+{
+	NvU32        version;
+	NvU32        displayMask;        // Display Mask of the concerned display.
+	NvU8         bIsDDCPort;         // indicates either the DDC port (TRUE) or the communication port (FALSE) of the concerned display.
+	NvU8         i2cDevAddress;      // address of the I2C slave.  The address should be shifted left by one. 0x50 -> 0xA0.
+	NvU8*        pbI2cRegAddress;    // I2C target register address.  May be NULL, which indicates no register address should be sent.
+	NvU32        regAddrSize;        // size in bytes of target register address.  If pbI2cRegAddress is NULL, this field must be 0.
+	NvU8*        pbData;             // buffer of data which is to be read or written (depending on the command).
+	NvU32        cbRead;             // bytes to read ??? seems required on write too
+	NvU32        cbSize;             // full size of the data buffer, pbData, to be read or written.
+	NV_I2C_SPEED i2cSpeedKhz;        // target speed of the transaction in (kHz) (Chosen from the enum NV_I2C_SPEED).
+	NvU8         portId;             // portid on which device is connected (remember to set bIsPortIdSet if this value is set)
+	NvU32        bIsPortIdSet;       // set this flag on if and only if portid value is set
+
+} NV_I2C_INFO_EX;
+#define NV_I2C_INFO_EX_VER  MAKE_NVAPI_VERSION(NV_I2C_INFO_EX,3)
+
+NvAPI_Status NvAPI_DLL_I2CReadEx(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32*);
+NvAPI_Status NvAPI_DLL_I2CWriteEx(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32*);

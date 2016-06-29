@@ -37,6 +37,7 @@ extern uint32_t device_mem_clocks[MAX_GPUS];
 extern uint32_t device_plimit[MAX_GPUS];
 extern uint8_t device_tlimit[MAX_GPUS];
 extern int8_t device_pstate[MAX_GPUS];
+extern int32_t device_led[MAX_GPUS];
 
 uint32_t clock_prev[MAX_GPUS] = { 0 };
 uint32_t clock_prev_mem[MAX_GPUS] = { 0 };
@@ -954,6 +955,63 @@ int nvapi_getbios(unsigned int devNum, char *desc, unsigned int maxlen)
 	return 0;
 }
 
+static int SetGigabyteRVBLogo(unsigned int devNum, uint32_t RVB)
+{
+	NvAPI_Status ret;
+	NV_I2C_INFO_EX* i2cInfo;
+	NV_INIT_STRUCT_ALLOC(NV_I2C_INFO_EX, i2cInfo);
+	if (i2cInfo == NULL)
+		return -ENOMEM;
+
+	NvU32 readBuf[25] = { 0 };
+	NvU32 data[5] = { 0 };
+	data[0] = 1; // block count or i2c send ?
+	data[2] = swab32(RVB & 0xfcfcfcU) | 0x40;
+
+	i2cInfo->i2cDevAddress = 0x90;
+	i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
+	i2cInfo->regAddrSize = 4; // NVAPI_MAX_SIZEOF_I2C_REG_ADDRESS
+	i2cInfo->pbData = (NvU8*) readBuf;
+	i2cInfo->cbRead = 2;
+	i2cInfo->cbSize = sizeof(readBuf);
+	i2cInfo->portId = 1;
+	i2cInfo->bIsPortIdSet = 1;
+
+	//ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, data);
+	ret = NvAPI_DLL_I2CReadEx(phys[devNum], i2cInfo, data);
+	free(i2cInfo);
+	return (int) ret;
+}
+
+int nvapi_set_led(unsigned int devNum, int32_t RVB, char *device_name)
+{
+	uint16_t vid = 0, pid = 0;
+	NvAPI_Status ret;
+	if (strstr(device_name, "Gigabyte GTX 10")) {
+		return SetGigabyteRVBLogo(devNum, (uint32_t) RVB);
+	} else {
+		NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM* illu;
+		NV_INIT_STRUCT_ALLOC(NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM, illu);
+		illu->hPhysicalGpu = phys[devNum];
+		illu->Attribute = NV_GPU_IA_LOGO_BRIGHTNESS;
+		ret = NvAPI_GPU_QueryIlluminationSupport(illu);
+		if (!ret && illu->bSupported) {
+			NV_GPU_GET_ILLUMINATION_PARM *led;
+			NV_INIT_STRUCT_ALLOC(NV_GPU_GET_ILLUMINATION_PARM, led);
+			led->hPhysicalGpu = phys[devNum];
+			led->Attribute = NV_GPU_IA_LOGO_BRIGHTNESS;
+			NvAPI_GPU_GetIllumination(led);
+			if (opt_debug)
+				applog(LOG_DEBUG, " Led level was %u, set to %06x", RVB);
+			led->Value = (uint32_t) RVB;
+			ret = NvAPI_GPU_SetIllumination((NV_GPU_SET_ILLUMINATION_PARM*) led);
+			free(led);
+		}
+		free(illu);
+		return ret;
+	}
+}
+
 int nvapi_pstateinfo(unsigned int devNum)
 {
 	uint32_t n;
@@ -1193,23 +1251,6 @@ int nvapi_pstateinfo(unsigned int devNum)
 	ret = NvAPI_DLL_PerfPoliciesGetStatus(phys[devNum], &ps);
 	applog(LOG_BLUE, "%llx %lld. %lld. %llx %llx %llx", ps.timeRef, ps.val1, ps.val2, ps.values[0], ps.values[1], ps.values[2]);
 #endif
-	// led test
-	NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM* illu;
-	NV_INIT_STRUCT_ON(NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM, illu, mem);
-	illu->hPhysicalGpu = phys[devNum];
-	illu->Attribute = NV_GPU_IA_LOGO_BRIGHTNESS;
-	ret = NvAPI_GPU_QueryIlluminationSupport(illu);
-	if (!ret && illu->bSupported) {
-		NV_GPU_GET_ILLUMINATION_PARM led = { 0 };
-		led.version = NV_GPU_GET_ILLUMINATION_PARM_VER;
-		led.hPhysicalGpu = phys[devNum];
-		led.Attribute = NV_GPU_IA_LOGO_BRIGHTNESS;
-		NvAPI_GPU_GetIllumination(&led);
-		applog(LOG_RAW, " Led level is %u", led.Value);
-		//applog(LOG_RAW, " Led level was %u, power off", led.Value);
-		//led.Value = 0;
-		//ret = NvAPI_GPU_SetIllumination((NV_GPU_SET_ILLUMINATION_PARM*) &led);
-	}
 
 #endif
 	free(mem);
@@ -1484,6 +1525,10 @@ int nvapi_init_settings()
 	if (ret != NVAPI_OK)
 		return ret;
 
+	if (!opt_n_threads) {
+		opt_n_threads = active_gpus;
+	}
+
 	for (int n=0; n < opt_n_threads; n++) {
 		int dev_id = device_map[n % MAX_GPUS];
 		if (device_plimit[dev_id]) {
@@ -1513,6 +1558,9 @@ int nvapi_init_settings()
 		}
 		if (device_pstate[dev_id]) {
 			// dunno how via nvapi or/and pascal
+		}
+		if (device_led[dev_id] != -1) {
+			nvapi_set_led(nvapi_dev_map[dev_id], device_led[dev_id], device_name[dev_id]);
 		}
 	}
 
