@@ -86,6 +86,7 @@ NvAPI_Status NvAPI_DLL_GetInterfaceVersionString(NvAPI_ShortString string) {
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvAPI_ShortString))nvidia_handle->query(NVAPI_ID_IFVERSION);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(string);
 }
 
@@ -96,6 +97,7 @@ NvAPI_Status NvAPI_DLL_PerfPoliciesGetInfo(NvPhysicalGpuHandle handle, NVAPI_GPU
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_PERF_INFO*))nvidia_handle->query(NVAPI_ID_PERF_INFO);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pInfo);
 }
 
@@ -106,6 +108,7 @@ NvAPI_Status NvAPI_DLL_PerfPoliciesGetStatus(NvPhysicalGpuHandle handle, NVAPI_G
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_PERF_STATUS*))nvidia_handle->query(NVAPI_ID_PERF_STATS);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pStatus);
 }
 
@@ -116,6 +119,7 @@ NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetInfo(NvPhysicalGpuHandle handle, NV
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_POWER_INFO*))nvidia_handle->query(NVAPI_ID_POWER_INFO);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pInfo);
 }
 
@@ -126,6 +130,7 @@ NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetStatus(NvPhysicalGpuHandle handle, 
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_POWER_STATUS*))nvidia_handle->query(NVAPI_ID_POWERPOL_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pPolicies);
 }
 
@@ -136,6 +141,7 @@ NvAPI_Status NvAPI_DLL_ClientPowerPoliciesSetStatus(NvPhysicalGpuHandle handle, 
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_POWER_STATUS*))nvidia_handle->query(NVAPI_ID_POWERPOL_SET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pPolicies);
 }
 
@@ -146,6 +152,7 @@ NvAPI_Status NvAPI_DLL_ClientPowerTopologyGetStatus(NvPhysicalGpuHandle handle, 
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_POWER_TOPO*))nvidia_handle->query(NVAPI_ID_POWERTOPO_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, topo);
 }
 
@@ -156,6 +163,7 @@ NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetInfo(NvPhysicalGpuHandle handle, 
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_THERMAL_INFO*))nvidia_handle->query(NVAPI_ID_THERMAL_INFO);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pInfo);
 }
 
@@ -166,6 +174,7 @@ NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetLimit(NvPhysicalGpuHandle handle,
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_THERMAL_LIMIT*))nvidia_handle->query(NVAPI_ID_TLIMIT_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pLimit);
 }
 
@@ -176,6 +185,7 @@ NvAPI_Status NvAPI_DLL_ClientThermalPoliciesSetLimit(NvPhysicalGpuHandle handle,
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_GPU_THERMAL_LIMIT*))nvidia_handle->query(NVAPI_ID_TLIMIT_SET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pLimit);
 }
 
@@ -186,6 +196,7 @@ NvAPI_Status NvAPI_DLL_GetSerialNumber(NvPhysicalGpuHandle handle, NvAPI_ShortSt
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NvAPI_ShortString))nvidia_handle->query(NVAPI_ID_SERIALNUM_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, serial);
 }
 
@@ -196,6 +207,7 @@ NvAPI_Status NvAPI_DLL_GetCurrentVoltage(NvPhysicalGpuHandle handle, NVAPI_VOLTA
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTAGE_STATUS*))nvidia_handle->query(NVAPI_ID_VOLTAGE_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, status);
 }
 
@@ -206,6 +218,7 @@ NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle handle, NVAPI
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*))nvidia_handle->query(NVAPI_ID_VOLT_STATUS_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, data);
 }
 
@@ -216,6 +229,7 @@ NvAPI_Status NvAPI_DLL_GetClockBoostRanges(NvPhysicalGpuHandle handle, NVAPI_CLO
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_CLOCKS_RANGE*))nvidia_handle->query(NVAPI_ID_CLK_RANGE_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, range);
 }
 
@@ -226,6 +240,7 @@ NvAPI_Status NvAPI_DLL_GetClockBoostMask(NvPhysicalGpuHandle handle, NVAPI_CLOCK
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_CLOCK_MASKS*))nvidia_handle->query(NVAPI_ID_CLK_BOOST_MASK);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, range);
 }
 
@@ -236,6 +251,7 @@ NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle handle, NVAPI_CLOC
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_CLOCK_TABLE*))nvidia_handle->query(NVAPI_ID_CLK_BOOST_TABLE_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, table);
 }
 
@@ -246,6 +262,7 @@ NvAPI_Status NvAPI_DLL_SetClockBoostTable(NvPhysicalGpuHandle handle, NVAPI_CLOC
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_CLOCK_TABLE*))nvidia_handle->query(NVAPI_ID_CLK_BOOST_TABLE_SET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, table);
 }
 
@@ -256,6 +273,7 @@ NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle handle, NVAPI_VFP_CURVE* 
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VFP_CURVE*))nvidia_handle->query(NVAPI_ID_VFP_CURVE_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, curve);
 }
 
@@ -269,6 +287,7 @@ NvAPI_Status NvAPI_DLL_GetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NV
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTBOOST_PERCENT*))nvidia_handle->query(NVAPI_ID_VOLTBOOST_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, boost);
 }
 #define NVAPI_ID_VOLTBOOST_SET 0xB9306D9B // Pascal 1-0028
@@ -278,6 +297,7 @@ NvAPI_Status NvAPI_DLL_SetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NV
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTBOOST_PERCENT*))nvidia_handle->query(NVAPI_ID_VOLTBOOST_SET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, boost);
 }
 
@@ -288,6 +308,7 @@ NvAPI_Status NvAPI_DLL_GetPerfClocks(NvPhysicalGpuHandle handle, void* pFreqs){
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, void*))nvidia_handle->query(NVAPI_ID_PERFCLOCKS_GET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pFreqs);
 }
 
@@ -299,6 +320,7 @@ NvAPI_Status NvAPI_DLL_SetPstates20v1(NvPhysicalGpuHandle handle, NV_GPU_PERF_PS
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATES20_INFO_V1*))nvidia_handle->query(NVAPI_ID_PSTATE20_SET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pSet);
 }
 
@@ -309,6 +331,7 @@ NvAPI_Status NvAPI_DLL_SetPstates20v2(NvPhysicalGpuHandle handle, NV_GPU_PERF_PS
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATES20_INFO_V2*))nvidia_handle->query(NVAPI_ID_PSTATE20_SET);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pSet);
 }
 
@@ -320,6 +343,7 @@ NvAPI_Status NvAPI_DLL_GetVoltages(NvPhysicalGpuHandle handle, NVAPI_VOLTAGES_TA
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLTAGES_TABLE*))nvidia_handle->query(NVAPI_ID_VOLTAGES);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pInfo);
 }
 
@@ -330,6 +354,7 @@ NvAPI_Status NvAPI_DLL_Unload() {
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)())nvidia_handle->query(NVAPI_ID_UNLOAD);
 	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)();
 }
 

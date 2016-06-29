@@ -264,3 +264,16 @@ NvAPI_Status NvAPI_DLL_SetPstates20v2(NvPhysicalGpuHandle handle, NV_GPU_PERF_PS
 NvAPI_Status NvAPI_DLL_Unload();
 
 #define NV_ASSERT(x) { NvAPI_Status ret = x; if(ret != NVAPI_OK) return ret; }
+
+// to reduce stack size, allow to reuse a mem buffer
+#define NV_INIT_STRUCT_ON(TYPE, var, mem) { \
+	var = (TYPE*) mem; \
+	memset(var, 0, sizeof(TYPE)); \
+	var->version = TYPE##_VER; \
+}
+
+// alloc a struct, need free(var)
+#define NV_INIT_STRUCT_ALLOC(TYPE, var) { \
+	var = (TYPE*) calloc(1, TYPE##_VER & 0xFFFF); \
+	if (var) var->version = TYPE##_VER; \
+}
