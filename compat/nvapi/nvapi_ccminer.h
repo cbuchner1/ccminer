@@ -220,41 +220,89 @@ typedef struct {
 	NvU64 val2;      // seen 7 and 3
 	NvU64 values[3]; // increment with time
 	NvU32 pad[326];  // empty
-}
-NVAPI_GPU_PERF_STATUS; // 1360 bytes (1-0550)
+} NVAPI_GPU_PERF_STATUS; // 1360 bytes (1-0550)
 #define NVAPI_GPU_PERF_STATUS_VER MAKE_NVAPI_VERSION(NVAPI_GPU_PERF_STATUS, 1)
+
+typedef struct {
+	NvU32 version;
+	NvU32 val1;      // 4
+	NvU32 val2;      // 2 or 0
+	NvU32 val3;      // 2
+	NvU32 val4;      // 3
+	NV_GPU_PERF_PSTATE_ID pStateId;
+	NvU32 val6;      // 0 or 2
+	NvU32 val7;      // 4
+	NvU32 val8;      // 0
+	NvU32 memFreq1;  // 405000.
+	NvU32 memFreq2;  // 405000.
+	NvU32 memFreqMin;// 101250.
+	NvU32 memFreqMax;// 486000.
+	NvU32 zeros[3];
+	NvU32 gpuFreq1;  // 696000. Unsure about those
+	NvU32 gpuFreq2;  // 696000.
+	NvU32 gpuFreqMin;// 174000.
+	NvU32 gpuFreqMax;// 658000.
+	NvU32 pad[2697];
+} NVAPI_GPU_PERF_CLOCKS; // 10868 bytes (2-2a74)
+#define NVAPI_GPU_PERF_CLOCKS_VER MAKE_NVAPI_VERSION(NVAPI_GPU_PERF_CLOCKS, 2)
+
+typedef struct {
+	NvU32 version;
+	NvU32 level;
+	NvU32 count;
+	NvU32 pad[339]; // (4-0558)
+} NVAPI_COOLER_SETTINGS;
+#define NVAPI_COOLER_SETTINGS_VER MAKE_NVAPI_VERSION(NVAPI_COOLER_SETTINGS, 4)
+
+typedef struct {
+	NvU32 version;
+	NvU32 level;   // 0 = auto ?
+	NvU32 count;   // 1
+	NvU32 pad[38]; // (1-00a4)
+} NVAPI_COOLER_LEVEL;
+#define NVAPI_COOLER_LEVEL_VER MAKE_NVAPI_VERSION(NVAPI_COOLER_LEVEL, 1)
 
 NvAPI_Status NvAPI_DLL_GetInterfaceVersionString(NvAPI_ShortString string);
 
 NvAPI_Status NvAPI_DLL_PerfPoliciesGetInfo(NvPhysicalGpuHandle, NVAPI_GPU_PERF_INFO*); // 409D9841 1-004c
 NvAPI_Status NvAPI_DLL_PerfPoliciesGetStatus(NvPhysicalGpuHandle, NVAPI_GPU_PERF_STATUS*); // 3D358A0C 1-0550
 
-NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetInfo(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_INFO*);
-NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_STATUS*);
-NvAPI_Status NvAPI_DLL_ClientPowerPoliciesSetStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_STATUS*);
-NvAPI_Status NvAPI_DLL_ClientPowerTopologyGetStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_POWER_TOPO*); // EDCF624E 1-0048
+NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetInfo(NvPhysicalGpuHandle, NVAPI_GPU_POWER_INFO*);
+NvAPI_Status NvAPI_DLL_ClientPowerPoliciesGetStatus(NvPhysicalGpuHandle, NVAPI_GPU_POWER_STATUS*);
+NvAPI_Status NvAPI_DLL_ClientPowerPoliciesSetStatus(NvPhysicalGpuHandle, NVAPI_GPU_POWER_STATUS*);
+NvAPI_Status NvAPI_DLL_ClientPowerTopologyGetStatus(NvPhysicalGpuHandle, NVAPI_GPU_POWER_TOPO*); // EDCF624E 1-0048
 
-NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetInfo(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_THERMAL_INFO*);
-NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetLimit(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_THERMAL_LIMIT*);
-NvAPI_Status NvAPI_DLL_ClientThermalPoliciesSetLimit(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_GPU_THERMAL_LIMIT*);
+NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetInfo(NvPhysicalGpuHandle, NVAPI_GPU_THERMAL_INFO*);
+NvAPI_Status NvAPI_DLL_ClientThermalPoliciesGetLimit(NvPhysicalGpuHandle, NVAPI_GPU_THERMAL_LIMIT*);
+NvAPI_Status NvAPI_DLL_ClientThermalPoliciesSetLimit(NvPhysicalGpuHandle, NVAPI_GPU_THERMAL_LIMIT*);
 
 // Pascal GTX only
-NvAPI_Status NvAPI_DLL_GetClockBoostRanges(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCKS_RANGE*);
-NvAPI_Status NvAPI_DLL_GetClockBoostMask(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_MASKS*); // 0x507B4B59
-NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_TABLE*); // 0x23F1B133
-NvAPI_Status NvAPI_DLL_SetClockBoostTable(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_CLOCK_TABLE*); // 0x0733E009
-NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VFP_CURVE*); // 0x21537AD4
-NvAPI_Status NvAPI_DLL_GetCurrentVoltage(NvPhysicalGpuHandle handle, NVAPI_VOLTAGE_STATUS* status); // 0x465F9BCF 1-004c
-NvAPI_Status NvAPI_DLL_GetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NVAPI_VOLTBOOST_PERCENT*);
-NvAPI_Status NvAPI_DLL_SetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NVAPI_VOLTBOOST_PERCENT*);
+NvAPI_Status NvAPI_DLL_GetClockBoostRanges(NvPhysicalGpuHandle, NVAPI_CLOCKS_RANGE*);
+NvAPI_Status NvAPI_DLL_GetClockBoostMask(NvPhysicalGpuHandle, NVAPI_CLOCK_MASKS*);  // 0x507B4B59
+NvAPI_Status NvAPI_DLL_GetClockBoostTable(NvPhysicalGpuHandle, NVAPI_CLOCK_TABLE*); // 0x23F1B133
+NvAPI_Status NvAPI_DLL_SetClockBoostTable(NvPhysicalGpuHandle, NVAPI_CLOCK_TABLE*); // 0x0733E009
+NvAPI_Status NvAPI_DLL_GetVFPCurve(NvPhysicalGpuHandle, NVAPI_VFP_CURVE*); // 0x21537AD4
+NvAPI_Status NvAPI_DLL_GetCurrentVoltage(NvPhysicalGpuHandle, NVAPI_VOLTAGE_STATUS*);   // 0x465F9BCF 1-004c
+NvAPI_Status NvAPI_DLL_GetCoreVoltageBoostPercent(NvPhysicalGpuHandle, NVAPI_VOLTBOOST_PERCENT*);
+NvAPI_Status NvAPI_DLL_SetCoreVoltageBoostPercent(NvPhysicalGpuHandle, NVAPI_VOLTBOOST_PERCENT*);
 
 // Maxwell only
-NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle hPhysicalGpu, NVAPI_VOLT_STATUS*); // 0xC16C7E2C
-NvAPI_Status NvAPI_DLL_GetVoltages(NvPhysicalGpuHandle handle, NVAPI_VOLTAGES_TABLE*); // 7D656244 1-40CC
+NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*); // 0xC16C7E2C
+NvAPI_Status NvAPI_DLL_GetVoltages(NvPhysicalGpuHandle, NVAPI_VOLTAGES_TABLE*); // 0x7D656244 1-40CC
+NvAPI_Status NvAPI_DLL_GetVoltageStep(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*); // 0x28766157 1-008C unsure of the name
 
-NvAPI_Status NvAPI_DLL_GetPerfClocks(NvPhysicalGpuHandle hPhysicalGpu, void* pFreqs);
+NvAPI_Status NvAPI_DLL_GetCoolerSettings(NvPhysicalGpuHandle, uint32_t, NVAPI_COOLER_SETTINGS*); // 0xDA141340 4-0558
+NvAPI_Status NvAPI_DLL_SetCoolerLevels(NvPhysicalGpuHandle, uint32_t, NVAPI_COOLER_LEVEL*); // 0x891FA0AE 1-00A4
+NvAPI_Status NvAPI_DLL_RestoreCoolerSettings(NvPhysicalGpuHandle, NVAPI_COOLER_SETTINGS*, uint32_t);
 
-NvAPI_Status NvAPI_DLL_GetSerialNumber(NvPhysicalGpuHandle handle, NvAPI_ShortString serial);
+NvAPI_Status NvAPI_DLL_GetSerialNumber(NvPhysicalGpuHandle, NvAPI_ShortString serial);
+
+NvAPI_Status NvAPI_DLL_GetPerfClocks(NvPhysicalGpuHandle, uint32_t num, NVAPI_GPU_PERF_CLOCKS* pClocks); // 2-2A74
+//NvAPI_Status NvAPI_DLL_SetPerfClocks(NvPhysicalGpuHandle, uint32_t num, NVAPI_GPU_PERF_CLOCKS* pClocks); // error
+
+//invalid..
+//NvAPI_Status NvAPI_DLL_GetPstateClientLimits(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATE_ID, uint32_t* pLimits);
+//NvAPI_Status NvAPI_DLL_SetPstateClientLimits(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATE_ID, uint32_t* pLimits);
 
 NvAPI_Status NvAPI_DLL_SetPstates20v1(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO_V1 *pSet);
 NvAPI_Status NvAPI_DLL_SetPstates20v2(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATES20_INFO_V2 *pSet);
@@ -294,6 +342,29 @@ typedef struct
 
 } NV_I2C_INFO_EX;
 #define NV_I2C_INFO_EX_VER  MAKE_NVAPI_VERSION(NV_I2C_INFO_EX,3)
+/*
+sample evga x64 call (struct of 0x40 bytes)
+ReadEx
+$ ==> 40 00 03 00  00 00 00 00  00 40 00 00  00 00 00 00
+$+10  58 F9 2B 00  00 00 00 00  01 00 00 00  00 00 00 00
+$+20  C0 F9 2B 00  00 00 00 00  02 00 00 00  FF FF 00 00
+$+30  00 00 00 00  02 00 00 00  01 00 00 00  00 00 00 00
+
+$ ==> 40 00 03 00  00 00 00 00  00 10 00 00  00 00 00 00
+$+10  68 F9 2B 00  00 00 00 00  01 00 00 00  00 00 00 00
+$+20  C0 F9 2B 00  00 00 00 00  01 00 00 00  FF FF 00 00
+$+30  00 00 00 00  01 00 00 00  01 00 00 00  00 00 00 00
+00000000002BF968 > 75 83 CF 3F 01 00 00 00
+00000000002BF9C0 > 0
+
+WriteEx
+$ ==> 40 00 03 00  00 00 00 00  00 8C 00 00  00 00 00 00
+$+10  30 F9 2B 00  00 00 00 00  01 00 00 00  00 00 00 00
+$+20  38 F9 2B 00  00 00 00 00  02 00 00 00  FF FF 00 00
+$+30  00 00 00 00  01 00 00 00  01 00 00 00  00 00 00 00
+00000000002BF930 > D1 00 00 00 00 00 00 00
+00000000002BF938 > 38 00 00 00 00 00 00 00
+*/
 
 NvAPI_Status NvAPI_DLL_I2CReadEx(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32*);
 NvAPI_Status NvAPI_DLL_I2CWriteEx(NvPhysicalGpuHandle, NV_I2C_INFO_EX*, NvU32*);

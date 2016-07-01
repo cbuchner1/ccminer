@@ -1031,7 +1031,9 @@ int nvapi_pstateinfo(unsigned int devNum)
 	uint32_t* buf = (uint32_t*) calloc(1, 0x8000);
 	for (int i=8; i < 0x8000 && buf; i+=4) {
 		buf[0] = 0x10000 + i;
-		if ((ret = NvAPI_DLL_GetXXX(phys[devNum], buf)) != NVAPI_INCOMPATIBLE_STRUCT_VERSION) {
+		NV_GPU_PERF_PSTATE_ID pst = NVAPI_GPU_PERF_PSTATE_P0;
+		ret = NvAPI_DLL_GetPstateClientLimits(phys[devNum], pst, buf);
+		if (ret != NVAPI_INCOMPATIBLE_STRUCT_VERSION) {
 			NvAPI_ShortString string;
 			NvAPI_GetErrorMessage(ret, string);
 			applog(LOG_BLUE, "struct size is %06x : %s", buf[0], string);
@@ -1111,6 +1113,19 @@ int nvapi_pstateinfo(unsigned int devNum)
 		(double) freqs->domain[NVAPI_GPU_PUBLIC_CLOCK_MEMORY].frequency / 1000,
 		(double) freqs->domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency / 1000);
 
+	// Other clock values ??
+	NVAPI_GPU_PERF_CLOCKS *pcl;
+	NV_INIT_STRUCT_ALLOC(NVAPI_GPU_PERF_CLOCKS, pcl);
+	int numClock=0; ret = NVAPI_OK;
+	while (ret == NVAPI_OK) {
+		if ((ret = NvAPI_DLL_GetPerfClocks(phys[devNum], numClock, pcl)) == NVAPI_OK) {
+			applog(LOG_RAW, " C%d: MEM %4.0f MHz  GPU %6.1f MHz [%5.1f/%6.1f]", numClock,
+				(double) pcl->memFreq1/1000, (double) pcl->gpuFreq1/1000, (double) pcl->gpuFreqMin/1000, (double) pcl->gpuFreqMax/1000);
+		//	ret = NvAPI_DLL_SetPerfClocks(phys[devNum], numClock, pcl); // error
+		}
+		numClock++;
+	}
+
 	// Pascal only
 	NVAPI_VOLTBOOST_PERCENT *pvb;
 	NV_INIT_STRUCT_ON(NVAPI_VOLTBOOST_PERCENT, pvb, mem);
@@ -1125,17 +1140,37 @@ int nvapi_pstateinfo(unsigned int devNum)
 		free(pvdom);
 	} else {
 		// Maxwell 9xx
-		NVAPI_VOLT_STATUS *mvdom;
+		NVAPI_VOLT_STATUS *mvdom, *mvstep;
 		NV_INIT_STRUCT_ALLOC(NVAPI_VOLT_STATUS, mvdom);
 		if (mvdom && (ret = NvAPI_DLL_GetVoltageDomainsStatus(phys[devNum], mvdom)) == NVAPI_OK) {
-			if (mvdom->value_uV)
-				applog(LOG_RAW, " GPU Voltage is %u mV", mvdom->value_uV/1000);
+			NV_INIT_STRUCT_ALLOC(NVAPI_VOLT_STATUS, mvstep);
+			NvAPI_DLL_GetVoltageStep(phys[devNum], mvstep);
+			if (mvdom->value_uV) applog(LOG_RAW, " GPU Voltage is %.1f mV with %.3f mV resolution",
+				(double) mvdom->value_uV/1000, (double) mvstep->value_uV/1000);
+			free(mvstep);
 		}
 		free(mvdom);
 	}
 
 	uint32_t plim = nvapi_get_plimit(devNum);
 	applog(LOG_RAW, " Power limit is set to %u%%", plim);
+
+	NVAPI_COOLER_SETTINGS *cooler;
+	NV_INIT_STRUCT_ON(NVAPI_COOLER_SETTINGS, cooler, mem);
+	ret = NvAPI_DLL_GetCoolerSettings(phys[devNum], 7, cooler);
+	if (ret == NVAPI_OK) {
+		applog(LOG_RAW, " Fan level is set to %u%%", cooler->level);
+#if 0
+		NVAPI_COOLER_LEVEL *fan;
+		NV_INIT_STRUCT_ALLOC(NVAPI_COOLER_LEVEL, fan);
+		fan->level = 100;
+		fan->count = 1;
+		ret = NvAPI_DLL_SetCoolerLevels(phys[devNum], 7, fan);
+		free(fan);
+		sleep(10);
+		ret = NvAPI_DLL_RestoreCoolerSettings(phys[devNum], cooler, 7);
+#endif
+	}
 
 	NV_GPU_THERMAL_SETTINGS *tset;
 	NV_INIT_STRUCT_ON(NV_GPU_THERMAL_SETTINGS, tset, mem);

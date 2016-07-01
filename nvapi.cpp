@@ -211,12 +211,23 @@ NvAPI_Status NvAPI_DLL_GetCurrentVoltage(NvPhysicalGpuHandle handle, NVAPI_VOLTA
 	return (*pointer)(handle, status);
 }
 
-#define NVAPI_ID_VOLT_STATUS_GET 0xC16C7E2C
+#define NVAPI_ID_VOLT_STATUS_GET 0xC16C7E2C // Maxwell
 NvAPI_Status NvAPI_DLL_GetVoltageDomainsStatus(NvPhysicalGpuHandle handle, NVAPI_VOLT_STATUS* data) {
-	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle,  NVAPI_VOLT_STATUS*) = NULL;
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*) = NULL;
 	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
 	if(!pointer) {
 		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*))nvidia_handle->query(NVAPI_ID_VOLT_STATUS_GET);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, data);
+}
+
+#define NVAPI_ID_VOLTAGE 0x28766157 // Maxwell 1-008c Real func name is unknown
+NvAPI_Status NvAPI_DLL_GetVoltageStep(NvPhysicalGpuHandle handle, NVAPI_VOLT_STATUS* data) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_VOLT_STATUS*))nvidia_handle->query(NVAPI_ID_VOLTAGE);
 	}
 	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, data);
@@ -302,14 +313,47 @@ NvAPI_Status NvAPI_DLL_SetCoreVoltageBoostPercent(NvPhysicalGpuHandle handle, NV
 }
 
 #define NVAPI_ID_PERFCLOCKS_GET 0x1EA54A3B
-NvAPI_Status NvAPI_DLL_GetPerfClocks(NvPhysicalGpuHandle handle, void* pFreqs){
-	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, void*) = NULL;
+NvAPI_Status NvAPI_DLL_GetPerfClocks(NvPhysicalGpuHandle handle, uint32_t num, NVAPI_GPU_PERF_CLOCKS* pClocks) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, uint32_t, NVAPI_GPU_PERF_CLOCKS*) = NULL;
 	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
 	if(!pointer) {
-		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, void*))nvidia_handle->query(NVAPI_ID_PERFCLOCKS_GET);
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, uint32_t, NVAPI_GPU_PERF_CLOCKS*))nvidia_handle->query(NVAPI_ID_PERFCLOCKS_GET);
 	}
 	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
-	return (*pointer)(handle, pFreqs);
+	return (*pointer)(handle, num, pClocks);
+}
+
+#define NVAPI_ID_PERFCLOCKS_SET 0x07BCF4AC // error
+NvAPI_Status NvAPI_DLL_SetPerfClocks(NvPhysicalGpuHandle handle, uint32_t num, NVAPI_GPU_PERF_CLOCKS* pClocks) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, uint32_t, NVAPI_GPU_PERF_CLOCKS*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, uint32_t, NVAPI_GPU_PERF_CLOCKS*))nvidia_handle->query(NVAPI_ID_PERFCLOCKS_SET);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, num, pClocks);
+}
+
+#define NVAPI_ID_PSTATELIMITS_GET 0x88C82104 // wrong prototype or missing struct data ?
+NvAPI_Status NvAPI_DLL_GetPstateClientLimits(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATE_ID pst, uint32_t* pLimits) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATE_ID, uint32_t*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATE_ID, uint32_t*))nvidia_handle->query(NVAPI_ID_PSTATELIMITS_GET);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, pst, pLimits);
+}
+
+#define NVAPI_ID_PSTATELIMITS_SET 0xFDFC7D49 // wrong prototype or missing struct data ?
+NvAPI_Status NvAPI_DLL_SetPstateClientLimits(NvPhysicalGpuHandle handle, NV_GPU_PERF_PSTATE_ID pst, uint32_t* pLimits) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATE_ID, uint32_t*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NV_GPU_PERF_PSTATE_ID, uint32_t*))nvidia_handle->query(NVAPI_ID_PSTATELIMITS_SET);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, pst, pLimits);
 }
 
 #define NVAPI_ID_PSTATE20_SET 0x0F4DAE6B
@@ -345,6 +389,39 @@ NvAPI_Status NvAPI_DLL_GetVoltages(NvPhysicalGpuHandle handle, NVAPI_VOLTAGES_TA
 	}
 	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
 	return (*pointer)(handle, pInfo);
+}
+
+#define NVAPI_ID_COOLERSETTINGS 0xDA141340 // 4-0558
+NvAPI_Status NvAPI_DLL_GetCoolerSettings(NvPhysicalGpuHandle handle, uint32_t id, NVAPI_COOLER_SETTINGS* pSettings) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, uint32_t, NVAPI_COOLER_SETTINGS*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, uint32_t, NVAPI_COOLER_SETTINGS*))nvidia_handle->query(NVAPI_ID_COOLERSETTINGS);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, id, pSettings);
+}
+
+#define NVAPI_ID_COOLER_SETLEVELS 0x891FA0AE // 1-00A4
+NvAPI_Status NvAPI_DLL_SetCoolerLevels(NvPhysicalGpuHandle handle, uint32_t id, NVAPI_COOLER_LEVEL* pLevel) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, uint32_t, NVAPI_COOLER_LEVEL*) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, uint32_t, NVAPI_COOLER_LEVEL*))nvidia_handle->query(NVAPI_ID_COOLER_SETLEVELS);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, id, pLevel);
+}
+
+#define NVAPI_ID_COOLER_RESTORE 0x8F6ED0FB
+NvAPI_Status NvAPI_DLL_RestoreCoolerSettings(NvPhysicalGpuHandle handle, NVAPI_COOLER_SETTINGS* pSettings, uint32_t id) {
+	static NvAPI_Status (*pointer)(NvPhysicalGpuHandle, NVAPI_COOLER_SETTINGS*, uint32_t) = NULL;
+	if(!nvapi_dll_loaded) return NVAPI_API_NOT_INITIALIZED;
+	if(!pointer) {
+		pointer = (NvAPI_Status (*)(NvPhysicalGpuHandle, NVAPI_COOLER_SETTINGS*, uint32_t))nvidia_handle->query(NVAPI_ID_COOLER_RESTORE);
+	}
+	if(!pointer) return NVAPI_NO_IMPLEMENTATION;
+	return (*pointer)(handle, pSettings, id);
 }
 
 #define NVAPI_ID_I2CREADEX 0x4D7B0709 // 3-002c
