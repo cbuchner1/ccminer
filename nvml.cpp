@@ -968,7 +968,7 @@ static int SetGigabyteRVBLogo(unsigned int devNum, uint32_t RVB)
 	data[0] = 1; // block count or i2c send ?
 	data[2] = swab32(RVB & 0xfcfcfcU) | 0x40;
 
-	i2cInfo->i2cDevAddress = 0x90;
+	i2cInfo->i2cDevAddress = 0x48 << 1; // maybe a PCF8591
 	i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
 	i2cInfo->regAddrSize = 4; // NVAPI_MAX_SIZEOF_I2C_REG_ADDRESS
 	i2cInfo->pbData = (NvU8*) readBuf;
@@ -988,6 +988,8 @@ int nvapi_set_led(unsigned int devNum, int32_t RVB, char *device_name)
 	uint16_t vid = 0, pid = 0;
 	NvAPI_Status ret;
 	if (strstr(device_name, "Gigabyte GTX 10")) {
+		if (opt_debug)
+			applog(LOG_DEBUG, " Set RVB led to %06x", RVB);
 		return SetGigabyteRVBLogo(devNum, (uint32_t) RVB);
 	} else {
 		NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM* illu;
@@ -1002,7 +1004,7 @@ int nvapi_set_led(unsigned int devNum, int32_t RVB, char *device_name)
 			led->Attribute = NV_GPU_IA_LOGO_BRIGHTNESS;
 			NvAPI_GPU_GetIllumination(led);
 			if (opt_debug)
-				applog(LOG_DEBUG, " Led level was %u, set to %06x", RVB);
+				applog(LOG_DEBUG, " Led level was %u, set to %d", RVB);
 			led->Value = (uint32_t) RVB;
 			ret = NvAPI_GPU_SetIllumination((NV_GPU_SET_ILLUMINATION_PARM*) led);
 			free(led);
