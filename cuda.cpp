@@ -110,7 +110,10 @@ void cuda_print_devices()
 #ifdef USE_WRAPNVML
 			if (opt_debug) nvml_print_device_info(dev_id);
 #ifdef WIN32
-			if (opt_debug) nvapi_pstateinfo(dev_id);
+			if (opt_debug) {
+				unsigned int devNum = nvapi_devnum(dev_id);
+				nvapi_pstateinfo(devNum);
+			}
 #endif
 #endif
 		}

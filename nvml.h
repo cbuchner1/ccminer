@@ -226,6 +226,9 @@ int nvapi_init_settings();
 int nvapi_pstateinfo(unsigned int devNum);
 uint8_t nvapi_get_plimit(unsigned int devNum);
 
+// nvapi devNum from dev_id (cuda GPU #N)
+unsigned int nvapi_devnum(int dev_id);
+
 // cuda Replacement for 6.5 compat
 int nvapiMemGetInfo(int dev_id, size_t *free, size_t *total);
 #endif

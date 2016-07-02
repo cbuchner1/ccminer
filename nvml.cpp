@@ -955,7 +955,7 @@ int nvapi_getbios(unsigned int devNum, char *desc, unsigned int maxlen)
 	return 0;
 }
 
-static int SetGigabyteRVBLogo(unsigned int devNum, uint32_t RVB)
+static int SetGigabyteRGBLogo(unsigned int devNum, uint32_t RGB)
 {
 	NvAPI_Status ret;
 	NV_I2C_INFO_EX* i2cInfo;
@@ -965,10 +965,10 @@ static int SetGigabyteRVBLogo(unsigned int devNum, uint32_t RVB)
 
 	NvU32 readBuf[25] = { 0 };
 	NvU32 data[5] = { 0 };
-	data[0] = 1; // block count or i2c send ?
-	data[2] = swab32(RVB & 0xfcfcfcU) | 0x40;
+	data[0] = 1;
+	data[2] = swab32(RGB & 0xfffffcU) | 0x40;
 
-	i2cInfo->i2cDevAddress = 0x48 << 1; // maybe a PCF8591
+	i2cInfo->i2cDevAddress = 0x48 << 1;
 	i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
 	i2cInfo->regAddrSize = 4; // NVAPI_MAX_SIZEOF_I2C_REG_ADDRESS
 	i2cInfo->pbData = (NvU8*) readBuf;
@@ -983,14 +983,14 @@ static int SetGigabyteRVBLogo(unsigned int devNum, uint32_t RVB)
 	return (int) ret;
 }
 
-int nvapi_set_led(unsigned int devNum, int32_t RVB, char *device_name)
+int nvapi_set_led(unsigned int devNum, int32_t RGB, char *device_name)
 {
 	uint16_t vid = 0, pid = 0;
 	NvAPI_Status ret;
 	if (strstr(device_name, "Gigabyte GTX 10")) {
 		if (opt_debug)
-			applog(LOG_DEBUG, " Set RVB led to %06x", RVB);
-		return SetGigabyteRVBLogo(devNum, (uint32_t) RVB);
+			applog(LOG_DEBUG, " Set RGB led to %06x", RGB);
+		return SetGigabyteRGBLogo(devNum, (uint32_t) RGB);
 	} else {
 		NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM* illu;
 		NV_INIT_STRUCT_ALLOC(NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM, illu);
@@ -1004,8 +1004,8 @@ int nvapi_set_led(unsigned int devNum, int32_t RVB, char *device_name)
 			led->Attribute = NV_GPU_IA_LOGO_BRIGHTNESS;
 			NvAPI_GPU_GetIllumination(led);
 			if (opt_debug)
-				applog(LOG_DEBUG, " Led level was %u, set to %d", RVB);
-			led->Value = (uint32_t) RVB;
+				applog(LOG_DEBUG, " Led level was %u, set to %d", RGB);
+			led->Value = (uint32_t) RGB;
 			ret = NvAPI_GPU_SetIllumination((NV_GPU_SET_ILLUMINATION_PARM*) led);
 			free(led);
 		}
@@ -1603,6 +1603,12 @@ int nvapi_init_settings()
 
 	return ret;
 }
+
+unsigned int nvapi_devnum(int dev_id)
+{
+	return nvapi_dev_map[dev_id];
+}
+
 #endif
 
 /* api functions -------------------------------------- */
