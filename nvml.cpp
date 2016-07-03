@@ -38,6 +38,7 @@ extern uint32_t device_plimit[MAX_GPUS];
 extern uint8_t device_tlimit[MAX_GPUS];
 extern int8_t device_pstate[MAX_GPUS];
 extern int32_t device_led[MAX_GPUS];
+int32_t device_led_state[MAX_GPUS] = { 0 };
 
 uint32_t clock_prev[MAX_GPUS] = { 0 };
 uint32_t clock_prev_mem[MAX_GPUS] = { 0 };
@@ -979,17 +980,18 @@ static int SetGigabyteRGBLogo(unsigned int devNum, uint32_t RGB)
 
 	//ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, data);
 	ret = NvAPI_DLL_I2CReadEx(phys[devNum], i2cInfo, data);
+	ret = NvAPI_DLL_I2CReadEx(phys[devNum], i2cInfo, data);
 	free(i2cInfo);
 	return (int) ret;
 }
 
-int nvapi_set_led(unsigned int devNum, int32_t RGB, char *device_name)
+int nvapi_set_led(unsigned int devNum, int RGB, char *device_name)
 {
 	uint16_t vid = 0, pid = 0;
 	NvAPI_Status ret;
 	if (strstr(device_name, "Gigabyte GTX 10")) {
 		if (opt_debug)
-			applog(LOG_DEBUG, " Set RGB led to %06x", RGB);
+			applog(LOG_DEBUG, "GPU %x: Set RGB led to %06x", (int) phys[devNum], RGB);
 		return SetGigabyteRGBLogo(devNum, (uint32_t) RGB);
 	} else {
 		NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM* illu;
@@ -1004,7 +1006,7 @@ int nvapi_set_led(unsigned int devNum, int32_t RGB, char *device_name)
 			led->Attribute = NV_GPU_IA_LOGO_BRIGHTNESS;
 			NvAPI_GPU_GetIllumination(led);
 			if (opt_debug)
-				applog(LOG_DEBUG, " Led level was %u, set to %d", RGB);
+				applog(LOG_DEBUG, "GPU %x: Led level was %d, set to %d", (int) phys[devNum], led->Value, RGB);
 			led->Value = (uint32_t) RGB;
 			ret = NvAPI_GPU_SetIllumination((NV_GPU_SET_ILLUMINATION_PARM*) led);
 			free(led);
@@ -1597,7 +1599,11 @@ int nvapi_init_settings()
 			// dunno how via nvapi or/and pascal
 		}
 		if (device_led[dev_id] != -1) {
-			nvapi_set_led(nvapi_dev_map[dev_id], device_led[dev_id], device_name[dev_id]);
+			int err = nvapi_set_led(nvapi_dev_map[dev_id], device_led[dev_id], device_name[dev_id]);
+			if (err != 0) {
+				gpulog(LOG_WARNING, n, "Unable to set led value (err %d)", err);
+			}
+			device_led_state[dev_id] = device_led[dev_id];
 		}
 	}
 
@@ -1609,7 +1615,7 @@ unsigned int nvapi_devnum(int dev_id)
 	return nvapi_dev_map[dev_id];
 }
 
-#endif
+#endif /* WIN32 : Windows specific (nvapi) */
 
 /* api functions -------------------------------------- */
 
@@ -1809,3 +1815,36 @@ int gpu_info(struct cgpu_info *gpu)
 }
 
 #endif /* USE_WRAPNVML */
+
+
+void gpu_led_on(int dev_id)
+{
+#if defined(WIN32) && defined(USE_WRAPNVML)
+	int value = device_led[dev_id];
+	if (device_led_state[dev_id] != value) {
+		if (nvapi_set_led(nvapi_dev_map[dev_id], value, device_name[dev_id]) == 0)
+			device_led_state[dev_id] = value;
+	}
+#endif
+}
+
+void gpu_led_percent(int dev_id, int percent)
+{
+#if defined(WIN32) && defined(USE_WRAPNVML)
+	int value = (device_led[dev_id] * percent) / 100;
+	if (device_led_state[dev_id] != value) {
+		if (nvapi_set_led(nvapi_dev_map[dev_id], value, device_name[dev_id]) == 0)
+			device_led_state[dev_id] = value;
+	}
+#endif
+}
+
+void gpu_led_off(int dev_id)
+{
+#if defined(WIN32) && defined(USE_WRAPNVML)
+	if (device_led_state[dev_id]) {
+		if (nvapi_set_led(nvapi_dev_map[dev_id], 0, device_name[dev_id]) == 0)
+			device_led_state[dev_id] = 0;
+	}
+#endif
+}

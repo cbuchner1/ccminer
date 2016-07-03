@@ -234,3 +234,7 @@ int nvapiMemGetInfo(int dev_id, size_t *free, size_t *total);
 #endif
 
 #endif /* USE_WRAPNVML */
+
+void gpu_led_on(int dev_id);
+void gpu_led_percent(int dev_id, int percent);
+void gpu_led_off(int dev_id);

@@ -1255,7 +1255,9 @@ static void *workio_thread(void *userdata)
 			ok = workio_get_work(wc, curl);
 			break;
 		case WC_SUBMIT_WORK:
+			gpu_led_on(device_map[wc->thr->id]);
 			ok = workio_submit_work(wc, curl);
+			gpu_led_off(device_map[wc->thr->id]);
 			break;
 		case WC_ABORT:
 		default:		/* should never happen */
@@ -1641,6 +1643,8 @@ static void *miner_thread(void *userdata)
 			affine_to_cpu_mask(thr_id, (unsigned long) opt_affinity);
 		}
 	}
+
+	gpu_led_off(dev_id);
 
 	while (!abort_flag) {
 		struct timeval tv_start, tv_end, diff;
@@ -2200,6 +2204,7 @@ static void *miner_thread(void *userdata)
 
 		/* if nonce found, submit work */
 		if (rc > 0 && !opt_benchmark) {
+			gpu_led_percent(dev_id, 50);
 			if (!submit_work(mythr, &work))
 				break;
 
