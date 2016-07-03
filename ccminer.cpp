@@ -2960,13 +2960,16 @@ void parse_arg(int key, char *arg)
 	case 1080: /* --led */
 		{
 			char *pch = strtok(arg,",");
-			int n = 0;
+			int n = 0, val;
 			while (pch != NULL && n < MAX_GPUS) {
 				int dev_id = device_map[n++];
 				char * p = strstr(pch, "0x");
-				device_led[dev_id] = p ? (int32_t) strtoul(p, NULL, 16) : atoi(arg);
+				val = p ? (int32_t) strtoul(p, NULL, 16) : atoi(pch);
+				device_led[dev_id] = val;
 				pch = strtok(NULL, ",");
 			}
+			if (val <= 100)	while (n < MAX_GPUS)
+				device_led[n++] = val;
 		}
 		break;
 	case 1005:

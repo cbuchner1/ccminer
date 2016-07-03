@@ -782,7 +782,7 @@ int nvml_destroy(nvml_handle *nvmlh)
 #ifdef WIN32
 #include "nvapi/nvapi_ccminer.h"
 
-static int nvapi_dev_map[MAX_GPUS] = { 0 };
+static unsigned int nvapi_dev_map[MAX_GPUS] = { 0 };
 static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };
 static NvPhysicalGpuHandle phys[NVAPI_MAX_PHYSICAL_GPUS] = { 0 };
 static NvU32 nvapi_dev_cnt = 0;
@@ -967,7 +967,7 @@ static int SetGigabyteRGBLogo(unsigned int devNum, uint32_t RGB)
 	NvU32 readBuf[25] = { 0 };
 	NvU32 data[5] = { 0 };
 	data[0] = 1;
-	data[2] = swab32(RGB & 0xfffffcU) | 0x40;
+	data[2] = swab32(RGB & 0xfcfcfcU) | 0x40;
 
 	i2cInfo->i2cDevAddress = 0x48 << 1;
 	i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
@@ -980,7 +980,7 @@ static int SetGigabyteRGBLogo(unsigned int devNum, uint32_t RGB)
 
 	//ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, data);
 	ret = NvAPI_DLL_I2CReadEx(phys[devNum], i2cInfo, data);
-	ret = NvAPI_DLL_I2CReadEx(phys[devNum], i2cInfo, data);
+	usleep(10000);
 	free(i2cInfo);
 	return (int) ret;
 }
@@ -1831,7 +1831,8 @@ void gpu_led_on(int dev_id)
 void gpu_led_percent(int dev_id, int percent)
 {
 #if defined(WIN32) && defined(USE_WRAPNVML)
-	int value = (device_led[dev_id] * percent) / 100;
+	// todo rgb percent function (byte per byte)
+	int value = device_led[dev_id] > 100 ? device_led[dev_id] ^ 0x808080 : (device_led[dev_id] * percent)/100;
 	if (device_led_state[dev_id] != value) {
 		if (nvapi_set_led(nvapi_dev_map[dev_id], value, device_name[dev_id]) == 0)
 			device_led_state[dev_id] = value;
