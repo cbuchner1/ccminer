@@ -131,6 +131,7 @@ uint32_t device_plimit[MAX_GPUS] = { 0 };
 uint8_t device_tlimit[MAX_GPUS] = { 0 };
 int8_t device_pstate[MAX_GPUS] = { -1, -1 };
 int32_t device_led[MAX_GPUS] = { -1, -1 };
+int opt_led_mode = 0;
 int opt_cudaschedule = -1;
 static bool opt_keep_clocks = false;
 
@@ -1255,9 +1256,11 @@ static void *workio_thread(void *userdata)
 			ok = workio_get_work(wc, curl);
 			break;
 		case WC_SUBMIT_WORK:
-			gpu_led_on(device_map[wc->thr->id]);
+			if (opt_led_mode == LED_MODE_SHARES)
+				gpu_led_on(device_map[wc->thr->id]);
 			ok = workio_submit_work(wc, curl);
-			gpu_led_off(device_map[wc->thr->id]);
+			if (opt_led_mode == LED_MODE_SHARES)
+				gpu_led_off(device_map[wc->thr->id]);
 			break;
 		case WC_ABORT:
 		default:		/* should never happen */
@@ -1968,6 +1971,9 @@ static void *miner_thread(void *userdata)
 		gpulog(LOG_DEBUG, thr_id, "start=%08x end=%08x range=%08x",
 			start_nonce, max_nonce, (max_nonce-start_nonce));
 
+		if (opt_led_mode == LED_MODE_MINING)
+			gpu_led_on(dev_id);
+
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
 
@@ -2110,6 +2116,9 @@ static void *miner_thread(void *userdata)
 			goto out;
 		}
 
+		if (opt_led_mode == LED_MODE_MINING)
+			gpu_led_off(dev_id);
+
 		if (abort_flag)
 			break; // time to leave the mining loop...
 
@@ -2204,7 +2213,8 @@ static void *miner_thread(void *userdata)
 
 		/* if nonce found, submit work */
 		if (rc > 0 && !opt_benchmark) {
-			gpu_led_percent(dev_id, 50);
+			if (opt_led_mode == LED_MODE_SHARES)
+				gpu_led_percent(dev_id, 50);
 			if (!submit_work(mythr, &work))
 				break;
 
@@ -2233,6 +2243,8 @@ static void *miner_thread(void *userdata)
 	}
 
 out:
+	if (opt_led_mode)
+		gpu_led_off(dev_id);
 	if (opt_debug_threads)
 		applog(LOG_DEBUG, "%s() died", __func__);
 	tq_freeze(mythr->q);
@@ -2959,12 +2971,18 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1080: /* --led */
 		{
+			if (!opt_led_mode)
+				opt_led_mode = LED_MODE_SHARES;
 			char *pch = strtok(arg,",");
 			int n = 0, val;
 			while (pch != NULL && n < MAX_GPUS) {
 				int dev_id = device_map[n++];
 				char * p = strstr(pch, "0x");
 				val = p ? (int32_t) strtoul(p, NULL, 16) : atoi(pch);
+				if (!val && !strcmp(pch, "mining"))
+					opt_led_mode = LED_MODE_MINING;
+				if (!val && !strcmp(pch, "shares"))
+					opt_led_mode = LED_MODE_SHARES;
 				device_led[dev_id] = val;
 				pch = strtok(NULL, ",");
 			}

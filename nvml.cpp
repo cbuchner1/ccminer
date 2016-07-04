@@ -1819,9 +1819,9 @@ int gpu_info(struct cgpu_info *gpu)
 static int rgb_percent(int RGB, int percent)
 {
 	uint8_t* comp = (uint8_t*) &RGB;
-	int res = ((comp[2] * percent) / 100) << 16;
-	res += ((comp[1] * percent) / 100) << 8;
-	return res + ((comp[0] * percent) / 100);
+	int res = ((percent*comp[2]) / 100) << 16;
+	res += ((percent*comp[1]) / 100) << 8;
+	return res + ((percent*comp[0]) / 100);
 }
 
 void gpu_led_on(int dev_id)
@@ -1838,7 +1838,7 @@ void gpu_led_on(int dev_id)
 void gpu_led_percent(int dev_id, int percent)
 {
 #if defined(WIN32) && defined(USE_WRAPNVML)
-	int value = device_led[dev_id] > 100 ? rgb_percent(device_led[dev_id], percent) : (device_led[dev_id] * percent)/100;
+	int value = rgb_percent(device_led[dev_id], percent);
 	if (device_led_state[dev_id] != value) {
 		if (nvapi_set_led(nvapi_dev_map[dev_id], value, device_name[dev_id]) == 0)
 			device_led_state[dev_id] = value;
