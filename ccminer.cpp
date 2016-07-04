@@ -2974,20 +2974,20 @@ void parse_arg(int key, char *arg)
 			if (!opt_led_mode)
 				opt_led_mode = LED_MODE_SHARES;
 			char *pch = strtok(arg,",");
-			int n = 0, val;
+			int n = 0, lastval, val;
 			while (pch != NULL && n < MAX_GPUS) {
 				int dev_id = device_map[n++];
 				char * p = strstr(pch, "0x");
 				val = p ? (int32_t) strtoul(p, NULL, 16) : atoi(pch);
 				if (!val && !strcmp(pch, "mining"))
 					opt_led_mode = LED_MODE_MINING;
-				if (!val && !strcmp(pch, "shares"))
-					opt_led_mode = LED_MODE_SHARES;
-				device_led[dev_id] = val;
+				else if (device_led[dev_id] == -1)
+					device_led[dev_id] = lastval = val;
 				pch = strtok(NULL, ",");
 			}
-			if (val <= 100)	while (n < MAX_GPUS)
-				device_led[n++] = val;
+			if (lastval) while (n < MAX_GPUS) {
+				device_led[n++] = lastval;
+			}
 		}
 		break;
 	case 1005:
