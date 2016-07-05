@@ -10,7 +10,7 @@
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
 void myriadgroestl_cpu_free(int thr_id);
 void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
-void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce);
+void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *nounce);
 
 void myriadhash(void *state, const void *input)
 {
@@ -37,10 +37,10 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	uint32_t start_nonce = pdata[19];
-	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 17);
+	int dev_id = device_map[thr_id];
+	int intensity = (device_sm[dev_id] >= 600) ? 20 : 18;
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - start_nonce);
-
-	uint32_t *outputHash = (uint32_t*)malloc(throughput * 64);
 
 	if (opt_benchmark)
 		ptarget[7] = 0x0000ff;
@@ -48,7 +48,7 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	// init
 	if(!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(dev_id);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
 			cudaDeviceReset();
 			// reduce cpu usage
@@ -62,14 +62,13 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
-	// Context mit dem Endian gedrehten Blockheader vorbereiten (Nonce wird später ersetzt)
 	myriadgroestl_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
 
 	do {
 		// GPU
 		uint32_t foundNounce = UINT32_MAX;
 
-		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
+		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], &foundNounce);
 
 		*hashes_done = pdata[19] - start_nonce + throughput;
 
@@ -81,9 +80,8 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				work_set_target_ratio(work, vhash);
 				pdata[19] = foundNounce;
-				free(outputHash);
 				return 1;
-			} else {
+			} else if (vhash[7] > ptarget[7]) {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
 			}
 		}
@@ -98,7 +96,6 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 
 	*hashes_done = max_nonce - start_nonce;
 
-	free(outputHash);
 	return 0;
 }
 
