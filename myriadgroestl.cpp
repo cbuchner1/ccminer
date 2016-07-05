@@ -9,8 +9,8 @@
 
 void myriadgroestl_cpu_init(int thr_id, uint32_t threads);
 void myriadgroestl_cpu_free(int thr_id);
-void myriadgroestl_cpu_setBlock(int thr_id, void *data, void *pTargetIn);
-void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *nounce);
+void myriadgroestl_cpu_setBlock(int thr_id, void *data, uint32_t *target);
+void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *resNonces);
 
 void myriadhash(void *state, const void *input)
 {
@@ -62,27 +62,37 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
-	myriadgroestl_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
+	myriadgroestl_cpu_setBlock(thr_id, endiandata, ptarget);
 
 	do {
 		// GPU
-		uint32_t foundNounce = UINT32_MAX;
+		uint32_t foundNonces[2] = { UINT32_MAX, UINT32_MAX };
 
-		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], &foundNounce);
+		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], foundNonces);
 
 		*hashes_done = pdata[19] - start_nonce + throughput;
 
-		if (foundNounce < UINT32_MAX && bench_algo < 0)
+		if (foundNonces[0] < UINT32_MAX && bench_algo < 0)
 		{
 			uint32_t _ALIGN(64) vhash[8];
-			endiandata[19] = swab32(foundNounce);
+			endiandata[19] = swab32(foundNonces[0]);
 			myriadhash(vhash, endiandata);
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				work_set_target_ratio(work, vhash);
-				pdata[19] = foundNounce;
+				pdata[19] = foundNonces[0];
+				// search for another nonce
+				if (foundNonces[1] != UINT32_MAX) {
+					endiandata[19] = swab32(foundNonces[1]);
+					myriadhash(vhash, endiandata);
+					pdata[21] = foundNonces[1];
+					if(bn_hash_target_ratio(vhash, ptarget) > work->shareratio) {
+						work_set_target_ratio(work, vhash);
+					}
+					return 2;
+				}
 				return 1;
 			} else if (vhash[7] > ptarget[7]) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonces[0]);
 			}
 		}
 
