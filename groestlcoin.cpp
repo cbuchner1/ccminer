@@ -36,8 +36,6 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 	uint32_t throughput = cuda_default_throughput(thr_id, 1 << 19); // 256*256*8
 	if (init[thr_id]) throughput = min(throughput, max_nonce - start_nonce);
 
-	uint32_t *outputHash = (uint32_t*)malloc((size_t) 64* throughput);
-
 	if (opt_benchmark)
 		ptarget[7] = 0x001f;
 
@@ -66,7 +64,7 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 		*hashes_done = pdata[19] - start_nonce + throughput;
 
 		// GPU hash
-		groestlcoin_cpu_hash(thr_id, throughput, pdata[19], outputHash, &foundNounce);
+		groestlcoin_cpu_hash(thr_id, throughput, pdata[19], &foundNounce);
 
 		if (foundNounce < UINT32_MAX && bench_algo < 0)
 		{
@@ -77,9 +75,8 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				work_set_target_ratio(work, vhash);
 				pdata[19] = foundNounce;
-				free(outputHash);
 				return true;
-			} else {
+			} else if (vhash[7] > ptarget[7]) {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
 			}
 		}
@@ -93,8 +90,6 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - start_nonce;
-
-	free(outputHash);
 	return 0;
 }
 

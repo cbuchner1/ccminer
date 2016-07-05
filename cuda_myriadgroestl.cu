@@ -18,7 +18,7 @@
 
 // globaler Speicher für alle HeftyHashes aller Threads
 __constant__ uint32_t pTarget[8]; // Single GPU
-uint32_t *d_outputHashes[MAX_GPUS];
+static uint32_t *d_outputHashes[MAX_GPUS];
 static uint32_t *d_resultNonce[MAX_GPUS];
 
 __constant__ uint32_t myriadgroestl_gpu_msg[32];
@@ -225,8 +225,9 @@ __device__ void myriadgroestl_gpu_sha256(uint32_t *message)
 		message[k] = SWAB32(hash[k]);
 }
 
-__global__ void __launch_bounds__(256, 4)
- myriadgroestl_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t *hashBuffer)
+__global__
+__launch_bounds__(256, 4)
+void myriadgroestl_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t *hashBuffer)
 {
 #if __CUDA_ARCH__ >= 300
 	// durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
@@ -263,8 +264,8 @@ __global__ void __launch_bounds__(256, 4)
 #endif
 }
 
-__global__ void
- myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, uint32_t *hashBuffer)
+__global__
+void myriadgroestl_gpu_hash_quad2(uint32_t threads, uint32_t startNounce, uint32_t *resNounce, uint32_t *hashBuffer)
 {
 #if __CUDA_ARCH__ >= 300
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -321,6 +322,9 @@ void myriadgroestl_cpu_init(int thr_id, uint32_t threads)
 	cudaMemcpyToSymbol( myr_sha256_gpu_constantTable,
 						myr_sha256_cpu_constantTable,
 						sizeof(uint32_t) * 64 );
+
+	// to check if the binary supports SM3+
+	cuda_get_arch(thr_id);
 
 	cudaMalloc(&d_outputHashes[thr_id], (size_t) 64 * threads);
 	cudaMalloc(&d_resultNonce[thr_id], sizeof(uint32_t));
@@ -379,7 +383,7 @@ void myriadgroestl_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, 
 	myriadgroestl_gpu_hash_quad2 <<< grid2, block >>> (threads, startNounce, d_resultNonce[thr_id], d_outputHashes[thr_id]);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, 0, thr_id);
+	//MyStreamSynchronize(NULL, 0, thr_id);
 
 	cudaMemcpy(resNounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }

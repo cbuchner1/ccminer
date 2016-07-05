@@ -5,6 +5,11 @@
 
 #include "cuda_helper.h"
 
+#ifdef __INTELLISENSE__
+#define __CUDA_ARCH__ 500
+#define __byte_perm(x,y,n) x
+#endif
+
 #include "miner.h"
 
 __constant__ uint32_t pTarget[8]; // Single GPU
@@ -85,9 +90,8 @@ void groestlcoin_gpu_hash_quad(uint32_t threads, uint32_t startNounce, uint32_t 
 				 }
 			}
 
-			if(rc == true)
-				if(resNounce[0] > nounce)
-					resNounce[0] = nounce;
+			if(rc && resNounce[0] > nounce)
+				resNounce[0] = nounce;
 		}
 	}
 #endif
@@ -111,9 +115,8 @@ void groestlcoin_cpu_free(int thr_id)
 __host__
 void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 {
-	uint32_t msgBlock[32];
+	uint32_t msgBlock[32] = { 0 };
 
-	memset(msgBlock, 0, sizeof(uint32_t) * 32);
 	memcpy(&msgBlock[0], data, 80);
 
 	// Erweitere die Nachricht auf den Nachrichtenblock (padding)
@@ -125,18 +128,14 @@ void groestlcoin_cpu_setBlock(int thr_id, void *data, void *pTargetIn)
 	// auf der GPU ausgeführt)
 
 	// Blockheader setzen (korrekte Nonce und Hefty Hash fehlen da drin noch)
-	cudaMemcpyToSymbol( groestlcoin_gpu_msg,
-						msgBlock,
-						128);
+	cudaMemcpyToSymbol(groestlcoin_gpu_msg, msgBlock, 128);
 
 	cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
-	cudaMemcpyToSymbol( pTarget,
-						pTargetIn,
-						sizeof(uint32_t) * 8 );
+	cudaMemcpyToSymbol(pTarget, pTargetIn, 32);
 }
 
 __host__
-void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, void *outputHashes, uint32_t *nounce)
+void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *resNonce)
 {
 	uint32_t threadsperblock = 256;
 
@@ -144,12 +143,9 @@ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, vo
 	// mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
 	int factor = 4;
 
-		// berechne wie viele Thread Blocks wir brauchen
+	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
 	dim3 block(threadsperblock);
-
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
 
 	int dev_id = device_map[thr_id];
 	if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300) {
@@ -158,10 +154,10 @@ void groestlcoin_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, vo
 	}
 
 	cudaMemset(d_resultNonce[thr_id], 0xFF, sizeof(uint32_t));
-	groestlcoin_gpu_hash_quad<<<grid, block, shared_size>>>(threads, startNounce, d_resultNonce[thr_id]);
+	groestlcoin_gpu_hash_quad <<<grid, block>>> (threads, startNounce, d_resultNonce[thr_id]);
 
 	// Strategisches Sleep Kommando zur Senkung der CPU Last
-	MyStreamSynchronize(NULL, 0, thr_id);
+	// MyStreamSynchronize(NULL, 0, thr_id);
 
-	cudaMemcpy(nounce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(resNonce, d_resultNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 }
