@@ -265,7 +265,7 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 			foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		}
 
-		*hashes_done = pdata[19] - first_nonce + 1;
+		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		if (foundNonce != UINT32_MAX)
 		{
@@ -288,7 +288,6 @@ extern "C" int scanhash_quark(int thr_id, struct work* work, uint32_t max_nonce,
 
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
 
