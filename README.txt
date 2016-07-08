@@ -240,11 +240,12 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  June 2016       v1.8.0
+  July 2016       v1.8.0
                   Pascal support with cuda 8
                   x11evo algo (XRE)
-                  Lyra2v2 and Decred hashrate improvements
+                  Lyra2v2, Neoscrypt and Decred improvements
                   Enhance windows NVAPI clock and power limits
+                  Led support for mining/shares activity on windows
 
   May  18th 2016  v1.7.6
                   Decred vote support

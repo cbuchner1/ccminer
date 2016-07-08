@@ -3,9 +3,10 @@
 #include "neoscrypt/neoscrypt.h"
 
 extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
-extern void neoscrypt_cpu_init(int thr_id, uint32_t threads);
-extern void neoscrypt_cpu_free(int thr_id);
-extern uint32_t neoscrypt_cpu_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, int have_stratum, int order);
+
+extern void neoscrypt_init_2stream(int thr_id, uint32_t threads);
+extern void neoscrypt_free_2stream(int thr_id);
+extern void neoscrypt_hash_k4_2stream(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *result, bool stratum);
 
 static bool init[MAX_GPUS] = { 0 };
 
@@ -35,12 +36,12 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 		cudaGetLastError(); // reset errors if device is not "reset"
 
 		if (device_sm[dev_id] <= 300) {
-			applog(LOG_ERR, "Sorry neoscrypt is not supported on SM 3.0 devices");
+			gpulog(LOG_ERR, thr_id, "Sorry neoscrypt is not supported on SM 3.0 devices");
 			proper_exit(EXIT_CODE_CUDA_ERROR);
 		}
 
-		applog(LOG_INFO, "GPU #%d: Using %d cuda threads", dev_id, throughput);
-		neoscrypt_cpu_init(thr_id, throughput);
+		gpulog(LOG_INFO, thr_id, "Using %d cuda threads", throughput);
+		neoscrypt_init_2stream(thr_id, throughput);
 
 		init[thr_id] = true;
 	}
@@ -56,26 +57,28 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 	neoscrypt_setBlockTarget(endiandata,ptarget);
 
 	do {
-		uint32_t foundNonce = neoscrypt_cpu_hash_k4(thr_id, throughput, pdata[19], have_stratum, 0);
-		if (foundNonce != UINT32_MAX)
-		{
-			uint32_t _ALIGN(64) vhash64[8];
+		uint32_t foundNonces[2] = { UINT32_MAX, UINT32_MAX };
+		neoscrypt_hash_k4_2stream(thr_id, throughput, pdata[19], foundNonces, have_stratum);
 
-			*hashes_done = pdata[19] - first_nonce + 1;
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
+		if (foundNonces[0] != UINT32_MAX)
+		{
+			uint32_t _ALIGN(64) vhash[8];
 
 			if (have_stratum) {
-				be32enc(&endiandata[19], foundNonce);
+				be32enc(&endiandata[19], foundNonces[0]);
 			} else {
-				endiandata[19] = foundNonce;
+				endiandata[19] = foundNonces[0];
 			}
-			neoscrypt((uchar*)vhash64, (uchar*) endiandata, 0x80000620U);
+			neoscrypt((uchar*)vhash, (uchar*) endiandata, 0x80000620U);
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				work_set_target_ratio(work, vhash64);
-				pdata[19] = foundNonce;
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+				work_set_target_ratio(work, vhash);
+				pdata[19] = foundNonces[0];
 				return 1;
 			} else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+				gpulog(LOG_WARNING, thr_id, "nonce %08x does not validate on CPU!", foundNonces[0]);
 			}
 		}
 
@@ -100,7 +103,7 @@ void free_neoscrypt(int thr_id)
 
 	cudaThreadSynchronize();
 
-	neoscrypt_cpu_free(thr_id);
+	neoscrypt_free_2stream(thr_id);
 	init[thr_id] = false;
 
 	cudaDeviceSynchronize();
