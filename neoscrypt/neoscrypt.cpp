@@ -32,8 +32,12 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 	{
 		cudaDeviceSynchronize();
 		cudaSetDevice(dev_id);
-		cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
-		cudaGetLastError(); // reset errors if device is not "reset"
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			cudaGetLastError(); // reset errors if device is not "reset"
+		}
 
 		if (device_sm[dev_id] <= 300) {
 			gpulog(LOG_ERR, thr_id, "Sorry neoscrypt is not supported on SM 3.0 devices");
