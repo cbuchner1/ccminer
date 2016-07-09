@@ -258,7 +258,9 @@
     <CudaCompile Include="Algo256\cuda_bmw.cu">
       <MaxRegCount>76</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu" />
+    <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
+      <MaxRegCount>160</MaxRegCount>
+    </CudaCompile>
     <ClCompile Include="scrypt-jane.cpp" />
     <ClCompile Include="scrypt.cpp" />
     <ClCompile Include="skein2.cpp" />

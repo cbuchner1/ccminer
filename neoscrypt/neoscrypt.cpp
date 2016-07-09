@@ -1,12 +1,14 @@
 #include <cuda_runtime.h>
-#include "miner.h"
-#include "neoscrypt/neoscrypt.h"
+#include <string.h>
+#include <miner.h>
 
-extern void neoscrypt_setBlockTarget(uint32_t * data, const void *ptarget);
+#include "neoscrypt.h"
+
+extern void neoscrypt_setBlockTarget(uint32_t* const data, uint32_t* const ptarget);
 
 extern void neoscrypt_init_2stream(int thr_id, uint32_t threads);
 extern void neoscrypt_free_2stream(int thr_id);
-extern void neoscrypt_hash_k4_2stream(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *result, bool stratum);
+extern void neoscrypt_hash_k4_2stream(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *resNonces, bool stratum);
 
 static bool init[MAX_GPUS] = { 0 };
 
@@ -19,6 +21,8 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 
 	int dev_id = device_map[thr_id];
 	int intensity = is_windows() ? 18 : 19;
+	if (strstr(device_name[dev_id], "GTX 10")) intensity = 20; // also need more than 2GB
+
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	throughput = throughput / 32; /* set for max intensity ~= 20 */
 	api_set_throughput(thr_id, throughput);
