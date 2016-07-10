@@ -1483,7 +1483,7 @@ int nvapiMemGetInfo(int dev_id, size_t *free, size_t *total)
 	mem.version = NV_DISPLAY_DRIVER_MEMORY_INFO_VER;
 	unsigned int devNum = nvapi_dev_map[dev_id % MAX_GPUS];
 	if ((ret = NvAPI_GPU_GetMemoryInfo(phys[devNum], &mem)) == NVAPI_OK) {
-		*total = mem.availableDedicatedVideoMemory;
+		*total = mem.dedicatedVideoMemory;// mem.availableDedicatedVideoMemory;
 		*free  = mem.curAvailableDedicatedVideoMemory;
 	}
 	return (int) ret;

@@ -1638,13 +1638,13 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 	strcpy(os, is_windows() ? "win32" : "linux");
 #endif
 
+	cuda_gpu_info(cgpu);
 #ifdef USE_WRAPNVML
 	cgpu->has_monitoring = true;
 	cgpu->gpu_power = gpu_power(cgpu); // mWatts
 	watts = (cgpu->gpu_power >= 1000) ? cgpu->gpu_power / 1000 : 0; // ignore nvapi %
 	gpu_info(cgpu);
 #endif
-	cuda_gpu_clocks(cgpu);
 	get_currentalgo(algo, sizeof(algo));
 
 	card = device_name[dev_id];

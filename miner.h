@@ -365,6 +365,7 @@ struct cgpu_info {
 	int gpu_clock;
 	int gpu_memclock;
 	size_t gpu_mem;
+	size_t gpu_memfree;
 	uint32_t gpu_power;
 	double gpu_vddc;
 	int16_t gpu_pstate;
@@ -486,6 +487,7 @@ extern double net_diff;
 extern double stratum_diff;
 
 #define MAX_GPUS 16
+//#define MAX_THREADS 32 todo
 extern char* device_name[MAX_GPUS];
 extern short device_map[MAX_GPUS];
 extern long  device_sm[MAX_GPUS];
@@ -500,7 +502,7 @@ void cuda_shutdown();
 int cuda_finddevice(char *name);
 int cuda_version();
 void cuda_print_devices();
-int cuda_gpu_clocks(struct cgpu_info *gpu);
+int cuda_gpu_info(struct cgpu_info *gpu);
 int cuda_available_memory(int thr_id);
 
 uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);

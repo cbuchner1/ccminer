@@ -116,6 +116,7 @@ static void gpustatus(int thr_id)
 		char buf[512]; *buf = '\0';
 		char* card;
 
+		cuda_gpu_info(cgpu);
 #ifdef USE_WRAPNVML
 		cgpu->has_monitoring = true;
 		cgpu->gpu_bus = gpu_busid(cgpu);
@@ -124,7 +125,6 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_fan_rpm = (uint16_t) gpu_fanrpm(cgpu);
 		cgpu->gpu_power = gpu_power(cgpu); // mWatts
 #endif
-		cuda_gpu_clocks(cgpu);
 
 		// todo: per gpu
 		cgpu->accepted = p->accepted_count;
@@ -254,6 +254,7 @@ static void gpuhwinfos(int gpu_id)
 	if (cgpu == NULL)
 		return;
 
+	cuda_gpu_info(cgpu);
 #ifdef USE_WRAPNVML
 	cgpu->has_monitoring = true;
 	cgpu->gpu_bus = gpu_busid(cgpu);
@@ -268,18 +269,16 @@ static void gpuhwinfos(int gpu_id)
 #endif
 #endif
 
-	cuda_gpu_clocks(cgpu);
-
 	memset(pstate, 0, sizeof(pstate));
 	if (cgpu->gpu_pstate != -1)
 		snprintf(pstate, sizeof(pstate), "P%d", (int) cgpu->gpu_pstate);
 
 	card = device_name[gpu_id];
 
-	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%hu;MEM=%lu;"
+	snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;SM=%hu;MEM=%u;"
 		"TEMP=%.1f;FAN=%hu;RPM=%hu;FREQ=%d;MEMFREQ=%d;PST=%s;POWER=%u;"
 		"VID=%hx;PID=%hx;NVML=%d;NVAPI=%d;SN=%s;BIOS=%s|",
-		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_arch, cgpu->gpu_mem,
+		gpu_id, cgpu->gpu_bus, card, cgpu->gpu_arch, (uint32_t) cgpu->gpu_mem,
 		cgpu->gpu_temp, cgpu->gpu_fan, cgpu->gpu_fan_rpm,
 		cgpu->gpu_clock, cgpu->gpu_memclock,
 		pstate, cgpu->gpu_power,

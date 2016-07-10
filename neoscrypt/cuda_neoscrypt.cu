@@ -752,8 +752,8 @@ void fastkdf256_v1(const uint32_t thread, const uint32_t nonce, uint32_t* const 
 	rbuf = idx & 3;
 	bitbuf = rbuf << 3;
 
-	for(int i = 0; i<64; i++)
 #if __CUDA_ARCH__ >= 320
+	for(int i = 0; i<64; i++)
 		asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(((uint32_t*)output)[i]) : "r"(B[(qbuf + i) & 0x3f]), "r"(B[(qbuf + i + 1) & 0x3f4]), "r"(bitbuf));
 #endif
 

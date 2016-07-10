@@ -233,13 +233,18 @@ void cuda_clear_lasterror()
 } /* extern "C" */
 #endif
 
-int cuda_gpu_clocks(struct cgpu_info *gpu)
+int cuda_gpu_info(struct cgpu_info *gpu)
 {
 	cudaDeviceProp props;
 	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
 		gpu->gpu_clock = props.clockRate;
 		gpu->gpu_memclock = props.memoryClockRate;
-		gpu->gpu_mem = props.totalGlobalMem;
+		gpu->gpu_mem = (props.totalGlobalMem / 1024); // kB
+#if defined(_WIN32) && defined(USE_WRAPNVML)
+		// required to get mem size > 4GB (size_t too small for bytes on 32bit)
+		nvapiMemGetInfo(gpu->gpu_id, &gpu->gpu_memfree, &gpu->gpu_mem); // kB
+#endif
+		gpu->gpu_mem = gpu->gpu_mem / 1024; // MB
 		return 0;
 	}
 	return -1;
