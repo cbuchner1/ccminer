@@ -1421,28 +1421,39 @@ static uint32_t getblocheight(struct stratum_ctx *sctx)
 
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
-	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime, *nreward;
+	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime;
+	const char *claim = NULL, *nreward = NULL;
 	size_t coinb1_size, coinb2_size;
 	bool clean, ret = false;
-	int merkle_count, i;
+	int merkle_count, i, p=0;
 	json_t *merkle_arr;
 	uchar **merkle = NULL;
 	// uchar(*merkle_tree)[32] = { 0 };
 	int ntime;
+	char algo[64] = { 0 };
+	get_currentalgo(algo, sizeof(algo));
+	bool has_claim = !strcasecmp(algo, "lbry");
 
-	job_id = json_string_value(json_array_get(params, 0));
-	prevhash = json_string_value(json_array_get(params, 1));
-	coinb1 = json_string_value(json_array_get(params, 2));
-	coinb2 = json_string_value(json_array_get(params, 3));
-	merkle_arr = json_array_get(params, 4);
+	job_id = json_string_value(json_array_get(params, p++));
+	prevhash = json_string_value(json_array_get(params, p++));
+	if (has_claim) {
+		claim = json_string_value(json_array_get(params, p++));
+		if (!claim || strlen(claim) != 64) {
+			applog(LOG_ERR, "Stratum notify: invalid claim parameter");
+			goto out;
+		}
+	}
+	coinb1 = json_string_value(json_array_get(params, p++));
+	coinb2 = json_string_value(json_array_get(params, p++));
+	merkle_arr = json_array_get(params, p++);
 	if (!merkle_arr || !json_is_array(merkle_arr))
 		goto out;
 	merkle_count = (int) json_array_size(merkle_arr);
-	version = json_string_value(json_array_get(params, 5));
-	nbits = json_string_value(json_array_get(params, 6));
-	stime = json_string_value(json_array_get(params, 7));
-	clean = json_is_true(json_array_get(params, 8));
-	nreward = json_string_value(json_array_get(params, 9));
+	version = json_string_value(json_array_get(params, p++));
+	nbits = json_string_value(json_array_get(params, p++));
+	stime = json_string_value(json_array_get(params, p++));
+	clean = json_is_true(json_array_get(params, p)); p++;
+	nreward = json_string_value(json_array_get(params, p++));
 
 	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !stime ||
 	    strlen(prevhash) != 64 || strlen(version) != 8 ||
@@ -1494,6 +1505,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	free(sctx->job.job_id);
 	sctx->job.job_id = strdup(job_id);
 	hex2bin(sctx->job.prevhash, prevhash, 32);
+	if (has_claim) hex2bin(sctx->job.claim, claim, 32);
 
 	sctx->job.height = getblocheight(sctx);
 
@@ -2079,7 +2091,8 @@ void do_gpu_tests(void)
 	//scanhash_scrypt_jane(0, &work, NULL, 1, &done, &tv, &tv);
 
 	memset(work.data, 0, sizeof(work.data));
-	scanhash_decred(0, &work, 1, &done);
+	work.data[0] = 0;
+	scanhash_lbry(0, &work, 1, &done);
 
 	free(work_restart);
 	work_restart = NULL;
@@ -2141,6 +2154,10 @@ void print_hash_tests(void)
 
 	keccak256_hash(&hash[0], &buf[0]);
 	printpfx("keccak", hash);
+
+	memset(buf, 0, 128);
+	lbry_hash(&hash[0], &buf[0]);
+	printpfx("lbry", hash);
 
 	luffa_hash(&hash[0], &buf[0]);
 	printpfx("luffa", hash);

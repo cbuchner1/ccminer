@@ -82,6 +82,9 @@
     <Filter Include="Source Files\CUDA\lyra2">
       <UniqueIdentifier>{1613763f-895c-4321-b58b-6f5849868956}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\lbry">
+      <UniqueIdentifier>{3079ea1f-f768-455a-acd6-f517fac535b4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -150,9 +153,6 @@
     <ClCompile Include="sph\luffa.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
-    <ClCompile Include="sph\md_helper.c">
-      <Filter>Source Files\sph</Filter>
-    </ClCompile>
     <ClCompile Include="sph\sha2.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
@@ -180,7 +180,10 @@
     <ClCompile Include="sph\haval.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
-    <ClCompile Include="sph\haval_helper.c">
+    <ClCompile Include="sph\ripemd.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\sph_sha2.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
     <ClCompile Include="sph\sha2big.c">
@@ -720,6 +723,18 @@
     </CudaCompile>
     <CudaCompile Include="Algo256\blake2s.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lbry\cuda_sha256_lbry.cu">
+      <Filter>Source Files\CUDA\lbry</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lbry\cuda_sha512_lbry.cu">
+      <Filter>Source Files\CUDA\lbry</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lbry\cuda_ripemd160.cu">
+      <Filter>Source Files\CUDA\lbry</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lbry\lbry.cu">
+      <Filter>Source Files\CUDA\lbry</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

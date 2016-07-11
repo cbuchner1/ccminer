@@ -275,6 +275,7 @@ extern int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, 
 extern int scanhash_groestlcoin(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_heavy(int thr_id,struct work *work, uint32_t max_nonce, unsigned long *hashes_done, uint32_t maxvote, int blocklen);
 extern int scanhash_jackpot(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_lyra2v2(int thr_id,struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -584,6 +585,7 @@ struct stratum_job {
 	unsigned char version[4];
 	unsigned char nbits[4];
 	unsigned char ntime[4];
+	unsigned char claim[32]; // lbry
 	bool clean;
 	unsigned char nreward[2];
 	uint32_t height;
@@ -797,6 +799,7 @@ void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
 void keccak256_hash(void *state, const void *input);
 unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
+void lbry_hash(void *output, const void *input);
 void lyra2re_hash(void *state, const void *input);
 void lyra2v2_hash(void *state, const void *input);
 void myriadhash(void *state, const void *input);

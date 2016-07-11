@@ -228,6 +228,7 @@ Options:\n\
 			heavy       Heavycoin\n\
 			jackpot     Jackpot\n\
 			keccak      Keccak-256 (Maxcoin)\n\
+			lbry        LBRY Credits (Sha/Ripemd)\n\
 			luffa       Joincoin\n\
 			lyra2       LyraBar\n\
 			lyra2v2     VertCoin\n\
@@ -567,6 +568,7 @@ static void calc_network_diff(struct work *work)
 	// sample for diff 43.281 : 1c05ea29
 	// todo: endian reversed on longpoll could be zr5 specific...
 	uint32_t nbits = have_longpoll ? work->data[18] : swab32(work->data[18]);
+	if (opt_algo == ALGO_LBRY) nbits = swab32(work->data[26]);
 	if (opt_algo == ALGO_DECRED) nbits = work->data[29];
 	uint32_t bits = (nbits & 0xffffff);
 	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
@@ -836,6 +838,11 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			le32enc(&ntime, work->data[17]);
 			le32enc(&nonce, work->data[19]);
 			be16enc(&nvote, *((uint16_t*)&work->data[20]));
+			break;
+		case ALGO_LBRY:
+			check_dups = true;
+			le32enc(&ntime, work->data[25]);
+			le32enc(&nonce, work->data[27]);
 			break;
 		case ALGO_ZR5:
 			check_dups = true;
@@ -1296,6 +1303,8 @@ bool get_work(struct thr_info *thr, struct work *work)
 		memset(work->data + 19, 0x00, 52);
 		if (opt_algo == ALGO_DECRED) {
 			memset(&work->data[35], 0x00, 52);
+		} else if (opt_algo == ALGO_LBRY) {
+			work->data[28] = 0x80000000;
 		} else {
 			work->data[20] = 0x80000000;
 			work->data[31] = 0x00000280;
@@ -1441,6 +1450,14 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[37] = (rand()*4) << 8; // random work data
 		sctx->job.height = work->data[32];
 		//applog_hex(work->data, 180);
+	} else if (opt_algo == ALGO_LBRY) {
+		for (i = 0; i < 8; i++)
+			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
+		for (i = 0; i < 8; i++)
+			work->data[17 + i] = ((uint32_t*)sctx->job.claim)[i];
+		work->data[25] = le32dec(sctx->job.ntime);
+		work->data[26] = le32dec(sctx->job.nbits);
+		work->data[28] = 0x80000000;
 	} else {
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
@@ -1498,6 +1515,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
+		case ALGO_LBRY:
 		case ALGO_LYRA2v2:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
@@ -1658,6 +1676,7 @@ static void *miner_thread(void *userdata)
 
 		// &work.data[19]
 		int wcmplen = (opt_algo == ALGO_DECRED) ? 140 : 76;
+		if (opt_algo == ALGO_LBRY) wcmplen = 108;
 		int wcmpoft = 0;
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
@@ -1910,6 +1929,7 @@ static void *miner_thread(void *userdata)
 				minmax = 0x40000000U;
 				break;
 			case ALGO_KECCAK:
+			case ALGO_LBRY:
 			case ALGO_LUFFA:
 			case ALGO_SKEIN:
 			case ALGO_SKEIN2:
@@ -2035,6 +2055,9 @@ static void *miner_thread(void *userdata)
 		case ALGO_JACKPOT:
 			rc = scanhash_jackpot(thr_id, &work, max_nonce, &hashes_done);
 			break;
+		case ALGO_LBRY:
+			rc = scanhash_lbry(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_LUFFA:
 			rc = scanhash_luffa(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -2130,7 +2153,7 @@ static void *miner_thread(void *userdata)
 
 		// todo: update all algos to use work->nonces
 		work.nonces[0] = nonceptr[0];
-		if (opt_algo != ALGO_DECRED && opt_algo != ALGO_BLAKE2S) {
+		if (opt_algo != ALGO_DECRED && opt_algo != ALGO_BLAKE2S && opt_algo != ALGO_LBRY) {
 			work.nonces[1] = nonceptr[2];
 		}
 

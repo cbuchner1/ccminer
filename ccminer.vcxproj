@@ -115,7 +115,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61;compute_52,sm_52</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
@@ -273,15 +273,11 @@
     <ClCompile Include="sph\fugue.c" />
     <ClCompile Include="sph\groestl.c" />
     <ClCompile Include="sph\haval.c" />
-    <ClCompile Include="sph\haval_helper.c">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="sph\jh.c" />
     <ClCompile Include="sph\keccak.c" />
     <ClCompile Include="sph\luffa.c" />
-    <ClCompile Include="sph\md_helper.c">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="sph\ripemd.c" />
+    <ClCompile Include="sph\sph_sha2.c" />
     <ClCompile Include="sph\sha2.c" />
     <ClCompile Include="sph\sha2big.c" />
     <ClCompile Include="sph\shabal.c" />
@@ -428,6 +424,10 @@
       <MaxRegCount>92</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="Algo256\cuda_skein256.cu" />
+    <CudaCompile Include="lbry\cuda_ripemd160.cu" />
+    <CudaCompile Include="lbry\cuda_sha256_lbry.cu" />
+    <CudaCompile Include="lbry\cuda_sha512_lbry.cu" />
+    <CudaCompile Include="lbry\lbry.cu" />
     <CudaCompile Include="pentablake.cu">
       <MaxRegCount>80</MaxRegCount>
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>

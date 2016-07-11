@@ -1,5 +1,5 @@
 
-ccMiner preview 1.8-dev (May 2016) "Pascal and x11evo algo"
+ccMiner 1.8 Preview (July 2016) "CUDA 8, lbry and x11evo algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -28,6 +28,7 @@ Decred (Blake256 14-rounds - 180 bytes)
 HeavyCoin & MjollnirCoin
 FugueCoin
 GroestlCoin & Myriad-Groestl
+Lbry Credits
 JackpotCoin
 QuarkCoin family & AnimeCoin
 TalkCoin
@@ -35,13 +36,13 @@ DarkCoin and other X11 coins
 Chaincoin and Flaxscript (C11)
 Saffroncoin blake (256 14-rounds)
 BlakeCoin (256 8-rounds)
-Midnight (BMW 256)
 Qubit (Digibyte, ...)
 Luffa (Joincoin)
 Keccak (Maxcoin)
 Pentablake (Blake 512 x5)
 1Coin Triple S
 Neoscrypt (FeatherCoin)
+Revolver (X11evo)
 Scrypt and Scrypt:N
 Scrypt-Jane (Chacha)
 Sibcoin (sib)
@@ -82,6 +83,7 @@ its command line interface and options.
                           heavy       use to mine Heavycoin
                           jackpot     use to mine Jackpotcoin
                           keccak      use to mine Maxcoin
+                          lbry        use to mine LBRY Credits
                           luffa       use to mine Joincoin
                           lyra2       use to mine Vertcoin
                           mjollnir    use to mine Mjollnircoin
@@ -151,6 +153,7 @@ its command line interface and options.
       --max-diff=N      Only mine if net difficulty is less than specified value
       --pstate=0        will force the Geforce 9xx to run in P0 P-State
       --plimit=150W     set the gpu power limit, allow multiple values for N cards
+      --tlimit=85       Set the gpu thermal limit (windows only)
       --keep-clocks     prevent reset clocks and/or power limit on exit
       --show-diff       display submitted block and net difficulty
   -B, --background      run the miner in the background
@@ -242,6 +245,7 @@ features.
 
   July 2016       v1.8.0
                   Pascal support with cuda 8
+                  lbry new multi sha / ripemd algo (LBC)
                   x11evo algo (XRE)
                   Lyra2v2, Neoscrypt and Decred improvements
                   Enhance windows NVAPI clock and power limits

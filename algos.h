@@ -19,6 +19,7 @@ enum sha_algos {
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
+	ALGO_LBRY,
 	ALGO_LUFFA,
 	ALGO_LYRA2,
 	ALGO_LYRA2v2,
@@ -67,6 +68,7 @@ static const char *algo_names[] = {
 	"heavy",
 	"keccak",
 	"jackpot",
+	"lbry",
 	"luffa",
 	"lyra2",
 	"lyra2v2",
