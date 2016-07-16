@@ -37,6 +37,18 @@ static __constant__ uint32_t c_IV[5] = {
 	0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u
 };
 
+__device__ __forceinline__
+uint32_t xor3b(const uint32_t a, const uint32_t b, const uint32_t c) {
+	uint32_t result;
+#if __CUDA_ARCH__ >= 500 && CUDA_VERSION >= 7050
+	asm ("lop3.b32 %0, %1, %2, %3, 0x96; // xor3b"  //0x96 = 0xF0 ^ 0xCC ^ 0xAA
+		: "=r"(result) : "r"(a), "r"(b),"r"(c));
+#else
+	result = a^b^c;
+#endif
+	return result;
+}
+
 //__host__
 //uint64_t xornot64(uint64_t a, uint64_t b, uint64_t c) {
 //	return c ^ (a | !b);
@@ -83,7 +95,7 @@ uint64_t xornt64(uint64_t a, uint64_t b, uint64_t c)
 #define F4(x, y, z)   ((((x) ^ (y)) & (z)) ^ (y))
 #define F5(x, y, z)   ((x) ^ ((y) | ~(z)))
 #else
-#define F1(x, y, z)   xor3(x,y,z)
+#define F1(x, y, z)   xor3b(x,y,z)
 #define F2(x, y, z)   xandx(x,y,z)
 #define F3(x, y, z)   xornot64(x,y,z)
 #define F4(x, y, z)   xandx(z,x,y)
@@ -305,59 +317,7 @@ uint64_t xornt64(uint64_t a, uint64_t b, uint64_t c)
 	h[0] = tmp; \
 }
 
-#if 0
 __global__
-void lbry_ripemd160_gpu_hash_32(const uint32_t threads, uint64_t *g_hash, const uint32_t byteOffset)
-{
-	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint32_t *hash = (uint32_t*) (&g_hash[thread * 8U + byteOffset/8]);
-
-		uint32_t in[16];
-		for (int i=0; i<8; i++)
-			in[i] = (hash[i]);
-		in[8] = 0x80;
-
-		#pragma unroll
-		for (int i=9;i<16;i++) in[i] = 0;
-
-		in[14] = 0x100; // size in bits
-
-		uint32_t h[5];
-		#pragma unroll
-		for (int i=0; i<5; i++)
-			h[i] = c_IV[i];
-
-		RIPEMD160_ROUND_BODY(in, h);
-
-		#pragma unroll
-		for (int i=0; i<5; i++)
-			hash[i] = h[i];
-
-#ifdef PAD_ZEROS
-		// 20 bytes hash on 32 or 64 bytes output space
-		hash[5] = 0;
-		hash[6] = 0;
-		hash[7] = 0;
-#endif
-	}
-}
-
-__host__
-void lbry_ripemd160_hash_32(int thr_id, uint32_t threads, uint32_t *g_Hash, uint32_t byteOffset, cudaStream_t stream)
-{
-	const uint32_t threadsperblock = 128;
-
-	dim3 grid(threads/threadsperblock);
-	dim3 block(threadsperblock);
-
-	lbry_ripemd160_gpu_hash_32 <<<grid, block, 0, stream>>> (threads, (uint64_t*) g_Hash, byteOffset);
-}
-#endif
-
-__global__
-//__launch_bounds__(256,6)
 void lbry_ripemd160_gpu_hash_32x2(const uint32_t threads, uint64_t *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -366,6 +326,7 @@ void lbry_ripemd160_gpu_hash_32x2(const uint32_t threads, uint64_t *g_hash)
 		uint32_t *hash = (uint32_t*) (&g_hash[thread * 8U]);
 
 		uint32_t in[16];
+		#pragma unroll
 		for (int i=0; i<8; i++)
 			in[i] = (hash[i]);
 		in[8] = 0x80;

@@ -160,20 +160,6 @@ uint32_t xor3b(const uint32_t a, const uint32_t b, const uint32_t c) {
 	return result;
 }
 
-/*
-__device__ __forceinline__
-uint32_t xor3b(const uint32_t a, const uint32_t b, const uint32_t c) {
-	uint32_t result;
-	asm("{  .reg .u32 t1; // xor3b \n\t"
-		"xor.b32 t1, %2, %3;\n\t"
-		"xor.b32 %0, %1, t1;"
-		"}"
-		: "=r"(result) : "r"(a) ,"r"(b),"r"(c));
-	return result;
-}
-#define xor3b(a,b,c) (a ^ b ^ c)
-*/
-
 __device__ __forceinline__ uint32_t bsg2_0(const uint32_t x)
 {
 	uint32_t r1 = ROTR32(x,2);
@@ -217,6 +203,13 @@ __device__ __forceinline__ uint32_t andor32(const uint32_t a, const uint32_t b, 
 		" or.b32 %0,  m, o ;\n\t"
 		"}\n\t" : "=r"(result) : "r"(a), "r"(b), "r"(c)
 	);
+	return result;
+}
+
+__device__ __forceinline__ uint2 vectorizeswap(uint64_t v) {
+	uint2 result;
+	asm("mov.b64 {%0,%1},%2; \n\t"
+		: "=r"(result.y), "=r"(result.x) : "l"(v));
 	return result;
 }
 
@@ -393,7 +386,8 @@ void lbry_sha256_gpu_hash_32(uint32_t threads, uint64_t *Hash512)
 		uint2* output = (uint2*) input;
 		#pragma unroll
 		for (int i=0;i<4;i++) {
-			output[i] = vectorize(cuda_swab32ll(((uint64_t*)buf)[i]));
+			//output[i] = vectorize(cuda_swab32ll(((uint64_t*)buf)[i]));
+			output[i] = vectorizeswap(((uint64_t*)buf)[i]);
 		}
 #ifdef PAD_ZEROS
 		#pragma unroll
@@ -447,8 +441,8 @@ void lbry_sha256d_gpu_hash_112(const uint32_t threads, const uint32_t startNonce
 		uint2* output = (uint2*) (&outputHash[thread * 8U]);
 		#pragma unroll
 		for (int i=0;i<4;i++) {
-			output[i] = vectorize(cuda_swab32ll(((uint64_t*)buf)[i]));
-			//output[i] = vectorize(((uint64_t*)buf)[i]);
+		//	//output[i] = vectorize(cuda_swab32ll(((uint64_t*)buf)[i]));
+			output[i] = vectorizeswap(((uint64_t*)buf)[i]);
 		}
 	}
 }

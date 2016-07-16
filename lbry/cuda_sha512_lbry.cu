@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <memory.h>
 
+//#define USE_ROT_ASM_OPT 0
 #include <cuda_helper.h>
 
 static __constant__ uint64_t K_512[80];
@@ -35,8 +36,6 @@ static const uint64_t K512[80] = {
 
 //#undef xor3
 //#define xor3(a,b,c) (a^b^c)
-
-//#undef 
 
 static __device__ __forceinline__
 uint64_t bsg5_0(const uint64_t x)
@@ -111,26 +110,17 @@ __global__
 void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
+	//if (thread < threads)
 	{
 		uint64_t *pHash = &g_hash[thread * 8U];
 
 		uint64_t W[80];
-		uint64_t r[8];
-
-		uint64_t IV512[8] = {
-		        0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
-		        0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
-		};
-
-		#pragma unroll
-		for (int i = 0; i < 8; i++)
-			r[i] = IV512[i];
 
 		#pragma unroll
 		for (int i = 0; i < 4; i++) {
 			// 32 bytes input
-			W[i] = cuda_swab64(pHash[i]);
+			W[i] = pHash[i];
+			//W[i] = cuda_swab64(pHash[i]); // made in sha256
 		}
 
 		W[4] = 0x8000000000000000; // end tag
@@ -140,12 +130,22 @@ void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 
 		W[15] = 0x100; // 256 bits
 
-		#pragma unroll
-		for (int i = 16; i < 80; i++) W[i] = 0;
+		//#pragma unroll
+		//for (int i = 16; i < 78; i++) W[i] = 0;
 
-		#pragma unroll 64
+		#pragma unroll
 		for (int i = 16; i < 80; i++)
 			W[i] = ssg5_1(W[i - 2]) + W[i - 7] + ssg5_0(W[i - 15]) + W[i - 16];
+
+		const uint64_t IV512[8] = {
+			0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
+			0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
+		};
+
+		uint64_t r[8];
+		#pragma unroll
+		for (int i = 0; i < 8; i++)
+			r[i] = IV512[i];
 
 		#pragma unroll 10
 		for (int i = 0; i < 10; i++) {
@@ -168,7 +168,7 @@ void lbry_sha512_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash, cudaStr
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	size_t shared_size = 80*8;
+	size_t shared_size = 0;
 	lbry_sha512_gpu_hash_32 <<<grid, block, shared_size, stream>>> (threads, (uint64_t*)d_hash);
 }
 
