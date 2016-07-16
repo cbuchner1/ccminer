@@ -730,9 +730,6 @@
     <CudaCompile Include="lbry\cuda_sha512_lbry.cu">
       <Filter>Source Files\CUDA\lbry</Filter>
     </CudaCompile>
-    <CudaCompile Include="lbry\cuda_ripemd160.cu">
-      <Filter>Source Files\CUDA\lbry</Filter>
-    </CudaCompile>
     <CudaCompile Include="lbry\lbry.cu">
       <Filter>Source Files\CUDA\lbry</Filter>
     </CudaCompile>
