@@ -161,7 +161,7 @@ void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 }
 
 __host__
-void lbry_sha512_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash, cudaStream_t stream)
+void lbry_sha512_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash)
 {
 	const int threadsperblock = 256;
 
@@ -169,7 +169,7 @@ void lbry_sha512_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash, cudaStr
 	dim3 block(threadsperblock);
 
 	size_t shared_size = 0;
-	lbry_sha512_gpu_hash_32 <<<grid, block, shared_size, stream>>> (threads, (uint64_t*)d_hash);
+	lbry_sha512_gpu_hash_32 <<<grid, block, shared_size>>> (threads, (uint64_t*)d_hash);
 }
 
 /**************************************************************************************************/
