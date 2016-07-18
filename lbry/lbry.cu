@@ -180,7 +180,7 @@ extern "C" int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, 
 
 	} while (!work_restart[thr_id].restart);
 
-	//*hashes_done = pdata[LBC_NONCE_OFT32] - first_nonce;
+	*hashes_done = pdata[LBC_NONCE_OFT32] - first_nonce;
 
 	return 0;
 }
