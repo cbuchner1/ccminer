@@ -1157,12 +1157,12 @@ int nvapi_pstateinfo(unsigned int devNum)
 	uint32_t plim = nvapi_get_plimit(devNum);
 	applog(LOG_RAW, " Power limit is set to %u%%", plim);
 
+#if 0
 	NVAPI_COOLER_SETTINGS *cooler;
 	NV_INIT_STRUCT_ON(NVAPI_COOLER_SETTINGS, cooler, mem);
 	ret = NvAPI_DLL_GetCoolerSettings(phys[devNum], 7, cooler);
 	if (ret == NVAPI_OK) {
-		applog(LOG_RAW, " Fan level is set to %u%%", cooler->level);
-#if 0
+		applog(LOG_RAW, " Fan level is set to %u%%", cooler->level); // wrong val, seems 1 (auto ?)
 		NVAPI_COOLER_LEVEL *fan;
 		NV_INIT_STRUCT_ALLOC(NVAPI_COOLER_LEVEL, fan);
 		fan->level = 100;
@@ -1171,8 +1171,8 @@ int nvapi_pstateinfo(unsigned int devNum)
 		free(fan);
 		sleep(10);
 		ret = NvAPI_DLL_RestoreCoolerSettings(phys[devNum], cooler, 7);
-#endif
 	}
+#endif
 
 	NV_GPU_THERMAL_SETTINGS *tset;
 	NV_INIT_STRUCT_ON(NV_GPU_THERMAL_SETTINGS, tset, mem);

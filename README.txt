@@ -1,5 +1,5 @@
 
-ccMiner 1.8 Preview (July 2016) "CUDA 8, lbry and x11evo algos"
+ccMiner 1.8 (20th July 2016)    "CUDA 8, lbry and x11evo algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -243,7 +243,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  July 2016       v1.8.0
+  July 20th 2016  v1.8.0
                   Pascal support with cuda 8
                   lbry new multi sha / ripemd algo (LBC)
                   x11evo algo (XRE)
