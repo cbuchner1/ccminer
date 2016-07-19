@@ -6,9 +6,9 @@
 
 extern void neoscrypt_setBlockTarget(uint32_t* const data, uint32_t* const ptarget);
 
-extern void neoscrypt_init_2stream(int thr_id, uint32_t threads);
-extern void neoscrypt_free_2stream(int thr_id);
-extern void neoscrypt_hash_k4_2stream(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *resNonces, bool stratum);
+extern void neoscrypt_init(int thr_id, uint32_t threads);
+extern void neoscrypt_free(int thr_id);
+extern void neoscrypt_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *resNonces, bool stratum);
 
 static bool init[MAX_GPUS] = { 0 };
 
@@ -21,13 +21,11 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 
 	int dev_id = device_map[thr_id];
 	int intensity = is_windows() ? 18 : 19;
-	if (strstr(device_name[dev_id], "GTX 10")) intensity = 20; // also need more than 2GB
+	if (strstr(device_name[dev_id], "GTX 10")) intensity = 21; // >= 20 need more than 2GB
 
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	throughput = throughput / 32; /* set for max intensity ~= 20 */
 	api_set_throughput(thr_id, throughput);
-
-	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce + 1);
 
 	if (opt_benchmark)
 		ptarget[7] = 0x00ff;
@@ -49,7 +47,7 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 		}
 
 		gpulog(LOG_INFO, thr_id, "Using %d cuda threads", throughput);
-		neoscrypt_init_2stream(thr_id, throughput);
+		neoscrypt_init(thr_id, throughput);
 
 		init[thr_id] = true;
 	}
@@ -66,7 +64,7 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 
 	do {
 		uint32_t foundNonces[2] = { UINT32_MAX, UINT32_MAX };
-		neoscrypt_hash_k4_2stream(thr_id, throughput, pdata[19], foundNonces, have_stratum);
+		neoscrypt_hash_k4(thr_id, throughput, pdata[19], foundNonces, have_stratum);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
@@ -111,7 +109,7 @@ void free_neoscrypt(int thr_id)
 
 	cudaThreadSynchronize();
 
-	neoscrypt_free_2stream(thr_id);
+	neoscrypt_free(thr_id);
 	init[thr_id] = false;
 
 	cudaDeviceSynchronize();

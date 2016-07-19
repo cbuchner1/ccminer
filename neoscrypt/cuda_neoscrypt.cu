@@ -15,6 +15,7 @@ typedef uint48 uint4x2;
 #ifdef __INTELLISENSE__
 #define __CUDA_ARCH__ 500
 #define __byte_perm(x,y,c) x
+#define __shfl(x,y,c) x
 #define atomicExch(p,x) x
 #endif
 
@@ -80,26 +81,6 @@ __constant__ uint32_t BLAKE2S_SIGMA[10][16] = {
 #define shf_r_clamp32(out,a,b,shift) \
 	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(out) : "r"(a), "r"(b), "r"(shift));
 
-__device__ __forceinline__
-static void shift256R4(uint32_t* ret, const uint8 &vec4, const uint32_t shift2)
-{
-#if __CUDA_ARCH__ >= 320
-	uint32_t shift = 32U - shift2;
-	asm("shf.r.clamp.b32 %0, 0, %1, %2;" : "=r"(ret[0]) : "r"(vec4.s0), "r"(shift));
-	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[1]) : "r"(vec4.s0), "r"(vec4.s1), "r"(shift));
-	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[2]) : "r"(vec4.s1), "r"(vec4.s2), "r"(shift));
-	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[3]) : "r"(vec4.s2), "r"(vec4.s3), "r"(shift));
-	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[4]) : "r"(vec4.s3), "r"(vec4.s4), "r"(shift));
-	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[5]) : "r"(vec4.s4), "r"(vec4.s5), "r"(shift));
-	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[6]) : "r"(vec4.s5), "r"(vec4.s6), "r"(shift));
-	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[7]) : "r"(vec4.s6), "r"(vec4.s7), "r"(shift));
-	asm("shr.b32         %0, %1, %2;"     : "=r"(ret[8]) : "r"(vec4.s7), "r"(shift));
-#else
-	// to check
-	shift256R(ret, vec4, shift2);
-#endif
-}
-
 #if __CUDA_ARCH__ >= 300
 __device__ __forceinline__ uint32_t WarpShuffle(uint32_t a, uint32_t b, uint32_t c)
 {
@@ -164,6 +145,26 @@ __device__ __forceinline__ void WarpShuffle3(uint32_t &a1, uint32_t &a2, uint32_
 }
 
 #if __CUDA_ARCH__ < 500
+
+__device__ __forceinline__
+static void shift256R4(uint32_t* ret, const uint8 &vec4, const uint32_t shift2)
+{
+#if __CUDA_ARCH__ >= 320
+	uint32_t shift = 32U - shift2;
+	asm("shf.r.clamp.b32 %0, 0, %1, %2;" : "=r"(ret[0]) : "r"(vec4.s0), "r"(shift));
+	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[1]) : "r"(vec4.s0), "r"(vec4.s1), "r"(shift));
+	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[2]) : "r"(vec4.s1), "r"(vec4.s2), "r"(shift));
+	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[3]) : "r"(vec4.s2), "r"(vec4.s3), "r"(shift));
+	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[4]) : "r"(vec4.s3), "r"(vec4.s4), "r"(shift));
+	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[5]) : "r"(vec4.s4), "r"(vec4.s5), "r"(shift));
+	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[6]) : "r"(vec4.s5), "r"(vec4.s6), "r"(shift));
+	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(ret[7]) : "r"(vec4.s6), "r"(vec4.s7), "r"(shift));
+	asm("shr.b32         %0, %1, %2;"     : "=r"(ret[8]) : "r"(vec4.s7), "r"(shift));
+#else
+	// to check
+	shift256R(ret, vec4, shift2);
+#endif
+}
 
 #define BLAKE(a, b, c, d, key1, key2) { \
 	a += key1; \
@@ -721,7 +722,6 @@ static __forceinline__ __device__
 void fastkdf256_v1(const uint32_t thread, const uint32_t nonce, uint32_t* const s_data)
 {
 	uint2x4 output[8];
-	uchar4 bufhelper;
 	uint32_t* B = (uint32_t*)&s_data[threadIdx.x * 64U];
 	uint32_t qbuf, rbuf, bitbuf;
 	uint32_t input[BLAKE2S_BLOCK_SIZE / 4];
@@ -787,6 +787,9 @@ void fastkdf256_v1(const uint32_t thread, const uint32_t nonce, uint32_t* const 
 
 		for (int k = 0; k<8; k++)
 			asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(key[k]) : "r"(temp[k]), "r"(temp[k + 1]), "r"(bitbuf));
+#else
+		//#error SM 3.0 code missing here
+		printf("", data18, data20);
 #endif
 		Blake2S(input, input, key);
 	}
@@ -1095,6 +1098,7 @@ uint32_t fastkdf32_v1(uint32_t thread, const uint32_t nonce, uint32_t* const sal
 		asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(key[7]) : "r"(temp[7]), "r"(temp[8]), "r"(bitbuf));
 #else
 		//#error SM 3.0 code missing here
+		printf("", data18, data20);
 #endif
 		for (int k = 0; k < 9; k++) {
 			B0[(k + qbuf) & 0x3f] = temp[k];
@@ -1465,7 +1469,7 @@ static __thread uint32_t *Trans2 = NULL; // 2 streams
 static __thread uint32_t *Trans3 = NULL; // 2 streams
 
 __host__
-void neoscrypt_init_2stream(int thr_id, uint32_t threads)
+void neoscrypt_init(int thr_id, uint32_t threads)
 {
 	CUDA_SAFE_CALL(cudaMalloc(&d_NNonce[thr_id], 2 * sizeof(uint32_t)));
 	CUDA_SAFE_CALL(cudaMalloc(&hash1, 32 * 128 * sizeof(uint64_t) * min(8192, threads)));
@@ -1480,7 +1484,7 @@ void neoscrypt_init_2stream(int thr_id, uint32_t threads)
 }
 
 __host__
-void neoscrypt_free_2stream(int thr_id)
+void neoscrypt_free(int thr_id)
 {
 	cudaFree(d_NNonce[thr_id]);
 
@@ -1491,18 +1495,15 @@ void neoscrypt_free_2stream(int thr_id)
 }
 
 __host__
-void neoscrypt_hash_k4_2stream(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *resNonces, bool stratum)
+void neoscrypt_hash_k4(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *resNonces, bool stratum)
 {
 	CUDA_SAFE_CALL(cudaMemset(d_NNonce[thr_id], 0xff, 2 * sizeof(uint32_t)));
-
-	const int threadsperblock = TPB;
-	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
-	dim3 block(threadsperblock);
 
 	const int threadsperblock2 = TPB2;
 	dim3 grid2((threads + threadsperblock2 - 1) / threadsperblock2);
 	dim3 block2(threadsperblock2);
 
+	const int threadsperblock = TPB;
 	dim3 grid3((threads * 4 + threadsperblock - 1) / threadsperblock);
 	dim3 block3(4, threadsperblock >> 2);
 
