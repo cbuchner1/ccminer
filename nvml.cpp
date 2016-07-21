@@ -980,7 +980,79 @@ static int SetGigabyteRGBLogo(unsigned int devNum, uint32_t RGB)
 
 	//ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, data);
 	ret = NvAPI_DLL_I2CReadEx(phys[devNum], i2cInfo, data);
-	usleep(10000);
+	usleep(20000);
+	free(i2cInfo);
+	return (int) ret;
+}
+
+static int SetZotacRGBLogo(unsigned int devNum, uint32_t RGB)
+{
+	NvAPI_Status ret;
+	NV_I2C_INFO* i2cInfo;
+	NV_INIT_STRUCT_ALLOC(NV_I2C_INFO, i2cInfo);
+	if (i2cInfo == NULL)
+		return -ENOMEM;
+
+	NvU32 buf[25] = { 0 };
+	NvU32 data[5] = { 0 };
+
+	uint32_t color = 0, level = 0x40;
+
+	uchar4 rgb = { 0 };
+	memcpy(&rgb, &RGB, 4);
+	level  = rgb.x & 0xF0;
+	level |= rgb.y & 0xF0;
+	level |= rgb.z & 0xF0;
+	//applog(LOG_DEBUG, "R %u G %u B %u", rgb.z, rgb.y, rgb.x);
+
+	// Not really RGB custom, only some basic colors, so convert
+	// 0: Red, 1: Yellow, 2: Green, 3: Cyan, 4: Blue, 5: magenta, 6: white
+	if ((RGB & 0xFF0000) && (RGB & 0xFF00) && (RGB & 0xFF)) color = 6;
+	else if ((RGB & 0xFF0000) && (RGB & 0xFF)) color = 5;
+	else if ((RGB & 0xFF00) && (RGB & 0xFF)) color = 3;
+	else if ((RGB & 0xFF0000) && (RGB & 0xFF00)) color = 1;
+	else if (RGB & 0xFF) color = 4;
+	else if (RGB & 0xFF00) color = 2;
+
+	buf[0] = 0xF0; // F0 set colors
+	buf[0] |= (color << 8);  // logo
+	buf[0] |= (1 << 16); // top
+	if (RGB != 0) // level : 0x10 to 0xF0
+		buf[0] |= (level << 24);
+	else
+		buf[0] |= (0x10U << 24);
+
+	// todo: i2c data crc ?
+
+	i2cInfo->displayMask = 1;
+	i2cInfo->bIsDDCPort = 1;
+	i2cInfo->i2cDevAddress = 0x48 << 1;
+	i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
+	i2cInfo->regAddrSize = 1;
+	i2cInfo->pbData = (NvU8*) buf;
+	i2cInfo->cbSize = 4;
+	i2cInfo->i2cSpeed = NVAPI_I2C_SPEED_DEPRECATED;
+	i2cInfo->i2cSpeedKhz = NVAPI_I2C_SPEED_100KHZ; // 4
+	i2cInfo->portId = 1;
+	i2cInfo->bIsPortIdSet = 1;
+
+	ret = NvAPI_I2CWrite(phys[devNum], i2cInfo);
+	// required to prevent i2c lock
+	usleep(20000);
+
+#if 0
+	buf[0] = 0xF7; // F7 toggle leds
+	if (RGB == 0)
+		buf[0] |= (1 << 8);  // 0 logo on, 1 off
+	buf[0] |= (1 << 16); // 1 top off
+	ret = NvAPI_I2CWrite(phys[devNum], i2cInfo);
+	usleep(20000);
+#endif
+	// other modes:
+	// 0xF1 breathing green (0x070202F1)
+	// 0xF2 strobe green    (0x070202F2)
+	// 0xF3 cycle           (0x000000F3)
+
 	free(i2cInfo);
 	return (int) ret;
 }
@@ -993,6 +1065,10 @@ int nvapi_set_led(unsigned int devNum, int RGB, char *device_name)
 		if (opt_debug)
 			applog(LOG_DEBUG, "GPU %x: Set RGB led to %06x", (int) phys[devNum], RGB);
 		return SetGigabyteRGBLogo(devNum, (uint32_t) RGB);
+	} else if (strstr(device_name, "Zotac GTX 10")) {
+		if (opt_debug)
+			applog(LOG_DEBUG, "GPU %x: Set RGB led to %06x", (int) phys[devNum], RGB);
+		return SetZotacRGBLogo(devNum, (uint32_t) RGB);
 	} else {
 		NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM* illu;
 		NV_INIT_STRUCT_ALLOC(NV_GPU_QUERY_ILLUMINATION_SUPPORT_PARM, illu);
