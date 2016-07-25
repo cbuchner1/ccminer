@@ -72,7 +72,7 @@ extern "C" int scanhash_s3(int thr_id, struct work* work, uint32_t max_nonce, un
 	intensity--;
 #endif
 	uint32_t throughput =  cuda_default_throughput(thr_id, 1 << intensity);
-	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
+	//if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		ptarget[7] = 0xF;

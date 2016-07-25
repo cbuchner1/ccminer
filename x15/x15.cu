@@ -143,7 +143,7 @@ extern "C" int scanhash_x15(int thr_id,  struct work* work, uint32_t max_nonce, 
 	uint32_t endiandata[20];
 
 	uint32_t throughput =  cuda_default_throughput(thr_id, 1U << 19); // 19=256*256*8;
-	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
+	//if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		ptarget[7] = 0x00FF;

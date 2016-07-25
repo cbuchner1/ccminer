@@ -3,6 +3,8 @@
 
 #include "cuda_helper.h"
 
+extern __device__ __device_builtin__ void __threadfence_block(void);
+
 #include "cuda_x11_aes.cuh"
 
 __device__ __forceinline__ void AES_2ROUND(
@@ -284,6 +286,7 @@ void x11_echo512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g
 	__shared__ uint32_t sharedMemory[1024];
 
 	echo_gpu_init(sharedMemory);
+	__threadfence_block();
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)

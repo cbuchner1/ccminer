@@ -2,6 +2,8 @@
 
 #include "cuda_helper.h"
 
+extern __device__ __device_builtin__ void __threadfence_block(void);
+
 #define TPB 128
 
 __constant__ uint32_t c_PaddedMessage80[32]; // padded message (80 bytes + padding)
@@ -1346,6 +1348,7 @@ void x11_shavite512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t
 	__shared__ uint32_t sharedMemory[1024];
 
 	shavite_gpu_init(sharedMemory);
+	__threadfence_block();
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -1397,6 +1400,7 @@ void x11_shavite512_gpu_hash_80(uint32_t threads, uint32_t startNounce, void *ou
 	__shared__ uint32_t sharedMemory[1024];
 
 	shavite_gpu_init(sharedMemory);
+	__threadfence_block();
 
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
