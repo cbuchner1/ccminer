@@ -372,7 +372,7 @@ extern "C" int scanhash_x11evo(int thr_id, struct work* work, uint32_t max_nonce
 				}
 				pdata[19] = foundNonce;
 				return res;
-			} else {
+			} else if (vhash64[7] > Htarg) {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 				pdata[19] = foundNonce + 1;
 				continue;
