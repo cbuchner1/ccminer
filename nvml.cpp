@@ -1820,7 +1820,7 @@ static int translate_vendor_id(uint16_t vid, char *vendorname)
 		{ 0x19DA, "Zotac" },
 		{ 0x19F1, "BFG" },
 		{ 0x1ACC, "PoV" },
-		{ 0x1B4C, "KFA2" },
+		{ 0x1B4C, "Galax" }, // KFA2 in EU, to check on Pascal cards
 		{ 0x3842, "EVGA" },
 		{ 0x7377, "Colorful" },
 		{ 0, "" }
