@@ -1,6 +1,6 @@
 /*
  * sha256 + ripemd CUDA implementation.
- * tpruvot and alexis78
+ * tpruvot and Provos Alexis - JUL 2016
  */
 
 #include <stdio.h>
@@ -31,12 +31,13 @@ __constant__ static uint32_t _ALIGN(16) c_K[64] = {
 	0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208, 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
 };
 
-static __thread uint32_t* d_resNonces;
 __constant__ static uint32_t _ALIGN(8) c_target[2];
 __device__ uint64_t d_target[1];
 
 #ifdef __INTELLISENSE__
 #define atomicExch(p,y) y
+#define __byte_perm(x,y,c) x
+#define __CUDA_ARCH__ 520
 #endif
 
 // ------------------------------------------------------------------------------------------------
@@ -181,19 +182,6 @@ __device__ __forceinline__ uint32_t ssg2_1(const uint32_t x)
 	return xor3b(ROTR32(x,17),ROTR32(x,19),(x>>10));
 }
 
-__device__ __forceinline__ uint32_t andor32(const uint32_t a, const uint32_t b, const uint32_t c)
-{
-	uint32_t result;
-	asm("{ .reg .u32 m,n,o; // andor32 \n\t"
-		"and.b32 m,  %1, %2;\n\t"
-		" or.b32 n,  %1, %2;\n\t"
-		"and.b32 o,   n, %3;\n\t"
-		" or.b32 %0,  m, o ;\n\t"
-		"}\n\t" : "=r"(result) : "r"(a), "r"(b), "r"(c)
-	);
-	return result;
-}
-
 __device__ __forceinline__ uint2 vectorizeswap(uint64_t v)
 {
 	uint2 result;
@@ -202,59 +190,42 @@ __device__ __forceinline__ uint2 vectorizeswap(uint64_t v)
 	return result;
 }
 
-__device__
-__forceinline__
-static void sha2_step1(uint32_t a, uint32_t b, uint32_t c, uint32_t &d, uint32_t e, uint32_t f, uint32_t g, uint32_t &h, uint32_t in, const uint32_t Kshared)
-{
-	uint32_t t1 = bsg2_1(e) + ((((f) ^ (g)) & (e)) ^ (g)) + Kshared + in;
-	d = d + h + t1;
-	h += t1 + bsg2_0(a) + (((b) & (c)) | (((b) | (c)) & (a)));
-}
-
-__device__
-static void sha2_step2(uint32_t a, uint32_t b, uint32_t c, uint32_t &d, uint32_t e, uint32_t f, uint32_t g, uint32_t &h,
-	uint32_t* in, uint32_t pc, const uint32_t Kshared)
-{
-	uint32_t t1,t2;
-
-	int pcidx1 = (pc-2) & 0xF;
-	int pcidx2 = (pc-7) & 0xF;
-	int pcidx3 = (pc-15) & 0xF;
-
-	uint32_t inx0 = in[pc];
-	uint32_t inx1 = in[pcidx1];
-	uint32_t inx2 = in[pcidx2];
-	uint32_t inx3 = in[pcidx3];
-
-	uint32_t ssg21 = ssg2_1(inx1);
-	uint32_t ssg20 = ssg2_0(inx3);
-	uint32_t vxandx = xandx(e, f, g);
-	uint32_t bsg21 = bsg2_1(e);
-	uint32_t bsg20 = bsg2_0(a);
-	uint32_t andorv = andor32(a,b,c);
-
-	in[pc] = ssg21 + inx2 + ssg20 + inx0;
-
-	t1 = h + bsg21 + vxandx + Kshared + in[pc];
-	t2 = bsg20 + andorv;
-	d =  d + t1;
-	h = t1 + t2;
+__device__ __forceinline__
+uint32_t Maj(const uint32_t a, const uint32_t b, const uint32_t c) { //Sha256 - Maj - andor
+	uint32_t result;
+#if __CUDA_ARCH__ >= 500 && CUDA_VERSION >= 7050
+	asm ("lop3.b32 %0, %1, %2, %3, 0xE8;" : "=r"(result) : "r"(a), "r"(b),"r"(c)); // 0xE8 = ((0xF0 & (0xCC | 0xAA)) | (0xCC & 0xAA))
+#else
+	result = ((a & (b | c)) | (b & c));
+#endif
+	return result;
 }
 
 __device__ __forceinline__
-static void sha256_round_first(uint32_t* in,uint32_t *buf, uint32_t* state, uint32_t* const Kshared)
+static void sha2_step1(uint32_t a, uint32_t b, uint32_t c, uint32_t &d,
+	uint32_t e, uint32_t f, uint32_t g, uint32_t &h, uint32_t in, const uint32_t Kshared)
 {
-	uint32_t a = buf[0];
+	const uint32_t t1 = h + bsg2_1(e) + xandx(e, f, g) + Kshared + in;
+	h = t1 + bsg2_0(a) + Maj(a, b, c);
+	d+= t1;
+}
+
+#define sha2_step2 sha2_step1
+
+
+__device__ __forceinline__
+static void sha256_round_first(uint32_t* in, uint32_t *buf, uint32_t* state, uint32_t* const Kshared)
+{
+	uint32_t a = buf[0] + in[11];
 	uint32_t b = buf[1];
 	uint32_t c = buf[2];
 	uint32_t d = buf[3];
-	uint32_t e = buf[4];
+	uint32_t e = buf[4] + in[11];
 	uint32_t f = buf[5];
 	uint32_t g = buf[6];
 	uint32_t h = buf[7];
 
-	// 10 first steps made on host
-	sha2_step1(f,g,h,a,b,c,d,e,in[11],Kshared[11]);
+	// 12 first steps made on host
 	sha2_step1(e,f,g,h,a,b,c,d,in[12],Kshared[12]);
 	sha2_step1(d,e,f,g,h,a,b,c,in[13],Kshared[13]);
 	sha2_step1(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
@@ -263,35 +234,39 @@ static void sha256_round_first(uint32_t* in,uint32_t *buf, uint32_t* state, uint
 	#pragma unroll
 	for (int i=0; i<3; i++)
 	{
-		sha2_step2(a,b,c,d,e,f,g,h,in,0, Kshared[16+16*i]);
-		sha2_step2(h,a,b,c,d,e,f,g,in,1, Kshared[17+16*i]);
-		sha2_step2(g,h,a,b,c,d,e,f,in,2, Kshared[18+16*i]);
-		sha2_step2(f,g,h,a,b,c,d,e,in,3, Kshared[19+16*i]);
-		sha2_step2(e,f,g,h,a,b,c,d,in,4, Kshared[20+16*i]);
-		sha2_step2(d,e,f,g,h,a,b,c,in,5, Kshared[21+16*i]);
-		sha2_step2(c,d,e,f,g,h,a,b,in,6, Kshared[22+16*i]);
-		sha2_step2(b,c,d,e,f,g,h,a,in,7, Kshared[23+16*i]);
-		sha2_step2(a,b,c,d,e,f,g,h,in,8, Kshared[24+16*i]);
-		sha2_step2(h,a,b,c,d,e,f,g,in,9, Kshared[25+16*i]);
-		sha2_step2(g,h,a,b,c,d,e,f,in,10,Kshared[26+16*i]);
-		sha2_step2(f,g,h,a,b,c,d,e,in,11,Kshared[27+16*i]);
-		sha2_step2(e,f,g,h,a,b,c,d,in,12,Kshared[28+16*i]);
-		sha2_step2(d,e,f,g,h,a,b,c,in,13,Kshared[29+16*i]);
-		sha2_step2(c,d,e,f,g,h,a,b,in,14,Kshared[30+16*i]);
-		sha2_step2(b,c,d,e,f,g,h,a,in,15,Kshared[31+16*i]);
+		#pragma unroll 16
+		for (int j = 0; j < 16; j++){
+			in[j] = in[j] + in[(j + 9) & 15] + ssg2_0(in[(j + 1) & 15]) + ssg2_1(in[(j + 14) & 15]);
+		}
+		sha2_step2(a,b,c,d,e,f,g,h,in[0], Kshared[16+16*i]);
+		sha2_step2(h,a,b,c,d,e,f,g,in[1], Kshared[17+16*i]);
+		sha2_step2(g,h,a,b,c,d,e,f,in[2], Kshared[18+16*i]);
+		sha2_step2(f,g,h,a,b,c,d,e,in[3], Kshared[19+16*i]);
+		sha2_step2(e,f,g,h,a,b,c,d,in[4], Kshared[20+16*i]);
+		sha2_step2(d,e,f,g,h,a,b,c,in[5], Kshared[21+16*i]);
+		sha2_step2(c,d,e,f,g,h,a,b,in[6], Kshared[22+16*i]);
+		sha2_step2(b,c,d,e,f,g,h,a,in[7], Kshared[23+16*i]);
+		sha2_step2(a,b,c,d,e,f,g,h,in[8], Kshared[24+16*i]);
+		sha2_step2(h,a,b,c,d,e,f,g,in[9], Kshared[25+16*i]);
+		sha2_step2(g,h,a,b,c,d,e,f,in[10],Kshared[26+16*i]);
+		sha2_step2(f,g,h,a,b,c,d,e,in[11],Kshared[27+16*i]);
+		sha2_step2(e,f,g,h,a,b,c,d,in[12],Kshared[28+16*i]);
+		sha2_step2(d,e,f,g,h,a,b,c,in[13],Kshared[29+16*i]);
+		sha2_step2(c,d,e,f,g,h,a,b,in[14],Kshared[30+16*i]);
+		sha2_step2(b,c,d,e,f,g,h,a,in[15],Kshared[31+16*i]);
 	}
 
-	buf[ 0] = state[0] + a;
-	buf[ 1] = state[1] + b;
-	buf[ 2] = state[2] + c;
-	buf[ 3] = state[3] + d;
-	buf[ 4] = state[4] + e;
-	buf[ 5] = state[5] + f;
-	buf[ 6] = state[6] + g;
-	buf[ 7] = state[7] + h;
+	buf[0] = state[0] + a;
+	buf[1] = state[1] + b;
+	buf[2] = state[2] + c;
+	buf[3] = state[3] + d;
+	buf[4] = state[4] + e;
+	buf[5] = state[5] + f;
+	buf[6] = state[6] + g;
+	buf[7] = state[7] + h;
 }
 
-__device__
+__device__ __forceinline__
 static void sha256_round_body(uint32_t* in, uint32_t* state, uint32_t* const Kshared)
 {
 	uint32_t a = state[0];
@@ -323,22 +298,26 @@ static void sha256_round_body(uint32_t* in, uint32_t* state, uint32_t* const Ksh
 	#pragma unroll
 	for (int i=0; i<3; i++)
 	{
-		sha2_step2(a,b,c,d,e,f,g,h,in,0, Kshared[16+16*i]);
-		sha2_step2(h,a,b,c,d,e,f,g,in,1, Kshared[17+16*i]);
-		sha2_step2(g,h,a,b,c,d,e,f,in,2, Kshared[18+16*i]);
-		sha2_step2(f,g,h,a,b,c,d,e,in,3, Kshared[19+16*i]);
-		sha2_step2(e,f,g,h,a,b,c,d,in,4, Kshared[20+16*i]);
-		sha2_step2(d,e,f,g,h,a,b,c,in,5, Kshared[21+16*i]);
-		sha2_step2(c,d,e,f,g,h,a,b,in,6, Kshared[22+16*i]);
-		sha2_step2(b,c,d,e,f,g,h,a,in,7, Kshared[23+16*i]);
-		sha2_step2(a,b,c,d,e,f,g,h,in,8, Kshared[24+16*i]);
-		sha2_step2(h,a,b,c,d,e,f,g,in,9, Kshared[25+16*i]);
-		sha2_step2(g,h,a,b,c,d,e,f,in,10,Kshared[26+16*i]);
-		sha2_step2(f,g,h,a,b,c,d,e,in,11,Kshared[27+16*i]);
-		sha2_step2(e,f,g,h,a,b,c,d,in,12,Kshared[28+16*i]);
-		sha2_step2(d,e,f,g,h,a,b,c,in,13,Kshared[29+16*i]);
-		sha2_step2(c,d,e,f,g,h,a,b,in,14,Kshared[30+16*i]);
-		sha2_step2(b,c,d,e,f,g,h,a,in,15,Kshared[31+16*i]);
+		#pragma unroll 16
+		for (int j = 0; j < 16; j++) {
+			in[j] = in[j] + in[(j + 9) & 15] + ssg2_0(in[(j + 1) & 15]) + ssg2_1(in[(j + 14) & 15]);
+		}
+		sha2_step2(a, b, c, d, e, f, g, h, in[0],  Kshared[16 + 16 * i]);
+		sha2_step2(h, a, b, c, d, e, f, g, in[1],  Kshared[17 + 16 * i]);
+		sha2_step2(g, h, a, b, c, d, e, f, in[2],  Kshared[18 + 16 * i]);
+		sha2_step2(f, g, h, a, b, c, d, e, in[3],  Kshared[19 + 16 * i]);
+		sha2_step2(e, f, g, h, a, b, c, d, in[4],  Kshared[20 + 16 * i]);
+		sha2_step2(d, e, f, g, h, a, b, c, in[5],  Kshared[21 + 16 * i]);
+		sha2_step2(c, d, e, f, g, h, a, b, in[6],  Kshared[22 + 16 * i]);
+		sha2_step2(b, c, d, e, f, g, h, a, in[7],  Kshared[23 + 16 * i]);
+		sha2_step2(a, b, c, d, e, f, g, h, in[8],  Kshared[24 + 16 * i]);
+		sha2_step2(h, a, b, c, d, e, f, g, in[9],  Kshared[25 + 16 * i]);
+		sha2_step2(g, h, a, b, c, d, e, f, in[10], Kshared[26 + 16 * i]);
+		sha2_step2(f, g, h, a, b, c, d, e, in[11], Kshared[27 + 16 * i]);
+		sha2_step2(e, f, g, h, a, b, c, d, in[12], Kshared[28 + 16 * i]);
+		sha2_step2(d, e, f, g, h, a, b, c, in[13], Kshared[29 + 16 * i]);
+		sha2_step2(c, d, e, f, g, h, a, b, in[14], Kshared[30 + 16 * i]);
+		sha2_step2(b, c, d, e, f, g, h, a, in[15], Kshared[31 + 16 * i]);
 	}
 
 	state[0] += a;
@@ -351,19 +330,92 @@ static void sha256_round_body(uint32_t* in, uint32_t* state, uint32_t* const Ksh
 	state[7] += h;
 }
 
-__device__
-uint64_t cuda_swab32ll(uint64_t x) {
-	return MAKE_ULONGLONG(cuda_swab32(_LODWORD(x)), cuda_swab32(_HIDWORD(x)));
+__device__ __forceinline__
+static void sha256_round_body_final(uint32_t* in, uint32_t* state, uint32_t* const Kshared)
+{
+	uint32_t a = state[0];
+	uint32_t b = state[1];
+	uint32_t c = state[2];
+	uint32_t d = state[3];
+	uint32_t e = state[4];
+	uint32_t f = state[5];
+	uint32_t g = state[6];
+	uint32_t h = state[7];
+
+	sha2_step1(a,b,c,d,e,f,g,h,in[0],  Kshared[0]);
+	sha2_step1(h,a,b,c,d,e,f,g,in[1],  Kshared[1]);
+	sha2_step1(g,h,a,b,c,d,e,f,in[2],  Kshared[2]);
+	sha2_step1(f,g,h,a,b,c,d,e,in[3],  Kshared[3]);
+	sha2_step1(e,f,g,h,a,b,c,d,in[4],  Kshared[4]);
+	sha2_step1(d,e,f,g,h,a,b,c,in[5],  Kshared[5]);
+	sha2_step1(c,d,e,f,g,h,a,b,in[6],  Kshared[6]);
+	sha2_step1(b,c,d,e,f,g,h,a,in[7],  Kshared[7]);
+	sha2_step1(a,b,c,d,e,f,g,h,in[8],  Kshared[8]);
+	sha2_step1(h,a,b,c,d,e,f,g,in[9],  Kshared[9]);
+	sha2_step1(g,h,a,b,c,d,e,f,in[10], Kshared[10]);
+	sha2_step1(f,g,h,a,b,c,d,e,in[11], Kshared[11]);
+	sha2_step1(e,f,g,h,a,b,c,d,in[12], Kshared[12]);
+	sha2_step1(d,e,f,g,h,a,b,c,in[13], Kshared[13]);
+	sha2_step1(c,d,e,f,g,h,a,b,in[14], Kshared[14]);
+	sha2_step1(b,c,d,e,f,g,h,a,in[15], Kshared[15]);
+
+	#pragma unroll
+	for (int i=0; i<2; i++)
+	{
+		#pragma unroll 16
+		for (int j = 0; j < 16; j++) {
+			in[j] = in[j] + in[(j + 9) & 15] + ssg2_0(in[(j + 1) & 15]) + ssg2_1(in[(j + 14) & 15]);
+		}
+		sha2_step2(a, b, c, d, e, f, g, h, in[0],  Kshared[16 + 16 * i]);
+		sha2_step2(h, a, b, c, d, e, f, g, in[1],  Kshared[17 + 16 * i]);
+		sha2_step2(g, h, a, b, c, d, e, f, in[2],  Kshared[18 + 16 * i]);
+		sha2_step2(f, g, h, a, b, c, d, e, in[3],  Kshared[19 + 16 * i]);
+		sha2_step2(e, f, g, h, a, b, c, d, in[4],  Kshared[20 + 16 * i]);
+		sha2_step2(d, e, f, g, h, a, b, c, in[5],  Kshared[21 + 16 * i]);
+		sha2_step2(c, d, e, f, g, h, a, b, in[6],  Kshared[22 + 16 * i]);
+		sha2_step2(b, c, d, e, f, g, h, a, in[7],  Kshared[23 + 16 * i]);
+		sha2_step2(a, b, c, d, e, f, g, h, in[8],  Kshared[24 + 16 * i]);
+		sha2_step2(h, a, b, c, d, e, f, g, in[9],  Kshared[25 + 16 * i]);
+		sha2_step2(g, h, a, b, c, d, e, f, in[10], Kshared[26 + 16 * i]);
+		sha2_step2(f, g, h, a, b, c, d, e, in[11], Kshared[27 + 16 * i]);
+		sha2_step2(e, f, g, h, a, b, c, d, in[12], Kshared[28 + 16 * i]);
+		sha2_step2(d, e, f, g, h, a, b, c, in[13], Kshared[29 + 16 * i]);
+		sha2_step2(c, d, e, f, g, h, a, b, in[14], Kshared[30 + 16 * i]);
+		sha2_step2(b, c, d, e, f, g, h, a, in[15], Kshared[31 + 16 * i]);
+	}
+	#pragma unroll 16
+	for (int j = 0; j < 16; j++) {
+		in[j] = in[j] + in[(j + 9) & 15] + ssg2_0(in[(j + 1) & 15]) + ssg2_1(in[(j + 14) & 15]);
+	}
+	sha2_step2(a, b, c, d, e, f, g, h, in[0],  Kshared[16 + 16 * 2]);
+	sha2_step2(h, a, b, c, d, e, f, g, in[1],  Kshared[17 + 16 * 2]);
+	sha2_step2(g, h, a, b, c, d, e, f, in[2],  Kshared[18 + 16 * 2]);
+	sha2_step2(f, g, h, a, b, c, d, e, in[3],  Kshared[19 + 16 * 2]);
+	sha2_step2(e, f, g, h, a, b, c, d, in[4],  Kshared[20 + 16 * 2]);
+	sha2_step2(d, e, f, g, h, a, b, c, in[5],  Kshared[21 + 16 * 2]);
+	sha2_step2(c, d, e, f, g, h, a, b, in[6],  Kshared[22 + 16 * 2]);
+	sha2_step2(b, c, d, e, f, g, h, a, in[7],  Kshared[23 + 16 * 2]);
+	sha2_step2(a, b, c, d, e, f, g, h, in[8],  Kshared[24 + 16 * 2]);
+	sha2_step2(h, a, b, c, d, e, f, g, in[9],  Kshared[25 + 16 * 2]);
+	sha2_step2(g, h, a, b, c, d, e, f, in[10], Kshared[26 + 16 * 2]);
+	sha2_step2(f, g, h, a, b, c, d, e, in[11], Kshared[27 + 16 * 2]);
+	sha2_step2(e, f, g, h, a, b, c, d, in[12], Kshared[28 + 16 * 2]);
+	sha2_step2(d, e, f, g, h, a, b, c, in[13], Kshared[29 + 16 * 2]);
+
+	state[6] += g;
+	state[7] += h;
 }
 
 __global__
-__launch_bounds__(512,2) /* to force 64 regs */
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(1024,2) /* to force 32 regs */
+#else
+__launch_bounds__(768,2) /* to force 32 regs */
+#endif
 void lbry_sha256d_gpu_hash_112(const uint32_t threads, const uint32_t startNonce, uint64_t *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	extern __shared__ uint32_t s_K[];
-	if (threadIdx.x < 64U) s_K[threadIdx.x] = c_K[threadIdx.x];
-	//__threadfence_block();
+	uint32_t buf[8], state[8];
 	if (thread < threads)
 	{
 		uint32_t dat[16];
@@ -374,8 +426,6 @@ void lbry_sha256d_gpu_hash_112(const uint32_t threads, const uint32_t startNonce
 		dat[13] = 0;
 		dat[14] = 0;
 		dat[15] = 0x380;
-
-		uint32_t __align__(8) buf[8], state[8];
 
 		*(uint2x4*)&state[0] = *(uint2x4*)&c_midstate112[0];
 		*(uint2x4*)&buf[0]   = *(uint2x4*)&c_midbuffer112[0];
@@ -394,7 +444,7 @@ void lbry_sha256d_gpu_hash_112(const uint32_t threads, const uint32_t startNonce
 
 		*(uint2x4*)&buf[0] = *(uint2x4*)&c_H256[0];
 
-		sha256_round_body(dat, buf, s_K);
+		sha256_round_body(dat, buf, c_K); //no shared mem at all
 
 		// output
 		*(uint2*)&buf[0] = vectorizeswap(((uint64_t*)buf)[0]);
@@ -402,32 +452,33 @@ void lbry_sha256d_gpu_hash_112(const uint32_t threads, const uint32_t startNonce
 		*(uint2*)&buf[4] = vectorizeswap(((uint64_t*)buf)[2]);
 		*(uint2*)&buf[6] = vectorizeswap(((uint64_t*)buf)[3]);
 
-		*(uint2x4*)&outputHash[thread*8U] = *(uint2x4*)&buf[0];
+		*(uint2x4*)&outputHash[thread<<3] = *(uint2x4*)&buf[0];
 	}
 }
 
 __host__
 void lbry_sha256d_hash_112(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_outputHash)
 {
-	const int threadsperblock = 512;
+	int dev_id = device_map[thr_id];
 
-	dim3 grid(threads/threadsperblock);
+	const uint32_t threadsperblock = (device_sm[dev_id] <= 500) ? 768 : 1024;
+
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	lbry_sha256d_gpu_hash_112 <<<grid, block, 64*4>>> (threads, startNonce, (uint64_t*) d_outputHash);
+	lbry_sha256d_gpu_hash_112 <<<grid, block>>> (threads, startNonce, (uint64_t*) d_outputHash);
 }
 
 __host__
 void lbry_sha256_init(int thr_id)
 {
 	cudaMemcpyToSymbol(c_K, cpu_K, sizeof(cpu_K), 0, cudaMemcpyHostToDevice);
-	CUDA_SAFE_CALL(cudaMalloc(&d_resNonces, 4*sizeof(uint32_t)));
 }
 
 __host__
 void lbry_sha256_free(int thr_id)
 {
-	cudaFree(d_resNonces);
+
 }
 
 __host__
@@ -462,6 +513,7 @@ void lbry_sha256_setBlock_112(uint32_t *pdata, uint32_t *ptarget)
 	sha256_step1_host(a,b,c,d,e,f,g,h,end[8], cpu_K[8]);
 	sha256_step1_host(h,a,b,c,d,e,f,g,end[9], cpu_K[9]);
 	sha256_step1_host(g,h,a,b,c,d,e,f,end[10],cpu_K[10]);
+	sha256_step1_host(f, g, h, a, b, c, d, e, 0, cpu_K[11]);
 
 	buf[0] = a;
 	buf[1] = b;
@@ -484,59 +536,58 @@ static __constant__ uint32_t c_IV[5] = {
 	0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u
 };
 
+__device__ __forceinline__
+static uint32_t ROTATE(const uint32_t x,const int r){
+	if(r==8)
+		return __byte_perm(x, 0, 0x2103);
+	else
+		return ROTL32(x,r);
+}
+
 /*
  * Round functions for RIPEMD-160.
  */
-#if 1
 #define F1(x, y, z)   ((x) ^ (y) ^ (z))
-#define F2(x, y, z)   ((((y) ^ (z)) & (x)) ^ (z))
-#define F3(x, y, z)   (((x) | ~(y)) ^ (z))
-#define F4(x, y, z)   ((((x) ^ (y)) & (z)) ^ (y))
-#define F5(x, y, z)   ((x) ^ ((y) | ~(z)))
-#else
-#define F1(x, y, z)   xor3b(x,y,z)
-#define F2(x, y, z)   xandx(x,y,z)
-#define F3(x, y, z)   xornot64(x,y,z)
-#define F4(x, y, z)   xandx(z,x,y)
-#define F5(x, y, z)   xornt64(x,y,z)
-#endif
+#define F2(x, y, z)   ((x & (y ^ z)) ^ z)
+#define F3(x, y, z)   ((x | ~y) ^ z)
+#define F4(x, y, z)   (y ^ ((x ^ y) & z))
+#define F5(x, y, z)   (x ^ (y | ~z))
 
 /*
  * Round constants for RIPEMD-160.
  */
-#define K11 0x00000000u
-#define K12 0x5A827999u
-#define K13 0x6ED9EBA1u
-#define K14 0x8F1BBCDCu
-#define K15 0xA953FD4Eu
+#define K11 0
+#define K12 0x5A827999
+#define K13 0x6ED9EBA1
+#define K14 0x8F1BBCDC
+#define K15 0xA953FD4E
 
-#define K21 0x50A28BE6u
-#define K22 0x5C4DD124u
-#define K23 0x6D703EF3u
-#define K24 0x7A6D76E9u
-#define K25 0x00000000u
+#define K21 0x50A28BE6
+#define K22 0x5C4DD124
+#define K23 0x6D703EF3
+#define K24 0x7A6D76E9
+#define K25 0
 
 #define RR(a, b, c, d, e, f, s, r, k) { \
-	a = SPH_T32(ROTL32(SPH_T32(a + f(b, c, d) + r + k), s) + e); \
+	a = e + ROTATE((a + r + k + f(b, c, d)), s); \
 	c = ROTL32(c, 10); \
 }
 
 #define ROUND1(a, b, c, d, e, f, s, r, k) \
-	RR(a ## 1, b ## 1, c ## 1, d ## 1, e ## 1, f, s, r, K1 ## k)
+	RR(a[0], b[0], c[0], d[0], e[0], f, s, r, K1 ## k)
 
 #define ROUND2(a, b, c, d, e, f, s, r, k) \
-	RR(a ## 2, b ## 2, c ## 2, d ## 2, e ## 2, f, s, r, K2 ## k)
+	RR(a[1], b[1], c[1], d[1], e[1], f, s, r, K2 ## k)
 
 #define RIPEMD160_ROUND_BODY(in, h) { \
-	uint32_t A1, B1, C1, D1, E1; \
-	uint32_t A2, B2, C2, D2, E2; \
+	uint32_t A[2], B[2], C[2], D[2], E[2]; \
 	uint32_t tmp; \
 \
-	A1 = A2 = h[0]; \
-	B1 = B2 = h[1]; \
-	C1 = C2 = h[2]; \
-	D1 = D2 = h[3]; \
-	E1 = E2 = h[4]; \
+	A[0] = A[1] = h[0]; \
+	B[0] = B[1] = h[1]; \
+	C[0] = C[1] = h[2]; \
+	D[0] = D[1] = h[3]; \
+	E[0] = E[1] = h[4]; \
 \
 	ROUND1(A, B, C, D, E, F1, 11, in[ 0],  1); \
 	ROUND1(E, A, B, C, D, F1, 14, in[ 1],  1); \
@@ -708,29 +759,40 @@ static __constant__ uint32_t c_IV[5] = {
 	ROUND2(C, D, E, A, B, F1, 11, in[ 9],  5); \
 	ROUND2(B, C, D, E, A, F1, 11, in[11],  5); \
 \
-	tmp  = (h[1] + C1 + D2); \
-	h[1] = (h[2] + D1 + E2); \
-	h[2] = (h[3] + E1 + A2); \
-	h[3] = (h[4] + A1 + B2); \
-	h[4] = (h[0] + B1 + C2); \
+	tmp  = h[1] + C[0] + D[1]; \
+	h[1] = h[2] + D[0] + E[1]; \
+	h[2] = h[3] + E[0] + A[1]; \
+	h[3] = h[4] + A[0] + B[1]; \
+	h[4] = h[0] + B[0] + C[1]; \
 	h[0] = tmp; \
 }
 
+__device__ __forceinline__
+uint64_t swab64ll(const uint32_t x, const uint32_t y) {
+	uint64_t r;
+	asm("prmt.b32 %1, %1, 0, 0x0123; // swab64ll\n\t"
+		"prmt.b32 %2, %2, 0, 0x0123;\n\t"
+		"mov.b64 %0, {%1,%2};\n\t"
+	: "=l"(r): "r"(x), "r"(y) );
+	return r;
+}
+
 __global__
-__launch_bounds__(640,2) /* 640,2 <= 48 regs, 512,2 <= 64 */
+#if __CUDA_ARCH__ > 500
+__launch_bounds__(1024,2) /* to force 32 regs */
+#else
+__launch_bounds__(768,2) /* to force 32 regs */
+#endif
 void lbry_sha256d_gpu_hash_final(const uint32_t threads, uint64_t *Hash512, uint32_t *resNonces)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	extern __shared__ uint32_t s_K[];
-	if (threadIdx.x < 64U) s_K[threadIdx.x] = c_K[threadIdx.x];
-	//__threadfence_block();
-	if (thread < threads)
+	uint32_t dat[16];
+	uint32_t h[5];
+//	if (thread < threads)
 	{
 		uint32_t* input = (uint32_t*) (&Hash512[thread * 8U]);
 
-		uint32_t __align__(8) dat[16];
-
-		*(uint2x4*)&dat[0] = *(uint2x4*)&input[0];
+		*(uint2x4*)&dat[0] = __ldg4((uint2x4*)&input[0]);
 
 		dat[8] = 0x80;
 
@@ -739,7 +801,6 @@ void lbry_sha256d_gpu_hash_final(const uint32_t threads, uint64_t *Hash512, uint
 
 		dat[14] = 0x100; // size in bits
 
-		uint32_t h[5];
 		#pragma unroll
 		for (int i=0; i<5; i++)
 			h[i] = c_IV[i];
@@ -753,12 +814,12 @@ void lbry_sha256d_gpu_hash_final(const uint32_t threads, uint64_t *Hash512, uint
 
 		// second 32 bytes block hash
 
-		*(uint2x4*)&dat[0] = *(uint2x4*)&input[8];
+		*(uint2x4*)&dat[0] = __ldg4((uint2x4*)&input[8]);
 
 		dat[8] = 0x80;
 
 		#pragma unroll
-		for (int i=9;i<16;i++) dat[i] = 0;
+		for (int i=9; i<16; i++) dat[i] = 0;
 
 		dat[14] = 0x100; // size in bits
 
@@ -771,9 +832,9 @@ void lbry_sha256d_gpu_hash_final(const uint32_t threads, uint64_t *Hash512, uint
 		// first final sha256
 
 		#pragma unroll
-		for (int i=0;i<5;i++) dat[i] = cuda_swab32(buf[i]);
+		for (int i=0; i<5; i++) dat[i] = cuda_swab32(buf[i]);
 		#pragma unroll
-		for (int i=0;i<5;i++) dat[i+5] = cuda_swab32(h[i]);
+		for (int i=0; i<5; i++) dat[i+5] = cuda_swab32(h[i]);
 		dat[10] = 0x80000000;
 		#pragma unroll
 		for (int i=11; i<15; i++) dat[i] = 0;
@@ -781,45 +842,39 @@ void lbry_sha256d_gpu_hash_final(const uint32_t threads, uint64_t *Hash512, uint
 
 		*(uint2x4*)&buf[0] = *(uint2x4*)&c_H256[0];
 
-		sha256_round_body(dat, buf, c_K); // s_K uses too much regs
+		sha256_round_body(dat, buf, c_K); // s_K uses too many regs
 
 		// second sha256
 
 		*(uint2x4*)&dat[0] = *(uint2x4*)&buf[0];
+		*(uint2x4*)&buf[0] = *(uint2x4*)&c_H256[0];
+
 		dat[8] = 0x80000000;
 		#pragma unroll
 		for (int i=9; i<15; i++) dat[i] = 0;
 		dat[15] = 0x100;
 
-		*(uint2x4*)&buf[0] = *(uint2x4*)&c_H256[0];
-
-		sha256_round_body(dat, buf, s_K);
+		sha256_round_body_final(dat, buf, c_K);
 
 		// valid nonces
-		const uint64_t high = cuda_swab32ll(((uint64_t*)buf)[3]);
+		const uint64_t high = swab64ll(buf[6], buf[7]);
 		if (high <= d_target[0]) {
-			resNonces[1] = atomicExch(resNonces, thread);
+			//resNonces[1] = atomicExch(resNonces, thread);
+			resNonces[1] = resNonces[0];
+			resNonces[0] = thread;
 			d_target[0] = high;
 		}
 	}
 }
 
 __host__
-void lbry_sha256d_hash_final(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_inputHash, uint32_t *resNonces)
+void lbry_sha256d_hash_final(int thr_id, uint32_t threads, uint32_t *d_inputHash, uint32_t *d_resNonce)
 {
-	const int threadsperblock = 512;
+	int dev_id = device_map[thr_id];
+	const uint32_t threadsperblock = (device_sm[dev_id] > 500) ? 1024 : 768;
 
-	dim3 grid(threads/threadsperblock);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	cudaMemset(d_resNonces, 0xFF, 2 * sizeof(uint32_t));
-
-	lbry_sha256d_gpu_hash_final <<<grid, block, 64*4>>> (threads, (uint64_t*) d_inputHash, d_resNonces);
-
-	cudaMemcpy(resNonces, d_resNonces, 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-	if (resNonces[0] == resNonces[1]) {
-		resNonces[1] = UINT32_MAX;
-	}
-	if (resNonces[0] != UINT32_MAX) resNonces[0] += startNonce;
-	if (resNonces[1] != UINT32_MAX) resNonces[1] += startNonce;
+	lbry_sha256d_gpu_hash_final <<<grid, block>>> (threads, (uint64_t*) d_inputHash, d_resNonce);
 }
