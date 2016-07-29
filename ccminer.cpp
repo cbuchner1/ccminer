@@ -570,6 +570,8 @@ static void calc_network_diff(struct work *work)
 	uint32_t nbits = have_longpoll ? work->data[18] : swab32(work->data[18]);
 	if (opt_algo == ALGO_LBRY) nbits = swab32(work->data[26]);
 	if (opt_algo == ALGO_DECRED) nbits = work->data[29];
+	if (opt_algo == ALGO_SIA) nbits = work->data[11]; // unsure if correct
+
 	uint32_t bits = (nbits & 0xffffff);
 	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 
@@ -647,7 +649,7 @@ static bool work_decode(const json_t *val, struct work *work)
 	stratum_diff = work->targetdiff;
 
 	work->tx_count = use_pok = 0;
-	if (work->data[0] & POK_BOOL_MASK) {
+	if (opt_algo == ALGO_ZR5 && work->data[0] & POK_BOOL_MASK) {
 		use_pok = 1;
 		json_t *txs = json_object_get(val, "txs");
 		if (txs && json_is_array(txs)) {
@@ -844,6 +846,10 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			le32enc(&ntime, work->data[25]);
 			le32enc(&nonce, work->data[27]);
 			break;
+		case ALGO_SIA:
+			be32enc(&ntime, work->data[10]);
+			be32enc(&nonce, work->data[8]);
+			break;
 		case ALGO_ZR5:
 			check_dups = true;
 			be32enc(&ntime, work->data[17]);
@@ -874,6 +880,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		if (opt_algo == ALGO_DECRED) {
 			xnonce2str = bin2hex((const uchar*)&work->data[36], stratum.xnonce1_size);
+		} else if (opt_algo == ALGO_SIA) {
+			uint16_t high_nonce = swab32(work->data[9]) >> 16;
+			xnonce2str = bin2hex((unsigned char*)(&high_nonce), 2);
 		} else {
 			xnonce2str = bin2hex(work->xnonce2, work->xnonce2_len);
 		}
@@ -1394,6 +1403,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	/* Generate merkle root */
 	switch (opt_algo) {
 		case ALGO_DECRED:
+		case ALGO_SIA:
 			// getwork over stratum, no merkle to generate
 			break;
 		case ALGO_HEAVY:
@@ -1446,7 +1456,6 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			sctx->xnonce1_size = sizeof(work->data)-(36*4);
 		}
 		memcpy(&work->data[36], sctx->xnonce1, sctx->xnonce1_size);
-		// work->data[36] = swab32(vote); // alt vote submission method
 		work->data[37] = (rand()*4) << 8; // random work data
 		sctx->job.height = work->data[32];
 		//applog_hex(work->data, 180);
@@ -1458,6 +1467,18 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[25] = le32dec(sctx->job.ntime);
 		work->data[26] = le32dec(sctx->job.nbits);
 		work->data[28] = 0x80000000;
+	} else if (opt_algo == ALGO_SIA) {
+		uint32_t extra = 0;
+		memcpy(&extra, &sctx->job.coinbase[32], 2);
+		for (i = 0; i < 8; i++) // reversed hash
+			work->data[i] = ((uint32_t*)sctx->job.prevhash)[7-i];
+		work->data[8] = 0; // nonce
+		work->data[9] = swab32(extra) | ((rand() << 8) & 0xffff);
+		work->data[10] = be32dec(sctx->job.ntime);
+		work->data[11] = be32dec(sctx->job.nbits);
+		memcpy(&work->data[12], sctx->job.coinbase, 32); // merkle_root
+		work->data[20] = 0x80000000;
+		if (opt_debug) applog_hex(work->data, 80);
 	} else {
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
@@ -1490,7 +1511,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	pthread_mutex_unlock(&stratum_work_lock);
 
-	if (opt_debug && opt_algo != ALGO_DECRED) {
+	if (opt_debug && opt_algo != ALGO_DECRED && opt_algo != ALGO_SIA) {
 		uint32_t utm = work->data[17];
 		if (opt_algo != ALGO_ZR5) utm = swab32(utm);
 		char *tm = atime2str(utm - sctx->srvtime_diff);
@@ -1673,11 +1694,19 @@ static void *miner_thread(void *userdata)
 		uint32_t start_nonce;
 		uint32_t scan_time = have_longpoll ? LP_SCANTIME : opt_scantime;
 		uint64_t max64, minmax = 0x100000;
+		int nodata_check_oft = 0;
+		bool regen = false;
 
 		// &work.data[19]
 		int wcmplen = (opt_algo == ALGO_DECRED) ? 140 : 76;
-		if (opt_algo == ALGO_LBRY) wcmplen = 108;
 		int wcmpoft = 0;
+
+		if (opt_algo == ALGO_LBRY) wcmplen = 108;
+		else if (opt_algo == ALGO_SIA) {
+			wcmpoft = (32+16)/4;
+			wcmplen = 32;
+		}
+
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
 		if (have_stratum) {
@@ -1698,7 +1727,14 @@ static void *miner_thread(void *userdata)
 			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 			pthread_mutex_lock(&g_work_lock);
 			extrajob |= work_done;
-			if (nonceptr[0] >= end_nonce || extrajob) {
+
+			regen = (nonceptr[0] >= end_nonce);
+			if (opt_algo == ALGO_SIA) {
+				regen = (nonceptr[1] & 0xFF00 >= 0xF000);
+			}
+			regen = regen || extrajob;
+
+			if (regen) {
 				work_done = false;
 				extrajob = false;
 				if (stratum_gen_work(&stratum, &g_work))
@@ -1774,6 +1810,20 @@ static void *miner_thread(void *userdata)
 			// and make an unique work (extradata)
 			nonceptr[1] += 1;
 			nonceptr[2] |= thr_id;
+
+		} else if (opt_algo == ALGO_SIA) {
+			// suprnova job_id check without data/target/height change...
+			check_stratum_jobs = true;
+			if (check_stratum_jobs && strcmp(work.job_id, g_work.job_id)) {
+				pthread_mutex_unlock(&g_work_lock);
+				work_done = true;
+				continue;
+			}
+			nonceptr[1] += opt_n_threads;
+			nonceptr[1] |= thr_id;
+			// range max
+			nonceptr[0] = 0;
+			end_nonce = UINT32_MAX;
 		} else if (opt_benchmark) {
 			// randomize work
 			nonceptr[-1] += 1;
@@ -1796,11 +1846,14 @@ static void *miner_thread(void *userdata)
 		}
 		loopcnt++;
 
-		/* prevent gpu scans before a job is received */
-		//if (opt_algo != ALGO_DECRED) // uncomment to allow testnet
-		if (have_stratum && work.data[0] == 0 && !opt_benchmark) {
+		// prevent gpu scans before a job is received
+		if (opt_algo == ALGO_SIA) nodata_check_oft = 7; // no stratum version
+		else if (opt_algo == ALGO_DECRED) nodata_check_oft = 4; // testnet ver is 0
+		else nodata_check_oft = 0;
+		if (have_stratum && work.data[nodata_check_oft] == 0 && !opt_benchmark) {
 			sleep(1);
 			if (!thr_id) pools[cur_pooln].wait_time += 1;
+			gpulog(LOG_DEBUG, thr_id, "no data");
 			continue;
 		}
 
@@ -1931,6 +1984,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_KECCAK:
 			case ALGO_LBRY:
 			case ALGO_LUFFA:
+			case ALGO_SIA:
 			case ALGO_SKEIN:
 			case ALGO_SKEIN2:
 				minmax = 0x1000000;
@@ -2096,6 +2150,9 @@ static void *miner_thread(void *userdata)
 		case ALGO_SKEIN2:
 			rc = scanhash_skein2(thr_id, &work, max_nonce, &hashes_done);
 			break;
+		case ALGO_SIA:
+			rc = scanhash_sia(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_SIB:
 			rc = scanhash_sib(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -2152,8 +2209,9 @@ static void *miner_thread(void *userdata)
 		gettimeofday(&tv_end, NULL);
 
 		// todo: update all algos to use work->nonces
-		work.nonces[0] = nonceptr[0];
-		if (opt_algo != ALGO_DECRED && opt_algo != ALGO_BLAKE2S && opt_algo != ALGO_LBRY) {
+		if (opt_algo != ALGO_SIA) // reversed endian
+			work.nonces[0] = nonceptr[0];
+		if (opt_algo != ALGO_DECRED && opt_algo != ALGO_BLAKE2S && opt_algo != ALGO_LBRY && opt_algo != ALGO_SIA) {
 			work.nonces[1] = nonceptr[2];
 		}
 
@@ -2203,7 +2261,7 @@ static void *miner_thread(void *userdata)
 				nonceptr[0] = UINT32_MAX;
 		}
 
-		if (check_dups && opt_algo != ALGO_DECRED)
+		if (check_dups && opt_algo != ALGO_DECRED && opt_algo != ALGO_SIA)
 			hashlog_remember_scan_range(&work);
 
 		/* output */
@@ -2236,10 +2294,15 @@ static void *miner_thread(void *userdata)
 
 		/* if nonce found, submit work */
 		if (rc > 0 && !opt_benchmark) {
+			uint32_t curnonce = nonceptr[0]; // current scan position
+
 			if (opt_led_mode == LED_MODE_SHARES)
 				gpu_led_percent(dev_id, 50);
+
+			nonceptr[0] = work.nonces[0];
 			if (!submit_work(mythr, &work))
 				break;
+			nonceptr[0] = curnonce;
 
 			// prevent stale work in solo
 			// we can't submit twice a block!
@@ -2261,6 +2324,7 @@ static void *miner_thread(void *userdata)
 				}
 				if (!submit_work(mythr, &work))
 					break;
+				nonceptr[0] = curnonce;
 			}
 		}
 	}
@@ -3431,7 +3495,7 @@ int main(int argc, char *argv[])
 	cur_pooln = pool_get_first_valid(0);
 	pool_switch(-1, cur_pooln);
 
-	if (opt_algo == ALGO_DECRED) {
+	if (opt_algo == ALGO_DECRED || opt_algo == ALGO_SIA) {
 		allow_gbt = false;
 		allow_mininginfo = false;
 	}

@@ -56,6 +56,7 @@ void algo_free_all(int thr_id)
 	free_groestlcoin(thr_id);
 	free_heavy(thr_id);
 	free_jackpot(thr_id);
+	free_lbry(thr_id);
 	free_luffa(thr_id);
 	free_lyra2(thr_id);
 	free_lyra2v2(thr_id);
@@ -67,6 +68,7 @@ void algo_free_all(int thr_id)
 	free_qubit(thr_id);
 	free_skeincoin(thr_id);
 	free_skein2(thr_id);
+	free_sia(thr_id);
 	free_sib(thr_id);
 	free_s3(thr_id);
 	free_vanilla(thr_id);

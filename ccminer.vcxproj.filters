@@ -129,6 +129,12 @@
     <ClCompile Include="sph\blake.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="sph\blake2b.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
+    <ClCompile Include="sph\blake2s.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
     <ClCompile Include="sph\bmw.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
@@ -264,9 +270,6 @@
     <ClCompile Include="bignum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sph\blake2s.c">
-      <Filter>Source Files\sph</Filter>
-    </ClCompile>
     <ClCompile Include="nvapi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -313,6 +316,12 @@
     </ClInclude>
     <ClInclude Include="x11\cuda_x11.h">
       <Filter>Header Files\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\blake2b.h">
+      <Filter>Header Files\sph</Filter>
+    </ClInclude>
+    <ClInclude Include="sph\blake2s.h">
+      <Filter>Header Files\sph</Filter>
     </ClInclude>
     <ClInclude Include="sph\sph_blake.h">
       <Filter>Header Files\sph</Filter>
@@ -662,6 +671,9 @@
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
     <CudaCompile Include="zr5.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="sia.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="skein.cu">

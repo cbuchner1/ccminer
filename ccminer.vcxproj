@@ -115,7 +115,7 @@
       <MaxRegCount>80</MaxRegCount>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_61,sm_61;compute_52,sm_52</CodeGeneration>
+      <CodeGeneration>compute_52,sm_52</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
@@ -266,6 +266,7 @@
     <ClCompile Include="skein2.cpp" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />
+    <ClCompile Include="sph\blake2b.c" />
     <ClCompile Include="sph\blake2s.c" />
     <ClCompile Include="sph\bmw.c" />
     <ClCompile Include="sph\cubehash.c" />
@@ -322,6 +323,8 @@
     <ClInclude Include="quark\cuda_skein512_sp.cuh" />
     <ClInclude Include="res\resource.h" />
     <ClInclude Include="scrypt\salsa_kernel.h" />
+    <ClInclude Include="sph\blake2b.h" />
+    <ClInclude Include="sph\blake2s.h" />
     <ClInclude Include="sph\sph_blake.h" />
     <ClInclude Include="sph\sph_bmw.h" />
     <ClInclude Include="sph\sph_cubehash.h" />
@@ -469,6 +472,7 @@
     <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="lyra2\lyra2REv2.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2v2.cu" />
+    <CudaCompile Include="sia.cu" />
     <CudaCompile Include="skein.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
