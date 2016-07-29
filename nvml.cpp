@@ -39,6 +39,7 @@ extern uint8_t device_tlimit[MAX_GPUS];
 extern int8_t device_pstate[MAX_GPUS];
 extern int32_t device_led[MAX_GPUS];
 int32_t device_led_state[MAX_GPUS] = { 0 };
+static __thread bool has_rgb_ok = false;
 
 uint32_t clock_prev[MAX_GPUS] = { 0 };
 uint32_t clock_prev_mem[MAX_GPUS] = { 0 };
@@ -956,6 +957,106 @@ int nvapi_getbios(unsigned int devNum, char *desc, unsigned int maxlen)
 	return 0;
 }
 
+static int SetAsusRGBLogo(unsigned int devNum, uint32_t RGB, bool ignorePrevState)
+{
+	NvAPI_Status ret = NVAPI_OK;
+	NV_I2C_INFO_EX* i2cInfo;
+
+	int delay1 = 20000;
+	int delay2 = 0;
+
+	uchar4 rgb = { 0 };
+	memcpy(&rgb, &RGB, 4);
+	uchar4 prgb = { 0 };
+	int32_t prev = device_led_state[nvapi_devid(devNum)];
+	memcpy(&prgb, &prev, 4);
+
+	NV_INIT_STRUCT_ALLOC(NV_I2C_INFO_EX, i2cInfo);
+	if (i2cInfo == NULL) return -ENOMEM;
+
+	NvU32 data[5] = { 0 };
+	NvU32 datv[2] = { 0, 1 };
+	NvU32 datw[2] = { 1, 0 };
+	if (rgb.z != prgb.z || ignorePrevState) {
+		data[2] = 4; // R:4 G:5 B:6, Mode = 7 (1 static, 2 breath, 3 blink, 4 demo)
+		data[3] = 1;
+		datv[0] = rgb.z | 0x13384000;
+
+		i2cInfo->i2cDevAddress = 0x52;
+		i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
+		i2cInfo->regAddrSize = 1;
+		i2cInfo->pbData = (NvU8*) datv;
+		i2cInfo->cbRead = 5;
+		i2cInfo->cbSize = 1;
+		i2cInfo->portId = 1;
+		i2cInfo->bIsPortIdSet = 1;
+
+		ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, datw);
+		usleep(delay1);
+		has_rgb_ok = (ret == NVAPI_OK);
+	}
+
+	if (rgb.y != prgb.y || ignorePrevState) {
+		data[2] = 5;
+		data[3] = 1;
+		datv[0] = rgb.y | 0x4000;
+
+		i2cInfo->i2cDevAddress = 0x52;
+		i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
+		i2cInfo->regAddrSize = 1;
+		i2cInfo->pbData = (NvU8*) datv;
+		i2cInfo->cbRead = 5;
+		i2cInfo->cbSize = 1;
+		i2cInfo->portId = 1;
+		i2cInfo->bIsPortIdSet = 1;
+
+		ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, datw);
+		usleep(delay1);
+		has_rgb_ok = (ret == NVAPI_OK);
+	}
+
+	if (rgb.y != prgb.y || ignorePrevState) {
+		data[2] = 6;
+		data[3] = 1;
+		datv[0] = rgb.x | 0x4000;
+
+		i2cInfo->i2cDevAddress = 0x52;
+		i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
+		i2cInfo->regAddrSize = 1;
+		i2cInfo->pbData = (NvU8*) datv;
+		i2cInfo->cbRead = 5;
+		i2cInfo->cbSize = 1;
+		i2cInfo->portId = 1;
+		i2cInfo->bIsPortIdSet = 1;
+
+		ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, datw);
+		usleep(delay1);
+		has_rgb_ok = (ret == NVAPI_OK);
+	}
+
+	if (rgb.w && ignorePrevState) {
+		data[2] = 7;
+		data[3] = 1;
+		datv[0] = rgb.w | 0x4000;
+
+		i2cInfo->i2cDevAddress = 0x52;
+		i2cInfo->pbI2cRegAddress = (NvU8*) (&data[2]);
+		i2cInfo->regAddrSize = 1;
+		i2cInfo->pbData = (NvU8*) datv;
+		i2cInfo->cbRead = 5;
+		i2cInfo->cbSize = 1;
+		i2cInfo->portId = 1;
+		i2cInfo->bIsPortIdSet = 1;
+
+		ret = NvAPI_DLL_I2CWriteEx(phys[devNum], i2cInfo, datw);
+		usleep(delay1);
+		has_rgb_ok = (ret == NVAPI_OK);
+	}
+	usleep(delay2);
+	free(i2cInfo);
+	return (int) ret;
+}
+
 static int SetGigabyteRGBLogo(unsigned int devNum, uint32_t RGB)
 {
 	NvAPI_Status ret;
@@ -1065,6 +1166,10 @@ int nvapi_set_led(unsigned int devNum, int RGB, char *device_name)
 		if (opt_debug)
 			applog(LOG_DEBUG, "GPU %x: Set RGB led to %06x", (int) phys[devNum], RGB);
 		return SetGigabyteRGBLogo(devNum, (uint32_t) RGB);
+	} else if (strstr(device_name, "ASUS GTX 10")) {
+		if (opt_debug)
+			applog(LOG_DEBUG, "GPU %x: Set RGB led to %06x", (int) phys[devNum], RGB);
+		return SetAsusRGBLogo(devNum, (uint32_t) RGB, !has_rgb_ok);
 	} else if (strstr(device_name, "Zotac GTX 10")) {
 		if (opt_debug)
 			applog(LOG_DEBUG, "GPU %x: Set RGB led to %06x", (int) phys[devNum], RGB);
@@ -1689,6 +1794,16 @@ int nvapi_init_settings()
 unsigned int nvapi_devnum(int dev_id)
 {
 	return nvapi_dev_map[dev_id];
+}
+
+int nvapi_devid(unsigned int devNum)
+{
+	for (int i=0; i < opt_n_threads; i++) {
+		int dev_id = device_map[i % MAX_GPUS];
+		if (nvapi_dev_map[dev_id] = devNum)
+			return dev_id;
+	}
+	return 0;
 }
 
 #endif /* WIN32 : Windows specific (nvapi) */
