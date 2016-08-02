@@ -710,11 +710,178 @@ static bool work_decode(const json_t *val, struct work *work)
 	return true;
 }
 
+// ---- SIA LONGPOLL --------------------------------------------------------------------------------
+
+struct data_buffer {
+	void *buf;
+	size_t len;
+};
+
+static size_t sia_data_cb(const void *ptr, size_t size, size_t nmemb,
+			  void *user_data)
+{
+	struct data_buffer *db = (struct data_buffer *)user_data;
+	size_t len = size * nmemb;
+	size_t oldlen, newlen;
+	void *newmem;
+	static const uchar zero = 0;
+
+	oldlen = db->len;
+	newlen = oldlen + len;
+
+	newmem = realloc(db->buf, newlen + 1);
+	if (!newmem)
+		return 0;
+
+	db->buf = newmem;
+	db->len = newlen;
+	memcpy((char*)db->buf + oldlen, ptr, len);
+	memcpy((char*)db->buf + newlen, &zero, 1);	/* null terminate */
+
+	return len;
+}
+
+char* sia_getheader(CURL *curl, struct pool_infos *pool)
+{
+	char curl_err_str[CURL_ERROR_SIZE] = { 0 };
+	struct data_buffer all_data = { 0 };
+	struct curl_slist *headers = NULL;
+	char data[256] = { 0 };
+	char url[512];
+
+	// nanopool
+	snprintf(url, 512, "%s/miner/header?address=%s&worker=%s", //&longpoll
+		pool->url, pool->user, pool->pass);
+
+	if (opt_protocol)
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_POST, 0);
+	curl_easy_setopt(curl, CURLOPT_ENCODING, "");
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, opt_timeout);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_err_str);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, sia_data_cb);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &all_data);
+
+	headers = curl_slist_append(headers, "Accept: application/octet-stream");
+	headers = curl_slist_append(headers, "Expect:"); // disable Expect hdr
+	headers = curl_slist_append(headers, "User-Agent: Sia-Agent"); // required for now
+//	headers = curl_slist_append(headers, "User-Agent: " USER_AGENT);
+//	headers = curl_slist_append(headers, "X-Mining-Extensions: longpoll");
+
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+	int rc = curl_easy_perform(curl);
+	if (rc && strlen(curl_err_str)) {
+		applog(LOG_WARNING, "%s", curl_err_str);
+	}
+
+	if (all_data.len >= 112)
+		cbin2hex(data, (const char*) all_data.buf, 112);
+	if (opt_protocol || all_data.len != 112)
+		applog(LOG_DEBUG, "received %d bytes: %s", (int) all_data.len, data);
+
+	curl_slist_free_all(headers);
+
+	return rc == 0 && all_data.len ? strdup(data) : NULL;
+}
+
+bool sia_work_decode(const char *hexdata, struct work *work)
+{
+	uint8_t target[32];
+	if (!work) return false;
+
+	hex2bin((uchar*)target, &hexdata[0], 32);
+	swab256(work->target, target);
+	work->targetdiff = target_to_diff(work->target);
+
+	hex2bin((uchar*)work->data, &hexdata[64], 80);
+	// high 16 bits of the 64 bits nonce
+	work->data[9] = rand() << 16;
+
+	// use work ntime as job id
+	cbin2hex(work->job_id, (const char*)&work->data[10], 4);
+	calc_network_diff(work);
+
+	if (stratum_diff != work->targetdiff) {
+		stratum_diff = work->targetdiff;
+		applog(LOG_WARNING, "Pool diff set to %g", stratum_diff);
+	}
+
+	return true;
+}
+
+int share_result(int result, int pooln, double sharediff, const char *reason);
+
+bool sia_submit(CURL *curl, struct pool_infos *pool, struct work *work)
+{
+	char curl_err_str[CURL_ERROR_SIZE] = { 0 };
+	struct data_buffer all_data = { 0 };
+	struct curl_slist *headers = NULL;
+	char buf[256] = { 0 };
+	char url[512];
+
+	if (opt_protocol)
+		applog_hex(work->data, 80);
+	//applog_hex(&work->data[8], 16);
+	//applog_hex(&work->data[10], 4);
+
+	// nanopool
+	snprintf(url, 512, "%s/miner/header?address=%s&worker=%s",
+		pool->url, pool->user, pool->pass);
+
+	if (opt_protocol)
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_ENCODING, "");
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_err_str);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
+
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &all_data);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, sia_data_cb);
+
+	memcpy(buf, work->data, 80);
+	curl_easy_setopt(curl, CURLOPT_POST, 1);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, 80);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (void*) buf);
+
+//	headers = curl_slist_append(headers, "Content-Type: application/octet-stream");
+//	headers = curl_slist_append(headers, "Content-Length: 80");
+	headers = curl_slist_append(headers, "Accept:"); // disable Accept hdr
+	headers = curl_slist_append(headers, "Expect:"); // disable Expect hdr
+	headers = curl_slist_append(headers, "User-Agent: Sia-Agent");
+//	headers = curl_slist_append(headers, "User-Agent: " USER_AGENT);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+	int res = curl_easy_perform(curl) == 0;
+	long errcode;
+	CURLcode c = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &errcode);
+	if (errcode != 204) {
+		if (strlen(curl_err_str))
+			applog(LOG_ERR, "submit err %ld %s", errcode, curl_err_str);
+		res = 0;
+	}
+	share_result(res, work->pooln, work->sharediff, res ? NULL : (char*) all_data.buf);
+
+	curl_slist_free_all(headers);
+	return true;
+}
+
+// ---- END SIA LONGPOLL ----------------------------------------------------------------------------
+
 #define YES "yes!"
 #define YAY "yay!!!"
 #define BOO "booooo"
 
-static int share_result(int result, int pooln, double sharediff, const char *reason)
+int share_result(int result, int pooln, double sharediff, const char *reason)
 {
 	const char *flag;
 	char suppl[32] = { 0 };
@@ -935,6 +1102,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		else if (opt_algo == ALGO_DECRED) {
 			data_size = 192; adata_sz = 180/4;
 		}
+		else if (opt_algo == ALGO_SIA) {
+			return sia_submit(curl, pool, work);
+		}
 
 		if (opt_algo != ALGO_HEAVY && opt_algo != ALGO_MJOLLNIR) {
 			for (int i = 0; i < adata_sz; i++)
@@ -1097,21 +1267,36 @@ static bool get_mininginfo(CURL *curl, struct work *work)
 	return true;
 }
 
-static const char *rpc_req =
-	"{\"method\": \"getwork\", \"params\": [], \"id\":0}\r\n";
+static const char *json_rpc_getwork =
+	"{\"method\":\"getwork\",\"params\":[],\"id\":0}\r\n";
 
 static bool get_upstream_work(CURL *curl, struct work *work)
 {
-	bool rc;
+	bool rc = false;
 	struct timeval tv_start, tv_end, diff;
 	struct pool_infos *pool = &pools[work->pooln];
+	const char *rpc_req = json_rpc_getwork;
 	json_t *val;
+
+	gettimeofday(&tv_start, NULL);
+
+	if (opt_algo == ALGO_SIA) {
+		char *sia_header = sia_getheader(curl, pool);
+		if (sia_header) {
+			rc = sia_work_decode(sia_header, work);
+			free(sia_header);
+		}
+		gettimeofday(&tv_end, NULL);
+		if (have_stratum || unlikely(work->pooln != cur_pooln)) {
+			return rc;
+		}
+		return rc;
+	}
 
 	if (opt_debug_threads)
 		applog(LOG_DEBUG, "%s: want_longpoll=%d have_longpoll=%d",
 			__func__, want_longpoll, have_longpoll);
 
-	gettimeofday(&tv_start, NULL);
 	/* want_longpoll/have_longpoll required here to init/unlock the lp thread */
 	val = json_rpc_call_pool(curl, pool, rpc_req, want_longpoll, have_longpoll, NULL);
 	gettimeofday(&tv_end, NULL);
@@ -1730,7 +1915,7 @@ static void *miner_thread(void *userdata)
 
 			regen = (nonceptr[0] >= end_nonce);
 			if (opt_algo == ALGO_SIA) {
-				regen = (nonceptr[1] & 0xFF00 >= 0xF000);
+				regen = ((nonceptr[1] & 0xFF00) >= 0xF000);
 			}
 			regen = regen || extrajob;
 
@@ -1813,8 +1998,7 @@ static void *miner_thread(void *userdata)
 
 		} else if (opt_algo == ALGO_SIA) {
 			// suprnova job_id check without data/target/height change...
-			check_stratum_jobs = true;
-			if (check_stratum_jobs && strcmp(work.job_id, g_work.job_id)) {
+			if (have_stratum && strcmp(work.job_id, g_work.job_id)) {
 				pthread_mutex_unlock(&g_work_lock);
 				work_done = true;
 				continue;
@@ -2344,6 +2528,7 @@ static void *longpoll_thread(void *userdata)
 	struct pool_infos *pool;
 	CURL *curl = NULL;
 	char *hdr_path = NULL, *lp_url = NULL;
+	const char *rpc_req = json_rpc_getwork;
 	bool need_slash = false;
 	int pooln, switchn;
 
@@ -2369,8 +2554,12 @@ wait_lp_url:
 	// to detect pool switch during loop
 	switchn = pool_switch_count;
 
+	if (opt_algo == ALGO_SIA) {
+		goto out;
+	}
+
 	/* full URL */
-	if (strstr(hdr_path, "://")) {
+	else if (strstr(hdr_path, "://")) {
 		lp_url = hdr_path;
 		hdr_path = NULL;
 	}
@@ -2407,6 +2596,19 @@ longpoll_retry:
 		// exit on pool switch
 		if (switchn != pool_switch_count)
 			goto need_reinit;
+
+		if (opt_algo == ALGO_SIA) {
+			char *sia_header = sia_getheader(curl, pool);
+			if (sia_header) {
+				pthread_mutex_lock(&g_work_lock);
+				if (sia_work_decode(sia_header, &g_work)) {
+					g_work_time = time(NULL);
+					pthread_mutex_unlock(&g_work_lock);
+				}
+				free(sia_header);
+			}
+			continue;
+		}
 
 		val = json_rpc_longpoll(curl, lp_url, pool, rpc_req, &err);
 		if (have_stratum || switchn != pool_switch_count) {

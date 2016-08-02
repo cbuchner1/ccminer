@@ -662,7 +662,6 @@ struct work {
 #define POK_BOOL_MASK 0x00008000
 #define POK_DATA_MASK 0xFFFF0000
 
-
 #define MAX_POOLS 8
 struct pool_infos {
 	uint8_t id;
@@ -681,7 +680,7 @@ struct pool_infos {
 	// credentials
 	char url[512];
 	char short_url[64];
-	char user[64];
+	char user[128];
 	char pass[384];
 	// config options
 	double max_diff;
