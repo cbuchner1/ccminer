@@ -68,7 +68,7 @@ extern void lbry_sha256_setBlock_112(uint32_t *pdata, uint32_t *ptarget);
 extern void lbry_sha256d_hash_112(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_outputHash);
 extern void lbry_sha512_init(int thr_id);
 extern void lbry_sha512_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash);
-extern void lbry_sha256d_hash_final(int thr_id, uint32_t threads, uint32_t *d_inputHash, uint32_t *d_resNonce);
+extern int lbry_sha256d_hash_final(int thr_id, uint32_t threads, uint32_t *d_inputHash, uint32_t *d_resNonce);
 
 static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
 	return iftrue ? swab32(val) : val;
@@ -136,7 +136,12 @@ extern "C" int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, 
 		lbry_sha512_hash_32(thr_id, throughput, d_hash[thr_id]);
 
 		uint32_t resNonces[2] = { UINT32_MAX, UINT32_MAX };
-		lbry_sha256d_hash_final(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
+		int err = lbry_sha256d_hash_final(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
+		if (err) {
+			// reinit
+			free_lbry(thr_id);
+			return -1;
+		}
 
 		cudaMemcpy(resNonces, d_resNonce[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 

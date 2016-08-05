@@ -868,7 +868,7 @@ void lbry_sha256d_gpu_hash_final(const uint32_t threads, uint64_t *Hash512, uint
 }
 
 __host__
-void lbry_sha256d_hash_final(int thr_id, uint32_t threads, uint32_t *d_inputHash, uint32_t *d_resNonce)
+int lbry_sha256d_hash_final(int thr_id, uint32_t threads, uint32_t *d_inputHash, uint32_t *d_resNonce)
 {
 	int dev_id = device_map[thr_id];
 	const uint32_t threadsperblock = (device_sm[dev_id] > 500) ? 1024 : 768;
@@ -877,4 +877,5 @@ void lbry_sha256d_hash_final(int thr_id, uint32_t threads, uint32_t *d_inputHash
 	dim3 block(threadsperblock);
 
 	lbry_sha256d_gpu_hash_final <<<grid, block>>> (threads, (uint64_t*) d_inputHash, d_resNonce);
+	return cudaGetLastError();
 }
