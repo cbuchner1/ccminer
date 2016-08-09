@@ -1,5 +1,5 @@
 
-ccMiner 1.8 (20th July 2016)    "CUDA 8, lbry and x11evo algos"
+ccMiner 1.8.1 (August 2016) "Sia Blake2-B Algo and RPCs"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -97,6 +97,7 @@ its command line interface and options.
                           scrypt:N    use to mine Scrypt-N (:10 for 2048 iterations)
                           scrypt-jane use to mine Chacha coins like Cache and Ultracoin
                           s3          use to mine 1coin
+                          sia         use to mine SIA
                           sib         use to mine Sibcoin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
@@ -242,6 +243,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Aug. 10th 2016  v1.8.1
+                  SIA Blake2-B Algo (getwork over stratum for Suprnova)
+                  SIA Nanopool RPC (getwork over http)
 
   July 20th 2016  v1.8.0
                   Pascal support with cuda 8
