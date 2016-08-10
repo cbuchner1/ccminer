@@ -2603,9 +2603,9 @@ longpoll_retry:
 				pthread_mutex_lock(&g_work_lock);
 				if (sia_work_decode(sia_header, &g_work)) {
 					g_work_time = time(NULL);
-					pthread_mutex_unlock(&g_work_lock);
 				}
 				free(sia_header);
+				pthread_mutex_unlock(&g_work_lock);
 			}
 			continue;
 		}
