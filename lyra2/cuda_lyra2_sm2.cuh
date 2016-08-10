@@ -3,15 +3,16 @@
 #ifdef __INTELLISENSE__
 /* just for vstudio code colors */
 #undef __CUDA_ARCH__
-#define __CUDA_ARCH__ 300
+#define __CUDA_ARCH__ 500
 #endif
 
 #include "cuda_helper.h"
 
 #define TPB30 160
+#define TPB20 160
 
 #if (__CUDA_ARCH__ >= 200 && __CUDA_ARCH__ <= 350) || !defined(__CUDA_ARCH__)
-__constant__ static uint2 blake2b_IV[8] = {
+__constant__ static uint2 blake2b_IV_sm2[8] = {
 	{ 0xf3bcc908, 0x6a09e667 },
 	{ 0x84caa73b, 0xbb67ae85 },
 	{ 0xfe94f82b, 0x3c6ef372 },
@@ -149,7 +150,7 @@ void lyra2_gpu_hash_32_sm2(uint32_t threads, uint32_t startNounce, uint64_t *g_h
 
 		#pragma unroll
 		for (int i = 0; i<8; i++) {
-			state[i + 8] = blake2b_IV[i];
+			state[i + 8] = blake2b_IV_sm2[i];
 		}
 
 		// blake2blyra x2

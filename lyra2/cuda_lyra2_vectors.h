@@ -13,7 +13,7 @@
 #include "cuda_helper.h"
 
 #if __CUDA_ARCH__ < 300
-#define __shfl(x, y) (x)
+#define __shfl(x, y, z) (x)
 #endif
 
 #if __CUDA_ARCH__ < 320 && !defined(__ldg4)

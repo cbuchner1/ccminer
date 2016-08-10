@@ -247,6 +247,7 @@ features.
   Aug. 10th 2016  v1.8.1
                   SIA Blake2-B Algo (getwork over stratum for Suprnova)
                   SIA Nanopool RPC (getwork over http)
+                  Update also the older lyra2 with Nanashi version
 
   July 20th 2016  v1.8.0
                   Pascal support with cuda 8
