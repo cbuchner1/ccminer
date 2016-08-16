@@ -3761,6 +3761,8 @@ int main(int argc, char *argv[])
 		}
 		SetPriorityClass(GetCurrentProcess(), prio);
 	}
+	// Prevent windows to sleep while mining
+	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
 #endif
 	if (opt_affinity != -1) {
 		if (!opt_quiet)
