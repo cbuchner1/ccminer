@@ -44,6 +44,7 @@ enum sha_algos {
 	ALGO_X15,
 	ALGO_X17,
 	ALGO_VANILLA,
+	ALGO_VELTOR,
 	ALGO_WHIRLCOIN,
 	ALGO_WHIRLPOOL,
 	ALGO_WHIRLPOOLX,
@@ -94,6 +95,7 @@ static const char *algo_names[] = {
 	"x15",
 	"x17",
 	"vanilla",
+	"veltor",
 	"whirlcoin",
 	"whirlpool",
 	"whirlpoolx",
@@ -127,6 +129,8 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_LYRA2;
 		else if (!strcasecmp("lyra2rev2", arg))
 			i = ALGO_LYRA2v2;
+		else if (!strcasecmp("thorsriddle", arg))
+			i = ALGO_VELTOR;
 		else if (!strcasecmp("whirl", arg))
 			i = ALGO_WHIRLPOOL;
 		else if (!strcasecmp("ziftr", arg))

@@ -1,5 +1,5 @@
 
-ccMiner 1.8.1 (August 2016) "Sia Blake2-B Algo and RPCs"
+ccMiner 1.8.2 (August 2016) "Veltor algo Thor's Riddle streebog"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -108,6 +108,7 @@ its command line interface and options.
                           x17         use to mine X17
                           x17         use to mine X17
                           vanilla     use to mine Vanilla (Blake256)
+                          veltor      use to mine VeltorCoin
                           whirlpool   use to mine Joincoin
                           zr5         use to mine ZiftrCoin
 
@@ -243,6 +244,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Aug. 20th 2016  v1.8.2
+                  Prevent Windows hibernate while mining
+                  veltor algo
 
   Aug. 10th 2016  v1.8.1
                   SIA Blake2-B Algo (getwork over stratum for Suprnova)

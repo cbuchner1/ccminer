@@ -230,7 +230,7 @@ Options:\n\
 			keccak      Keccak-256 (Maxcoin)\n\
 			lbry        LBRY Credits (Sha/Ripemd)\n\
 			luffa       Joincoin\n\
-			lyra2       LyraBar\n\
+			lyra2       CryptoCoin\n\
 			lyra2v2     VertCoin\n\
 			mjollnir    Mjollnircoin\n\
 			myr-gr      Myriad-Groestl\n\
@@ -245,6 +245,7 @@ Options:\n\
 			skein       Skein SHA2 (Skeincoin)\n\
 			skein2      Double Skein (Woodcoin)\n\
 			s3          S3 (1Coin)\n\
+			veltor      Thorsriddle streebog\n\
 			x11evo      Permuted x11 (Revolver)\n\
 			x11         X11 (DarkCoin)\n\
 			x13         X13 (MaruCoin)\n\
@@ -2194,6 +2195,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_NEOSCRYPT:
 			case ALGO_SIB:
 			case ALGO_SCRYPT:
+			case ALGO_VELTOR:
 				minmax = 0x80000;
 				break;
 			case ALGO_SCRYPT_JANE:
@@ -2346,6 +2348,9 @@ static void *miner_thread(void *userdata)
 		case ALGO_VANILLA:
 			rc = scanhash_vanilla(thr_id, &work, max_nonce, &hashes_done, 8);
 			break;
+		case ALGO_VELTOR:
+			rc = scanhash_veltor(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_WHIRLCOIN:
 		case ALGO_WHIRLPOOL:
 			rc = scanhash_whirl(thr_id, &work, max_nonce, &hashes_done);
@@ -2396,6 +2401,7 @@ static void *miner_thread(void *userdata)
 		if (opt_algo != ALGO_SIA) // reversed endian
 			work.nonces[0] = nonceptr[0];
 		if (opt_algo != ALGO_DECRED && opt_algo != ALGO_BLAKE2S && opt_algo != ALGO_LBRY && opt_algo != ALGO_SIA) {
+			if (opt_algo != ALGO_VELTOR)
 			work.nonces[1] = nonceptr[2];
 		}
 

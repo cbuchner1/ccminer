@@ -2207,6 +2207,9 @@ void print_hash_tests(void)
 	blake256hash(&hash[0], &buf[0], 8);
 	printpfx("vanilla", hash);
 
+	veltorhash(&hash[0], &buf[0]);
+	printpfx("veltor", hash);
+
 	wcoinhash(&hash[0], &buf[0]);
 	printpfx("whirlpool", hash);
 
