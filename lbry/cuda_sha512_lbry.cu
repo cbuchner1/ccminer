@@ -40,21 +40,30 @@ uint64_t K_512[80] = {
 #undef xor3
 #define xor3(a,b,c) (a^b^c)
 
+//#define ROR64_8(x) ROTR64(x,8)
+__device__ __inline__
+uint64_t ROR64_8(const uint64_t u64) {
+	const uint2 a = vectorize(u64);
+	uint2 result;
+	result.x = __byte_perm(a.y, a.x, 0x0765);
+	result.y = __byte_perm(a.y, a.x, 0x4321);
+	return devectorize(result);
+}
+
 #define bsg5_0(x) xor3(ROTR64(x,28),ROTR64(x,34),ROTR64(x,39))
 #define bsg5_1(x) xor3(ROTR64(x,14),ROTR64(x,18),ROTR64(x,41))
-#define ssg5_0(x) xor3(ROTR64(x,1),ROTR64(x,8),x>>7)
-#define ssg5_1(x) xor3(ROTR64(x,19),ROTR64(x,61),x>>6)
-
+#define ssg5_0(x) xor3(ROTR64(x,1), ROR64_8(x), x>>7)
+#define ssg5_1(x) xor3(ROTR64(x,19),ROTR64(x,61), x>>6)
 
 #define andor64(a,b,c) ((a & (b | c)) | (b & c))
 #define xandx64(e,f,g) (g ^ (e & (g ^ f)))
 
 static __device__ __forceinline__
-void sha512_step2(uint64_t* r,const uint64_t W,const uint64_t K, const int ord)
+void sha512_step2(uint64_t* r, const uint64_t W, const uint64_t K, const int ord)
 {
 	const uint64_t T1 = r[(15-ord) & 7] + K + W + bsg5_1(r[(12-ord) & 7]) + xandx64(r[(12-ord) & 7],r[(13-ord) & 7],r[(14-ord) & 7]);
-	r[(15-ord)& 7] = andor64(r[( 8-ord) & 7],r[( 9-ord) & 7],r[(10-ord) & 7]) + bsg5_0(r[( 8-ord) & 7]) + T1;
-	r[(11-ord)& 7]+= T1;
+	r[(15-ord) & 7] = andor64(r[(8-ord) & 7],r[(9-ord) & 7],r[(10-ord) & 7]) + bsg5_0(r[(8-ord) & 7]) + T1;
+	r[(11-ord) & 7] += T1;
 }
 
 /**************************************************************************************************/
@@ -67,16 +76,17 @@ void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 		0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
 		0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
 	};
+
 	uint64_t r[8];
 	uint64_t W[16];
 	if (thread < threads)
 	{
 		uint64_t *pHash = &g_hash[thread<<3];
 
-		*(uint2x4*)&r[ 0] = *(uint2x4*)&IV512[ 0];
-		*(uint2x4*)&r[ 4] = *(uint2x4*)&IV512[ 4];
+		*(uint2x4*)&r[0] = *(uint2x4*)&IV512[0];
+		*(uint2x4*)&r[4] = *(uint2x4*)&IV512[4];
 
-		*(uint2x4*)&W[ 0] = __ldg4((uint2x4*)&pHash[ 0]);
+		*(uint2x4*)&W[0] = __ldg4((uint2x4*)pHash);
 
 		W[4] = 0x8000000000000000; // end tag
 
@@ -91,7 +101,7 @@ void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 		}
 
 		#pragma unroll
-		for (int i = 16; i < 80; i+=16){
+		for (int i = 16; i < 80; i+=16) {
 			#pragma unroll
 			for (int j = 0; j<16; j++) {
 				W[(i + j) & 15] += W[((i + j) - 7) & 15] + ssg5_0(W[((i + j) - 15) & 15]) + ssg5_1(W[((i + j) - 2) & 15]);
