@@ -39,7 +39,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" Condition="'$(Platform)'=='Win32'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.props" />
   </ImportGroup>
   <ImportGroup Label="ExtensionSettings" Condition="'$(Platform)'=='x64'">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.props" />
@@ -429,6 +429,7 @@
     <CudaCompile Include="Algo256\cuda_skein256.cu" />
     <CudaCompile Include="lbry\cuda_sha256_lbry.cu" />
     <CudaCompile Include="lbry\cuda_sha512_lbry.cu" />
+    <CudaCompile Include="lbry\cuda_lbry_merged.cu" />
     <CudaCompile Include="lbry\lbry.cu" />
     <CudaCompile Include="pentablake.cu">
       <MaxRegCount>80</MaxRegCount>
@@ -534,7 +535,7 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='Win32'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.targets" />
   </ImportGroup>
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='x64'">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />

@@ -481,7 +481,7 @@ static __device__ __forceinline__ uint2 operator~ (uint2 a) { return make_uint2(
 static __device__ __forceinline__ void operator^= (uint2 &a, uint2 b) { a = a ^ b; }
 
 static __device__ __forceinline__ uint2 operator+ (uint2 a, uint2 b) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) && CUDA_VERSION < 7000
 	uint2 result;
 	asm("{ // uint2 a+b \n\t"
 		"add.cc.u32 %0, %2, %4; \n\t"

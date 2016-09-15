@@ -2430,7 +2430,7 @@ static void *miner_thread(void *userdata)
 				pthread_mutex_lock(&stats_lock);
 				thr_hashrates[thr_id] = hashes_done / dtime;
 				thr_hashrates[thr_id] *= rate_factor;
-				if (loopcnt > 1) // ignore first (init time)
+				if (loopcnt > 2) // ignore first (init time)
 					stats_remember_speed(thr_id, hashes_done, thr_hashrates[thr_id], (uint8_t) rc, work.height);
 				pthread_mutex_unlock(&stats_lock);
 			}

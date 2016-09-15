@@ -1,5 +1,5 @@
 
-ccMiner 1.8.2 (August 2016) "Veltor algo Thor's Riddle streebog"
+ccMiner 1.8.2 (Sept 2016) "Veltor and lbry boost"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -245,9 +245,10 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Aug. 20th 2016  v1.8.2
+  Sep. 22th 2016  v1.8.2
+                  lbry improvements by Alexis Provos
                   Prevent Windows hibernate while mining
-                  veltor algo
+                  veltor algo (basic implementation)
 
   Aug. 10th 2016  v1.8.1
                   SIA Blake2-B Algo (getwork over stratum for Suprnova)

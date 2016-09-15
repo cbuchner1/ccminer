@@ -1,20 +1,16 @@
 /**
  * sha-512 CUDA implementation.
- * Tanguy Pruvot and Provos Alexis - JUL 2016
+ * Tanguy Pruvot and Provos Alexis - Jul / Sep 2016
+ * Sponsored by LBRY.IO team
  */
 
 //#define USE_ROT_ASM_OPT 0
 #include <cuda_helper.h>
 #include <cuda_vector_uint2x4.h>
-#include "miner.h"
 
-static __constant__
-#if __CUDA_ARCH__ > 500
-_ALIGN(16)
-#else
-_ALIGN(8)
-#endif
-uint64_t K_512[80] = {
+#include <miner.h>
+
+static __constant__ _ALIGN(8) uint64_t K_512[80] = {
 	0x428A2F98D728AE22, 0x7137449123EF65CD, 0xB5C0FBCFEC4D3B2F, 0xE9B5DBA58189DBBC,
 	0x3956C25BF348B538, 0x59F111F1B605D019, 0x923F82A4AF194F9B, 0xAB1C5ED5DA6D8118,
 	0xD807AA98A3030242, 0x12835B0145706FBE, 0x243185BE4EE4B28C, 0x550C7DC3D5FFB4E2,
@@ -58,12 +54,12 @@ uint64_t ROR64_8(const uint64_t u64) {
 #define andor64(a,b,c) ((a & (b | c)) | (b & c))
 #define xandx64(e,f,g) (g ^ (e & (g ^ f)))
 
-static __device__ __forceinline__
-void sha512_step2(uint64_t* r, const uint64_t W, const uint64_t K, const int ord)
+__device__ __forceinline__
+static void sha512_step2(uint64_t *const r,const uint64_t W,const uint64_t K, const int ord)
 {
 	const uint64_t T1 = r[(15-ord) & 7] + K + W + bsg5_1(r[(12-ord) & 7]) + xandx64(r[(12-ord) & 7],r[(13-ord) & 7],r[(14-ord) & 7]);
 	r[(15-ord) & 7] = andor64(r[(8-ord) & 7],r[(9-ord) & 7],r[(10-ord) & 7]) + bsg5_0(r[(8-ord) & 7]) + T1;
-	r[(11-ord) & 7] += T1;
+	r[(11-ord) & 7]+= T1;
 }
 
 /**************************************************************************************************/
@@ -76,7 +72,6 @@ void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 		0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
 		0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
 	};
-
 	uint64_t r[8];
 	uint64_t W[16];
 	if (thread < threads)
@@ -91,7 +86,7 @@ void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 		W[4] = 0x8000000000000000; // end tag
 
 		#pragma unroll
-		for (int i = 5; i < 15; i++) W[i] = 0;
+		for (uint32_t i = 5; i < 15; i++) W[i] = 0;
 
 		W[15] = 0x100; // 256 bits
 
@@ -100,31 +95,32 @@ void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 			sha512_step2(r, W[i], K_512[i], i&7);
 		}
 
-		#pragma unroll
-		for (int i = 16; i < 80; i+=16) {
+		#pragma unroll 5
+		for (uint32_t i = 16; i < 80; i+=16){
 			#pragma unroll
-			for (int j = 0; j<16; j++) {
+			for (uint32_t j = 0; j<16; j++){
 				W[(i + j) & 15] += W[((i + j) - 7) & 15] + ssg5_0(W[((i + j) - 15) & 15]) + ssg5_1(W[((i + j) - 2) & 15]);
 			}
 			#pragma unroll
-			for (int j = 0; j<16; j++) {
+			for (uint32_t j = 0; j<16; j++){
 				sha512_step2(r, W[j], K_512[i+j], (i+j)&7);
 			}
 		}
 
 		#pragma unroll 8
-		for (int i = 0; i < 8; i++)
+		for (uint32_t i = 0; i < 8; i++)
 			r[i] = cuda_swab64(r[i] + IV512[i]);
 
 		*(uint2x4*)&pHash[0] = *(uint2x4*)&r[0];
 		*(uint2x4*)&pHash[4] = *(uint2x4*)&r[4];
+
 	}
 }
 
 __host__
 void lbry_sha512_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash)
 {
-	const uint32_t threadsperblock = 512;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
