@@ -239,6 +239,7 @@ Options:\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
+			sia         SIA (Blake2B)\n\
 			sib         Sibcoin (X11+Streebog)\n\
 			scrypt      Scrypt\n\
 			scrypt-jane Scrypt-jane Chacha\n\
