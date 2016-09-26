@@ -2981,8 +2981,6 @@ void parse_arg(int key, char *arg)
 					}
 					else if (gpus_intensity[n] != (1 << v)) {
 						gpus_intensity[n] = (1 << v);
-						applog(LOG_INFO, "Intensity set to %u, %u cuda threads",
-							v, gpus_intensity[n]);
 					}
 				}
 				last = gpus_intensity[n];

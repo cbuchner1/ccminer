@@ -378,6 +378,7 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 			CUDA_LOG_ERROR();
 		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		if (sm5) {
 			skeincoin_init(thr_id);

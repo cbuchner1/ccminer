@@ -378,6 +378,11 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 	const uint32_t targetHigh   = ptarget[6];
 	int dev_id = device_map[thr_id];
 
+	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 30 : 24;
+	if (device_sm[dev_id] < 350) intensity = 22;
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
+	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
+
 	if (!init[thr_id]) {
 		cudaSetDevice(dev_id);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
@@ -387,6 +392,8 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 			CUDA_LOG_ERROR();
 		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
+
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), -1);
 		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)), -1);
 		cudaStreamCreate(&streams[thr_id]);
@@ -401,11 +408,6 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 	cudaMemsetAsync(d_resNonce[thr_id], 0xff, sizeof(uint32_t),streams[thr_id]);
 
 	vanilla_cpu_setBlock_16(thr_id,endiandata,&pdata[16]);
-
-	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 30 : 24;
-	if (device_sm[dev_id] < 350) intensity = 22;
-	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
-	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	const dim3 grid((throughput + (NPT*TPB)-1)/(NPT*TPB));
 	const dim3 block(TPB);

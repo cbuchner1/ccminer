@@ -40,6 +40,13 @@ int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigne
 	if(!init[thr_id])
 	{
 		cudaSetDevice(device_map[thr_id]);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		fugue256_cpu_init(thr_id, throughput);
 		init[thr_id] = true;

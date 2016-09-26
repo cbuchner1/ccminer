@@ -79,7 +79,7 @@ extern "C" void lyra2re_hash(void *state, const void *input)
 }
 
 static bool init[MAX_GPUS] = { 0 };
-static uint32_t throughput[MAX_GPUS] = { 0 };
+static __thread uint32_t throughput = 0;
 
 extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -99,9 +99,8 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 
 		int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 17 : 16;
 		if (device_sm[device_map[thr_id]] == 500) intensity = 15;
-		int temp = intensity;
-		throughput[thr_id] = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
-		if (init[thr_id]) throughput[thr_id] = min(throughput[thr_id], max_nonce - first_nonce);
+		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
+		if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, dev_id);
@@ -109,25 +108,23 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 		if (strstr(props.name, "750 Ti")) gtx750ti = true;
 		else gtx750ti = false;
 
-		blake256_cpu_init(thr_id, throughput[thr_id]);
-		keccak256_cpu_init(thr_id, throughput[thr_id]);
-		skein256_cpu_init(thr_id, throughput[thr_id]);
-		groestl256_cpu_init(thr_id, throughput[thr_id]);
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
+
+		blake256_cpu_init(thr_id, throughput);
+		keccak256_cpu_init(thr_id, throughput);
+		skein256_cpu_init(thr_id, throughput);
+		groestl256_cpu_init(thr_id, throughput);
 
 		if (device_sm[dev_id] >= 500)
 		{
 			size_t matrix_sz = device_sm[dev_id] > 500 ? sizeof(uint64_t) * 4 * 4 : sizeof(uint64_t) * 8 * 8 * 3 * 4;
-			CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], matrix_sz * throughput[thr_id]));
-			lyra2_cpu_init(thr_id, throughput[thr_id], d_matrix[thr_id]);
+			CUDA_SAFE_CALL(cudaMalloc(&d_matrix[thr_id], matrix_sz * throughput));
+			lyra2_cpu_init(thr_id, throughput, d_matrix[thr_id]);
 		}
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput[thr_id]));
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)32 * throughput));
 
 		init[thr_id] = true;
-		if (temp != intensity){
-			gpulog(LOG_INFO, thr_id, "Intensity set to %u, %u cuda threads",
-				intensity, throughput[thr_id]);
-		}
 	}
 
 	uint32_t _ALIGN(128) endiandata[20];
@@ -141,15 +138,15 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 		int order = 0;
 		uint32_t foundNonce;
 
-		blake256_cpu_hash_80(thr_id, throughput[thr_id], pdata[19], d_hash[thr_id], order++);
-		keccak256_cpu_hash_32(thr_id, throughput[thr_id], pdata[19], d_hash[thr_id], order++);
-		lyra2_cpu_hash_32(thr_id, throughput[thr_id], pdata[19], d_hash[thr_id], gtx750ti);
-		skein256_cpu_hash_32(thr_id, throughput[thr_id], pdata[19], d_hash[thr_id], order++);
+		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], gtx750ti);
+		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		TRACE("S")
 
-		*hashes_done = pdata[19] - first_nonce + throughput[thr_id];
+		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		foundNonce = groestl256_cpu_hash_32(thr_id, throughput[thr_id], pdata[19], d_hash[thr_id], order++);
+		foundNonce = groestl256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash64[8];
@@ -181,11 +178,11 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 			}
 		}
 
-		if ((uint64_t)throughput[thr_id] + pdata[19] >= max_nonce) {
+		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
-		pdata[19] += throughput[thr_id];
+		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);
 

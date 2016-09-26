@@ -357,6 +357,7 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 			CUDA_LOG_ERROR();
 		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		// constants
 		cudaMemcpyToSymbol(c_permut, permut, 24*4, 0, cudaMemcpyHostToDevice);

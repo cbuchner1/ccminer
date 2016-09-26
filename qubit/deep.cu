@@ -66,8 +66,9 @@ extern "C" int scanhash_deep(int thr_id, struct work* work, uint32_t max_nonce, 
 			cudaDeviceReset();
 			// reduce cpu usage
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
 		}
-		CUDA_LOG_ERROR();
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 

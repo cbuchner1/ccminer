@@ -178,6 +178,7 @@ int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned l
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 			CUDA_LOG_ERROR();
 		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		hefty_cpu_init(thr_id, throughput);
 		sha256_cpu_init(thr_id, throughput);

@@ -489,8 +489,9 @@ int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsi
 		cudaDeviceSynchronize();
 		cudaDeviceReset();
 		cudaSetDevice(dev_id);
+
 		throughput = cuda_throughput(thr_id);
-		applog(LOG_INFO, "GPU #%d: cuda throughput is %d", dev_id, throughput);
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		init[thr_id] = true;
 	}
