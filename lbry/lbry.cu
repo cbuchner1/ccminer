@@ -116,6 +116,7 @@ extern "C" int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, 
 			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 			CUDA_LOG_ERROR();
 		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		if(device_sm[dev_id] <= 500)
 			CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 8 * sizeof(uint64_t) * throughput));

@@ -172,6 +172,21 @@ uint32_t cuda_default_throughput(int thr_id, uint32_t defcount)
 	return throughput;
 }
 
+// since 1.8.3
+double throughput2intensity(uint32_t throughput)
+{
+	double intensity = 0.;
+	uint32_t ws = throughput;
+	uint8_t i = 0;
+	while (ws > 1 && i++ < 32)
+		ws = ws >> 1;
+	intensity = (double) i;
+	if (i && ((1U << i) < throughput)) {
+		intensity += ((double) (throughput-(1U << i)) / (1U << i));
+	}
+	return intensity;
+}
+
 // if we use 2 threads on the same gpu, we need to reinit the threads
 void cuda_reset_device(int thr_id, bool *init)
 {
