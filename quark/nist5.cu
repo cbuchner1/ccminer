@@ -22,13 +22,13 @@ extern "C" void nist5hash(void *state, const void *input)
     sph_jh512_context ctx_jh;
     sph_keccak512_context ctx_keccak;
     sph_skein512_context ctx_skein;
-    
+
     uint8_t hash[64];
 
     sph_blake512_init(&ctx_blake);
     sph_blake512 (&ctx_blake, input, 80);
     sph_blake512_close(&ctx_blake, (void*) hash);
-    
+
     sph_groestl512_init(&ctx_groestl);
     sph_groestl512 (&ctx_groestl, (const void*) hash, 64);
     sph_groestl512_close(&ctx_groestl, (void*) hash);
@@ -66,8 +66,14 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 
 	if (!init[thr_id])
 	{
-		cudaDeviceSynchronize();
 		cudaSetDevice(device_map[thr_id]);
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			// reduce cpu usage
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		// Constants copy/init (no device alloc in these algos)
 		quark_blake512_cpu_init(thr_id, throughput);

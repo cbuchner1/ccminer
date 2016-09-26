@@ -357,8 +357,6 @@
     <CudaCompile Include="cuda.cpp" />
     <CudaCompile Include="cuda_groestlcoin.cu" />
     <CudaCompile Include="cuda_myriadgroestl.cu" />
-    <CudaCompile Include="cuda_nist5.cu">
-    </CudaCompile>
     <CudaCompile Include="scrypt\blake.cu" />
     <CudaCompile Include="scrypt\keccak.cu" />
     <CudaCompile Include="scrypt\sha256.cu" />
@@ -459,16 +457,12 @@
     </CudaCompile>
     <CudaCompile Include="quark\cuda_skein512.cu">
     </CudaCompile>
-    <CudaCompile Include="quark\quarkcoin.cu">
-    </CudaCompile>
-    <CudaCompile Include="qubit\deep.cu">
-    </CudaCompile>
-    <CudaCompile Include="qubit\luffa.cu">
-    </CudaCompile>
-    <CudaCompile Include="qubit\qubit.cu">
-    </CudaCompile>
-    <CudaCompile Include="qubit\qubit_luffa512.cu">
-    </CudaCompile>
+    <CudaCompile Include="quark\quarkcoin.cu" />
+    <CudaCompile Include="quark\nist5.cu" />
+    <CudaCompile Include="qubit\deep.cu" />
+    <CudaCompile Include="qubit\luffa.cu" />
+    <CudaCompile Include="qubit\qubit.cu" />
+    <CudaCompile Include="qubit\qubit_luffa512.cu" />
     <CudaCompile Include="lyra2\lyra2RE.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="lyra2\lyra2REv2.cu" />

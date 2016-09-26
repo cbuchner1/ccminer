@@ -535,6 +535,9 @@
     <CudaCompile Include="quark\cuda_quark_keccak512.cu">
       <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
+    <CudaCompile Include="quark\nist5.cu">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </CudaCompile>
     <CudaCompile Include="quark\quarkcoin.cu">
       <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>
@@ -549,9 +552,6 @@
     </CudaCompile>
     <CudaCompile Include="qubit\qubit_luffa512.cu">
       <Filter>Source Files\CUDA\qubit</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda_nist5.cu">
-      <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
     <ClInclude Include="x11\cuda_x11_aes.cuh">
       <Filter>Source Files\CUDA\x11</Filter>
