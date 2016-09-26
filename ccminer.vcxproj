@@ -39,7 +39,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" Condition="'$(Platform)'=='Win32'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
   </ImportGroup>
   <ImportGroup Label="ExtensionSettings" Condition="'$(Platform)'=='x64'">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.props" />
@@ -535,7 +535,7 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='Win32'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
   </ImportGroup>
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='x64'">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
