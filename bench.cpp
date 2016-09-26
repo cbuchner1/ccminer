@@ -72,7 +72,9 @@ void algo_free_all(int thr_id)
 	free_sib(thr_id);
 	free_s3(thr_id);
 	free_vanilla(thr_id);
+	free_veltor(thr_id);
 	free_whirl(thr_id);
+	//free_whirlx(thr_id);
 	free_x11evo(thr_id);
 	free_x11(thr_id);
 	free_x13(thr_id);
@@ -103,6 +105,7 @@ bool bench_algo_switch_next(int thr_id)
 	if (algo == ALGO_DMD_GR) algo++; // same as groestl
 	if (algo == ALGO_MJOLLNIR) algo++; // same as heavy
 	if (algo == ALGO_WHIRLCOIN) algo++; // same as whirlpool
+	if (algo == ALGO_WHIRLPOOLX) algo++; // disabled
 
 	if (device_sm[dev_id] && device_sm[dev_id] < 300) {
 		// incompatible SM 2.1 kernels...

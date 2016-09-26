@@ -40,14 +40,12 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 			cudaGetLastError(); // reset errors if device is not "reset"
 		}
-		gpulog(LOG_INFO, thr_id, "Intensity set to %g (+5), %u cuda threads", throughput2intensity(throughput), throughput);
-
 		if (device_sm[dev_id] <= 300) {
 			gpulog(LOG_ERR, thr_id, "Sorry neoscrypt is not supported on SM 3.0 devices");
 			proper_exit(EXIT_CODE_CUDA_ERROR);
 		}
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g (+5), %u cuda threads", throughput2intensity(throughput), throughput);
 
-		gpulog(LOG_INFO, thr_id, "Using %d cuda threads", throughput);
 		neoscrypt_init(thr_id, throughput);
 
 		init[thr_id] = true;
