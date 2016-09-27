@@ -569,7 +569,8 @@ extern void get_currentalgo(char* buf, int sz);
 double bn_convert_nbits(const uint32_t nbits);
 void bn_nbits_to_uchar(const uint32_t nBits, uchar *target);
 double bn_hash_target_ratio(uint32_t* hash, uint32_t* target);
-void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, struct work* work);
+void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, struct work* work, int nonce);
+void bn_set_target_ratio(struct work* work, uint32_t* hash, int nonce);
 void work_set_target_ratio(struct work* work, uint32_t* hash);
 
 // bench
@@ -632,6 +633,7 @@ struct tx {
 	uint32_t len;
 };
 
+#define MAX_NONCES 2
 struct work {
 	uint32_t data[48];
 	uint32_t target[8];
@@ -646,13 +648,15 @@ struct work {
 		uint64_t u64[1];
 	} noncerange;
 
-	uint32_t nonces[2];
+	uint8_t pooln;
+	uint8_t valid_nonces;
 
+	uint32_t nonces[MAX_NONCES];
+	double sharediff[MAX_NONCES];
+	double shareratio[MAX_NONCES];
 	double targetdiff;
-	double shareratio;
-	double sharediff;
+
 	uint32_t height;
-	uint8_t  pooln;
 
 	uint32_t scanned_from;
 	uint32_t scanned_to;

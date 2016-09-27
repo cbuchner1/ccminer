@@ -468,22 +468,30 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 
 			if (vhashcpu[7] <= target.y && fulltest(vhashcpu, ptarget)) {
 				work_set_target_ratio(work, vhashcpu);
-				pdata[19] = work->nonces[0] = swab32_if(foundNonce, !swap);
+				work->nonces[0] = swab32_if(foundNonce, !swap);
+				work->valid_nonces = 1;
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
 					endiandata[19] = swab32_if(extra_results[0], swap);
 					blake2s_hash_end(vhashcpu, endiandata);
 					if (vhashcpu[7] <= target.y && fulltest(vhashcpu, ptarget)) {
 						work->nonces[1] = swab32_if(extra_results[0], !swap);
-						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
+						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio[0]) {
+							work->shareratio[1] = work->shareratio[0];
+							work->sharediff[1] = work->sharediff[0];
 							work_set_target_ratio(work, vhashcpu);
-							xchg(work->nonces[1], pdata[19]);
+							xchg(work->nonces[0], work->nonces[1]);
+						} else {
+							bn_set_target_ratio(work, vhashcpu, 1);
 						}
+						work->valid_nonces++;
+						pdata[19] = max(work->nonces[0], work->nonces[1]);
 						return 2;
 					}
 					extra_results[0] = UINT32_MAX;
 				}
 #endif
+				pdata[19] = max(work->nonces[0], work->nonces[1]);
 				return 1;
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);

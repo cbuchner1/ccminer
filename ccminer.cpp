@@ -82,7 +82,7 @@ bool opt_debug_diff = false;
 bool opt_debug_threads = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
-bool opt_showdiff = false;
+bool opt_showdiff = true;
 
 // todo: limit use of these flags,
 // prefer the pools[] attributes
@@ -321,7 +321,7 @@ Options:\n\
       --syslog-prefix=... allow to change syslog tool name\n"
 #endif
 "\
-      --show-diff       display submitted block and net difficulty\n\
+      --hide-diff       hide submitted block and net difficulty (old mode)\n\
   -B, --background      run the miner in the background\n\
       --benchmark       run in offline benchmark mode\n\
       --cputest         debug hashes from cpu algorithms\n\
@@ -384,6 +384,7 @@ struct option options[] = {
 	{ "retry-pause", 1, NULL, 'R' },
 	{ "scantime", 1, NULL, 's' },
 	{ "show-diff", 0, NULL, 1013 },
+	{ "hide-diff", 0, NULL, 1014 },
 	{ "statsavg", 1, NULL, 'N' },
 	{ "gpu-clock", 1, NULL, 1070 },
 	{ "mem-clock", 1, NULL, 1071 },
@@ -871,7 +872,7 @@ bool sia_submit(CURL *curl, struct pool_infos *pool, struct work *work)
 			applog(LOG_ERR, "submit err %ld %s", errcode, curl_err_str);
 		res = 0;
 	}
-	share_result(res, work->pooln, work->sharediff, res ? NULL : (char*) all_data.buf);
+	share_result(res, work->pooln, work->sharediff[0], res ? NULL : (char*) all_data.buf);
 
 	curl_slist_free_all(headers);
 	return true;
@@ -943,6 +944,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	struct pool_infos *pool = &pools[work->pooln];
 	json_t *val, *res, *reason;
 	bool stale_work = false;
+	int idnonce = 0;
 
 	/* discard if a newer block was received */
 	stale_work = work->height && work->height < g_work.height;
@@ -1057,7 +1059,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		}
 
 		// store to keep/display the solved ratio/diff
-		stratum.sharediff = work->sharediff;
+		stratum.sharediff = work->sharediff[idnonce];
 
 		if (net_diff && stratum.sharediff > net_diff && (opt_debug || opt_debug_diff))
 			applog(LOG_INFO, "share diff: %.5f, possible block found!!!",
@@ -1069,13 +1071,13 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		if (opt_vote) { // ALGO_HEAVY ALGO_DECRED
 			nvotestr = bin2hex((const uchar*)(&nvote), 2);
 			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
-					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
-					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr);
+					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":%d}",
+					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr, 10+idnonce);
 			free(nvotestr);
 		} else {
 			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
-					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":4}",
-					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr);
+					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":%d}",
+					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, 10+idnonce);
 		}
 		free(xnonce2str);
 		free(ntimestr);
@@ -1120,7 +1122,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		/* build JSON-RPC request */
 		sprintf(s,
-			"{\"method\": \"getwork\", \"params\": [\"%s\"], \"id\":4}\r\n",
+			"{\"method\": \"getwork\", \"params\": [\"%s\"], \"id\":10}\r\n",
 			str);
 
 		/* issue JSON-RPC request */
@@ -1132,7 +1134,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 		res = json_object_get(val, "result");
 		reason = json_object_get(val, "reject-reason");
-		if (!share_result(json_is_true(res), work->pooln, work->sharediff,
+		if (!share_result(json_is_true(res), work->pooln, work->sharediff[0],
 				reason ? json_string_value(reason) : NULL))
 		{
 			if (check_dups)
@@ -2398,12 +2400,23 @@ static void *miner_thread(void *userdata)
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 
-		// todo: update all algos to use work->nonces
-		if (opt_algo != ALGO_SIA) // reversed endian
-			work.nonces[0] = nonceptr[0];
-		if (opt_algo != ALGO_DECRED && opt_algo != ALGO_BLAKE2S && opt_algo != ALGO_LBRY && opt_algo != ALGO_SIA) {
-			if (opt_algo != ALGO_VELTOR)
-			work.nonces[1] = nonceptr[2];
+		// todo: update all algos to use work->nonces and pdata[19] as counter
+		switch (opt_algo) {
+			case ALGO_BLAKE2S:
+			case ALGO_DECRED:
+			case ALGO_LBRY:
+			case ALGO_SIA:
+			case ALGO_VELTOR:
+				// migrated algos
+				break;
+			case ALGO_ZR5:
+				// algos with only work.nonces[1] set
+				work.nonces[0] = nonceptr[0];
+				break;
+			default:
+				// algos with 2 results in pdata and work.nonces unset
+				work.nonces[0] = nonceptr[0];
+				work.nonces[1] = nonceptr[2];
 		}
 
 		if (rc > 0 && opt_debug)
@@ -2686,6 +2699,7 @@ static bool stratum_handle_response(char *buf)
 	json_t *val, *err_val, *res_val, *id_val;
 	json_error_t err;
 	struct timeval tv_answer, diff;
+	int num = 0;
 	bool ret = false;
 
 	val = JSON_LOADS(buf, &err);
@@ -2701,9 +2715,13 @@ static bool stratum_handle_response(char *buf)
 	if (!id_val || json_is_null(id_val) || !res_val)
 		goto out;
 
-	// ignore subscribe late answer (yaamp)
-	if (json_integer_value(id_val) < 4)
+	// ignore late login answers
+	num = (int) json_integer_value(id_val);
+	if (num < 4)
 		goto out;
+
+	// todo: use request id to index nonce diff data
+	// num = num % 10;
 
 	gettimeofday(&tv_answer, NULL);
 	timeval_subtract(&diff, &tv_answer, &stratum.tv_submit);
@@ -3315,6 +3333,9 @@ void parse_arg(int key, char *arg)
 		break;
 	case 1013:
 		opt_showdiff = true;
+		break;
+	case 1014:
+		opt_showdiff = false;
 		break;
 	case 'S':
 	case 1018:

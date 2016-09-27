@@ -81,15 +81,15 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 			myriadhash(vhash, endiandata);
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				work_set_target_ratio(work, vhash);
+				work->nonces[0] = foundNonces[0];
 				pdata[19] = foundNonces[0];
 				// search for another nonce
 				if (foundNonces[1] != UINT32_MAX) {
 					endiandata[19] = swab32(foundNonces[1]);
 					myriadhash(vhash, endiandata);
-					pdata[21] = foundNonces[1];
-					if(bn_hash_target_ratio(vhash, ptarget) > work->shareratio) {
-						work_set_target_ratio(work, vhash);
-					}
+					pdata[21] = foundNonces[1]; // to drop
+					work->nonces[1] = foundNonces[1];
+					bn_set_target_ratio(work, vhash, 1);
 					return 2;
 				}
 				return 1;

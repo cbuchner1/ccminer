@@ -419,7 +419,7 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 							work->nonces[1] = swab32(h_resNonce[thr_id][j]);
 							if(!opt_quiet)
 								gpulog(LOG_NOTICE, thr_id, "second nonce found %u / %08x - %u / %08x", i, work->nonces[0], j, work->nonces[1]);
-							if(bn_hash_target_ratio(vhash, ptarget) > work->shareratio) {
+							if(bn_hash_target_ratio(vhash, ptarget) > work->shareratio[0]) {
 								work_set_target_ratio(work, vhash);
 								xchg(work->nonces[1], work->nonces[0]);
 							}

@@ -165,7 +165,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
 						if (opt_debug)
 							gpulog(LOG_BLUE, thr_id, "found second nonce %08x", secNonce);
-						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
 							work_set_target_ratio(work, vhash64);
 						pdata[21] = secNonce;
 						res++;

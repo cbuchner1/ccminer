@@ -458,7 +458,7 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 					tmpdata[0] = pok; tmpdata[19] = secNonce;
 					zr5hash(vhash64, tmpdata);
 					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
 							work_set_target_ratio(work, vhash64);
 						pdata[21] = secNonce;
 						pdata[22] = pok;

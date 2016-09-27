@@ -157,7 +157,7 @@ its command line interface and options.
       --plimit=150W     set the gpu power limit, allow multiple values for N cards
       --tlimit=85       Set the gpu thermal limit (windows only)
       --keep-clocks     prevent reset clocks and/or power limit on exit
-      --show-diff       display submitted block and net difficulty
+      --hide-diff       hide submitted block and net difficulty
   -B, --background      run the miner in the background
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms

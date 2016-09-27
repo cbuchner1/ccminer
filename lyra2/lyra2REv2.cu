@@ -177,7 +177,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 					be32enc(&endiandata[19], foundNonces[1]);
 					lyra2v2_hash(vhash64, endiandata);
 					pdata[21] = foundNonces[1];
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio) {
+					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0]) {
 						work_set_target_ratio(work, vhash64);
 						xchg(pdata[19], pdata[21]);
 					}

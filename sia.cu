@@ -258,7 +258,7 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 					swab256(vhashcpu, hash);
 					if (fulltest(vhashcpu, ptarget)) {
 						work->nonces[1] = secNonce;
-						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
+						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio[0]) {
 							work_set_target_ratio(work, vhashcpu);
 							xchg(work->nonces[0], work->nonces[1]);
 						}

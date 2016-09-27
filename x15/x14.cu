@@ -215,7 +215,7 @@ extern "C" int scanhash_x14(int thr_id,  struct work* work, uint32_t max_nonce, 
 				if (secNonce != 0) {
 					be32enc(&endiandata[19], secNonce);
 					x14hash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
+					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
 						work_set_target_ratio(work, vhash64);
 					pdata[21] = secNonce;
 					res++;

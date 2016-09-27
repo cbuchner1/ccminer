@@ -201,7 +201,7 @@ extern "C" int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, u
 					be32enc(&endiandata[19], secNonce);
 					x13hash(vhash, endiandata);
 					pdata[21] = secNonce;
-					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio) {
+					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio[0]) {
 						work_set_target_ratio(work, vhash);
 						xchg(pdata[19], pdata[21]);
 					}

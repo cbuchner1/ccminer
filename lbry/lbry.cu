@@ -171,7 +171,7 @@ extern "C" int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, 
 					endiandata[LBC_NONCE_OFT32] = swab32_if(resNonces[1], !swap);
 					lbry_hash(vhash, endiandata);
 					work->nonces[1] = swab32_if(resNonces[1], swap);
-					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio) {
+					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio[0]) {
 						work_set_target_ratio(work, vhash);
 						xchg(work->nonces[0], work->nonces[1]);
 					}

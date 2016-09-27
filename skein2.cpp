@@ -93,27 +93,24 @@ int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned 
 		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (foundNonce != UINT32_MAX)
 		{
-			uint32_t _ALIGN(64) vhash64[8];
+			uint32_t _ALIGN(64) vhash[8];
 
 			endiandata[19] = swab32_if(foundNonce, swap);
-			skein2hash(vhash64, endiandata);
+			skein2hash(vhash, endiandata);
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				int res = 1;
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				work_set_target_ratio(work, vhash64);
+				work_set_target_ratio(work, vhash);
 				if (secNonce != 0) {
-					if (!opt_quiet)
-						applog(LOG_BLUE, "GPU #%d: found second nonce %08x !", dev_id, swab32(secNonce));
-
 					endiandata[19] = swab32_if(secNonce, swap);
-					skein2hash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio)
-						work_set_target_ratio(work, vhash64);
-					pdata[21] = swab32_if(secNonce, !swap);
+					skein2hash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					pdata[21] = work->nonces[1] = swab32_if(secNonce, !swap);
+					gpulog(LOG_DEBUG, thr_id, "found second nonce %08x!", swab32(secNonce));
 					res++;
 				}
-				pdata[19] = swab32_if(foundNonce, !swap);
+				pdata[19] = work->nonces[0] = swab32_if(foundNonce, !swap);
 				return res;
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);

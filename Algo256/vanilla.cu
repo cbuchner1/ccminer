@@ -438,7 +438,7 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 					be32enc(&endiandata[19], h_resNonce[thr_id][1]);
 					vanillahash(vhashcpu, endiandata, blakerounds);
 					pdata[21] = h_resNonce[thr_id][1];
-					if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio) {
+					if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio[0]) {
 						work_set_target_ratio(work, vhashcpu);
 						xchg(pdata[19], pdata[21]);
 					}
