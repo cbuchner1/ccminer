@@ -211,7 +211,6 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 			cudaDeviceReset();
 			// reduce cpu usage (linux)
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-			//cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 			CUDA_LOG_ERROR();
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
@@ -235,17 +234,16 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 
 		if (foundNonce != UINT32_MAX)
 		{
-			int res = 0;
+			work->valid_nonces = 0;
 			inputdata[8] = foundNonce;
 			blake2b_hash(hash, inputdata);
 			if (swab32(hash[0]) <= Htarg) {
 				// sia hash target is reversed (start of hash)
 				swab256(vhashcpu, hash);
-				// applog_hex(vhashcpu, 32);
 				if (fulltest(vhashcpu, ptarget)) {
 					work_set_target_ratio(work, vhashcpu);
 					work->nonces[0] = foundNonce;
-					res ++;
+					work->valid_nonces++;
 				}
 			}
 
@@ -253,22 +251,25 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 				inputdata[8] = secNonce;
 				blake2b_hash(hash, inputdata);
 				if (swab32(hash[0]) <= Htarg) {
-					if (opt_debug)
-						gpulog(LOG_BLUE, thr_id, "found second nonce %08x", secNonce);
+					gpulog(LOG_DEBUG, thr_id, "found second nonce %08x", secNonce);
 					swab256(vhashcpu, hash);
 					if (fulltest(vhashcpu, ptarget)) {
 						work->nonces[1] = secNonce;
 						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio[0]) {
+							work->sharediff[1] = work->sharediff[0];
+							work->shareratio[1] = work->shareratio[0];
+							xchg(work->nonces[1], work->nonces[0]);
 							work_set_target_ratio(work, vhashcpu);
-							xchg(work->nonces[0], work->nonces[1]);
+						} else {
+							bn_set_target_ratio(work, vhashcpu, 1);
 						}
-						res++;
+						work->valid_nonces++;
 					}
 				}
 			}
-			if (res) {
+			if (work->valid_nonces) {
 				pdata[8] = max_nonce;
-				return res;
+				return work->valid_nonces;
 			}
 		}
 
