@@ -42,7 +42,7 @@
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
   </ImportGroup>
   <ImportGroup Label="ExtensionSettings" Condition="'$(Platform)'=='x64'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -534,7 +534,7 @@
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
   </ImportGroup>
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='x64'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.targets" />
   </ImportGroup>
   <!-- Copy the required dlls -->
   <Target Name="AfterBuild">
