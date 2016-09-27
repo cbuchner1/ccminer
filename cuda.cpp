@@ -218,16 +218,18 @@ void cuda_reset_device(int thr_id, bool *init)
 int cuda_available_memory(int thr_id)
 {
 	int dev_id = device_map[thr_id % MAX_GPUS];
-	size_t mtotal = 0, mfree = 0;
 #if defined(_WIN32) && defined(USE_WRAPNVML)
+	uint64_t tot64 = 0, free64 = 0;
 	// cuda (6.5) one can crash on pascal and dont handle 8GB
-	nvapiMemGetInfo(dev_id, &mfree, &mtotal);
+	nvapiMemGetInfo(dev_id, &free64, &tot64);
+	return (int) (free64 / (1024 * 1024));
 #else
+	size_t mtotal = 0, mfree = 0;
 	cudaSetDevice(dev_id);
 	cudaDeviceSynchronize();
 	cudaMemGetInfo(&mfree, &mtotal);
-#endif
 	return (int) (mfree / (1024 * 1024));
+#endif
 }
 
 // Check (and reset) last cuda error, and report it in logs
@@ -252,9 +254,9 @@ int cuda_gpu_info(struct cgpu_info *gpu)
 {
 	cudaDeviceProp props;
 	if (cudaGetDeviceProperties(&props, gpu->gpu_id) == cudaSuccess) {
-		gpu->gpu_clock = props.clockRate;
-		gpu->gpu_memclock = props.memoryClockRate;
-		gpu->gpu_mem = (props.totalGlobalMem / 1024); // kB
+		gpu->gpu_clock = (uint32_t) props.clockRate;
+		gpu->gpu_memclock = (uint32_t) props.memoryClockRate;
+		gpu->gpu_mem = (uint64_t) (props.totalGlobalMem / 1024); // kB
 #if defined(_WIN32) && defined(USE_WRAPNVML)
 		// required to get mem size > 4GB (size_t too small for bytes on 32bit)
 		nvapiMemGetInfo(gpu->gpu_id, &gpu->gpu_memfree, &gpu->gpu_mem); // kB

@@ -1657,15 +1657,15 @@ int nvapi_set_memclock(unsigned int devNum, uint32_t clock)
 }
 
 // Replacement for WIN32 CUDA 6.5 on pascal
-int nvapiMemGetInfo(int dev_id, size_t *free, size_t *total)
+int nvapiMemGetInfo(int dev_id, uint64_t *free, uint64_t *total)
 {
 	NvAPI_Status ret = NVAPI_OK;
 	NV_DISPLAY_DRIVER_MEMORY_INFO mem = { 0 };
 	mem.version = NV_DISPLAY_DRIVER_MEMORY_INFO_VER;
 	unsigned int devNum = nvapi_dev_map[dev_id % MAX_GPUS];
 	if ((ret = NvAPI_GPU_GetMemoryInfo(phys[devNum], &mem)) == NVAPI_OK) {
-		*total = mem.dedicatedVideoMemory;// mem.availableDedicatedVideoMemory;
-		*free  = mem.curAvailableDedicatedVideoMemory;
+		*total = (uint64_t) mem.dedicatedVideoMemory;// mem.availableDedicatedVideoMemory;
+		*free  = (uint64_t) mem.curAvailableDedicatedVideoMemory;
 	}
 	return (int) ret;
 }

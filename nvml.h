@@ -231,7 +231,7 @@ unsigned int nvapi_devnum(int dev_id);
 int nvapi_devid(unsigned int devNum);
 
 // cuda Replacement for 6.5 compat
-int nvapiMemGetInfo(int dev_id, size_t *free, size_t *total);
+int nvapiMemGetInfo(int dev_id, uint64_t *free, uint64_t *total);
 #endif
 
 #endif /* USE_WRAPNVML */

@@ -367,10 +367,10 @@ struct cgpu_info {
 	uint16_t gpu_fan;
 	uint16_t gpu_fan_rpm;
 	uint16_t gpu_arch;
-	int gpu_clock;
-	int gpu_memclock;
-	size_t gpu_mem;
-	size_t gpu_memfree;
+	uint32_t gpu_clock;
+	uint32_t gpu_memclock;
+	uint64_t gpu_mem;
+	uint64_t gpu_memfree;
 	uint32_t gpu_power;
 	double gpu_vddc;
 	int16_t gpu_pstate;
@@ -383,7 +383,7 @@ struct cgpu_info {
 
 	char gpu_sn[64];
 	char gpu_desc[64];
-	float intensity;
+	double intensity;
 	uint32_t throughput;
 };
 
