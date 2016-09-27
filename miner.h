@@ -362,8 +362,7 @@ struct cgpu_info {
 	int rejected;
 	int hw_errors;
 	double khashes;
-	uint8_t intensity_int;
-	uint8_t has_monitoring;
+	int has_monitoring;
 	float gpu_temp;
 	uint16_t gpu_fan;
 	uint16_t gpu_fan_rpm;
