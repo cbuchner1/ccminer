@@ -1,11 +1,7 @@
 /**
- * Blake-256 Decred 180-Bytes input Cuda Kernel (Tested on SM 5/5.2/6.1)
+ * Blake-256 Decred 180-Bytes input Cuda Kernel
  *
- * Tanguy Pruvot - Feb 2016
- *
- * Merged 8-round blake (XVC) tweaks
- * Further improved by: ~2.72%
- * Alexis Provos - Jun 2016
+ * Tanguy Pruvot, Alexis Provos - Feb/Sep 2016
  */
 
 #include <stdint.h>
@@ -20,7 +16,7 @@ extern "C" {
 #define TPB 640
 
 /* max count of found nonces in one call (like sgminer) */
-#define maxResults 4
+#define MAX_RESULTS 4
 
 /* hash by cpu with blake 256 */
 extern "C" void decred_hash(void *output, const void *input)
@@ -110,13 +106,13 @@ static uint32_t *h_resNonce[MAX_GPUS];
 
 #define pxorx0GS2(a,b,c,d, a1,b1,c1,d1) { \
 	v[ a]+= (c_xors[i++]^nonce) + v[ b];    v[a1]+= c_xors[i++] + v[b1]; \
-	v[ d] = ROL16(v[ d] ^ v[ a]); 	        v[d1] = ROL16(v[d1] ^ v[a1]); \
+	v[ d] = ROL16(v[ d] ^ v[ a]);           v[d1] = ROL16(v[d1] ^ v[a1]); \
 	v[ c]+= v[ d];                          v[c1]+= v[d1]; \
 	v[ b] = ROTR32(v[ b] ^ v[ c], 12);      v[b1] = ROTR32(v[b1] ^ v[c1], 12); \
-	v[ a]+= c_xors[i++] + v[ b]; 			v[a1]+= c_xors[i++] + v[b1]; \
-	v[ d] = ROR8(v[ d] ^ v[ a]); 	        v[d1] = ROR8(v[d1] ^ v[a1]); \
+	v[ a]+= c_xors[i++] + v[ b];            v[a1]+= c_xors[i++] + v[b1]; \
+	v[ d] = ROR8(v[ d] ^ v[ a]);            v[d1] = ROR8(v[d1] ^ v[a1]); \
 	v[ c]+= v[ d];                          v[c1]+= v[d1]; \
-	v[ b] = ROTR32(v[ b] ^ v[ c], 7); 		v[b1] = ROTR32(v[b1] ^ v[c1], 7); \
+	v[ b] = ROTR32(v[ b] ^ v[ c], 7);       v[b1] = ROTR32(v[b1] ^ v[c1], 7); \
 }
 
 __global__ __launch_bounds__(TPB,1)
@@ -367,7 +363,7 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 	const dim3 grid((throughput + TPB-1)/(TPB));
 	const dim3 block(TPB);
 
-	if (!init[thr_id]){
+	if (!init[thr_id]) {
 		cudaSetDevice(dev_id);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
 			cudaDeviceReset();
@@ -378,60 +374,74 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], maxResults*sizeof(uint32_t)), -1);
-		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], maxResults*sizeof(uint32_t)), -1);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], MAX_RESULTS*sizeof(uint32_t)), -1);
+		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], MAX_RESULTS*sizeof(uint32_t)), -1);
 		init[thr_id] = true;
 	}
 	memcpy(endiandata, pdata, 180);
 
 	decred_cpu_setBlock_52(endiandata);
-	h_resNonce[thr_id][0] = 1;
+	cudaMemset(d_resNonce[thr_id], 0x00, sizeof(uint32_t));
 
 	do {
-		if (h_resNonce[thr_id][0])
-			cudaMemset(d_resNonce[thr_id], 0x00, sizeof(uint32_t));
+		uint32_t* resNonces = h_resNonce[thr_id];
+
+		if (resNonces[0]) cudaMemset(d_resNonce[thr_id], 0x00, sizeof(uint32_t));
 
 		// GPU HASH
 		decred_gpu_hash_nonce <<<grid, block>>> (throughput, (*pnonce), d_resNonce[thr_id], targetHigh);
-		cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-		if (h_resNonce[thr_id][0])
+		// first cell contains the valid nonces count
+		cudaMemcpy(resNonces, d_resNonce[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
+		if (resNonces[0])
 		{
-			cudaMemcpy(h_resNonce[thr_id], d_resNonce[thr_id], (h_resNonce[thr_id][0]+1)*sizeof(uint32_t), cudaMemcpyDeviceToHost);
+			uint32_t _ALIGN(64) vhash[8];
 
-			for(uint32_t i=1; i <= h_resNonce[thr_id][0]; i++)
+			cudaMemcpy(resNonces, d_resNonce[thr_id], (resNonces[0]+1)*sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
+			be32enc(&endiandata[DCR_NONCE_OFT32], resNonces[1]);
+			decred_hash(vhash, endiandata);
+			if (vhash[6] <= ptarget[6] && fulltest(vhash, ptarget))
 			{
-				uint32_t _ALIGN(64) vhash[8];
-				be32enc(&endiandata[DCR_NONCE_OFT32], h_resNonce[thr_id][i]);
-				decred_hash(vhash, endiandata);
-				if (vhash[6] <= ptarget[6] && fulltest(vhash, ptarget))
+				int rc = work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				*hashes_done = (*pnonce) - first_nonce + throughput;
+				work->nonces[0] = swab32(resNonces[1]);
+				*pnonce = work->nonces[0];
+
+				// search for another nonce
+				for(uint32_t n=2; n <= resNonces[0]; n++)
 				{
-					int rc = 1;
-					work_set_target_ratio(work, vhash);
-					*hashes_done = (*pnonce) - first_nonce + throughput;
-					work->nonces[0] = swab32(h_resNonce[thr_id][i]);
-					// search for another nonce
-					for(uint32_t j=i+1; j <= h_resNonce[thr_id][0]; j++)
-					{
-						be32enc(&endiandata[DCR_NONCE_OFT32], h_resNonce[thr_id][j]);
-						decred_hash(vhash, endiandata);
-						if (vhash[6] <= ptarget[6] && fulltest(vhash, ptarget)){
-							work->nonces[1] = swab32(h_resNonce[thr_id][j]);
-							if(!opt_quiet)
-								gpulog(LOG_NOTICE, thr_id, "second nonce found %u / %08x - %u / %08x", i, work->nonces[0], j, work->nonces[1]);
-							if(bn_hash_target_ratio(vhash, ptarget) > work->shareratio[0]) {
-								work_set_target_ratio(work, vhash);
-								xchg(work->nonces[1], work->nonces[0]);
-							}
-							rc = 2;
-							break;
+					be32enc(&endiandata[DCR_NONCE_OFT32], resNonces[n]);
+					decred_hash(vhash, endiandata);
+					if (vhash[6] <= ptarget[6] && fulltest(vhash, ptarget)) {
+						work->nonces[1] = swab32(resNonces[n]);
+
+						if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio[0]) {
+							// we really want the best first ? depends...
+							work->shareratio[1] = work->shareratio[0];
+							work->sharediff[1] = work->sharediff[0];
+							xchg(work->nonces[1], work->nonces[0]);
+							work_set_target_ratio(work, vhash);
+							work->valid_nonces++;
+						} else if (work->valid_nonces == 1) {
+							bn_set_target_ratio(work, vhash, 1);
+							work->valid_nonces++;
 						}
+						rc = 2; // MAX_NONCES submit limited to 2
+
+						gpulog(LOG_DEBUG, thr_id, "multiple nonces 1:%08x (%g) %u:%08x (%g)",
+							work->nonces[0], work->sharediff[0], n, work->nonces[1], work->sharediff[1]);
+
+					} else if (vhash[6] > ptarget[6]) {
+						gpulog(LOG_WARNING, thr_id, "result %u for %08x does not validate on CPU!", n, resNonces[n]);
 					}
-					*pnonce = work->nonces[0];
-					return rc;
-				} else {
-					gpulog(LOG_WARNING, thr_id, "result %u for %08x does not validate on CPU!", i, h_resNonce[thr_id][i]);
 				}
+				return rc;
+
+			} else if (vhash[6] > ptarget[6]) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", resNonces[1]);
 			}
 		}
 		*pnonce += throughput;
