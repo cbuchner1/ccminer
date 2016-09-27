@@ -150,35 +150,46 @@ extern "C" int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, 
 		uint32_t resNonces[2] = { UINT32_MAX, UINT32_MAX };
 		cudaMemcpy(resNonces, d_resNonce[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
+		*hashes_done = pdata[LBC_NONCE_OFT32] - first_nonce + throughput;
+
 		if (resNonces[0] != UINT32_MAX)
 		{
 			const uint32_t startNonce = pdata[LBC_NONCE_OFT32];
-
 			resNonces[0] += startNonce;
 
 			endiandata[LBC_NONCE_OFT32] = swab32_if(resNonces[0], !swap);
 			lbry_hash(vhash, endiandata);
 
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
-				int res = 1;
-				*hashes_done = pdata[LBC_NONCE_OFT32] - first_nonce + throughput;
+
 				work->nonces[0] = swab32_if(resNonces[0], swap);
 				work_set_target_ratio(work, vhash);
+				work->valid_nonces = 1;
+
 				if (resNonces[1] != UINT32_MAX) {
 					resNonces[1] += startNonce;
-					if (opt_debug)
-						gpulog(LOG_BLUE, thr_id, "Found second nonce %08x", swab32(resNonces[1]));
+					gpulog(LOG_DEBUG, thr_id, "second nonce %08x", swab32(resNonces[1]));
 					endiandata[LBC_NONCE_OFT32] = swab32_if(resNonces[1], !swap);
 					lbry_hash(vhash, endiandata);
 					work->nonces[1] = swab32_if(resNonces[1], swap);
+
 					if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio[0]) {
+						// best first
+						xchg(work->nonces[1], work->nonces[0]);
+						work->sharediff[1] = work->sharediff[0];
+						work->shareratio[1] = work->shareratio[0];
 						work_set_target_ratio(work, vhash);
-						xchg(work->nonces[0], work->nonces[1]);
+						work->valid_nonces++;
+					} else {
+						bn_set_target_ratio(work, vhash, 1);
+						work->valid_nonces++;
 					}
-					res++;
 				}
-				pdata[LBC_NONCE_OFT32] = work->nonces[0];
-				return res;
+
+				pdata[LBC_NONCE_OFT32] = max(work->nonces[0], work->nonces[1]); // next scan start
+
+				return work->valid_nonces;
+
 			} else if (vhash[7] > ptarget[7]) {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU %08x > %08x!", resNonces[0], vhash[7], ptarget[7]);
 				cudaMemset(d_resNonce[thr_id], 0xFF, 2 * sizeof(uint32_t));
