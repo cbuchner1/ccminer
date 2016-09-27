@@ -85,6 +85,9 @@
     <Filter Include="Source Files\CUDA\lbry">
       <UniqueIdentifier>{3079ea1f-f768-455a-acd6-f517fac535b4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\sia">
+      <UniqueIdentifier>{86a896c0-1688-4854-98e0-285d166069a3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -272,6 +275,9 @@
     </ClCompile>
     <ClCompile Include="nvapi.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sia\sia-rpc.cpp">
+      <Filter>Source Files\sia</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -472,6 +478,9 @@
     </ClInclude>
     <ClInclude Include="x11\cuda_x11_simd512_sm2.cuh">
       <Filter>Source Files\CUDA\x11</Filter>
+    </ClInclude>
+    <ClInclude Include="sia\sia-rpc.h">
+      <Filter>Source Files\sia</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -676,9 +685,6 @@
     <CudaCompile Include="zr5.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
-    <CudaCompile Include="sia.cu">
-      <Filter>Source Files\CUDA</Filter>
-    </CudaCompile>
     <CudaCompile Include="skein.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
@@ -745,8 +751,14 @@
     <CudaCompile Include="lbry\cuda_sha512_lbry.cu">
       <Filter>Source Files\CUDA\lbry</Filter>
     </CudaCompile>
+    <CudaCompile Include="lbry\cuda_lbry_merged.cu">
+      <Filter>Source Files\CUDA\lbry</Filter>
+    </CudaCompile>
     <CudaCompile Include="lbry\lbry.cu">
       <Filter>Source Files\CUDA\lbry</Filter>
+    </CudaCompile>
+    <CudaCompile Include="sia\sia.cu">
+      <Filter>Source Files\sia</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -765,3 +777,4 @@
     </Text>
   </ItemGroup>
 </Project>
+

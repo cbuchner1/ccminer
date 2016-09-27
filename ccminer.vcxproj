@@ -263,6 +263,7 @@
     </CudaCompile>
     <ClCompile Include="scrypt-jane.cpp" />
     <ClCompile Include="scrypt.cpp" />
+    <ClCompile Include="sia\sia-rpc.cpp" />
     <ClCompile Include="skein2.cpp" />
     <ClCompile Include="sph\aes_helper.c" />
     <ClCompile Include="sph\blake.c" />
@@ -322,6 +323,7 @@
     <ClInclude Include="quark\cuda_quark_blake512_sp.cuh" />
     <ClInclude Include="quark\cuda_skein512_sp.cuh" />
     <ClInclude Include="res\resource.h" />
+    <ClInclude Include="sia\sia-rpc.h" />
     <ClInclude Include="scrypt\salsa_kernel.h" />
     <ClInclude Include="sph\blake2b.h" />
     <ClInclude Include="sph\blake2s.h" />
@@ -467,7 +469,7 @@
     <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="lyra2\lyra2REv2.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2v2.cu" />
-    <CudaCompile Include="sia.cu" />
+    <CudaCompile Include="sia\sia.cu" />
     <CudaCompile Include="skein.cu">
       <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
