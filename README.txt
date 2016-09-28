@@ -1,5 +1,5 @@
 
-ccMiner 1.8.2 (Sept 2016) "Veltor and lbry boost"
+ccMiner 1.8.3 (Sept 2016) "CUDA 8 Final Release"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -157,7 +157,7 @@ its command line interface and options.
       --plimit=150W     set the gpu power limit, allow multiple values for N cards
       --tlimit=85       Set the gpu thermal limit (windows only)
       --keep-clocks     prevent reset clocks and/or power limit on exit
-      --hide-diff       hide submitted block and net difficulty
+      --hide-diff       Hide submitted shares diff and net difficulty
   -B, --background      run the miner in the background
       --benchmark       run in offline benchmark mode
       --cputest         debug hashes from cpu algorithms
@@ -244,6 +244,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Sep. 28th 2016  v1.8.3
+                  show intensity on startup for each cards
+                  show-diff is now used by default, use --hide-diff if not wanted
 
   Sep. 22th 2016  v1.8.2
                   lbry improvements by Alexis Provos
