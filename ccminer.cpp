@@ -3465,7 +3465,7 @@ int main(int argc, char *argv[])
 #endif
 		CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10);
 	printf("  Originally based on Christian Buchner and Christian H. project\n");
-	printf("  Include some of the work of djm34, sp, tsiv and klausT.\n\n");
+	printf("  Include some algos from alexis78, djm34, sp, tsiv and klausT.\n\n");
 	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
 
 	rpc_user = strdup("");
@@ -3521,7 +3521,7 @@ int main(int argc, char *argv[])
 	// extra credits..
 	if (opt_algo == ALGO_VANILLA) {
 		printf("  Vanilla blake optimized by Alexis Provos.\n");
-		printf("VNL donation address: Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W\n\n");
+		printf("XVC donation address: Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W\n\n");
 	}
 
 	if (!opt_benchmark && !strlen(rpc_url)) {
