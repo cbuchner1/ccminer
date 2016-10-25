@@ -752,6 +752,8 @@ int nvml_get_info(nvml_handle *nvmlh, int cudaindex, uint16_t &vid, uint16_t &pi
 	if (!subids) subids = nvmlh->nvml_pci_device_id[gpuindex];
 	pid = subids >> 16;
 	vid = subids & 0xFFFF;
+	// Colorful and Inno3D
+	if (pid == 0) pid = nvmlh->nvml_pci_device_id[gpuindex] >> 16;
 	return 0;
 }
 
@@ -906,6 +908,8 @@ int nvapi_getinfo(unsigned int devNum, uint16_t &vid, uint16_t &pid)
 	if (vid == 0x10DE && pSubSystemId) {
 		vid = pSubSystemId & 0xFFFF;
 		pid = pSubSystemId >> 16;
+		// Colorful and Inno3D
+		if (pid == 0) pid = pDeviceId >> 16;
 	}
 
 	return 0;
@@ -1922,6 +1926,7 @@ static int translate_vendor_id(uint16_t vid, char *vendorname)
 		const char *name;
 	} vendors[] = {
 		{ 0x1043, "ASUS" },
+		{ 0x1048, "Elsa" },
 		{ 0x107D, "Leadtek" },
 		{ 0x10B0, "Gainward" },
 		// { 0x10DE, "NVIDIA" },
