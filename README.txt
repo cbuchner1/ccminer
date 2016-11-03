@@ -1,5 +1,5 @@
 
-ccMiner 1.8.3 (Sept 2016) "CUDA 8 Final Release"
+ccminer 1.8.4-dev (Nov 2016) "Winter improvements: sib, veltor"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -244,6 +244,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  Nov. 2016
+                  Improve streebog based algos, veltor and sib (from alexis work)
 
   Sep. 28th 2016  v1.8.3
                   show intensity on startup for each cards
