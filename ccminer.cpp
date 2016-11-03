@@ -246,16 +246,16 @@ Options:\n\
 			skein       Skein SHA2 (Skeincoin)\n\
 			skein2      Double Skein (Woodcoin)\n\
 			s3          S3 (1Coin)\n\
+			vanilla     Blake256-8 (VNL)\n\
 			veltor      Thorsriddle streebog\n\
+			whirlcoin   Old Whirlcoin (Whirlpool algo)\n\
+			whirlpool   Whirlpool algo\n\
 			x11evo      Permuted x11 (Revolver)\n\
 			x11         X11 (DarkCoin)\n\
 			x13         X13 (MaruCoin)\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17\n\
-			vanilla     Blake256-8 (VNL)\n\
-			whirlcoin   Old Whirlcoin (Whirlpool algo)\n\
-			whirlpool   Whirlpool algo\n\
 			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\

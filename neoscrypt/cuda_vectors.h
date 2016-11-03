@@ -482,7 +482,7 @@ static __forceinline__ __device__ uint32_t rotateR(uint32_t vec4, uint32_t shift
 // require a uint32_t[9] ret array
 // note: djm neoscrypt implementation is near the limits of gpu capabilities
 //       and weird behaviors can happen when tuning device functions code...
-__device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
+__device__ static void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 {
 	uint8_t *v = (uint8_t*) &vec4.s0;
 	uint8_t *r = (uint8_t*) ret;
@@ -496,7 +496,7 @@ __device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 #else
 
 // same for SM 3.5+, really faster ?
-__device__ void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
+__device__ static void shift256R(uint32_t* ret, const uint8 &vec4, uint32_t shift)
 {
 	uint32_t truc = 0, truc2 = cuda_swab32(vec4.s7), truc3 = 0;
 	asm("shf.r.clamp.b32 %0, %1, %2, %3;" : "=r"(truc) : "r"(truc3), "r"(truc2), "r"(shift));

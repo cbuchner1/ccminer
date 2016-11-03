@@ -17,7 +17,7 @@ extern "C" {
 #include "cuda_helper.h"
 #include "cuda_x11.h"
 
-extern void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
 
 #include <stdio.h>
 #include <memory.h>
@@ -104,9 +104,11 @@ extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, u
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-	int intensity = (device_sm[device_map[thr_id]] >= 500 && !is_windows()) ? 19 : 18;
-	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity); // 19=256*256*8;
-	//if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
+	const int dev_id = device_map[thr_id];
+	int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 19 : 18; // 2^18 = 262144 cuda threads
+	if (device_sm[dev_id] >= 600) intensity = 20;
+	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
+	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
 		ptarget[7] = 0xf;
@@ -132,9 +134,9 @@ extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, u
 		x11_shavite512_cpu_init(thr_id, throughput);
 		x11_echo512_cpu_init(thr_id, throughput);
 		if (x11_simd512_cpu_init(thr_id, throughput) != 0) {
-			return 0;
+			return -1;
 		}
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), -1);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
@@ -165,7 +167,7 @@ extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, u
 		TRACE("jh512  :");
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		TRACE("keccak :");
-		streebog_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		streebog_cpu_hash_64(thr_id, throughput, d_hash[thr_id]);
 		TRACE("gost   :");
 		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, d_hash[thr_id], order++);
 		TRACE("luffa+c:");
@@ -186,7 +188,6 @@ extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, u
 
 			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
 				int res = 1;
-				// check if there was some other ones...
 				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				work_set_target_ratio(work, vhash64);
 				*hashes_done = pdata[19] - first_nonce + throughput;
@@ -200,7 +201,7 @@ extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, u
 				}
 				pdata[19] = foundNonce;
 				return res;
-			} else {
+			} else if (vhash64[7] > Htarg && !opt_quiet) {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 				pdata[19] = foundNonce + 1;
 				continue;
