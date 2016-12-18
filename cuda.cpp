@@ -122,7 +122,9 @@ void cuda_print_devices()
 
 void cuda_shutdown()
 {
-	cudaDeviceSynchronize();
+	// require gpu init first
+	if (thr_info != NULL)
+		cudaDeviceSynchronize();
 	cudaDeviceReset();
 }
 
