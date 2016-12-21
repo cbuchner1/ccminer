@@ -48,6 +48,7 @@ enum sha_algos {
 	ALGO_WHIRLCOIN,
 	ALGO_WHIRLPOOL,
 	ALGO_WHIRLPOOLX,
+	ALGO_WILDKECCAK,
 	ALGO_ZR5,
 	ALGO_AUTO,
 	ALGO_COUNT
@@ -99,6 +100,7 @@ static const char *algo_names[] = {
 	"whirlcoin",
 	"whirlpool",
 	"whirlpoolx",
+	"wildkeccak",
 	"zr5",
 	"auto", /* reserved for multi algo */
 	""

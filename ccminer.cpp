@@ -43,6 +43,8 @@
 #include "miner.h"
 #include "algos.h"
 #include "sia/sia-rpc.h"
+#include "crypto/xmr-rpc.h"
+
 #include <cuda_runtime.h>
 
 #ifdef WIN32
@@ -95,7 +97,7 @@ bool allow_mininginfo = true;
 bool check_dups = false;
 bool check_stratum_jobs = false;
 
-static bool submit_old = false;
+bool submit_old = false;
 bool use_syslog = false;
 bool use_colors = true;
 int use_pok = 0;
@@ -159,6 +161,8 @@ volatile bool pool_on_hold = false;
 volatile bool pool_is_switching = false;
 volatile int pool_switch_count = 0;
 bool conditional_pool_rotate = false;
+
+extern char* opt_scratchpad_url;
 
 // current connection
 char *rpc_user = NULL;
@@ -257,6 +261,7 @@ Options:\n\
 			x14         X14\n\
 			x15         X15\n\
 			x17         X17\n\
+			wildkeccak  Boolberry\n\
 			zr5         ZR5 (ZiftrCoin)\n\
   -d, --devices         Comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
@@ -335,7 +340,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
 	"S"
 #endif
-	"a:Bc:i:Dhp:Px:f:m:nqr:R:s:t:T:o:u:O:Vd:N:b:l:L:";
+	"a:Bc:k:i:Dhp:Px:f:m:nqr:R:s:t:T:o:u:O:Vd:N:b:l:L:";
 
 struct option options[] = {
 	{ "algo", 1, NULL, 'a' },
@@ -360,9 +365,10 @@ struct option options[] = {
 	{ "no-stratum", 0, NULL, 1007 },
 	{ "no-autotune", 0, NULL, 1004 },  // scrypt
 	{ "interactive", 1, NULL, 1050 },  // scrypt
-	{ "launch-config", 1, NULL, 'l' }, // scrypt
 	{ "lookup-gap", 1, NULL, 'L' },    // scrypt
 	{ "texture-cache", 1, NULL, 1051 },// scrypt
+	{ "launch-config", 1, NULL, 'l' }, // scrypt & bbr
+	{ "scratchpad", 1, NULL, 'k' },    // bbr
 	{ "max-temp", 1, NULL, 1060 },
 	{ "max-diff", 1, NULL, 1061 },
 	{ "max-rate", 1, NULL, 1062 },
@@ -429,6 +435,13 @@ Scrypt specific options:\n\
                         which of the CUDA devices shall use the texture\n\
                         cache for mining. Kepler devices may profit.\n\
       --no-autotune     disable auto-tuning of kernel launch parameters\n\
+";
+
+static char const xmr_usage[] = "\n\
+CryptoNote specific options:\n\
+  -l, --launch-config   gives the launch configuration for each kernel\n\
+                        in a comma separated list, one per device.\n\
+  -k, --scratchpad url  Url used to download the scratchpad cache.\n\
 ";
 
 struct work _ALIGN(64) g_work;
@@ -544,8 +557,7 @@ void proper_exit(int reason)
 	exit(reason);
 }
 
-static bool jobj_binary(const json_t *obj, const char *key,
-			void *buf, size_t buflen)
+bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen)
 {
 	const char *hexstr;
 	json_t *tmp;
@@ -608,6 +620,8 @@ static bool work_decode(const json_t *val, struct work *work)
 		data_size = 80;
 		adata_sz = data_size / 4;
 		break;
+	case ALGO_WILDKECCAK:
+		return rpc2_job_decode(val, work);
 	default:
 		data_size = 128;
 		adata_sz = data_size / 4;
@@ -779,6 +793,18 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	json_t *val, *res, *reason;
 	bool stale_work = false;
 	int idnonce = 0;
+
+	if (pool->type & POOL_STRATUM && stratum.rpc2) {
+		struct work submit_work;
+		memcpy(&submit_work, work, sizeof(struct work));
+		bool sent = hashlog_already_submittted(submit_work.job_id, submit_work.nonces[0]);
+		if (sent) {
+			return true;
+		}
+		bool ret = rpc2_stratum_submit(pool, &submit_work);
+		hashlog_remember_submit(&submit_work, submit_work.nonces[0]);
+		return ret;
+	}
 
 	/* discard if a newer block was received */
 	stale_work = work->height && work->height < g_work.height;
@@ -1405,6 +1431,9 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	uchar merkle_root[64] = { 0 };
 	int i;
 
+	if (sctx->rpc2)
+		return rpc2_stratum_gen_work(sctx, work);
+
 	if (!sctx->job.job_id) {
 		// applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
 		return false;
@@ -1733,10 +1762,16 @@ static void *miner_thread(void *userdata)
 
 		uint32_t *nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 
+		if (opt_algo == ALGO_WILDKECCAK) {
+			nonceptr = (uint32_t*) (((char*)work.data) + 1);
+			wcmpoft = 2;
+			wcmplen = 32;
+		}
+
 		if (have_stratum) {
 			uint32_t sleeptime = 0;
 
-			if (opt_algo == ALGO_DECRED)
+			if (opt_algo == ALGO_DECRED || stratum.rpc2)
 				work_done = true; // force "regen" hash
 			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
 				usleep(100*1000);
@@ -1748,7 +1783,7 @@ static void *miner_thread(void *userdata)
 			}
 			if (sleeptime && opt_debug && !opt_quiet)
 				applog(LOG_DEBUG, "sleeptime: %u ms", sleeptime*100);
-			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
+			//nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
 			pthread_mutex_lock(&g_work_lock);
 			extrajob |= work_done;
 
@@ -1835,6 +1870,8 @@ static void *miner_thread(void *userdata)
 			nonceptr[1] += 1;
 			nonceptr[2] |= thr_id;
 
+		} else if (opt_algo == ALGO_WILDKECCAK) {
+			//nonceptr[1] += 1;
 		} else if (opt_algo == ALGO_SIA) {
 			// suprnova job_id check without data/target/height change...
 			if (have_stratum && strcmp(work.job_id, g_work.job_id)) {
@@ -1877,6 +1914,11 @@ static void *miner_thread(void *userdata)
 			sleep(1);
 			if (!thr_id) pools[cur_pooln].wait_time += 1;
 			gpulog(LOG_DEBUG, thr_id, "no data");
+			continue;
+		}
+		if (stratum.rpc2 && !scratchpad_size) {
+			sleep(1);
+			if (!thr_id) pools[cur_pooln].wait_time += 1;
 			continue;
 		}
 
@@ -2196,6 +2238,9 @@ static void *miner_thread(void *userdata)
 		//case ALGO_WHIRLPOOLX:
 		//	rc = scanhash_whirlx(thr_id, &work, max_nonce, &hashes_done);
 		//	break;
+		case ALGO_WILDKECCAK:
+			rc = scanhash_wildkeccak(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_X11EVO:
 			rc = scanhash_x11evo(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -2242,6 +2287,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_LBRY:
 			case ALGO_SIA:
 			case ALGO_VELTOR:
+			case ALGO_WILDKECCAK:
 				// migrated algos
 				break;
 			case ALGO_ZR5:
@@ -2252,6 +2298,13 @@ static void *miner_thread(void *userdata)
 				// algos with 2 results in pdata and work.nonces unset
 				work.nonces[0] = nonceptr[0];
 				work.nonces[1] = nonceptr[2];
+		}
+
+		if (stratum.rpc2 && rc == -EBUSY || work_restart[thr_id].restart) {
+			// bbr scratchpad download or stale result
+			sleep(1);
+			if (!thr_id) pools[cur_pooln].wait_time += 1;
+			continue;
 		}
 
 		if (rc > 0 && opt_debug)
@@ -2548,7 +2601,7 @@ static bool stratum_handle_response(char *buf)
 	err_val = json_object_get(val, "error");
 	id_val = json_object_get(val, "id");
 
-	if (!id_val || json_is_null(id_val) || !res_val)
+	if (!id_val || json_is_null(id_val))
 		goto out;
 
 	// ignore late login answers
@@ -2564,8 +2617,24 @@ static bool stratum_handle_response(char *buf)
 	// store time required to the pool to answer to a submit
 	stratum.answer_msec = (1000 * diff.tv_sec) + (uint32_t) (0.001 * diff.tv_usec);
 
-	share_result(json_is_true(res_val), stratum.pooln, stratum.sharediff,
-		err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
+	if (stratum.rpc2) {
+
+		const char* reject_reason = err_val ? json_string_value(json_object_get(err_val, "message")) : NULL;
+		// {"id":4,"jsonrpc":"2.0","error":null,"result":{"status":"OK"}}
+		share_result(json_is_null(err_val), stratum.pooln, stratum.sharediff, reject_reason);
+		if (reject_reason) {
+			g_work_time = 0;
+			restart_threads();
+		}
+
+	} else {
+
+		if (!res_val)
+			goto out;
+
+		share_result(json_is_true(res_val), stratum.pooln, stratum.sharediff,
+			err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
+	}
 
 	ret = true;
 out:
@@ -2639,6 +2708,10 @@ wait_stratum_url:
 					applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
 				sleep(opt_fail_pause);
 			}
+		}
+
+		if (opt_algo == ALGO_WILDKECCAK) {
+			rpc2_stratum_thread_stuff(pool);
 		}
 
 		if (switchn != pool_switch_count) goto pool_switched;
@@ -2733,6 +2806,9 @@ static void show_usage_and_exit(int status)
 	if (opt_algo == ALGO_SCRYPT || opt_algo == ALGO_SCRYPT_JANE) {
 		printf(scrypt_usage);
 	}
+	if (opt_algo == ALGO_WILDKECCAK) {
+		printf(xmr_usage);
+	}
 	proper_exit(status);
 }
 
@@ -2814,6 +2890,9 @@ void parse_arg(int key, char *arg)
 		}
 		break;
 	}
+	case 'k':
+		opt_scratchpad_url = strdup(arg);
+		break;
 	case 'i':
 		d = atof(arg);
 		v = (uint32_t) d;
@@ -3011,7 +3090,7 @@ void parse_arg(int key, char *arg)
 	case 1004:
 		opt_autotune = false;
 		break;
-	case 'l': /* scrypt --launch-config */
+	case 'l': /* --launch-config */
 		{
 			char *last = NULL, *pch = strtok(arg,",");
 			int n = 0;
@@ -3580,6 +3659,12 @@ int main(int argc, char *argv[])
 	if (opt_algo == ALGO_DECRED || opt_algo == ALGO_SIA) {
 		allow_gbt = false;
 		allow_mininginfo = false;
+	}
+
+	if (opt_algo == ALGO_WILDKECCAK) {
+		rpc2_init();
+		applog(LOG_INFO, "Using CryptoNote JSON-RPC 2.0");
+		GetScratchpad();
 	}
 
 	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)

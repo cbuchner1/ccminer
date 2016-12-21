@@ -293,6 +293,7 @@ extern int scanhash_s3(int thr_id, struct work* work, uint32_t max_nonce, unsign
 extern int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, int8_t blake_rounds);
 extern int scanhash_veltor(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x11evo(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x11(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_x13(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -340,6 +341,7 @@ extern void free_s3(int thr_id);
 extern void free_vanilla(int thr_id);
 extern void free_veltor(int thr_id);
 extern void free_whirl(int thr_id);
+extern void free_wildkeccak(int thr_id);
 extern void free_x11evo(int thr_id);
 extern void free_x11(int thr_id);
 extern void free_x13(int thr_id);
@@ -622,6 +624,7 @@ struct stratum_ctx {
 	int pooln;
 	time_t tm_connected;
 
+	int rpc2;
 	int srvtime_diff;
 };
 
@@ -743,6 +746,8 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 void stratum_free_job(struct stratum_ctx *sctx);
 
+bool rpc2_stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
+
 void hashlog_remember_submit(struct work* work, uint32_t nonce);
 void hashlog_remember_scan_range(struct work* work);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
@@ -831,6 +836,7 @@ void x13hash(void *output, const void *input);
 void x14hash(void *output, const void *input);
 void x15hash(void *output, const void *input);
 void x17hash(void *output, const void *input);
+void wildkeccak_hash(void *output, const void *input, uint64_t* scratchpad, uint64_t ssize);
 void zr5hash(void *output, const void *input);
 void zr5hash_pok(void *output, uint32_t *pdata);
 

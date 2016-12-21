@@ -36,6 +36,8 @@
 #include "miner.h"
 #include "elist.h"
 
+#include "crypto/xmr-rpc.h"
+
 extern pthread_mutex_t stratum_sock_lock;
 extern pthread_mutex_t stratum_work_lock;
 extern bool opt_debug_diff;
@@ -1216,6 +1218,8 @@ bool stratum_subscribe(struct stratum_ctx *sctx)
 	json_error_t err;
 	bool ret = false, retry = false;
 
+	if (sctx->rpc2) return true;
+
 start:
 	s = (char*)malloc(128 + (sctx->session_id ? strlen(sctx->session_id) : 0));
 	if (retry)
@@ -1306,6 +1310,9 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	char *s, *sret;
 	json_error_t err;
 	bool ret = false;
+
+	if (sctx->rpc2)
+		return rpc2_stratum_authorize(sctx, user, pass);
 
 	s = (char*)malloc(80 + strlen(user) + strlen(pass));
 	sprintf(s, "{\"id\": 2, \"method\": \"mining.authorize\", \"params\": [\"%s\", \"%s\"]}",
@@ -1847,6 +1854,10 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 	}
 	if (!strcasecmp(method, "client.show_message")) { // common
 		ret = stratum_show_message(sctx, id, params);
+		goto out;
+	}
+	if (sctx->rpc2 && !strcasecmp(method, "job")) { // cryptonote
+		ret = rpc2_stratum_job(sctx, id, params);
 		goto out;
 	}
 

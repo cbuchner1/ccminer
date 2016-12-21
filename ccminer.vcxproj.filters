@@ -88,6 +88,9 @@
     <Filter Include="Source Files\sia">
       <UniqueIdentifier>{86a896c0-1688-4854-98e0-285d166069a3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\crypto">
+      <UniqueIdentifier>{fea0fce3-c0fe-42f7-aa37-0cbba10b008a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -278,6 +281,15 @@
     </ClCompile>
     <ClCompile Include="sia\sia-rpc.cpp">
       <Filter>Source Files\sia</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\xmr-rpc.cpp">
+      <Filter>Source Files\crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\mman.c">
+      <Filter>Source Files\crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\wildkeccak-cpu.cpp">
+      <Filter>Source Files\crypto</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -481,6 +493,15 @@
     </ClInclude>
     <ClInclude Include="sia\sia-rpc.h">
       <Filter>Source Files\sia</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\mman.h">
+      <Filter>Source Files\crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\wildkeccak.h">
+      <Filter>Source Files\crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\xmr-rpc.h">
+      <Filter>Source Files\crypto</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -759,6 +780,9 @@
     </CudaCompile>
     <CudaCompile Include="sia\sia.cu">
       <Filter>Source Files\sia</Filter>
+    </CudaCompile>
+    <CudaCompile Include="crypto\wildkeccak.cu">
+      <Filter>Source Files\crypto</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

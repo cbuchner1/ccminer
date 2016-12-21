@@ -39,7 +39,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" Condition="'$(Platform)'=='Win32'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.props" />
   </ImportGroup>
   <ImportGroup Label="ExtensionSettings" Condition="'$(Platform)'=='x64'">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.props" />
@@ -230,6 +230,9 @@
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <Optimization Condition="'$(Configuration)'=='Release'">Full</Optimization>
     </ClCompile>
+    <ClCompile Include="crypto\mman.c" />
+    <ClCompile Include="crypto\wildkeccak-cpu.cpp" />
+    <ClCompile Include="crypto\xmr-rpc.cpp" />
     <ClCompile Include="nvapi.cpp" />
     <ClCompile Include="pools.cpp" />
     <ClCompile Include="util.cpp" />
@@ -248,6 +251,9 @@
     <ClCompile Include="myriadgroestl.cpp" />
     <ClCompile Include="lyra2\Lyra2.c" />
     <ClCompile Include="lyra2\Sponge.c" />
+    <ClInclude Include="crypto\mman.h" />
+    <ClInclude Include="crypto\wildkeccak.h" />
+    <ClInclude Include="crypto\xmr-rpc.h" />
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh" />
     <ClInclude Include="neoscrypt\neoscrypt.h" />
     <ClCompile Include="neoscrypt\neoscrypt.cpp" />
@@ -257,6 +263,9 @@
     <CudaCompile Include="Algo256\bmw.cu" />
     <CudaCompile Include="Algo256\cuda_bmw.cu">
       <MaxRegCount>76</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="crypto\wildkeccak.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">128</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
       <MaxRegCount>160</MaxRegCount>
@@ -531,7 +540,7 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='Win32'">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
   </ImportGroup>
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='x64'">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.targets" />

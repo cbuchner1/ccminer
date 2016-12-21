@@ -1,5 +1,5 @@
 
-ccminer 1.8.4 (Dec. 2016) "Winter boosts: sib, veltor, blake2s"
+ccminer 2.0 (December 2016)   "Boolberry's WildKeccak RPC 2.0"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -51,6 +51,7 @@ Woodcoin (Double Skein)
 Vanilla (Blake256 8-rounds - double sha256)
 Vertcoin Lyra2RE
 Ziftrcoin (ZR5)
+Boolberry (Wild Keccak)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL Only) implementations.
@@ -110,6 +111,7 @@ its command line interface and options.
                           vanilla     use to mine Vanilla (Blake256)
                           veltor      use to mine VeltorCoin
                           whirlpool   use to mine Joincoin
+                          wildkeccak  use to mine Boolberry (Stratum only)
                           zr5         use to mine ZiftrCoin
 
   -d, --devices         gives a comma separated list of CUDA device IDs
@@ -184,6 +186,12 @@ Scrypt specific options:
       --no-autotune     disable auto-tuning of kernel launch parameters
 
 
+Boolberry specific:
+  -l, --launch-config   gives the launch configuration for each kernel
+                        in a comma separated list, one per device.
+  -k, --scratchpad url  Url used to download the scratchpad cache.
+
+
 >>> Examples <<<
 
 
@@ -206,6 +214,8 @@ Example for Fuguecoin pool mining on dwarfpool.com with all your GPUs
 Example for Groestlcoin solo mining
     ccminer -q -s 1 -a groestl -o http://127.0.0.1:1441/ -u USERNAME -p PASSWORD
 
+Example for Boolberry
+    ccminer -a wildkeccak -o stratum+tcp://bbr.suprnova.cc:7777 -u tpruvot.donate -p x -k http://bbr.suprnova.cc/scratchpad.bin -l 64x360
 
 Example for Scrypt-N (2048) on Nicehash
     ccminer -a scrypt:10 -o stratum+tcp://stratum.nicehash.com:3335 -u 3EujYFcoBzWvpUEvbe3obEG95mBuU88QBD -p x
