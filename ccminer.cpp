@@ -101,6 +101,7 @@ bool use_colors = true;
 int use_pok = 0;
 static bool opt_background = false;
 bool opt_quiet = false;
+int opt_maxlograte = 3;
 static int opt_retries = -1;
 static int opt_fail_pause = 30;
 int opt_time_limit = -1;
@@ -1654,6 +1655,7 @@ static void *miner_thread(void *userdata)
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
 	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) - (thr_id + 1);
+	time_t tm_rate_log = 0;
 	bool work_done = false;
 	bool extrajob = false;
 	char s[16];
@@ -2302,9 +2304,10 @@ static void *miner_thread(void *userdata)
 			hashlog_remember_scan_range(&work);
 
 		/* output */
-		if (!opt_quiet && loopcnt > 1) {
+		if (!opt_quiet && loopcnt > 1 && (time(NULL) - tm_rate_log) > opt_maxlograte) {
 			format_hashrate(thr_hashrates[thr_id], s);
 			gpulog(LOG_INFO, thr_id, "%s, %s", device_name[dev_id], s);
+			tm_rate_log = time(NULL);
 		}
 
 		/* ignore first loop hashrate */
