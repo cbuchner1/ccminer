@@ -79,7 +79,7 @@ BEGIN
             VALUE "FileVersion", "1.8.4"
             VALUE "LegalCopyright", "Copyright (C) 2016"
             VALUE "ProductName", "ccminer"
-            VALUE "ProductVersion", "1.8.3"
+            VALUE "ProductVersion", "1.8.4"
         END
     END
     BLOCK "VarFileInfo"

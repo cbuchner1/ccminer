@@ -79,6 +79,9 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 	do {
 		bmw256_cpu_hash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], (int) swapnonce);
 		uint32_t foundNonce = cuda_check_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
 		if (foundNonce != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash64[8];
@@ -86,7 +89,6 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 			bmw_hash(vhash64, endiandata);
 
 			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				*hashes_done = foundNonce - first_nonce + 1;
 				pdata[19] = swab32_if(foundNonce,!swapnonce);
 				work_set_target_ratio(work, vhash64);
 				return 1;
