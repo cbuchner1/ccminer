@@ -3409,6 +3409,25 @@ static void parse_cmdline(int argc, char *argv[])
 	}
 }
 
+static void parse_single_opt(int opt, int argc, char *argv[])
+{
+	int key, prev = optind;
+	while (1) {
+#if HAVE_GETOPT_LONG
+		key = getopt_long(argc, argv, short_options, options, NULL);
+#else
+		key = getopt(argc, argv, short_options);
+#endif
+		if (key < 0)
+			break;
+		if (key == opt /* || key == 'c'*/)
+			parse_arg(key, optarg);
+	}
+	//todo with a filter: parse_config(opt_config);
+
+	optind = prev; // reset argv index
+}
+
 #ifndef WIN32
 static void signal_handler(int sig)
 {
@@ -3460,16 +3479,21 @@ int main(int argc, char *argv[])
 	long flags;
 	int i;
 
+	// get opt_quiet early
+	parse_single_opt('q', argc, argv);
+
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by tpruvot@github ***\n");
+	if (!opt_quiet) {
 #ifdef _MSC_VER
-	printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d\n\n", msver(),
+		printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d\n\n", msver(),
 #else
-	printf("    Built with the nVidia CUDA Toolkit %d.%d\n\n",
+		printf("    Built with the nVidia CUDA Toolkit %d.%d\n\n",
 #endif
-		CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10);
-	printf("  Originally based on Christian Buchner and Christian H. project\n");
-	printf("  Include some algos from alexis78, djm34, sp, tsiv and klausT.\n\n");
-	printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
+			CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10);
+		printf("  Originally based on Christian Buchner and Christian H. project\n");
+		printf("  Include some algos from alexis78, djm34, sp, tsiv and klausT.\n\n");
+		printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
+	}
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
@@ -3520,12 +3544,6 @@ int main(int argc, char *argv[])
 
 	/* parse command line */
 	parse_cmdline(argc, argv);
-
-	// extra credits..
-	if (opt_algo == ALGO_VANILLA) {
-		printf("  Vanilla blake optimized by Alexis Provos.\n");
-		printf("XVC donation address: Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W\n\n");
-	}
 
 	if (!opt_benchmark && !strlen(rpc_url)) {
 		// try default config file (user then binary folder)
