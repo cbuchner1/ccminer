@@ -25,7 +25,7 @@ config.sub
 
 mingw32-config.cache
 
-*/.dirstamp
+.dirstamp
 .DS_Store
 Desktop.ini
 Thumbs.db

@@ -91,6 +91,12 @@
     <Filter Include="Source Files\crypto">
       <UniqueIdentifier>{fea0fce3-c0fe-42f7-aa37-0cbba10b008a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\crypto\xmr">
+      <UniqueIdentifier>{af52b078-ed91-4c6e-b07a-e9243acc85d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\crypto\bbr">
+      <UniqueIdentifier>{af387eac-e9e6-4e91-a5e8-637b1e7a8d93}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -285,11 +291,23 @@
     <ClCompile Include="crypto\xmr-rpc.cpp">
       <Filter>Source Files\crypto</Filter>
     </ClCompile>
+    <ClCompile Include="crypto\aesb.cpp">
+      <Filter>Source Files\crypto\xmr</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\cpu\c_keccak.c">
+      <Filter>Source Files\crypto\xmr</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\oaes_lib.cpp">
+      <Filter>Source Files\crypto\xmr</Filter>
+    </ClCompile>
+    <ClCompile Include="crypto\cryptonight-cpu.cpp">
+      <Filter>Source Files\crypto\xmr</Filter>
+    </ClCompile>
     <ClCompile Include="crypto\mman.c">
-      <Filter>Source Files\crypto</Filter>
+      <Filter>Source Files\crypto\bbr</Filter>
     </ClCompile>
     <ClCompile Include="crypto\wildkeccak-cpu.cpp">
-      <Filter>Source Files\crypto</Filter>
+      <Filter>Source Files\crypto\bbr</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -494,14 +512,17 @@
     <ClInclude Include="sia\sia-rpc.h">
       <Filter>Source Files\sia</Filter>
     </ClInclude>
-    <ClInclude Include="crypto\mman.h">
-      <Filter>Source Files\crypto</Filter>
-    </ClInclude>
-    <ClInclude Include="crypto\wildkeccak.h">
-      <Filter>Source Files\crypto</Filter>
-    </ClInclude>
     <ClInclude Include="crypto\xmr-rpc.h">
       <Filter>Source Files\crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cryptonight.h">
+      <Filter>Source Files\crypto\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\mman.h">
+      <Filter>Source Files\crypto\bbr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\wildkeccak.h">
+      <Filter>Source Files\crypto\bbr</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -784,6 +805,15 @@
     <CudaCompile Include="crypto\wildkeccak.cu">
       <Filter>Source Files\crypto</Filter>
     </CudaCompile>
+    <CudaCompile Include="crypto\cryptonight.cu">
+      <Filter>Source Files\crypto</Filter>
+    </CudaCompile>
+    <CudaCompile Include="crypto\cuda_cryptonight_core.cu">
+      <Filter>Source Files\crypto</Filter>
+    </CudaCompile>
+    <CudaCompile Include="crypto\cuda_cryptonight_extra.cu">
+      <Filter>Source Files\crypto</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">
@@ -801,4 +831,3 @@
     </Text>
   </ItemGroup>
 </Project>
-

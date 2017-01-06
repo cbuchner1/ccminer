@@ -1856,7 +1856,7 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		ret = stratum_show_message(sctx, id, params);
 		goto out;
 	}
-	if (sctx->rpc2 && !strcasecmp(method, "job")) { // cryptonote
+	if (sctx->rpc2 && !strcasecmp(method, "job")) { // xmr/bbr
 		ret = rpc2_stratum_job(sctx, id, params);
 		goto out;
 	}
@@ -2140,6 +2140,9 @@ void print_hash_tests(void)
 
 	c11hash(&hash[0], &buf[0]);
 	printpfx("c11", hash);
+
+	cryptonight_hash(&hash[0], &buf[0], 76);
+	printpfx("cryptonight", hash);
 
 	memset(buf, 0, 180);
 	decred_hash(&hash[0], &buf[0]);

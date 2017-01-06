@@ -27,6 +27,7 @@
 #define PRIu64 "I64u"
 #endif
 
+#include <algos.h>
 #include "xmr-rpc.h"
 #include "wildkeccak.h"
 
@@ -376,7 +377,7 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		goto err_out;
 	}
 
-	if(!addendums_decode(job)) {
+	if(opt_algo == ALGO_WILDKECCAK && !addendums_decode(job)) {
 		applog(LOG_ERR, "JSON failed to process addendums");
 		goto err_out;
 	}
@@ -396,6 +397,7 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		applog(LOG_ERR, "JSON invalid blob length");
 		goto err_out;
 	}
+
 	if (blobLen != 0)
 	{
 		pthread_mutex_lock(&rpc2_job_lock);
@@ -420,7 +422,6 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		if(rpc2_target != target) {
 			double difficulty = (((double) UINT32_MAX) / target);
 			stratum.job.diff = difficulty;
-			//applog(LOG_WARNING, "Stratum difficulty set to %.1f M", difficulty/1e6);
 			rpc2_target = target;
 		}
 
@@ -430,6 +431,7 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		rpc2_job_id = strdup(job_id);
 		pthread_mutex_unlock(&rpc2_job_lock);
 	}
+
 	if(work)
 	{
 		if (!rpc2_blob) {
@@ -438,17 +440,14 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		}
 		memcpy(work->data, rpc2_blob, rpc2_bloblen);
 		memset(work->target, 0xff, sizeof(work->target));
-
-		// hmmpff ? seems wrong
-		//*((uint64_t*)&work->target[6]) = rpc2_target;
 		work->target[7] = rpc2_target;
-
 		work->targetdiff = target_to_diff(work->target);
 
 		snprintf(work->job_id, sizeof(work->job_id), "%s", rpc2_job_id);
 	}
 
-	wildkeccak_scratchpad_need_update(pscratchpad_buff);
+	if (opt_algo == ALGO_WILDKECCAK)
+		wildkeccak_scratchpad_need_update(pscratchpad_buff);
 	return true;
 
 err_out:
@@ -465,8 +464,9 @@ bool rpc2_stratum_job(struct stratum_ctx *sctx, json_t *id, json_t *params)
 	pthread_mutex_lock(&rpc2_work_lock);
 	ret = rpc2_job_decode(params, &rpc2_work);
 	// update miner threads work
-	rpc2_stratum_gen_work(sctx, &g_work);
+	if (ret) rpc2_stratum_gen_work(sctx, &g_work);
 	//memcpy(&g_work, &rpc2_work, sizeof(struct work));
+	restart_threads();
 	pthread_mutex_unlock(&rpc2_work_lock);
 	return ret;
 }
@@ -480,7 +480,10 @@ bool rpc2_stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		stratum_diff = sctx->job.diff;
 		if (opt_showdiff && work->targetdiff != stratum_diff)
 			snprintf(sdiff, 32, " (%.5f)", work->targetdiff);
-		applog(LOG_WARNING, "Stratum difficulty set to %.1f M%s", stratum_diff/1e6, sdiff);
+		if (stratum_diff >= 1e6)
+			applog(LOG_WARNING, "Stratum difficulty set to %.1f M%s", stratum_diff/1e6, sdiff);
+		else
+			applog(LOG_WARNING, "Stratum difficulty set to %.0f%s", stratum_diff, sdiff);
 	}
 	if (work->target[7] != rpc2_target) {
 		work->target[7] = rpc2_target;
@@ -501,19 +504,30 @@ bool rpc2_stratum_submit(struct pool_infos *pool, struct work *work)
 	char *noncestr, *hashhex;
 
 	memcpy(&data[0], work->data, 88);
-	memcpy(&data[1], work->nonces, 8);
 
-	// pass if the previous hash is not the current previous hash
-	if(!submit_old && memcmp(&work->data[3], &g_work.data[3], 28)) {
-		if (opt_debug) applog(LOG_DEBUG, "stale work detected", work->sharediff, work->targetdiff);
-		pool->stales_count++;
-		return true;
+	if (opt_algo == ALGO_WILDKECCAK) {
+		memcpy(&data[1], work->nonces, 8);
+		// pass if the previous hash is not the current previous hash
+		if(!submit_old && memcmp(&work->data[3], &g_work.data[3], 28)) {
+			if (opt_debug) applog(LOG_DEBUG, "stale work detected", work->sharediff, work->targetdiff);
+			pool->stales_count++;
+			return true;
+		}
+		noncestr = bin2hex((unsigned char*) &data[1], 8);
+		memcpy(&last_found_nonce, work->nonces, 8); // "nonce":"5794ec8000000000" => 0x0000000080ec9457
+		wildkeccak_hash(hash, data, NULL, 0);
+		work_set_target_ratio(work, (uint32_t*) hash);
 	}
 
-	noncestr = bin2hex((unsigned char*) &data[1], 8);
-	memcpy(&last_found_nonce, work->nonces, 8); // "nonce":"5794ec8000000000" => 0x0000000080ec9457
+	else if (opt_algo == ALGO_CRYPTONIGHT) {
+		uint32_t nonce;
+		memcpy(&nonce, &data[39], 4);
+		noncestr = bin2hex((unsigned char*) &nonce, 4);
+		last_found_nonce = nonce;
+		cryptonight_hash(hash, data, 76);
+		work_set_target_ratio(work, (uint32_t*) hash);
+	}
 
-	wildkeccak_hash(hash, data, NULL, 0);
 	//applog(LOG_DEBUG, "submit diff %g > %g", work->sharediff, work->targetdiff);
 	//applog_hex(data, 81);
 	//applog_hex(hash, 32);
@@ -592,7 +606,8 @@ bool store_scratchpad_to_file(bool do_fsync)
 	FILE *fp;
 	int ret;
 
-	if(!scratchpad_size || !pscratchpad_buff) return true; // opt_algo != ALGO_WILDKECCAK || 
+	if(opt_algo != ALGO_WILDKECCAK) return true;
+	if(!scratchpad_size || !pscratchpad_buff) return true;
 
 	snprintf(file_name_buff, sizeof(file_name_buff), "%s.tmp", pscratchpad_local_cache);
 	unlink(file_name_buff);
@@ -646,6 +661,8 @@ bool load_scratchpad_from_file(const char *fname)
 	FILE *fp;
 	long flen;
 
+	if(opt_algo != ALGO_WILDKECCAK) return true;
+
 	fp = fopen(fname, "rb");
 	if (!fp) {
 		if (errno != ENOENT) {
@@ -692,6 +709,8 @@ bool load_scratchpad_from_file(const char *fname)
 bool dump_scratchpad_to_file_debug()
 {
 	char file_name_buff[1024] = { 0 };
+	if(opt_algo != ALGO_WILDKECCAK) return true;
+
 	snprintf(file_name_buff, sizeof(file_name_buff), "scratchpad_%" PRIu64 "_%llx.scr",
 		current_scratchpad_hi.height, (long long) last_found_nonce);
 
@@ -1027,6 +1046,7 @@ static bool rpc2_stratum_getscratchpad(struct stratum_ctx *sctx)
 	json_t *val = NULL;
 	json_error_t err;
 	char *s, *sret;
+	if(opt_algo != ALGO_WILDKECCAK) return true;
 
 	s = (char*) calloc(1, 1024);
 	if (!s)
@@ -1067,14 +1087,21 @@ bool rpc2_stratum_authorize(struct stratum_ctx *sctx, const char *user, const ch
 	bool ret = false;
 	json_t *val = NULL, *res_val, *err_val, *job_val = NULL;
 	json_error_t err;
-	char *s, *sret;
-	char *prevhash = bin2hex((const unsigned char*)current_scratchpad_hi.prevhash, 32);
-	s = (char*) calloc(1, 320 + strlen(user) + strlen(pass));
-	sprintf(s, "{\"method\":\"login\",\"params\":{\"login\":\"%s\",\"pass\":\"%s\","
+	char *sret;
+	char *s = (char*) calloc(1, 320 + strlen(user) + strlen(pass));
+
+	if (opt_algo == ALGO_WILDKECCAK) {
+		char *prevhash = bin2hex((const unsigned char*)current_scratchpad_hi.prevhash, 32);
+		sprintf(s, "{\"method\":\"login\",\"params\":{\"login\":\"%s\",\"pass\":\"%s\","
 			   "\"hi\":{\"height\":%" PRIu64 ",\"block_id\":\"%s\"},"
 			   "\"agent\":\"" USER_AGENT "\"},\"id\":2}",
-		user, pass, current_scratchpad_hi.height, prevhash);
-	free(prevhash);
+			user, pass, current_scratchpad_hi.height, prevhash);
+		free(prevhash);
+	} else {
+		sprintf(s, "{\"method\":\"login\",\"params\":{\"login\":\"%s\",\"pass\":\"%s\","
+			   "\"agent\":\"" USER_AGENT "\"},\"id\":2}",
+			user, pass);
+	}
 
 	if (!stratum_send_line(sctx, s))
 		goto out;
@@ -1146,12 +1173,16 @@ bool rpc2_stratum_request_job(struct stratum_ctx *sctx)
 		return ret;
 	}
 
-	char* prevhash = bin2hex((const unsigned char*)current_scratchpad_hi.prevhash, 32);
-	sprintf(s, "{\"method\":\"getjob\",\"params\": {"
-		"\"id\":\"%s\", \"hi\": {\"height\": %" PRIu64 ",\"block_id\":\"%s\" }, \"agent\": \"" USER_AGENT "\"},"
-		"\"id\":1}",
-		rpc2_id, current_scratchpad_hi.height, prevhash);
-	free(prevhash);
+	if (opt_algo == ALGO_WILDKECCAK) {
+		char* prevhash = bin2hex((const unsigned char*)current_scratchpad_hi.prevhash, 32);
+		sprintf(s, "{\"method\":\"getjob\",\"params\": {"
+			"\"id\":\"%s\", \"hi\": {\"height\": %" PRIu64 ",\"block_id\":\"%s\" }, \"agent\": \"" USER_AGENT "\"},"
+			"\"id\":1}",
+			rpc2_id, current_scratchpad_hi.height, prevhash);
+		free(prevhash);
+	} else {
+		sprintf(s, "{\"method\":\"getjob\",\"params\":{\"id\":\"%s\"},\"id\":1}", rpc2_id);
+	}
 
 	if(!stratum_send_line(sctx, s)) {
 		applog(LOG_ERR, "Stratum failed to send getjob line");
@@ -1210,7 +1241,7 @@ int rpc2_stratum_thread_stuff(struct pool_infos* pool)
 		}
 	}
 
-	if(!scratchpad_size) {
+	if(!scratchpad_size && opt_algo == ALGO_WILDKECCAK) {
 		if(!rpc2_stratum_getscratchpad(&stratum)) {
 			stratum_disconnect(&stratum);
 			applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
@@ -1219,6 +1250,15 @@ int rpc2_stratum_thread_stuff(struct pool_infos* pool)
 		store_scratchpad_to_file(false);
 		prev_save = time(NULL);
 
+		if(!rpc2_stratum_request_job(&stratum)) {
+			stratum_disconnect(&stratum);
+			applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
+			sleep(opt_fail_pause);
+		}
+	}
+
+	// if getjob supported
+	if(0 && opt_algo == ALGO_CRYPTONIGHT) {
 		if(!rpc2_stratum_request_job(&stratum)) {
 			stratum_disconnect(&stratum);
 			applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);

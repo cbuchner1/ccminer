@@ -620,6 +620,7 @@ static bool work_decode(const json_t *val, struct work *work)
 		data_size = 80;
 		adata_sz = data_size / 4;
 		break;
+	case ALGO_CRYPTONIGHT:
 	case ALGO_WILDKECCAK:
 		return rpc2_job_decode(val, work);
 	default:
@@ -1766,12 +1767,15 @@ static void *miner_thread(void *userdata)
 			nonceptr = (uint32_t*) (((char*)work.data) + 1);
 			wcmpoft = 2;
 			wcmplen = 32;
+		} else if (opt_algo == ALGO_CRYPTONIGHT) {
+			nonceptr = (uint32_t*) (((char*)work.data) + 39);
+			wcmplen = 39;
 		}
 
 		if (have_stratum) {
 			uint32_t sleeptime = 0;
 
-			if (opt_algo == ALGO_DECRED || stratum.rpc2)
+			if (opt_algo == ALGO_DECRED || opt_algo == ALGO_WILDKECCAK /* getjob */)
 				work_done = true; // force "regen" hash
 			while (!work_done && time(NULL) >= (g_work_time + opt_scantime)) {
 				usleep(100*1000);
@@ -1798,6 +1802,8 @@ static void *miner_thread(void *userdata)
 				extrajob = false;
 				if (stratum_gen_work(&stratum, &g_work))
 					g_work_time = time(NULL);
+				if (opt_algo == ALGO_CRYPTONIGHT)
+					nonceptr[0] += 0x100000;
 			}
 		} else {
 			uint32_t secs = 0;
@@ -1839,7 +1845,20 @@ static void *miner_thread(void *userdata)
 			wcmplen -= 4;
 		}
 
-		if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
+		if (opt_algo == ALGO_CRYPTONIGHT) {
+			uint32_t oldpos = nonceptr[0];
+			if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
+				memcpy(&work, &g_work, sizeof(struct work));
+				nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // reset cursor
+			}
+			// also check the end, nonce in the middle
+			else if (memcmp(&work.data[44/4], &g_work.data[0], 76-44)) {
+				memcpy(&work, &g_work, sizeof(struct work));
+			}
+			if (oldpos & 0xFFFF) nonceptr[0] = oldpos + 0x100000;
+		}
+
+		else if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
 			#if 0
 			if (opt_debug) {
 				for (int n=0; n <= (wcmplen-8); n+=8) {
@@ -1916,7 +1935,7 @@ static void *miner_thread(void *userdata)
 			gpulog(LOG_DEBUG, thr_id, "no data");
 			continue;
 		}
-		if (stratum.rpc2 && !scratchpad_size) {
+		if (opt_algo == ALGO_WILDKECCAK && !scratchpad_size) {
 			sleep(1);
 			if (!thr_id) pools[cur_pooln].wait_time += 1;
 			continue;
@@ -2078,6 +2097,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_VELTOR:
 				minmax = 0x80000;
 				break;
+			case ALGO_CRYPTONIGHT:
 			case ALGO_SCRYPT_JANE:
 				minmax = 0x1000;
 				break;
@@ -2139,6 +2159,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_C11:
 			rc = scanhash_c11(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_CRYPTONIGHT:
+			rc = scanhash_cryptonight(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_DECRED:
 			//applog(LOG_BLUE, "version %x, nbits %x, ntime %x extra %x",
@@ -2283,6 +2306,7 @@ static void *miner_thread(void *userdata)
 		// todo: update all algos to use work->nonces and pdata[19] as counter
 		switch (opt_algo) {
 			case ALGO_BLAKE2S:
+			case ALGO_CRYPTONIGHT:
 			case ALGO_DECRED:
 			case ALGO_LBRY:
 			case ALGO_SIA:
@@ -2710,7 +2734,7 @@ wait_stratum_url:
 			}
 		}
 
-		if (opt_algo == ALGO_WILDKECCAK) {
+		if (stratum.rpc2) {
 			rpc2_stratum_thread_stuff(pool);
 		}
 
@@ -2806,7 +2830,7 @@ static void show_usage_and_exit(int status)
 	if (opt_algo == ALGO_SCRYPT || opt_algo == ALGO_SCRYPT_JANE) {
 		printf(scrypt_usage);
 	}
-	if (opt_algo == ALGO_WILDKECCAK) {
+	if (opt_algo == ALGO_WILDKECCAK || opt_algo == ALGO_CRYPTONIGHT) {
 		printf(xmr_usage);
 	}
 	proper_exit(status);
@@ -3661,9 +3685,14 @@ int main(int argc, char *argv[])
 		allow_mininginfo = false;
 	}
 
+	if (opt_algo == ALGO_CRYPTONIGHT) {
+		rpc2_init();
+		if (!opt_quiet) applog(LOG_INFO, "Using JSON-RPC 2.0");
+	}
+
 	if (opt_algo == ALGO_WILDKECCAK) {
 		rpc2_init();
-		applog(LOG_INFO, "Using CryptoNote JSON-RPC 2.0");
+		if (!opt_quiet) applog(LOG_INFO, "Using JSON-RPC 2.0");
 		GetScratchpad();
 	}
 

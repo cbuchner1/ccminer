@@ -233,6 +233,10 @@
     <ClCompile Include="crypto\mman.c" />
     <ClCompile Include="crypto\wildkeccak-cpu.cpp" />
     <ClCompile Include="crypto\xmr-rpc.cpp" />
+    <ClCompile Include="crypto\aesb.cpp" />
+    <ClCompile Include="crypto\oaes_lib.cpp" />
+    <ClCompile Include="crypto\cryptonight-cpu.cpp" />
+    <ClCompile Include="crypto\cpu\c_keccak.c" />
     <ClCompile Include="nvapi.cpp" />
     <ClCompile Include="pools.cpp" />
     <ClCompile Include="util.cpp" />
@@ -251,9 +255,6 @@
     <ClCompile Include="myriadgroestl.cpp" />
     <ClCompile Include="lyra2\Lyra2.c" />
     <ClCompile Include="lyra2\Sponge.c" />
-    <ClInclude Include="crypto\mman.h" />
-    <ClInclude Include="crypto\wildkeccak.h" />
-    <ClInclude Include="crypto\xmr-rpc.h" />
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh" />
     <ClInclude Include="neoscrypt\neoscrypt.h" />
     <ClCompile Include="neoscrypt\neoscrypt.cpp" />
@@ -264,8 +265,17 @@
     <CudaCompile Include="Algo256\cuda_bmw.cu">
       <MaxRegCount>76</MaxRegCount>
     </CudaCompile>
+    <CudaCompile Include="crypto\cryptonight.cu">
+      <MaxRegCount>128</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="crypto\cuda_cryptonight_core.cu">
+      <MaxRegCount>128</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="crypto\cuda_cryptonight_extra.cu">
+      <MaxRegCount>255</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="crypto\wildkeccak.cu">
-      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">128</MaxRegCount>
+      <MaxRegCount>128</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
       <MaxRegCount>160</MaxRegCount>
@@ -319,6 +329,10 @@
     <ClInclude Include="compat\unistd.h" />
     <ClInclude Include="compat\winansi.h" />
     <ClInclude Include="compat\ccminer-config.h" />
+    <ClInclude Include="crypto\mman.h" />
+    <ClInclude Include="crypto\cryptonight.h" />
+    <ClInclude Include="crypto\wildkeccak.h" />
+    <ClInclude Include="crypto\xmr-rpc.h" />
     <ClInclude Include="cuda_groestlcoin.h" />
     <ClInclude Include="cuda_helper.h" />
     <ClInclude Include="cuda_vector_uint2x4.h" />
