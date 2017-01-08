@@ -10,7 +10,7 @@
 #include "cryptonight.h"
 
 #ifdef WIN32
-int cn_bfactor = 6;
+int cn_bfactor = 8;
 int cn_bsleep = 100;
 #else
 int cn_bfactor = 0;
@@ -18,6 +18,14 @@ int cn_bsleep = 0;
 #endif
 
 #include "cn_aes.cuh"
+
+#define MUL_SUM_XOR_DST(a,c,dst) { \
+	uint64_t hi, lo = cuda_mul128(((uint64_t *)a)[0], ((uint64_t *)dst)[0], &hi) + ((uint64_t *)c)[1]; \
+	hi += ((uint64_t *)c)[0]; \
+	((uint64_t *)c)[0] = ((uint64_t *)dst)[0] ^ hi; \
+	((uint64_t *)c)[1] = ((uint64_t *)dst)[1] ^ lo; \
+	((uint64_t *)dst)[0] = hi; \
+	((uint64_t *)dst)[1] = lo; }
 
 __device__ __forceinline__ uint64_t cuda_mul128(uint64_t multiplier, uint64_t multiplicand, uint64_t* product_hi)
 {
@@ -52,7 +60,7 @@ void cryptonight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state
 }
 
 __global__
-void cryptonight_core_gpu_phase2(int threads, int bfactor, int partidx, uint32_t * __restrict__ d_long_state, uint32_t * __restrict__ d_ctx_a, uint32_t * __restrict__ d_ctx_b)
+void cryptonight_core_gpu_phase2(const int threads, const int bfactor, const int partidx, uint32_t * d_long_state, uint32_t * d_ctx_a, uint32_t * d_ctx_b)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -60,7 +68,7 @@ void cryptonight_core_gpu_phase2(int threads, int bfactor, int partidx, uint32_t
 
 	__syncthreads();
 
-#if __CUDA_ARCH__ >= 300
+#if 0 && __CUDA_ARCH__ >= 300
 
 	const int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
 	const int sub = threadIdx.x & 3;
@@ -171,25 +179,27 @@ void cryptonight_core_gpu_phase2(int threads, int bfactor, int partidx, uint32_t
 		const int batchsize = ITER >> (2 + bfactor);
 		const int start = partidx * batchsize;
 		const int end = start + batchsize;
-		uint32_t * __restrict__ long_state = &d_long_state[thread << 19];
-		uint32_t * __restrict__ ctx_a = d_ctx_a + thread * 4;
-		uint32_t * __restrict__ ctx_b = d_ctx_b + thread * 4;
-		uint32_t a[4], b[4], c[4];
-		int j;
+		const off_t longptr = (off_t) thread << 19;
+		uint32_t * long_state = &d_long_state[longptr];
+		uint32_t * ctx_a = &d_ctx_a[thread * 4];
+		uint32_t * ctx_b = &d_ctx_b[thread * 4];
+		uint32_t a[4], b[4];
 
 		MEMCPY8(a, ctx_a, 2);
 		MEMCPY8(b, ctx_b, 2);
 
-		for(int i = start; i < end; ++i)
+		for(int i = start; i < end; i++) // end = 262144
 		{
-			j = (a[0] & 0x1FFFF0) >> 2;
+			uint32_t c[4];
+			uint32_t j = (a[0] >> 2) & 0x7FFFC;
 			cn_aes_single_round(sharedMemory, &long_state[j], c, a);
 			XOR_BLOCKS_DST(c, b, &long_state[j]);
-			MUL_SUM_XOR_DST(c, a, (uint8_t *)&long_state[(c[0] & 0x1FFFF0) >> 2]);
-			j = (a[0] & 0x1FFFF0) >> 2;
+			MUL_SUM_XOR_DST(c, a, &long_state[(c[0] >> 2) & 0x7FFFC]);
+
+			j = (a[0] >> 2) & 0x7FFFC;
 			cn_aes_single_round(sharedMemory, &long_state[j], b, a);
 			XOR_BLOCKS_DST(b, c, &long_state[j]);
-			MUL_SUM_XOR_DST(b, a, &long_state[(b[0] & 0x1FFFF0) >> 2]);
+			MUL_SUM_XOR_DST(b, a, &long_state[(b[0] >> 2) & 0x7FFFC]);
 		}
 
 		if(bfactor > 0)

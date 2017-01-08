@@ -9,10 +9,10 @@
 #include <miner.h>
 #include "cryptonight.h"
 
-extern char *device_config[MAX_GPUS]; // -l 24x32
+extern char *device_config[MAX_GPUS]; // -l 32x16
 
-uint32_t cn_blocks  = 24;
-uint32_t cn_threads = 32;
+uint32_t cn_blocks  = 32;
+uint32_t cn_threads = 16;
 
 static uint32_t *d_long_state[MAX_GPUS];
 static uint32_t *d_ctx_state[MAX_GPUS];
@@ -43,11 +43,13 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 	{
 		if (device_config[thr_id]) {
 			sscanf(device_config[thr_id], "%ux%u", &cn_blocks, &cn_threads);
-			gpulog(LOG_INFO, thr_id, "Using %u x %u threads kernel launch config", cn_blocks, cn_threads);
 			throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
+			gpulog(LOG_INFO, thr_id, "Using %u x %u (%u) threads kernel launch config",
+				cn_blocks, cn_threads, throughput);
 		} else {
 			throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
-			gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
+			gpulog(LOG_INFO, thr_id, "Intensity set to %g, (%u x %u) %u threads",
+				throughput2intensity(throughput), cn_blocks, cn_threads, throughput);
 		}
 
 		if(sizeof(size_t) == 4 && throughput > UINT32_MAX / MEMORY) {
@@ -59,9 +61,8 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 		cudaSetDevice(device_map[thr_id]);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
 			cudaDeviceReset();
-			// reduce cpu usage (linux)
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-			//cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+			cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 			CUDA_LOG_ERROR();
 		}
 
@@ -107,7 +108,6 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 			uint32_t *tempnonceptr = (uint32_t*)(((char*)tempdata) + 39);
 			memcpy(tempdata, pdata, 76);
 			*tempnonceptr = resNonces[0];
-			gpulog(LOG_DEBUG, thr_id, "found nonce %x", resNonces[0]);
 			cryptonight_hash(vhash, tempdata, 76);
 			if(vhash[7] <= Htarg && fulltest(vhash, ptarget))
 			{

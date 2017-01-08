@@ -31,7 +31,18 @@
 #include "xmr-rpc.h"
 #include "wildkeccak.h"
 
-//#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
+double target_to_diff_rpc2(uint32_t* target)
+{
+	// unlike other algos, xmr diff is very low
+	if (opt_algo == ALGO_CRYPTONIGHT) {
+		// simplified to get 1.0 for 10K
+		return (double) (UINT32_MAX / target[7]) / 10000;
+	}
+	else if (opt_algo == ALGO_WILDKECCAK) {
+		return target_to_diff(target) * 1000;
+	}
+	return target_to_diff(target); // util.cpp
+}
 
 extern struct stratum_ctx stratum;
 
@@ -441,7 +452,7 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		memcpy(work->data, rpc2_blob, rpc2_bloblen);
 		memset(work->target, 0xff, sizeof(work->target));
 		work->target[7] = rpc2_target;
-		work->targetdiff = target_to_diff(work->target);
+		work->targetdiff = target_to_diff_rpc2(work->target);
 
 		snprintf(work->job_id, sizeof(work->job_id), "%s", rpc2_job_id);
 	}
@@ -479,7 +490,7 @@ bool rpc2_stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		char sdiff[32] = { 0 };
 		stratum_diff = sctx->job.diff;
 		if (opt_showdiff && work->targetdiff != stratum_diff)
-			snprintf(sdiff, 32, " (%.5f)", work->targetdiff);
+			snprintf(sdiff, 32, " (%g)", work->targetdiff);
 		if (stratum_diff >= 1e6)
 			applog(LOG_WARNING, "Stratum difficulty set to %.1f M%s", stratum_diff/1e6, sdiff);
 		else
@@ -487,7 +498,7 @@ bool rpc2_stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	}
 	if (work->target[7] != rpc2_target) {
 		work->target[7] = rpc2_target;
-		work->targetdiff = target_to_diff(work->target);
+		work->targetdiff = target_to_diff_rpc2(work->target);
 		g_work_time = 0;
 		restart_threads();
 	}
@@ -547,7 +558,7 @@ bool rpc2_stratum_submit(struct pool_infos *pool, struct work *work)
 		return false;
 	}
 
-	stratum.sharediff = target_to_diff((uint32_t*)hash);
+	stratum.sharediff = target_to_diff_rpc2((uint32_t*)hash);
 
 	return true;
 }
