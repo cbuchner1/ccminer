@@ -34,9 +34,9 @@
 double target_to_diff_rpc2(uint32_t* target)
 {
 	// unlike other algos, xmr diff is very low
-	if (opt_algo == ALGO_CRYPTONIGHT) {
-		// simplified to get 1.0 for 10K
-		return (double) (UINT32_MAX / target[7]) / 10000;
+	if (opt_algo == ALGO_CRYPTONIGHT && target[7]) {
+		// simplified to get 1.0 for 1000
+		return (double) (UINT32_MAX / target[7]) / 1000;
 	}
 	else if (opt_algo == ALGO_WILDKECCAK) {
 		return target_to_diff(target) * 1000;
