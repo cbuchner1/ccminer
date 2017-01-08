@@ -10,6 +10,7 @@
 #include "cryptonight.h"
 
 #ifdef WIN32
+// to prevent ui freeze
 int cn_bfactor = 8;
 int cn_bsleep = 100;
 #else

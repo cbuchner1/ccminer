@@ -11,8 +11,8 @@
 
 extern char *device_config[MAX_GPUS]; // -l 32x16
 
-uint32_t cn_blocks  = 32;
-uint32_t cn_threads = 16;
+static __thread uint32_t cn_blocks  = 32;
+static __thread uint32_t cn_threads = 16;
 
 static uint32_t *d_long_state[MAX_GPUS];
 static uint32_t *d_ctx_state[MAX_GPUS];
@@ -44,12 +44,16 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 		if (device_config[thr_id]) {
 			sscanf(device_config[thr_id], "%ux%u", &cn_blocks, &cn_threads);
 			throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
-			gpulog(LOG_INFO, thr_id, "Using %u x %u (%u) threads kernel launch config",
+			gpulog(LOG_INFO, thr_id, "Using %u x %u kernel launch config, %u threads",
 				cn_blocks, cn_threads, throughput);
 		} else {
 			throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
-			gpulog(LOG_INFO, thr_id, "Intensity set to %g, (%u x %u) %u threads",
-				throughput2intensity(throughput), cn_blocks, cn_threads, throughput);
+			if (throughput != cn_blocks*cn_threads && cn_threads) {
+				cn_blocks = throughput / cn_threads;
+				throughput = cn_threads * cn_blocks;
+			}
+			gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u threads (%ux%u)",
+				throughput2intensity(throughput), throughput, cn_blocks, cn_threads);
 		}
 
 		if(sizeof(size_t) == 4 && throughput > UINT32_MAX / MEMORY) {
