@@ -97,6 +97,9 @@
     <Filter Include="Source Files\crypto\bbr">
       <UniqueIdentifier>{af387eac-e9e6-4e91-a5e8-637b1e7a8d93}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\xmr">
+      <UniqueIdentifier>{0f9aec5e-5409-488f-992a-2c108590d1ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -515,14 +518,32 @@
     <ClInclude Include="crypto\xmr-rpc.h">
       <Filter>Source Files\crypto</Filter>
     </ClInclude>
-    <ClInclude Include="crypto\cryptonight.h">
-      <Filter>Source Files\crypto\xmr</Filter>
-    </ClInclude>
     <ClInclude Include="crypto\mman.h">
       <Filter>Source Files\crypto\bbr</Filter>
     </ClInclude>
     <ClInclude Include="crypto\wildkeccak.h">
       <Filter>Source Files\crypto\bbr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cn_aes.cuh">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cn_blake.cuh">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cn_groestl.cuh">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cn_jh.cuh">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cn_keccak.cuh">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cn_skein.cuh">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cryptonight.h">
+      <Filter>Source Files\CUDA\xmr</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -802,17 +823,17 @@
     <CudaCompile Include="sia\sia.cu">
       <Filter>Source Files\sia</Filter>
     </CudaCompile>
-    <CudaCompile Include="crypto\wildkeccak.cu">
-      <Filter>Source Files\crypto</Filter>
-    </CudaCompile>
     <CudaCompile Include="crypto\cryptonight.cu">
-      <Filter>Source Files\crypto</Filter>
+      <Filter>Source Files\CUDA\xmr</Filter>
     </CudaCompile>
     <CudaCompile Include="crypto\cuda_cryptonight_core.cu">
-      <Filter>Source Files\crypto</Filter>
+      <Filter>Source Files\CUDA\xmr</Filter>
     </CudaCompile>
     <CudaCompile Include="crypto\cuda_cryptonight_extra.cu">
-      <Filter>Source Files\crypto</Filter>
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </CudaCompile>
+    <CudaCompile Include="crypto\wildkeccak.cu">
+      <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

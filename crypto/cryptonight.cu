@@ -86,7 +86,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 		init[thr_id] = true;
 	}
 
-	throughput = cuda_default_throughput(thr_id, cn_blocks*cn_blocks);
+	throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
 
 	do
 	{
@@ -144,7 +144,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 
 done:
 	gpulog(LOG_DEBUG, thr_id, "nonce %08x exit", nonce);
-
+	work->valid_nonces = res;
 	*nonceptr = nonce;
 	return res;
 }

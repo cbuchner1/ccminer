@@ -214,6 +214,7 @@ static void cryptonight_hash_ctx(void* output, const void* input, size_t len, st
 
 	int extra_algo = ctx->state.hs.b[0] & 3;
 	extra_hashes[extra_algo](&ctx->state, 200, output);
+	if (opt_debug) applog(LOG_DEBUG, "extra algo=%d", extra_algo);
 
 	oaes_free((OAES_CTX **) &ctx->aes_ctx);
 }

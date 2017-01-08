@@ -274,6 +274,12 @@
     <CudaCompile Include="crypto\cuda_cryptonight_extra.cu">
       <MaxRegCount>255</MaxRegCount>
     </CudaCompile>
+    <ClInclude Include="crypto\cn_aes.cuh" />
+    <ClInclude Include="crypto\cn_blake.cuh" />
+    <ClInclude Include="crypto\cn_groestl.cuh" />
+    <ClInclude Include="crypto\cn_jh.cuh" />
+    <ClInclude Include="crypto\cn_keccak.cuh" />
+    <ClInclude Include="crypto\cn_skein.cuh" />
     <CudaCompile Include="crypto\wildkeccak.cu">
       <MaxRegCount>128</MaxRegCount>
     </CudaCompile>

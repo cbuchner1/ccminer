@@ -110,23 +110,16 @@ typedef struct {
 } Skein_512_Ctxt_t;
 
 typedef struct {
-  Skein_Ctxt_Hdr_t h;
-  uint64_t  X[SKEIN1024_STATE_WORDS];
-  uint8_t  b[SKEIN1024_BLOCK_BYTES];
-} Skein1024_Ctxt_t;
-
-typedef struct {
   uint_t  statebits;
   union {
 	Skein_Ctxt_Hdr_t h;
 	Skein_256_Ctxt_t ctx_256;
 	Skein_512_Ctxt_t ctx_512;
-	Skein1024_Ctxt_t ctx1024;
   } u;
 } skeinHashState;
 
 __device__
-void cn_skein_init(skeinHashState *state, size_t hashBitLen)
+void cn_skein256_init(skeinHashState *state, size_t hashBitLen)
 {
 	const uint64_t SKEIN_512_IV_256[] =
 	{
@@ -150,7 +143,7 @@ void cn_skein_init(skeinHashState *state, size_t hashBitLen)
 }
 
 __device__
-void cn_skein512_processblock(Skein_512_Ctxt_t * __restrict__ ctx, const uint8_t * __restrict__ blkPtr, size_t blkCnt, size_t byteCntAdd)
+void cn_skein_processblock(Skein_512_Ctxt_t * __restrict__ ctx, const uint8_t * __restrict__ blkPtr, size_t blkCnt, size_t byteCntAdd)
 {
 	enum {
 		R_512_0_0=46, R_512_0_1=36, R_512_0_2=19, R_512_0_3=37,
@@ -226,51 +219,7 @@ void cn_skein512_processblock(Skein_512_Ctxt_t * __restrict__ ctx, const uint8_t
 }
 
 __device__
-void cn_skein_final(skeinHashState * __restrict__ state, uint8_t * __restrict__ hashVal)
-{
-	size_t i,n,byteCnt;
-	uint64_t X[SKEIN_512_STATE_WORDS];
-	Skein_512_Ctxt_t *ctx = (Skein_512_Ctxt_t *)&state->u.ctx_512;
-	//size_t tmp;
-	//uint8_t *p8;
-	//uint64_t *p64;
-
-	ctx->h.T[1] |= SKEIN_T1_FLAG_FINAL;
-
-	if (ctx->h.bCnt < SKEIN_512_BLOCK_BYTES) {
-
-		memset(&ctx->b[ctx->h.bCnt],0,SKEIN_512_BLOCK_BYTES - ctx->h.bCnt);
-		//p8 = &ctx->b[ctx->h.bCnt];
-		//tmp = SKEIN_512_BLOCK_BYTES - ctx->h.bCnt;
-		//for( i = 0; i < tmp; i++ ) *(p8+i) = 0;
-	}
-
-	cn_skein512_processblock(ctx,ctx->b,1,ctx->h.bCnt);
-
-	byteCnt = (ctx->h.hashBitLen + 7) >> 3;
-
-	//uint8_t  b[SKEIN_512_BLOCK_BYTES] == 64
-	memset(ctx->b,0,sizeof(ctx->b));
-	//p64 = (uint64_t *)ctx->b;
-	//for( i = 0; i < 8; i++ ) *(p64+i) = 0;
-
-	memcpy(X,ctx->X,sizeof(X));
-
-	for (i=0;i*SKEIN_512_BLOCK_BYTES < byteCnt;i++) {
-
-		((uint64_t *)ctx->b)[0]= (uint64_t)i;
-		Skein_Start_New_Type(ctx,OUT_FINAL);
-		cn_skein512_processblock(ctx,ctx->b,1,sizeof(uint64_t));
-		n = byteCnt - i*SKEIN_512_BLOCK_BYTES;
-		if (n >= SKEIN_512_BLOCK_BYTES)
-		n  = SKEIN_512_BLOCK_BYTES;
-		memcpy(hashVal+i*SKEIN_512_BLOCK_BYTES,ctx->X,n);
-		memcpy(ctx->X,X,sizeof(X));   /* restore the counter mode key for next time */
-	}
-}
-
-__device__
-void cn_skein512_update(Skein_512_Ctxt_t * __restrict__ ctx, const uint8_t * __restrict__ msg, size_t msgByteCnt)
+void cn_skein_block(Skein_512_Ctxt_t * __restrict__ ctx, const uint8_t * __restrict__ msg, size_t msgByteCnt)
 {
 	size_t n;
 
@@ -288,14 +237,14 @@ void cn_skein512_update(Skein_512_Ctxt_t * __restrict__ ctx, const uint8_t * __r
 				ctx->h.bCnt += n;
 			}
 
-			cn_skein512_processblock(ctx,ctx->b,1,SKEIN_512_BLOCK_BYTES);
+			cn_skein_processblock(ctx, ctx->b, 1, SKEIN_512_BLOCK_BYTES);
 			ctx->h.bCnt = 0;
 		}
 
 		if (msgByteCnt > SKEIN_512_BLOCK_BYTES) {
 
-			n = (msgByteCnt-1) / SKEIN_512_BLOCK_BYTES;
-			cn_skein512_processblock(ctx,msg,n,SKEIN_512_BLOCK_BYTES);
+			n = (msgByteCnt - 1) / SKEIN_512_BLOCK_BYTES;
+			cn_skein_processblock(ctx, msg, n, SKEIN_512_BLOCK_BYTES);
 			msgByteCnt -= n * SKEIN_512_BLOCK_BYTES;
 			msg        += n * SKEIN_512_BLOCK_BYTES;
 		}
@@ -309,11 +258,11 @@ void cn_skein512_update(Skein_512_Ctxt_t * __restrict__ ctx, const uint8_t * __r
 }
 
 __device__
-void cn_skein_update(skeinHashState * __restrict__ state, const BitSequence * __restrict__ data, DataLength databitlen)
+void cn_skein256_update(skeinHashState * __restrict__ state, const uint8_t * __restrict__ data, DataLength databitlen)
 {
 	if ((databitlen & 7) == 0) {
 
-		cn_skein512_update(&state->u.ctx_512,data,databitlen >> 3);
+		cn_skein_block(&state->u.ctx_512, data, databitlen >> 3);
 	}
 	else {
 
@@ -323,15 +272,46 @@ void cn_skein_update(skeinHashState * __restrict__ state, const BitSequence * __
 		mask = (uint8_t) (1u << (7 - (databitlen & 7)));
 		b    = (uint8_t) ((data[bCnt-1] & (0-mask)) | mask);
 
-		cn_skein512_update(&state->u.ctx_512, data, bCnt-1);
-		cn_skein512_update(&state->u.ctx_512, &b,  1);
+		cn_skein_block(&state->u.ctx_512, data, bCnt - 1);
+		cn_skein_block(&state->u.ctx_512, &b, 1);
 
 		Skein_Set_Bit_Pad_Flag(state->u.h);
 	}
 }
 
 __device__
-void cn_skein(const BitSequence * __restrict__ data, DataLength len, BitSequence * __restrict__ hashval)
+void cn_skein256_final(skeinHashState * __restrict__ state, uint32_t * __restrict__ hashVal)
+{
+	uint64_t X[SKEIN_512_STATE_WORDS];
+	Skein_512_Ctxt_t *ctx = (Skein_512_Ctxt_t *)&state->u.ctx_512;
+	const int byteCnt = (ctx->h.hashBitLen + 7) >> 3;
+
+	ctx->h.T[1] |= SKEIN_T1_FLAG_FINAL;
+
+	if (ctx->h.bCnt < SKEIN_512_BLOCK_BYTES)
+	{
+		memset(&ctx->b[ctx->h.bCnt], 0, SKEIN_512_BLOCK_BYTES - ctx->h.bCnt);
+	}
+
+	cn_skein_processblock(ctx, ctx->b, 1, ctx->h.bCnt);
+
+	memset(ctx->b, 0, sizeof(ctx->b));
+	memcpy(X, ctx->X, sizeof(X));
+
+	for (int i = 0; i*SKEIN_512_BLOCK_BYTES < byteCnt; i++)
+	{
+		int n = byteCnt - i*SKEIN_512_BLOCK_BYTES;
+		if (n > SKEIN_512_BLOCK_BYTES) n = SKEIN_512_BLOCK_BYTES;
+		((uint64_t *)ctx->b)[0] = (uint64_t)i;
+		Skein_Start_New_Type(ctx, OUT_FINAL);
+		cn_skein_processblock(ctx, ctx->b, 1, sizeof(uint64_t));
+		memcpy(hashVal + (i*SKEIN_512_BLOCK_BYTES/sizeof(uint32_t)), ctx->X, n);
+		memcpy(ctx->X, X, sizeof(X)); // restore the counter mode key for next time
+	}
+}
+
+__device__
+void cn_skein(const uint8_t * __restrict__ data, DataLength len, uint32_t * __restrict__ hashval)
 {
 	int hashbitlen = 256;
 	DataLength databitlen = len << 3;
@@ -339,7 +319,7 @@ void cn_skein(const BitSequence * __restrict__ data, DataLength len, BitSequence
 
 	state.statebits = 64*SKEIN_512_STATE_WORDS;
 
-	cn_skein_init(&state, hashbitlen);
-	cn_skein_update(&state, data, databitlen);
-	cn_skein_final(&state, hashval);
+	cn_skein256_init(&state, hashbitlen);
+	cn_skein256_update(&state, data, databitlen);
+	cn_skein256_final(&state, hashval);
 }
