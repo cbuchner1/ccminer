@@ -222,16 +222,12 @@ static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
-	//uint32_t _ALIGN(64) endiandata[20];
 	uint32_t *ptarget = work->target;
 	uint32_t throughput = 0;
 	uint64_t n, nonce, first;
 	uint8_t *pdata = (uint8_t*) work->data;
 	memcpy(&first, &pdata[1], 8);
-	//memcpy(&n, &pdata[1], 4);;
 	n = nonce = first;
-//	pdata[5] = thr_id;
-//	memcpy(&nonce, &pdata[1], 8);
 
 	if (!scratchpad_size || !h_scratchpad[thr_id]) {
 		if (h_scratchpad[thr_id])
@@ -245,7 +241,8 @@ extern "C" int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_n
 
 		if (device_config[thr_id]) {
 			sscanf(device_config[thr_id], "%ux%u", &WK_CUDABlocks, &WK_CUDAThreads);
-			gpulog(LOG_INFO, thr_id, "Using %u x %u threads kernel launch config", WK_CUDABlocks, WK_CUDAThreads);
+			gpulog(LOG_INFO, thr_id, "Using %u x %u kernel launch config, %u threads",
+				WK_CUDABlocks, WK_CUDAThreads, throughput);
 		} else {
 			throughput = cuda_default_throughput(thr_id, WK_CUDABlocks*WK_CUDAThreads);
 			gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
@@ -319,6 +316,7 @@ extern "C" int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_n
 				if (n + throughput > max_nonce) {
 					*hashes_done = (unsigned long) (max_nonce - first);
 				}
+				work->valid_nonces = 1;
 				return 1;
 			}
 		}

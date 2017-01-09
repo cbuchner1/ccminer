@@ -94,7 +94,7 @@ bool want_stratum = true;
 bool have_stratum = false;
 bool allow_gbt = true;
 bool allow_mininginfo = true;
-bool check_dups = false;
+bool check_dups = true; //false;
 bool check_stratum_jobs = false;
 
 bool submit_old = false;
@@ -796,18 +796,17 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 	struct pool_infos *pool = &pools[work->pooln];
 	json_t *val, *res, *reason;
 	bool stale_work = false;
-	int idnonce = 0;
+	int idnonce = work->submit_nonce_id;
 
 	if (pool->type & POOL_STRATUM && stratum.rpc2) {
 		struct work submit_work;
 		memcpy(&submit_work, work, sizeof(struct work));
-		bool sent = hashlog_already_submittted(submit_work.job_id, submit_work.nonces[0]);
-		if (sent) {
-			return true;
+		if (!hashlog_already_submittted(submit_work.job_id, submit_work.nonces[idnonce])) {
+			if (rpc2_stratum_submit(pool, &submit_work))
+				hashlog_remember_submit(&submit_work, submit_work.nonces[idnonce]);
+			stratum.job.shares_count++;
 		}
-		bool ret = rpc2_stratum_submit(pool, &submit_work);
-		hashlog_remember_submit(&submit_work, submit_work.nonces[0]);
-		return ret;
+		return true;
 	}
 
 	/* discard if a newer block was received */
@@ -851,7 +850,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 	if (pool->type & POOL_STRATUM) {
 		uint32_t sent = 0;
-		uint32_t ntime, nonce;
+		uint32_t ntime, nonce = work->nonces[idnonce];
 		char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
 		uint16_t nvote = 0;
 
@@ -879,7 +878,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		case ALGO_LBRY:
 			check_dups = true;
 			le32enc(&ntime, work->data[25]);
-			le32enc(&nonce, work->data[27]);
+			//le32enc(&nonce, work->data[27]);
 			break;
 		case ALGO_SIA:
 			be32enc(&ntime, work->data[10]);
@@ -930,18 +929,18 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 				stratum.sharediff);
 		else if (opt_debug_diff)
 			applog(LOG_DEBUG, "share diff: %.5f (x %.1f)",
-				stratum.sharediff, work->shareratio);
+				stratum.sharediff, work->shareratio[idnonce]);
 
 		if (opt_vote) { // ALGO_HEAVY ALGO_DECRED
 			nvotestr = bin2hex((const uchar*)(&nvote), 2);
 			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
-					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":%d}",
-					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr, 10+idnonce);
+					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":%u}",
+					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, nvotestr, stratum.job.shares_count + 10);
 			free(nvotestr);
 		} else {
 			sprintf(s, "{\"method\": \"mining.submit\", \"params\": ["
-					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":%d}",
-					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, 10+idnonce);
+					"\"%s\", \"%s\", \"%s\", \"%s\", \"%s\"], \"id\":%u}",
+					pool->user, work->job_id + 8, xnonce2str, ntimestr, noncestr, stratum.job.shares_count + 10);
 		}
 		free(xnonce2str);
 		free(ntimestr);
@@ -953,8 +952,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 			return false;
 		}
 
-		if (check_dups)
+		if (check_dups || opt_showdiff)
 			hashlog_remember_submit(work, nonce);
+		stratum.job.shares_count++;
 
 	} else {
 
@@ -1830,6 +1830,10 @@ static void *miner_thread(void *userdata)
 			}
 		}
 
+		// reset shares id counter on new job
+		if (strcmp(work.job_id, g_work.job_id))
+			stratum.job.shares_count = 0;
+
 		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
 		{
 			if (opt_debug) {
@@ -2385,7 +2389,8 @@ static void *miner_thread(void *userdata)
 				nonceptr[0] = UINT32_MAX;
 		}
 
-		if (check_dups && opt_algo != ALGO_DECRED && opt_algo != ALGO_SIA)
+		// only required to debug purpose
+		if (opt_debug && check_dups && opt_algo != ALGO_DECRED && opt_algo != ALGO_SIA)
 			hashlog_remember_scan_range(&work);
 
 		/* output */
@@ -2441,6 +2446,7 @@ static void *miner_thread(void *userdata)
 
 			// second nonce found, submit too (on pool only!)
 			if (rc > 1 && work.nonces[1]) {
+				work.submit_nonce_id = 1;
 				nonceptr[0] = work.nonces[1];
 				if (opt_algo == ALGO_ZR5) {
 					// todo: use + 4..6 index for pok to allow multiple nonces
@@ -2620,7 +2626,8 @@ static bool stratum_handle_response(char *buf)
 	json_t *val, *err_val, *res_val, *id_val;
 	json_error_t err;
 	struct timeval tv_answer, diff;
-	int num = 0;
+	int num = 0, job_nonce_id = 0;
+	double sharediff = stratum.sharediff;
 	bool ret = false;
 
 	val = JSON_LOADS(buf, &err);
@@ -2641,8 +2648,10 @@ static bool stratum_handle_response(char *buf)
 	if (num < 4)
 		goto out;
 
-	// todo: use request id to index nonce diff data
-	// num = num % 10;
+	// We dont have the work anymore, so use the hashlog to get the right sharediff for multiple nonces
+	job_nonce_id = num - 10;
+	if (opt_showdiff && check_dups)
+		sharediff = hashlog_get_sharediff(g_work.job_id, job_nonce_id, sharediff);
 
 	gettimeofday(&tv_answer, NULL);
 	timeval_subtract(&diff, &tv_answer, &stratum.tv_submit);
@@ -2650,21 +2659,17 @@ static bool stratum_handle_response(char *buf)
 	stratum.answer_msec = (1000 * diff.tv_sec) + (uint32_t) (0.001 * diff.tv_usec);
 
 	if (stratum.rpc2) {
-
 		const char* reject_reason = err_val ? json_string_value(json_object_get(err_val, "message")) : NULL;
-		// {"id":4,"jsonrpc":"2.0","error":null,"result":{"status":"OK"}}
-		share_result(json_is_null(err_val), stratum.pooln, stratum.sharediff, reject_reason);
+		// {"id":10,"jsonrpc":"2.0","error":null,"result":{"status":"OK"}}
+		share_result(json_is_null(err_val), stratum.pooln, sharediff, reject_reason);
 		if (reject_reason) {
 			g_work_time = 0;
 			restart_threads();
 		}
-
 	} else {
-
 		if (!res_val)
 			goto out;
-
-		share_result(json_is_true(res_val), stratum.pooln, stratum.sharediff,
+		share_result(json_is_true(res_val), stratum.pooln, sharediff,
 			err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
 	}
 
@@ -2765,7 +2770,7 @@ wait_stratum_url:
 							stratum.job.height);
 				}
 				restart_threads();
-				if (check_dups)
+				if (check_dups || opt_showdiff)
 					hashlog_purge_old();
 				stats_purge_old();
 			} else if (opt_debug && !opt_quiet) {

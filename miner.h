@@ -421,9 +421,12 @@ struct stats_data {
 struct hashlog_data {
 	uint8_t npool;
 	uint8_t pool_type;
-	uint16_t align;
+	uint8_t nonce_id;
+	uint8_t job_nonce_id;
 
 	uint32_t height;
+	double sharediff;
+
 	uint32_t njobid;
 	uint32_t nonce;
 	uint32_t scanned_from;
@@ -601,6 +604,7 @@ struct stratum_job {
 	bool clean;
 	unsigned char nreward[2];
 	uint32_t height;
+	uint32_t shares_count;
 	double diff;
 };
 
@@ -656,6 +660,8 @@ struct work {
 
 	uint8_t pooln;
 	uint8_t valid_nonces;
+	uint8_t submit_nonce_id;
+	uint8_t job_nonce_id;
 
 	uint32_t nonces[MAX_NONCES];
 	double sharediff[MAX_NONCES];
@@ -754,6 +760,7 @@ bool rpc2_stratum_authorize(struct stratum_ctx *sctx, const char *user, const ch
 
 void hashlog_remember_submit(struct work* work, uint32_t nonce);
 void hashlog_remember_scan_range(struct work* work);
+double hashlog_get_sharediff(char* jobid, int idnonce, double defvalue);
 uint32_t hashlog_already_submittted(char* jobid, uint32_t nounce);
 uint32_t hashlog_get_last_sent(char* jobid);
 uint64_t hashlog_get_scan_range(char* jobid);

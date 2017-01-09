@@ -341,7 +341,7 @@ static bool addendum_decode(const json_t *addm)
 	current_scratchpad_hi = hi;
 
 	if (!opt_quiet && !opt_quiet_start)
-		applog(LOG_BLUE, "ADDENDUM APPLIED: %lld --> %lld", old_height, current_scratchpad_hi.height);
+		applog(LOG_BLUE, "ADDENDUM APPLIED: Block %lld", (long long) current_scratchpad_hi.height);
 
 	return true;
 err_out:
@@ -440,6 +440,8 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		}
 
 		if (rpc2_job_id) {
+			// reset job share counter
+			if (strcmp(rpc2_job_id, job_id)) stratum.job.shares_count = 0;
 			free(rpc2_job_id);
 		}
 		rpc2_job_id = strdup(job_id);
@@ -478,8 +480,7 @@ bool rpc2_stratum_job(struct stratum_ctx *sctx, json_t *id, json_t *params)
 	pthread_mutex_lock(&rpc2_work_lock);
 	ret = rpc2_job_decode(params, &rpc2_work);
 	// update miner threads work
-	if (ret) rpc2_stratum_gen_work(sctx, &g_work);
-	//memcpy(&g_work, &rpc2_work, sizeof(struct work));
+	ret = ret && rpc2_stratum_gen_work(sctx, &g_work);
 	restart_threads();
 	pthread_mutex_unlock(&rpc2_work_lock);
 	return ret;
@@ -510,32 +511,35 @@ bool rpc2_stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 }
 
 #define JSON_SUBMIT_BUF_LEN 512
+// called by submit_upstream_work()
 bool rpc2_stratum_submit(struct pool_infos *pool, struct work *work)
 {
 	char    _ALIGN(64) s[JSON_SUBMIT_BUF_LEN];
 	uint8_t _ALIGN(64) hash[32];
 	uint8_t _ALIGN(64) data[88];
 	char *noncestr, *hashhex;
+	int idnonce = work->submit_nonce_id;
 
 	memcpy(&data[0], work->data, 88);
 
 	if (opt_algo == ALGO_WILDKECCAK) {
+		// 64 bits nonce
 		memcpy(&data[1], work->nonces, 8);
 		// pass if the previous hash is not the current previous hash
 		if(!submit_old && memcmp(&work->data[3], &g_work.data[3], 28)) {
-			if (opt_debug) applog(LOG_DEBUG, "stale work detected", work->sharediff, work->targetdiff);
+			if (opt_debug) applog(LOG_DEBUG, "stale work detected");
 			pool->stales_count++;
-			return true;
+			return false;
 		}
 		noncestr = bin2hex((unsigned char*) &data[1], 8);
-		memcpy(&last_found_nonce, work->nonces, 8); // "nonce":"5794ec8000000000" => 0x0000000080ec9457
+		// "nonce":"5794ec8000000000" => 0x0000000080ec9457
+		memcpy(&last_found_nonce, work->nonces, 8);
 		wildkeccak_hash(hash, data, NULL, 0);
 		work_set_target_ratio(work, (uint32_t*) hash);
 	}
 
 	else if (opt_algo == ALGO_CRYPTOLIGHT) {
-		uint32_t nonce;
-		memcpy(&nonce, &data[39], 4);
+		uint32_t nonce = work->nonces[idnonce];
 		noncestr = bin2hex((unsigned char*) &nonce, 4);
 		last_found_nonce = nonce;
 		cryptolight_hash(hash, data, 76);
@@ -543,34 +547,33 @@ bool rpc2_stratum_submit(struct pool_infos *pool, struct work *work)
 	}
 
 	else if (opt_algo == ALGO_CRYPTONIGHT) {
-		uint32_t nonce;
-		memcpy(&nonce, &data[39], 4);
+		uint32_t nonce = work->nonces[idnonce];
 		noncestr = bin2hex((unsigned char*) &nonce, 4);
 		last_found_nonce = nonce;
 		cryptonight_hash(hash, data, 76);
 		work_set_target_ratio(work, (uint32_t*) hash);
 	}
 
-	//applog(LOG_DEBUG, "submit diff %g > %g", work->sharediff, work->targetdiff);
-	//applog_hex(data, 81);
-	//applog_hex(hash, 32);
 	if (hash[31] != 0)
-		return true; // prevent bad hashes
+		return false; // prevent bad hashes
 	hashhex = bin2hex((unsigned char*)hash, 32);
 
 	snprintf(s, sizeof(s), "{\"method\":\"submit\",\"params\":"
-		"{\"id\":\"%s\",\"job_id\":\"%s\",\"nonce\":\"%s\",\"result\":\"%s\"}, \"id\":4}",
-		rpc2_id, work->job_id, noncestr, hashhex);
+		"{\"id\":\"%s\",\"job_id\":\"%s\",\"nonce\":\"%s\",\"result\":\"%s\"}, \"id\":%u}",
+		rpc2_id, work->job_id, noncestr, hashhex, stratum.job.shares_count + 10);
 
 	free(hashhex);
 	free(noncestr);
 
+	gettimeofday(&stratum.tv_submit, NULL);
+
 	if(!stratum_send_line(&stratum, s)) {
-		applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
+		applog(LOG_ERR, "%s stratum_send_line failed", __func__);
 		return false;
 	}
 
-	stratum.sharediff = target_to_diff_rpc2((uint32_t*)hash);
+	//stratum.sharediff = target_to_diff_rpc2((uint32_t*)hash);
+	stratum.sharediff = work->sharediff[idnonce];
 
 	return true;
 }
@@ -892,14 +895,14 @@ void GetScratchpad()
 	pscratchpad_buff = (uint64_t*) mmap(0, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_POPULATE, 0, 0);
 	if(pscratchpad_buff == MAP_FAILED)
 	{
-		applog(LOG_INFO, "hugetlb not available");
+		if(opt_debug) applog(LOG_DEBUG, "hugetlb not available");
 		pscratchpad_buff = (uint64_t*) malloc(sz);
 		if(!pscratchpad_buff) {
 			applog(LOG_ERR, "Scratchpad allocation failed");
 			exit(1);
 		}
 	} else {
-		applog(LOG_INFO, "using hugetlb");
+		if(opt_debug) applog(LOG_DEBUG, "using hugetlb");
 	}
 	madvise(pscratchpad_buff, sz, MADV_RANDOM | MADV_WILLNEED | MADV_HUGEPAGE);
 	mlock(pscratchpad_buff, sz);
@@ -1187,9 +1190,9 @@ out:
 bool rpc2_stratum_request_job(struct stratum_ctx *sctx)
 {
 	json_t *val = NULL, *res_val, *err_val;
-	char *sret;
 	json_error_t err;
 	bool ret = false;
+	char *sret;
 	char *s = (char*) calloc(1, 10*2048);
 	if (!s) {
 		applog(LOG_ERR, "Stratum job OOM!");
