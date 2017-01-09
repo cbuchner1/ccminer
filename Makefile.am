@@ -40,7 +40,8 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  Algo256/blake2s.cu sph/blake2s.c \
 			  Algo256/bmw.cu Algo256/cuda_bmw.cu \
 			  crypto/xmr-rpc.cpp crypto/wildkeccak-cpu.cpp crypto/wildkeccak.cu \
-			  crypto/cryptonight.cu crypto/cuda_cryptonight_core.cu crypto/cuda_cryptonight_extra.cu \
+			  crypto/cryptolight.cu crypto/cryptolight-core.cu crypto/cryptolight-cpu.cpp \
+			  crypto/cryptonight.cu crypto/cryptonight-core.cu crypto/cryptonight-extra.cu \
 			  crypto/cryptonight-cpu.cpp crypto/oaes_lib.cpp crypto/aesb.cpp crypto/cpu/c_keccak.c \
 			  JHA/jackpotcoin.cu JHA/cuda_jha_keccak512.cu \
 			  JHA/cuda_jha_compactionTest.cu cuda_checkhash.cu \
@@ -107,7 +108,10 @@ Algo256/blake256.o: Algo256/blake256.cu
 Algo256/cuda_bmw.o: Algo256/cuda_bmw.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=76 -o $@ -c $<
 
-crypto/cuda_cryptonight_extra.o: crypto/cuda_cryptonight_extra.cu
+crypto/cryptonight-core.o: crypto/cryptonight-core.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
+
+crypto/cryptonight-extra.o: crypto/cryptonight-extra.cu
 	$(NVCC) $(nvcc_FLAGS) -o $@ -c $<
 
 heavy/cuda_hefty1.o: heavy/cuda_hefty1.cu

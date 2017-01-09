@@ -1,5 +1,5 @@
 
-#include "cryptonight.h"
+#include "cryptolight.h"
 
 extern char *device_config[MAX_GPUS]; // -l 32x16
 
@@ -16,7 +16,7 @@ static uint32_t *d_ctx_b[MAX_GPUS];
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_cryptolight(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	int res = 0;
 	uint32_t throughput = 0;
@@ -92,7 +92,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 
 		cryptonight_extra_cpu_setData(thr_id, pdata, ptarget);
 		cryptonight_extra_cpu_prepare(thr_id, throughput, nonce, d_ctx_state[thr_id], d_ctx_a[thr_id], d_ctx_b[thr_id], d_ctx_key1[thr_id], d_ctx_key2[thr_id]);
-		cryptonight_core_cpu_hash(thr_id, cn_blocks, cn_threads, d_long_state[thr_id], d_ctx_state[thr_id], d_ctx_a[thr_id], d_ctx_b[thr_id], d_ctx_key1[thr_id], d_ctx_key2[thr_id]);
+		cryptolight_core_cpu_hash(thr_id, cn_blocks, cn_threads, d_long_state[thr_id], d_ctx_state[thr_id], d_ctx_a[thr_id], d_ctx_b[thr_id], d_ctx_key1[thr_id], d_ctx_key2[thr_id]);
 		cryptonight_extra_cpu_final(thr_id, throughput, nonce, resNonces, d_ctx_state[thr_id]);
 
 		*hashes_done = nonce - first_nonce + throughput;
@@ -104,7 +104,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 			uint32_t *tempnonceptr = (uint32_t*)(((char*)tempdata) + 39);
 			memcpy(tempdata, pdata, 76);
 			*tempnonceptr = resNonces[0];
-			cryptonight_hash(vhash, tempdata, 76);
+			cryptolight_hash(vhash, tempdata, 76);
 			if(vhash[7] <= Htarg && fulltest(vhash, ptarget))
 			{
 				res = 1;
@@ -114,7 +114,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 				if(resNonces[1] != UINT32_MAX)
 				{
 					*tempnonceptr = resNonces[1];
-					cryptonight_hash(vhash, tempdata, 76);
+					cryptolight_hash(vhash, tempdata, 76);
 					if(vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 						res++;
 						work->nonces[1] = resNonces[1];
@@ -145,7 +145,7 @@ done:
 	return res;
 }
 
-void free_cryptonight(int thr_id)
+void free_cryptolight(int thr_id)
 {
 	if (!init[thr_id])
 		return;

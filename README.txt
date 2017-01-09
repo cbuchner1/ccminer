@@ -1,5 +1,5 @@
 
-ccminer 2.0 (December 2016)   "Boolberry's WildKeccak RPC 2.0"
+ccminer 2.0 (January 2016)  "Cryptonight & other RPC 2.0 algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -8,8 +8,12 @@ If you find this tool useful and like to support its continuous
 
 tpruvot@github:
   BTC  : 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
-  DRK  : XeVrkPrWB7pDbdFLfKhF1Z3xpqhsx6wkH3
-  ZRC  : ZEcubH2xp2mpuwxMjy7wZThr5AzLGu3mqT
+  DCR  : DsUCcACGcyP8McNMRXQwbtpDxaVUYLDQDeU
+  LBC  : bKe6pLqELL3HHSbpJXxSdn5RrY2bfrkRhF
+
+Alexis:
+  BTC  : 14EgXD7fPYD4sHBXWUi46VeiTVXNq765B8
+  XVC  : Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W
 
 DJM34:
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
@@ -52,6 +56,8 @@ Vanilla (Blake256 8-rounds - double sha256)
 Vertcoin Lyra2RE
 Ziftrcoin (ZR5)
 Boolberry (Wild Keccak)
+Monero (Cryptonight)
+Aeon (Cryptonight-light)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL Only) implementations.
@@ -74,6 +80,8 @@ its command line interface and options.
                           blakecoin   use to mine Old Blake 256
                           blake2s     use to mine Nevacoin (Blake2-S 256)
                           bmw         use to mine Midnight
+                          cryptolight use to mine AEON cryptonight (MEM/2)
+                          cryptonight use to mine XMR cryptonight
                           c11/flax    use to mine Chaincoin and Flax
                           decred      use to mine Decred 180 bytes Blake256-14
                           deep        use to mine Deepcoin
@@ -186,9 +194,10 @@ Scrypt specific options:
       --no-autotune     disable auto-tuning of kernel launch parameters
 
 
-Boolberry specific:
+XMR and Wildkeccak specific:
   -l, --launch-config   gives the launch configuration for each kernel
                         in a comma separated list, one per device.
+Wildkeccak specific:
   -k, --scratchpad url  Url used to download the scratchpad cache.
 
 

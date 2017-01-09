@@ -7,13 +7,10 @@
 
 #include <miner.h>
 #include <cuda_helper.h>
-//#include <cuda.h>
-//#include <cuda_runtime.h>
-
 #include "cryptonight.h"
 
-typedef unsigned char BitSequence;
-typedef unsigned long long DataLength;
+typedef uint8_t BitSequence;
+typedef uint64_t DataLength;
 
 static uint32_t *d_input[MAX_GPUS] = { 0 };
 static uint32_t *d_target[MAX_GPUS];

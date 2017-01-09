@@ -38,6 +38,9 @@ double target_to_diff_rpc2(uint32_t* target)
 		// simplified to get 1.0 for 1000
 		return (double) (UINT32_MAX / target[7]) / 1000;
 	}
+	else if (opt_algo == ALGO_CRYPTOLIGHT && target[7]) {
+		return (double) (UINT32_MAX / target[7]) / 1000;
+	}
 	else if (opt_algo == ALGO_WILDKECCAK) {
 		return target_to_diff(target) * 1000;
 	}
@@ -527,6 +530,15 @@ bool rpc2_stratum_submit(struct pool_infos *pool, struct work *work)
 		noncestr = bin2hex((unsigned char*) &data[1], 8);
 		memcpy(&last_found_nonce, work->nonces, 8); // "nonce":"5794ec8000000000" => 0x0000000080ec9457
 		wildkeccak_hash(hash, data, NULL, 0);
+		work_set_target_ratio(work, (uint32_t*) hash);
+	}
+
+	else if (opt_algo == ALGO_CRYPTOLIGHT) {
+		uint32_t nonce;
+		memcpy(&nonce, &data[39], 4);
+		noncestr = bin2hex((unsigned char*) &nonce, 4);
+		last_found_nonce = nonce;
+		cryptolight_hash(hash, data, 76);
 		work_set_target_ratio(work, (uint32_t*) hash);
 	}
 
@@ -1261,15 +1273,6 @@ int rpc2_stratum_thread_stuff(struct pool_infos* pool)
 		store_scratchpad_to_file(false);
 		prev_save = time(NULL);
 
-		if(!rpc2_stratum_request_job(&stratum)) {
-			stratum_disconnect(&stratum);
-			applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
-			sleep(opt_fail_pause);
-		}
-	}
-
-	// if getjob supported
-	if(0 && opt_algo == ALGO_CRYPTONIGHT) {
 		if(!rpc2_stratum_request_job(&stratum)) {
 			stratum_disconnect(&stratum);
 			applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);

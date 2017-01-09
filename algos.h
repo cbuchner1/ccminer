@@ -10,6 +10,7 @@ enum sha_algos {
 	ALGO_BLAKE2S,
 	ALGO_BMW,
 	ALGO_C11,
+	ALGO_CRYPTOLIGHT,
 	ALGO_CRYPTONIGHT,
 	ALGO_DEEP,
 	ALGO_DECRED,
@@ -63,6 +64,7 @@ static const char *algo_names[] = {
 	"blake2s",
 	"bmw",
 	"c11",
+	"cryptolight",
 	"cryptonight",
 	"deep",
 	"decred",
@@ -123,6 +125,8 @@ static inline int algo_to_int(char* arg)
 		// some aliases...
 		if (!strcasecmp("all", arg))
 			i = ALGO_AUTO;
+		else if (!strcasecmp("cryptonight-light", arg))
+			i = ALGO_CRYPTOLIGHT;
 		else if (!strcasecmp("flax", arg))
 			i = ALGO_C11;
 		else if (!strcasecmp("diamond", arg))

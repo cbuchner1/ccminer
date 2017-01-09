@@ -223,6 +223,8 @@ Options:\n\
 			blake2s     Blake2-S 256 (NEVA)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
 			bmw         BMW 256\n\
+			cryptolight AEON cryptonight (MEM/2)\n\
+			cryptonight XMR cryptonight\n\
 			c11/flax    X11 variant\n\
 			decred      Decred Blake256\n\
 			deep        Deepcoin\n\
@@ -620,6 +622,7 @@ static bool work_decode(const json_t *val, struct work *work)
 		data_size = 80;
 		adata_sz = data_size / 4;
 		break;
+	case ALGO_CRYPTOLIGHT:
 	case ALGO_CRYPTONIGHT:
 	case ALGO_WILDKECCAK:
 		return rpc2_job_decode(val, work);
@@ -1767,7 +1770,7 @@ static void *miner_thread(void *userdata)
 			nonceptr = (uint32_t*) (((char*)work.data) + 1);
 			wcmpoft = 2;
 			wcmplen = 32;
-		} else if (opt_algo == ALGO_CRYPTONIGHT) {
+		} else if (opt_algo == ALGO_CRYPTOLIGHT || opt_algo == ALGO_CRYPTONIGHT) {
 			nonceptr = (uint32_t*) (((char*)work.data) + 39);
 			wcmplen = 39;
 		}
@@ -1802,7 +1805,7 @@ static void *miner_thread(void *userdata)
 				extrajob = false;
 				if (stratum_gen_work(&stratum, &g_work))
 					g_work_time = time(NULL);
-				if (opt_algo == ALGO_CRYPTONIGHT)
+				if (opt_algo == ALGO_CRYPTONIGHT || opt_algo == ALGO_CRYPTOLIGHT)
 					nonceptr[0] += 0x100000;
 			}
 		} else {
@@ -1845,7 +1848,7 @@ static void *miner_thread(void *userdata)
 			wcmplen -= 4;
 		}
 
-		if (opt_algo == ALGO_CRYPTONIGHT) {
+		if (opt_algo == ALGO_CRYPTONIGHT || opt_algo == ALGO_CRYPTOLIGHT) {
 			uint32_t oldpos = nonceptr[0];
 			if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
 				memcpy(&work, &g_work, sizeof(struct work));
@@ -2097,6 +2100,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_VELTOR:
 				minmax = 0x80000;
 				break;
+			case ALGO_CRYPTOLIGHT:
 			case ALGO_CRYPTONIGHT:
 			case ALGO_SCRYPT_JANE:
 				minmax = 0x1000;
@@ -2159,6 +2163,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_C11:
 			rc = scanhash_c11(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_CRYPTOLIGHT:
+			rc = scanhash_cryptolight(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_CRYPTONIGHT:
 			rc = scanhash_cryptonight(thr_id, &work, max_nonce, &hashes_done);
@@ -2306,6 +2313,7 @@ static void *miner_thread(void *userdata)
 		// todo: update all algos to use work->nonces and pdata[19] as counter
 		switch (opt_algo) {
 			case ALGO_BLAKE2S:
+			case ALGO_CRYPTOLIGHT:
 			case ALGO_CRYPTONIGHT:
 			case ALGO_DECRED:
 			case ALGO_LBRY:
@@ -2830,7 +2838,7 @@ static void show_usage_and_exit(int status)
 	if (opt_algo == ALGO_SCRYPT || opt_algo == ALGO_SCRYPT_JANE) {
 		printf(scrypt_usage);
 	}
-	if (opt_algo == ALGO_WILDKECCAK || opt_algo == ALGO_CRYPTONIGHT) {
+	if (opt_algo == ALGO_CRYPTONIGHT || opt_algo == ALGO_CRYPTOLIGHT || opt_algo == ALGO_WILDKECCAK) {
 		printf(xmr_usage);
 	}
 	proper_exit(status);
@@ -3685,7 +3693,7 @@ int main(int argc, char *argv[])
 		allow_mininginfo = false;
 	}
 
-	if (opt_algo == ALGO_CRYPTONIGHT) {
+	if (opt_algo == ALGO_CRYPTONIGHT || opt_algo == ALGO_CRYPTOLIGHT) {
 		rpc2_init();
 		if (!opt_quiet) applog(LOG_INFO, "Using JSON-RPC 2.0");
 	}

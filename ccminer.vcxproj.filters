@@ -823,13 +823,19 @@
     <CudaCompile Include="sia\sia.cu">
       <Filter>Source Files\sia</Filter>
     </CudaCompile>
+    <CudaCompile Include="crypto\cryptolight.cu">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </CudaCompile>
+    <CudaCompile Include="crypto\cryptolight-core.cu">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </CudaCompile>
     <CudaCompile Include="crypto\cryptonight.cu">
       <Filter>Source Files\CUDA\xmr</Filter>
     </CudaCompile>
-    <CudaCompile Include="crypto\cuda_cryptonight_core.cu">
+    <CudaCompile Include="crypto\cryptonight-core.cu">
       <Filter>Source Files\CUDA\xmr</Filter>
     </CudaCompile>
-    <CudaCompile Include="crypto\cuda_cryptonight_extra.cu">
+    <CudaCompile Include="crypto\cryptonight-extra.cu">
       <Filter>Source Files\CUDA\xmr</Filter>
     </CudaCompile>
     <CudaCompile Include="crypto\wildkeccak.cu">

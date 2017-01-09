@@ -18,11 +18,10 @@ struct uint3  blockDim;
 #define __shfl(a,b,c) 1
 #endif
 
-
-#define MEMORY         (1 << 21) // 2 MiB / 2097152 B
-#define ITER           (1 << 20) // 1048576
-#define E2I_MASK1       0x1FFFF0
-#define E2I_MASK2      (0x1FFFF0 >> 2)
+#define MEMORY         (1UL << 20) /* 1 MiB - 1048576 */
+#define ITER           (1UL << 19) /* 512k */
+#define E2I_MASK1       0xFFFF0    /* MEMORY / AES_BLOCK_SIZE - 1 = 0xFFFF */
+#define E2I_MASK2       0x3FFFC    /* 0xFFFF0 >> 2 */
 
 #define AES_BLOCK_SIZE  16
 #define AES_KEY_SIZE    32
@@ -112,8 +111,6 @@ struct uint3  blockDim;
     ((uint64_t *)z)[0] = ((uint64_t *)(x))[0] ^ ((uint64_t *)(y))[0]; \
     ((uint64_t *)z)[1] = ((uint64_t *)(x))[1] ^ ((uint64_t *)(y))[1]; }
 
-#define E2I(x) ((size_t)(((*((uint64_t*)(x)) >> 4) & 0x1ffff)))
-
 union hash_state {
   uint8_t b[200];
   uint64_t w[25];
@@ -135,7 +132,7 @@ static inline void exit_if_cudaerror(int thr_id, const char *src, int line)
 		exit(1);
 	}
 }
-void cryptonight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2);
+void cryptolight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2);
 
 void cryptonight_extra_cpu_setData(int thr_id, const void *data, const void *pTargetIn);
 void cryptonight_extra_cpu_init(int thr_id, uint32_t threads);

@@ -235,6 +235,7 @@
     <ClCompile Include="crypto\xmr-rpc.cpp" />
     <ClCompile Include="crypto\aesb.cpp" />
     <ClCompile Include="crypto\oaes_lib.cpp" />
+    <ClCompile Include="crypto\cryptolight-cpu.cpp" />
     <ClCompile Include="crypto\cryptonight-cpu.cpp" />
     <ClCompile Include="crypto\cpu\c_keccak.c" />
     <ClCompile Include="nvapi.cpp" />
@@ -265,13 +266,15 @@
     <CudaCompile Include="Algo256\cuda_bmw.cu">
       <MaxRegCount>76</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="crypto\cryptonight.cu">
-      <MaxRegCount>128</MaxRegCount>
+    <CudaCompile Include="crypto\cryptolight.cu" />
+    <CudaCompile Include="crypto\cryptolight-core.cu">
+      <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="crypto\cuda_cryptonight_core.cu">
-      <MaxRegCount>128</MaxRegCount>
+    <CudaCompile Include="crypto\cryptonight.cu" />
+    <CudaCompile Include="crypto\cryptonight-core.cu">
+      <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="crypto\cuda_cryptonight_extra.cu">
+    <CudaCompile Include="crypto\cryptonight-extra.cu">
       <MaxRegCount>255</MaxRegCount>
     </CudaCompile>
     <ClInclude Include="crypto\cn_aes.cuh" />
@@ -335,8 +338,9 @@
     <ClInclude Include="compat\unistd.h" />
     <ClInclude Include="compat\winansi.h" />
     <ClInclude Include="compat\ccminer-config.h" />
-    <ClInclude Include="crypto\mman.h" />
+    <ClInclude Include="crypto\cryptolight.h" />
     <ClInclude Include="crypto\cryptonight.h" />
+    <ClInclude Include="crypto\mman.h" />
     <ClInclude Include="crypto\wildkeccak.h" />
     <ClInclude Include="crypto\xmr-rpc.h" />
     <ClInclude Include="cuda_groestlcoin.h" />

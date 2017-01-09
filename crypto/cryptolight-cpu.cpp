@@ -2,7 +2,7 @@
 #include <memory.h>
 
 #include "oaes_lib.h"
-#include "cryptonight.h"
+#include "cryptolight.h"
 
 extern "C" {
 #include <sph/sph_blake.h>
@@ -22,7 +22,7 @@ struct cryptonight_ctx {
 	oaes_ctx* aes_ctx;
 };
 
-static void do_blake_hash(const void* input, size_t len, void* output)
+static void do_blake_hash(const void* input, int len, void* output)
 {
 	uchar hash[32];
 	sph_blake256_context ctx;
@@ -33,7 +33,7 @@ static void do_blake_hash(const void* input, size_t len, void* output)
 	memcpy(output, hash, 32);
 }
 
-static void do_groestl_hash(const void* input, size_t len, void* output)
+static void do_groestl_hash(const void* input, int len, void* output)
 {
 	uchar hash[32];
 	sph_groestl256_context ctx;
@@ -43,7 +43,7 @@ static void do_groestl_hash(const void* input, size_t len, void* output)
 	memcpy(output, hash, 32);
 }
 
-static void do_jh_hash(const void* input, size_t len, void* output)
+static void do_jh_hash(const void* input, int len, void* output)
 {
 	uchar hash[64];
 	sph_jh256_context ctx;
@@ -53,7 +53,7 @@ static void do_jh_hash(const void* input, size_t len, void* output)
 	memcpy(output, hash, 32);
 }
 
-static void do_skein_hash(const void* input, size_t len, void* output)
+static void do_skein_hash(const void* input, int len, void* output)
 {
 	uchar hash[32];
 	sph_skein256_context ctx;
@@ -68,7 +68,7 @@ static void keccak_hash_permutation(union hash_state *state) {
 	keccakf((uint64_t*)state, 24);
 }
 
-static void keccak_hash_process(union hash_state *state, const uint8_t *buf, size_t count) {
+static void keccak_hash_process(union hash_state *state, const uint8_t *buf, int count) {
 	keccak1600(buf, (int)count, (uint8_t*)state);
 }
 
@@ -77,7 +77,7 @@ extern "C" int aesb_single_round(const uint8_t *in, uint8_t*out, const uint8_t *
 extern "C" int aesb_pseudo_round_mut(uint8_t *val, uint8_t *expandedKey);
 extern "C" int fast_aesb_pseudo_round_mut(uint8_t *val, uint8_t *expandedKey);
 
-static void (* const extra_hashes[4])(const void*, size_t, void *) = {
+static void (* const extra_hashes[4])(const void*, int, void *) = {
 	do_blake_hash, do_groestl_hash, do_jh_hash, do_skein_hash
 };
 
@@ -108,7 +108,9 @@ static uint64_t mul128(uint64_t multiplier, uint64_t multiplicand, uint64_t* pro
 }
 
 static size_t e2i(const uint8_t* a) {
-	return (*((uint64_t*) a) / AES_BLOCK_SIZE) & (MEMORY / AES_BLOCK_SIZE - 1);
+	//const uint32_t mask = (MEMORY / AES_BLOCK_SIZE - 1);
+	//return (*((uint64_t*) a) / AES_BLOCK_SIZE) & mask;
+	return *((uint64_t*) a) & 0xFFFF0; /* mask * AES_BLOCK_SIZE */
 }
 
 static void mul(const uint8_t* a, const uint8_t* b, uint8_t* res) {
@@ -155,7 +157,7 @@ static void xor_blocks_dst(const uint8_t* a, const uint8_t* b, uint8_t* dst) {
 	((uint64_t*) dst)[1] = ((uint64_t*) a)[1] ^ ((uint64_t*) b)[1];
 }
 
-static void cryptonight_hash_ctx(void* output, const void* input, size_t len, struct cryptonight_ctx* ctx)
+static void cryptolight_hash_ctx(void* output, const void* input, const int len, struct cryptonight_ctx* ctx)
 {
 	size_t i, j;
 	keccak_hash_process(&ctx->state.hs, (const uint8_t*) input, len);
@@ -181,17 +183,17 @@ static void cryptonight_hash_ctx(void* output, const void* input, size_t len, st
 	xor_blocks_dst(&ctx->state.k[16], &ctx->state.k[48], ctx->b);
 
 	for (i = 0; likely(i < ITER / 4); ++i) {
-		j = e2i(ctx->a) * AES_BLOCK_SIZE;
+		j = e2i(ctx->a);
 		aesb_single_round(&ctx->long_state[j], ctx->c, ctx->a);
 		xor_blocks_dst(ctx->c, ctx->b, &ctx->long_state[j]);
 
-		mul_sum_xor_dst(ctx->c, ctx->a, &ctx->long_state[e2i(ctx->c) * AES_BLOCK_SIZE]);
+		mul_sum_xor_dst(ctx->c, ctx->a, &ctx->long_state[e2i(ctx->c)]);
 
-		j = e2i(ctx->a) * AES_BLOCK_SIZE;
+		j = e2i(ctx->a);
 		aesb_single_round(&ctx->long_state[j], ctx->b, ctx->a);
 		xor_blocks_dst(ctx->b, ctx->c, &ctx->long_state[j]);
 
-		mul_sum_xor_dst(ctx->b, ctx->a, &ctx->long_state[e2i(ctx->b) * AES_BLOCK_SIZE]);
+		mul_sum_xor_dst(ctx->b, ctx->a, &ctx->long_state[e2i(ctx->b)]);
 	}
 
 	memcpy(ctx->text, ctx->state.init, INIT_SIZE_BYTE);
@@ -219,9 +221,9 @@ static void cryptonight_hash_ctx(void* output, const void* input, size_t len, st
 	oaes_free((OAES_CTX **) &ctx->aes_ctx);
 }
 
-void cryptonight_hash(void* output, const void* input, size_t len)
+void cryptolight_hash(void* output, const void* input, int len)
 {
 	struct cryptonight_ctx *ctx = (struct cryptonight_ctx*)malloc(sizeof(struct cryptonight_ctx));
-	cryptonight_hash_ctx(output, input, len, ctx);
+	cryptolight_hash_ctx(output, input, len, ctx);
 	free(ctx);
 }
