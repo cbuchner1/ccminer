@@ -8,7 +8,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-#define APIVERSION "1.8"
+#define APIVERSION "1.9"
 
 #ifdef WIN32
 # define  _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -112,6 +112,7 @@ static void gpustatus(int thr_id)
 
 	if (thr_id >= 0 && thr_id < opt_n_threads) {
 		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
+		double khashes_per_watt = 0;
 		int gpuid = cgpu->gpu_id;
 		char buf[512]; *buf = '\0';
 		char* card;
@@ -131,14 +132,24 @@ static void gpustatus(int thr_id)
 		cgpu->rejected = p->rejected_count;
 
 		cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
+		if (cgpu->monitor.gpu_power) {
+			cgpu->gpu_power = cgpu->monitor.gpu_power;
+			khashes_per_watt = (double)cgpu->khashes / cgpu->monitor.gpu_power;
+			khashes_per_watt *= 1000; // power in mW
+			//gpulog(LOG_BLUE, thr_id, "KHW: %g", khashes_per_watt);
+		}
 
 		card = device_name[gpuid];
 
 		snprintf(buf, sizeof(buf), "GPU=%d;BUS=%hd;CARD=%s;TEMP=%.1f;"
-			"POWER=%u;FAN=%hu;RPM=%hu;FREQ=%d;KHS=%.2f;HWF=%d;I=%.1f;THR=%u|",
+			"POWER=%u;FAN=%hu;RPM=%hu;"
+			"FREQ=%u;CORE=%u;MEM=%u;"
+			"KHS=%.2f;KHW=%.5f;"
+			"HWF=%d;I=%.1f;THR=%u|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp,
 			cgpu->gpu_power, cgpu->gpu_fan, cgpu->gpu_fan_rpm,
-			cgpu->gpu_clock, cgpu->khashes,
+			cgpu->gpu_clock, cgpu->monitor.gpu_clock, cgpu->monitor.gpu_memclock,
+			cgpu->khashes, khashes_per_watt,
 			cgpu->hw_errors, cgpu->intensity, cgpu->throughput);
 
 		// append to buffer for multi gpus
@@ -349,7 +360,7 @@ static char *gethistory(char *params)
 	*buffer = '\0';
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_stat;
-		p += sprintf(p, "GPU=%d;H=%u;KHS=%.2f;DIFF=%.6f;"
+		p += sprintf(p, "GPU=%d;H=%u;KHS=%.2f;DIFF=%g;"
 				"COUNT=%u;FOUND=%u;ID=%u;TS=%u|",
 			data[i].gpu_id, data[i].height, data[i].hashrate, data[i].difficulty,
 			data[i].hashcount, data[i].hashfound, data[i].uid, (uint32_t)ts);
@@ -358,7 +369,7 @@ static char *gethistory(char *params)
 }
 
 /**
- * Returns the job scans ranges (debug purpose)
+ * Returns the job scans ranges (debug purpose, only with -D)
  */
 static char *getscanlog(char *params)
 {
@@ -368,9 +379,11 @@ static char *getscanlog(char *params)
 	*buffer = '\0';
 	for (int i = 0; i < records; i++) {
 		time_t ts = data[i].tm_upd;
-		p += sprintf(p, "H=%u;P=%u;JOB=%u;N=%u;FROM=0x%x;SCANTO=0x%x;"
+		p += sprintf(p, "H=%u;P=%u;JOB=%u;ID=%d;DIFF=%g;"
+				"N=0x%x;FROM=0x%x;SCANTO=0x%x;"
 				"COUNT=0x%x;FOUND=%u;TS=%u|",
-			data[i].height, data[i].npool, data[i].njobid, data[i].nonce, data[i].scanned_from, data[i].scanned_to,
+			data[i].height, data[i].npool, data[i].njobid, (int)data[i].job_nonce_id, data[i].sharediff,
+			data[i].nonce, data[i].scanned_from, data[i].scanned_to,
 			(data[i].scanned_to - data[i].scanned_from), data[i].tm_sent ? 1 : 0, (uint32_t)ts);
 	}
 	return buffer;

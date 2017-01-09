@@ -361,6 +361,19 @@ extern void free_scrypt_jane(int thr_id);
 void *api_thread(void *userdata);
 void api_set_throughput(int thr_id, uint32_t throughput);
 
+struct monitor_info {
+	uint32_t gpu_temp;
+	uint32_t gpu_fan;
+	uint32_t gpu_clock;
+	uint32_t gpu_memclock;
+	uint32_t gpu_power;
+
+	pthread_mutex_t lock;
+	pthread_cond_t sampling_signal;
+	volatile bool sampling_flag;
+	uint32_t tm_displayed;
+};
+
 struct cgpu_info {
 	uint8_t gpu_id;
 	uint8_t thr_id;
@@ -391,6 +404,8 @@ struct cgpu_info {
 	char gpu_desc[64];
 	double intensity;
 	uint32_t throughput;
+
+	struct monitor_info monitor;
 };
 
 struct thr_api {

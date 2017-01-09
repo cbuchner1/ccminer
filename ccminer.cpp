@@ -85,6 +85,7 @@ bool opt_debug_threads = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
 bool opt_showdiff = true;
+bool opt_hwmonitor = true;
 
 // todo: limit use of these flags,
 // prefer the pools[] attributes
@@ -183,6 +184,7 @@ struct thr_api *thr_api;
 int longpoll_thr_id = -1;
 int stratum_thr_id = -1;
 int api_thr_id = -1;
+int monitor_thr_id = -1;
 bool stratum_need_reset = false;
 volatile bool abort_flag = false;
 struct work_restart *work_restart = NULL;
@@ -1684,6 +1686,7 @@ static void *miner_thread(void *userdata)
 	int switchn = pool_switch_count;
 	int thr_id = mythr->id;
 	int dev_id = device_map[thr_id % MAX_GPUS];
+	struct cgpu_info * cgpu = &thr_info[thr_id].gpu;
 	struct work work;
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
@@ -2142,6 +2145,11 @@ static void *miner_thread(void *userdata)
 		if (opt_led_mode == LED_MODE_MINING)
 			gpu_led_on(dev_id);
 
+		if (cgpu && loopcnt > 1) {
+			cgpu->monitor.sampling_flag = true;
+			pthread_cond_signal(&cgpu->monitor.sampling_signal);
+		}
+
 		hashes_done = 0;
 		gettimeofday(&tv_start, NULL);
 
@@ -2349,6 +2357,10 @@ static void *miner_thread(void *userdata)
 			applog(LOG_NOTICE, CL_CYN "found => %08x" CL_GRN " %08x", work.nonces[1], swab32(work.nonces[1]));
 
 		timeval_subtract(&diff, &tv_end, &tv_start);
+
+		if (cgpu && diff.tv_sec) { // stop monitoring
+			cgpu->monitor.sampling_flag = false;
+		}
 
 		if (diff.tv_usec || diff.tv_sec) {
 			double dtime = (double) diff.tv_sec + 1e-6 * diff.tv_usec;
@@ -3805,7 +3817,7 @@ int main(int argc, char *argv[])
 	if (!work_restart)
 		return EXIT_CODE_SW_INIT_ERROR;
 
-	thr_info = (struct thr_info *)calloc(opt_n_threads + 4, sizeof(*thr));
+	thr_info = (struct thr_info *)calloc(opt_n_threads + 5, sizeof(*thr));
 	if (!thr_info)
 		return EXIT_CODE_SW_INIT_ERROR;
 
@@ -3914,6 +3926,22 @@ int main(int argc, char *argv[])
 		}
 	}
 
+#ifdef USE_WRAPNVML
+	// to monitor gpu activitity during work, a thread is required
+	if (1) {
+		monitor_thr_id = opt_n_threads + 4;
+		thr = &thr_info[monitor_thr_id];
+		thr->id = monitor_thr_id;
+		thr->q = tq_new();
+		if (!thr->q)
+			return EXIT_CODE_SW_INIT_ERROR;
+		if (unlikely(pthread_create(&thr->pth, NULL, monitor_thread, thr))) {
+			applog(LOG_ERR, "Monitoring thread %d create failed", i);
+			return EXIT_CODE_SW_INIT_ERROR;
+		}
+	}
+#endif
+
 	/* start mining threads */
 	for (i = 0; i < opt_n_threads; i++) {
 		thr = &thr_info[i];
@@ -3925,6 +3953,9 @@ int main(int argc, char *argv[])
 		thr->q = tq_new();
 		if (!thr->q)
 			return EXIT_CODE_SW_INIT_ERROR;
+
+		pthread_mutex_init(&thr->gpu.monitor.lock, NULL);
+		pthread_cond_init(&thr->gpu.monitor.sampling_signal, NULL);
 
 		if (unlikely(pthread_create(&thr->pth, NULL, miner_thread, thr))) {
 			applog(LOG_ERR, "thread %d create failed", i);
@@ -3944,9 +3975,21 @@ int main(int argc, char *argv[])
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 
+	abort_flag = true;
+
 	/* wait for mining threads */
-	for (i = 0; i < opt_n_threads; i++)
+	for (i = 0; i < opt_n_threads; i++) {
+		struct cgpu_info *cgpu = &thr_info[i].gpu;
+		if (monitor_thr_id != -1 && cgpu) {
+			pthread_cond_signal(&cgpu->monitor.sampling_signal);
+		}
 		pthread_join(thr_info[i].pth, NULL);
+	}
+
+	if (monitor_thr_id != -1) {
+		pthread_join(thr_info[monitor_thr_id].pth, NULL);
+		//tq_free(thr_info[monitor_thr_id].q);
+	}
 
 	if (opt_debug)
 		applog(LOG_DEBUG, "workio thread dead, exiting.");

@@ -418,6 +418,25 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 	return ret;
 }
 
+int nvml_get_clocks(nvml_handle *nvmlh, int dev_id, unsigned int *core, unsigned int *mem)
+{
+	int ret = 0;
+	nvmlReturn_t rc;
+	uint32_t gpu_clk = 0, mem_clk = 0;
+	int n = nvmlh->cuda_nvml_device_id[dev_id];
+	if (n < 0 || n >= nvmlh->nvml_gpucount)
+		return -ENODEV;
+
+	if (nvmlh->nvmlDeviceGetClockInfo) {
+		rc = nvmlh->nvmlDeviceGetClockInfo(nvmlh->devs[n], NVML_CLOCK_SM, &gpu_clk);
+		rc = nvmlh->nvmlDeviceGetClockInfo(nvmlh->devs[n], NVML_CLOCK_MEM, &mem_clk);
+		if (rc == NVML_SUCCESS) {
+			*core = gpu_clk; *mem = mem_clk;
+			return 1;
+		}
+	}
+	return ret;
+}
 
 /**
  * Set power state of a device (9xx)
@@ -635,6 +654,21 @@ int nvml_get_fanpcnt(nvml_handle *nvmlh, int cudaindex, unsigned int *fanpcnt)
 	if (rc != NVML_SUCCESS) {
 		return -1;
 	}
+
+	return 0;
+}
+
+
+int nvml_get_current_clocks(int cudaindex, uint32_t *graphics_clock, uint32_t *mem_clock)
+{
+	nvmlReturn_t rc;
+	int gpuindex = hnvml->cuda_nvml_device_id[cudaindex];
+	if (gpuindex < 0 || gpuindex >= hnvml->nvml_gpucount) return -1;
+
+	rc = hnvml->nvmlDeviceGetClockInfo(hnvml->devs[gpuindex], NVML_CLOCK_SM, graphics_clock);
+	if (rc != NVML_SUCCESS) return -1;
+	rc = hnvml->nvmlDeviceGetClockInfo(hnvml->devs[gpuindex], NVML_CLOCK_MEM, mem_clock);
+	if (rc != NVML_SUCCESS) return -1;
 
 	return 0;
 }
@@ -2051,3 +2085,79 @@ void gpu_led_off(int dev_id)
 	}
 #endif
 }
+
+#ifdef USE_WRAPNVML
+extern double thr_hashrates[MAX_GPUS];
+extern bool opt_debug_threads;
+extern bool opt_hwmonitor;
+extern int num_cpus;
+
+void *monitor_thread(void *userdata)
+{
+	//struct thr_info *mythr = (struct thr_info *)userdata;
+	int thr_id = -1;
+
+	while (!abort_flag && !opt_quiet)
+	{
+		// This thread monitors card's power lazily during scans, one at a time...
+		thr_id = (thr_id + 1) % opt_n_threads;
+		struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
+		int dev_id = cgpu->gpu_id; cudaSetDevice(dev_id);
+
+		//applog(LOG_BLUE, "sampling device %d", dev_id);
+		if (hnvml != NULL && cgpu)
+		{
+			uint64_t clock = 0, mem_clock = 0;
+			uint32_t fanpercent = 0, power = 0;
+			double tempC = 0, khs_per_watt = 0;
+			uint32_t counter = 0;
+			int max_loops = 2000;
+
+			pthread_cond_wait(&cgpu->monitor.sampling_signal, &cgpu->monitor.lock);
+
+			do {
+				uint32_t tmp_clock, tmp_memclock;
+				nvml_get_current_clocks(device_map[thr_id], &tmp_clock, &tmp_memclock);
+				clock += tmp_clock;
+				mem_clock += tmp_memclock;
+				tempC += gpu_temp(cgpu);
+				fanpercent += gpu_fanpercent(cgpu);
+				power += gpu_power(cgpu);
+				counter++;
+
+				usleep(50000);
+				if (abort_flag) goto abort;
+
+			} while (cgpu->monitor.sampling_flag && (--max_loops));
+
+			cgpu->monitor.gpu_temp = (uint32_t) (tempC/counter);
+			cgpu->monitor.gpu_fan = fanpercent/counter;
+			cgpu->monitor.gpu_power = power/counter;
+			cgpu->monitor.gpu_clock = (uint32_t) (clock/counter);
+			cgpu->monitor.gpu_memclock = (uint32_t) (mem_clock/counter);
+
+			if (power) {
+				// todo: handle units
+				khs_per_watt = stats_get_speed(thr_id, thr_hashrates[thr_id]) / ((double)power / counter);
+			}
+
+			// todo: not shown on decred
+			if (opt_hwmonitor && (time(NULL) - cgpu->monitor.tm_displayed) > 60) {
+				gpulog(LOG_INFO, thr_id, "%u MHz %.3f kH/W %uW %uC FAN %u%%",
+					cgpu->monitor.gpu_clock/*, cgpu->monitor.gpu_memclock*/,
+					khs_per_watt, cgpu->monitor.gpu_power / 1000,
+					cgpu->monitor.gpu_temp, cgpu->monitor.gpu_fan
+				);
+				cgpu->monitor.tm_displayed = (uint32_t)time(NULL);
+			}
+
+			pthread_mutex_unlock(&cgpu->monitor.lock);
+		}
+		usleep(500); // safety
+	}
+abort:
+	if (opt_debug_threads)
+		applog(LOG_DEBUG, "%s() died", __func__);
+	return NULL;
+}
+#endif

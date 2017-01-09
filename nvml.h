@@ -17,6 +17,8 @@
 
 #include "miner.h"
 
+void *monitor_thread(void *userdata);
+
 typedef void * nvmlDevice_t;
 
 /* our own version of the PCI info struct */
@@ -211,6 +213,8 @@ float gpu_temp(struct cgpu_info *gpu);
 unsigned int gpu_power(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
+
+void gpu_current_clocks(struct cgpu_info *gpu);
 
 // pid/vid, sn and bios rev
 int gpu_info(struct cgpu_info *gpu);
