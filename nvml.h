@@ -214,8 +214,6 @@ unsigned int gpu_power(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
 
-void gpu_current_clocks(struct cgpu_info *gpu);
-
 // pid/vid, sn and bios rev
 int gpu_info(struct cgpu_info *gpu);
 
