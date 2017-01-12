@@ -2,7 +2,7 @@
 #define N_COLS          4
 #define WPOLY           0x011b
 
-static __constant__ uint32_t d_t_fn[1024] = {
+static __constant__ __align__(16) uint32_t d_t_fn[1024] = {
 	0xa56363c6U, 0x847c7cf8U, 0x997777eeU, 0x8d7b7bf6U, 0x0df2f2ffU, 0xbd6b6bd6U, 0xb16f6fdeU, 0x54c5c591U,
 	0x50303060U, 0x03010102U, 0xa96767ceU, 0x7d2b2b56U, 0x19fefee7U, 0x62d7d7b5U, 0xe6abab4dU, 0x9a7676ecU,
 	0x45caca8fU, 0x9d82821fU, 0x40c9c989U, 0x877d7dfaU, 0x15fafaefU, 0xeb5959b2U, 0xc947478eU, 0x0bf0f0fbU,
@@ -136,10 +136,13 @@ static __constant__ uint32_t d_t_fn[1024] = {
 	0x82c34141U, 0x29b09999U, 0x5a772d2dU, 0x1e110f0fU, 0x7bcbb0b0U, 0xa8fc5454U, 0x6dd6bbbbU, 0x2c3a1616U
 };
 
-#define t_fn0(x) (sharedMemory[      (x)])
-#define t_fn1(x) (sharedMemory[256 | (x)])
-#define t_fn2(x) (sharedMemory[512 | (x)])
-#define t_fn3(x) (sharedMemory[768 | (x)])
+#define AS_UINT2(addr) *((uint2*)(addr))
+#define AS_UINT4(addr) *((uint4*)(addr))
+
+#define t_fn0(x) (sharedMemory[x])
+#define t_fn1(x) (sharedMemory[0x100U | (x)])
+#define t_fn2(x) (sharedMemory[0x200U | (x)])
+#define t_fn3(x) (sharedMemory[0x300U | (x)])
 
 #define round(shared, out, x, k) \
 	out[0] = (k)[0] ^ (t_fn0(x[0] & 0xff) ^ t_fn1((x[1] >> 8) & 0xff) ^ t_fn2((x[2] >> 16) & 0xff) ^ t_fn3((x[3] >> 24) & 0xff)); \
@@ -148,60 +151,104 @@ static __constant__ uint32_t d_t_fn[1024] = {
 	out[3] = (k)[3] ^ (t_fn0(x[3] & 0xff) ^ t_fn1((x[0] >> 8) & 0xff) ^ t_fn2((x[1] >> 16) & 0xff) ^ t_fn3((x[2] >> 24) & 0xff));
 
 #define round_u4(shared, out, in, k) \
-	out[0] = (k)[0] ^ t_fn0(in[0].x) ^ t_fn1(in[1].y) ^ t_fn2(in[2].z) ^ t_fn3(in[3].w); \
-	out[1] = (k)[1] ^ t_fn0(in[1].x) ^ t_fn1(in[2].y) ^ t_fn2(in[3].z) ^ t_fn3(in[0].w); \
-	out[2] = (k)[2] ^ t_fn0(in[2].x) ^ t_fn1(in[3].y) ^ t_fn2(in[0].z) ^ t_fn3(in[1].w); \
-	out[3] = (k)[3] ^ t_fn0(in[3].x) ^ t_fn1(in[0].y) ^ t_fn2(in[1].z) ^ t_fn3(in[2].w);
+	((uint32_t*)out)[0] = (k)[0] ^ t_fn0(in[0].x) ^ t_fn1(in[1].y) ^ t_fn2(in[2].z) ^ t_fn3(in[3].w); \
+	((uint32_t*)out)[1] = (k)[1] ^ t_fn0(in[1].x) ^ t_fn1(in[2].y) ^ t_fn2(in[3].z) ^ t_fn3(in[0].w); \
+	((uint32_t*)out)[2] = (k)[2] ^ t_fn0(in[2].x) ^ t_fn1(in[3].y) ^ t_fn2(in[0].z) ^ t_fn3(in[1].w); \
+	((uint32_t*)out)[3] = (k)[3] ^ t_fn0(in[3].x) ^ t_fn1(in[0].y) ^ t_fn2(in[1].z) ^ t_fn3(in[2].w);
+
+#ifdef __INTELLISENSE__
+#define __byte_perm(a,b,c) a
+#endif
+
+#define OFF8_0(x) (x & 0xFFu)
+#define OFF8_1(x) __byte_perm(x, 0x01, 0x5541)
+#define OFF8_2(x) __byte_perm(x, 0x02, 0x5542)
+#define OFF8_3(x) __byte_perm(x, 0x03, 0x5543)
+
+#define SHARED_0(x) sharedMemory[OFF8_0(x)]
+#define SHARED_1(x) sharedMemory[OFF8_1(x)]
+#define SHARED_2(x) sharedMemory[OFF8_2(x)]
+#define SHARED_3(x) sharedMemory[OFF8_3(x)]
 
 __device__ __forceinline__
-void cn_aes_single_round(uint32_t * const sharedMemory, uint32_t * const in32, uint32_t * out, uint32_t * const expandedKey)
+void cn_aes_single_round(uint32_t * const sharedMemory, uint32_t * const in, uint32_t * out, uint32_t* expandedKey)
 {
-	uchar4* in = (uchar4*) in32;
-	out[0] = expandedKey[0] ^ t_fn0(in[0].x) ^ t_fn1(in[1].y) ^ t_fn2(in[2].z) ^ t_fn3(in[3].w);
-	out[1] = expandedKey[1] ^ t_fn0(in[1].x) ^ t_fn1(in[2].y) ^ t_fn2(in[3].z) ^ t_fn3(in[0].w);
-	out[2] = expandedKey[2] ^ t_fn0(in[2].x) ^ t_fn1(in[3].y) ^ t_fn2(in[0].z) ^ t_fn3(in[1].w);
-	out[3] = expandedKey[3] ^ t_fn0(in[3].x) ^ t_fn1(in[0].y) ^ t_fn2(in[1].z) ^ t_fn3(in[2].w);
-	//round(sharedMemory, out, in32, expandedKey);
+	asm("// aes_single_round");
+	out[0] = expandedKey[0] ^ SHARED_0(in[0]) ^ SHARED_1(in[1]) ^ SHARED_2(in[2]) ^ SHARED_3(in[3]);
+	out[1] = expandedKey[1] ^ SHARED_0(in[1]) ^ SHARED_1(in[2]) ^ SHARED_2(in[3]) ^ SHARED_3(in[0]);
+	out[2] = expandedKey[2] ^ SHARED_0(in[2]) ^ SHARED_1(in[3]) ^ SHARED_2(in[0]) ^ SHARED_3(in[1]);
+	out[3] = expandedKey[3] ^ SHARED_0(in[3]) ^ SHARED_1(in[0]) ^ SHARED_2(in[1]) ^ SHARED_3(in[2]);
 }
+
+
+#define round_perm(shared, out, in, k) \
+	out[0] = (k)[0] ^ SHARED_0(in[0]) ^ SHARED_1(in[1]) ^ SHARED_2(in[2]) ^ SHARED_3(in[3]); \
+	out[1] = (k)[1] ^ SHARED_0(in[1]) ^ SHARED_1(in[2]) ^ SHARED_2(in[3]) ^ SHARED_3(in[0]); \
+	out[2] = (k)[2] ^ SHARED_0(in[2]) ^ SHARED_1(in[3]) ^ SHARED_2(in[0]) ^ SHARED_3(in[1]); \
+	out[3] = (k)[3] ^ SHARED_0(in[3]) ^ SHARED_1(in[0]) ^ SHARED_2(in[1]) ^ SHARED_3(in[2]);
 
 __device__ __forceinline__
 void cn_aes_pseudo_round_mut(const uint32_t * sharedMemory, uint32_t * val, const uint32_t * expandedKey)
 {
+	asm("// aes_pseudo_round_mut");
+#if 0
+	uchar4 x[4];
+	uchar4* in = (uchar4*)val;
+	round_u4(sharedMemory, x, in, expandedKey);
+	round_u4(sharedMemory, in, x, expandedKey + (1 * N_COLS));
+	round_u4(sharedMemory, x, in, expandedKey + (2 * N_COLS));
+	round_u4(sharedMemory, in, x, expandedKey + (3 * N_COLS));
+	round_u4(sharedMemory, x, in, expandedKey + (4 * N_COLS));
+	round_u4(sharedMemory, in, x, expandedKey + (5 * N_COLS));
+	round_u4(sharedMemory, x, in, expandedKey + (6 * N_COLS));
+	round_u4(sharedMemory, in, x, expandedKey + (7 * N_COLS));
+	round_u4(sharedMemory, x, in, expandedKey + (8 * N_COLS));
+	round_u4(sharedMemory, val,x, expandedKey + (9 * N_COLS));
+#else
 	uint32_t b[4];
-	uchar4* x = (uchar4*) b;
-	round(sharedMemory, b, val, expandedKey);
-	round_u4(sharedMemory, val, x, expandedKey + 1 * N_COLS);
-	round(sharedMemory, b, val, expandedKey + 2 * N_COLS);
-	round_u4(sharedMemory, val, x, expandedKey + 3 * N_COLS);
-	round(sharedMemory, b, val, expandedKey + 4 * N_COLS);
-	round_u4(sharedMemory, val, x, expandedKey + 5 * N_COLS);
-	round(sharedMemory, b, val, expandedKey + 6 * N_COLS);
-	round_u4(sharedMemory, val, x, expandedKey + 7 * N_COLS);
-	round(sharedMemory, b, val, expandedKey + 8 * N_COLS);
-	round_u4(sharedMemory, val, x, expandedKey + 9 * N_COLS);
+	round_perm(sharedMemory, b, val, expandedKey);
+	round_perm(sharedMemory, val, b, expandedKey + (1 * N_COLS));
+	round_perm(sharedMemory, b, val, expandedKey + (2 * N_COLS));
+	round_perm(sharedMemory, val, b, expandedKey + (3 * N_COLS));
+	round_perm(sharedMemory, b, val, expandedKey + (4 * N_COLS));
+	round_perm(sharedMemory, val, b, expandedKey + (5 * N_COLS));
+	round_perm(sharedMemory, b, val, expandedKey + (6 * N_COLS));
+	round_perm(sharedMemory, val, b, expandedKey + (7 * N_COLS));
+	round_perm(sharedMemory, b, val, expandedKey + (8 * N_COLS));
+	round_perm(sharedMemory, val, b, expandedKey + (9 * N_COLS));
+#endif
 }
 
 __device__ __forceinline__
-void cn_aes_gpu_init(uint32_t *sharedMemory)
+void cn_aes_gpu_init(uint32_t* sharedMemory)
 {
 	if(blockDim.x >= 32)
 	{
-		if(threadIdx.x < 32)
-		{
-			for(int i = 0; i < 1024; i += 32)
-			{
+		if(threadIdx.x < 32) {
+#if 0
+			#pragma unroll 32
+			for(uint32_t i = 0; i < 1024; i += 32)
 				sharedMemory[threadIdx.x + i] = d_t_fn[threadIdx.x + i];
-			}
+#else
+			#define thrX (threadIdx.x << 2) // ensure offsets aligned (16) to vector
+			#pragma unroll 8
+			for (uint32_t i = 0; i < 1024; i += 128) // 32x32 = 1024, 8 * 128 also
+				AS_UINT4(&sharedMemory[i + thrX]) = AS_UINT4(&d_t_fn[i + thrX]);
+#endif
 		}
 
 	} else {
 
-		if(threadIdx.x < 4)
-		{
-			for(int i = 0; i < 1024; i += 4)
-			{
+		if(threadIdx.x < 4) {
+#if 0
+			for (uint32_t i = 0; i < 1024; i += 4)
 				sharedMemory[threadIdx.x + i] = d_t_fn[threadIdx.x + i];
-			}
+#else
+			#define thrX (threadIdx.x << 2) // ensure offsets aligned (16) to vector
+			#pragma unroll 64
+			for (uint32_t i = 0; i < 1024; i += 16)
+				AS_UINT4(&sharedMemory[i + thrX]) = AS_UINT4(&d_t_fn[i + thrX]);
+#endif
 		}
 	}
 }

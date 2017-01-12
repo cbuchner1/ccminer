@@ -16,6 +16,7 @@ struct uint3  blockDim;
 #define __syncthreads()
 #define asm(x)
 #define __shfl(a,b,c) 1
+#define __umul64hi(a,b) a*b
 #endif
 
 

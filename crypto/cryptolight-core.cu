@@ -11,8 +11,8 @@
 #define LONG_SHL_IDX 18
 #define LONG_LOOPS32 0x40000
 
-#ifdef WIN32 /* todo: --interactive */
-static __thread int cn_bfactor = 8;
+#ifdef WIN32
+static __thread int cn_bfactor = 11;
 static __thread int cn_bsleep = 100;
 #else
 static __thread int cn_bfactor = 0;
@@ -38,7 +38,7 @@ __device__ __forceinline__ uint64_t cuda_mul128(uint64_t multiplier, uint64_t mu
 __global__
 void cryptolight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state, uint32_t * __restrict__ ctx_state, uint32_t * __restrict__ ctx_key1)
 {
-	__shared__ uint32_t sharedMemory[1024];
+	__shared__ uint32_t __align__(16) sharedMemory[1024];
 
 	cn_aes_gpu_init(sharedMemory);
 
@@ -47,16 +47,23 @@ void cryptolight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state
 
 	if(thread < threads)
 	{
-		uint32_t key[40], text[4];
+		const int oft = thread * 50 + sub + 16; // not aligned 16!
+		const int long_oft = (thread << LONG_SHL_IDX) + sub;
+		uint32_t __align__(16) key[40];
+		uint32_t __align__(16) text[4];
 
-		MEMCPY8(key, ctx_key1 + thread * 40, 20);
-		MEMCPY8(text, ctx_state + thread * 50 + sub + 16, 2);
+		// copy 160 bytes
+		#pragma unroll
+		for (int i = 0; i < 40; i += 4)
+			AS_UINT4(&key[i]) = AS_UINT4(ctx_key1 + thread * 40 + i);
+
+		AS_UINT2(&text[0]) = AS_UINT2(&ctx_state[oft]);
+		AS_UINT2(&text[2]) = AS_UINT2(&ctx_state[oft + 2]);
 
 		__syncthreads();
-		for(int i = 0; i < LONG_LOOPS32; i += 32)
-		{
+		for(int i = 0; i < LONG_LOOPS32; i += 32) {
 			cn_aes_pseudo_round_mut(sharedMemory, text, key);
-			MEMCPY8(&long_state[(thread << LONG_SHL_IDX) + sub + i], text, 2);
+			AS_UINT4(&long_state[long_oft + i]) = AS_UINT4(text);
 		}
 	}
 }
@@ -64,7 +71,7 @@ void cryptolight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state
 __global__
 void cryptolight_core_gpu_phase2(const int threads, const int bfactor, const int partidx, uint32_t * d_long_state, uint32_t * d_ctx_a, uint32_t * d_ctx_b)
 {
-	__shared__ uint32_t sharedMemory[1024];
+	__shared__ uint32_t __align__(16) sharedMemory[1024];
 
 	cn_aes_gpu_init(sharedMemory);
 
@@ -176,21 +183,22 @@ void cryptolight_core_gpu_phase2(const int threads, const int bfactor, const int
 
 	const int thread = blockDim.x * blockIdx.x + threadIdx.x;
 
-	if(thread < threads)
+	if (thread < threads)
 	{
 		const int batchsize = ITER >> (2 + bfactor);
 		const int start = partidx * batchsize;
 		const int end = start + batchsize;
-		const off_t longptr = (off_t) thread << LONG_SHL_IDX;
+		const int longptr = thread << LONG_SHL_IDX;
 		uint32_t * long_state = &d_long_state[longptr];
-		uint32_t * ctx_a = &d_ctx_a[thread * 4];
-		uint32_t * ctx_b = &d_ctx_b[thread * 4];
-		uint32_t a[4], b[4];
 
-		MEMCPY8(a, ctx_a, 2);
-		MEMCPY8(b, ctx_b, 2);
+		uint64_t * ctx_a = (uint64_t*)(&d_ctx_a[thread * 4]);
+		uint64_t * ctx_b = (uint64_t*)(&d_ctx_b[thread * 4]);
+		uint4 A = AS_UINT4(ctx_a);
+		uint4 B = AS_UINT4(ctx_b);
+		uint32_t* a = (uint32_t*)&A;
+		uint32_t* b = (uint32_t*)&B;
 
-		for(int i = start; i < end; i++) // end = 262144
+		for (int i = start; i < end; i++) // end = 262144
 		{
 			uint32_t c[4];
 			uint32_t j = (a[0] >> 2) & E2I_MASK2;
@@ -204,43 +212,50 @@ void cryptolight_core_gpu_phase2(const int threads, const int bfactor, const int
 			MUL_SUM_XOR_DST(b, a, &long_state[(b[0] >> 2) & E2I_MASK2]);
 		}
 
-		if(bfactor > 0)
-		{
-			MEMCPY8(ctx_a, a, 2);
-			MEMCPY8(ctx_b, b, 2);
+		if (bfactor > 0) {
+			AS_UINT4(ctx_a) = A;
+			AS_UINT4(ctx_b) = B;
 		}
 	}
-
 #endif // __CUDA_ARCH__ >= 300
 }
 
 __global__
-void cryptolight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long_state, uint32_t * __restrict__ d_ctx_state, uint32_t * __restrict__ d_ctx_key2)
+void cryptolight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long_state, uint32_t * __restrict__ ctx_state, uint32_t * __restrict__ ctx_key2)
 {
-	__shared__ uint32_t sharedMemory[1024];
+	__shared__ uint32_t __align__(16) sharedMemory[1024];
 
 	cn_aes_gpu_init(sharedMemory);
 
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 3;
-	int sub = (threadIdx.x & 7) << 2;
+	const int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 3;
+	const int sub = (threadIdx.x & 7) << 2;
 
 	if(thread < threads)
 	{
-		uint32_t key[40], text[4];
-		MEMCPY8(key, d_ctx_key2 + thread * 40, 20);
-		MEMCPY8(text, d_ctx_state + thread * 50 + sub + 16, 2);
+		const int long_oft = (thread << LONG_SHL_IDX) + sub;
+		const int oft = thread * 50 + sub + 16;
+		uint32_t __align__(16) key[40];
+		uint32_t __align__(8) text[4];
+
+		#pragma unroll
+		for (int i = 0; i < 40; i += 4)
+			AS_UINT4(&key[i]) = AS_UINT4(ctx_key2 + thread * 40 + i);
+
+		AS_UINT2(&text[0]) = AS_UINT2(&ctx_state[oft + 0]);
+		AS_UINT2(&text[2]) = AS_UINT2(&ctx_state[oft + 2]);
 
 		__syncthreads();
 		for(int i = 0; i < LONG_LOOPS32; i += 32)
 		{
 			#pragma unroll
 			for(int j = 0; j < 4; j++)
-				text[j] ^= long_state[(thread << LONG_SHL_IDX) + sub + i + j];
+				text[j] ^= long_state[long_oft + i + j];
 
 			cn_aes_pseudo_round_mut(sharedMemory, text, key);
 		}
 
-		MEMCPY8(d_ctx_state + thread * 50 + sub + 16, text, 2);
+		AS_UINT2(&ctx_state[oft + 0]) = AS_UINT2(&text[0]);
+		AS_UINT2(&ctx_state[oft + 2]) = AS_UINT2(&text[2]);
 	}
 }
 

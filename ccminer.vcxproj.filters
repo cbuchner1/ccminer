@@ -303,6 +303,9 @@
     <ClCompile Include="crypto\oaes_lib.cpp">
       <Filter>Source Files\crypto\xmr</Filter>
     </ClCompile>
+    <ClCompile Include="crypto\cryptolight-cpu.cpp">
+      <Filter>Source Files\crypto\xmr</Filter>
+    </ClCompile>
     <ClCompile Include="crypto\cryptonight-cpu.cpp">
       <Filter>Source Files\crypto\xmr</Filter>
     </ClCompile>
@@ -540,6 +543,9 @@
       <Filter>Source Files\CUDA\xmr</Filter>
     </ClInclude>
     <ClInclude Include="crypto\cn_skein.cuh">
+      <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="crypto\cryptolight.h">
       <Filter>Source Files\CUDA\xmr</Filter>
     </ClInclude>
     <ClInclude Include="crypto\cryptonight.h">
