@@ -146,7 +146,8 @@ int device_singlememory[MAX_GPUS] = { 0 };
 // implemented scrypt options
 int parallel = 2; // All should be made on GPU
 char *device_config[MAX_GPUS] = { 0 };
-int device_backoff[MAX_GPUS] = { 0 };
+int device_backoff[MAX_GPUS] = { 0 }; // scrypt
+int device_bfactor[MAX_GPUS] = { 0 }; // cryptonight
 int device_lookup_gap[MAX_GPUS] = { 0 };
 int device_interactive[MAX_GPUS] = { 0 };
 int opt_nfactor = 0;
@@ -371,8 +372,9 @@ struct option options[] = {
 	{ "interactive", 1, NULL, 1050 },  // scrypt
 	{ "lookup-gap", 1, NULL, 'L' },    // scrypt
 	{ "texture-cache", 1, NULL, 1051 },// scrypt
-	{ "launch-config", 1, NULL, 'l' }, // scrypt & bbr
+	{ "launch-config", 1, NULL, 'l' }, // scrypt bbr xmr
 	{ "scratchpad", 1, NULL, 'k' },    // bbr
+	{ "bfactor", 1, NULL, 1055 },      // xmr
 	{ "max-temp", 1, NULL, 1060 },
 	{ "max-diff", 1, NULL, 1061 },
 	{ "max-rate", 1, NULL, 1062 },
@@ -442,7 +444,16 @@ Scrypt specific options:\n\
 ";
 
 static char const xmr_usage[] = "\n\
-CryptoNote specific options:\n\
+CryptoNight specific options:\n\
+  -l, --launch-config   gives the launch configuration for each kernel\n\
+                        in a comma separated list, one per device.\n\
+      --bfactor=[0-12]  Run Cryptonight core kernel in smaller pieces,\n\
+                        From 0 (ui freeze) to 12 (smooth), win default is 11\n\
+                        This is a per-device setting like the launch config.\n\
+";
+
+static char const bbr_usage[] = "\n\
+Boolberry specific options:\n\
   -l, --launch-config   gives the launch configuration for each kernel\n\
                         in a comma separated list, one per device.\n\
   -k, --scratchpad url  Url used to download the scratchpad cache.\n\
@@ -2441,6 +2452,7 @@ static void *miner_thread(void *userdata)
 			if (opt_led_mode == LED_MODE_SHARES)
 				gpu_led_percent(dev_id, 50);
 
+			work.submit_nonce_id = 0;
 			nonceptr[0] = work.nonces[0];
 			if (!submit_work(mythr, &work))
 				break;
@@ -2468,6 +2480,7 @@ static void *miner_thread(void *userdata)
 				if (!submit_work(mythr, &work))
 					break;
 				nonceptr[0] = curnonce;
+				work.nonces[1] = 0; // reset
 			}
 		}
 	}
@@ -2852,11 +2865,15 @@ static void show_usage_and_exit(int status)
 		fprintf(stderr, "Try `" PROGRAM_NAME " --help' for more information.\n");
 	else
 		printf(usage);
+
 	if (opt_algo == ALGO_SCRYPT || opt_algo == ALGO_SCRYPT_JANE) {
 		printf(scrypt_usage);
 	}
-	if (opt_algo == ALGO_CRYPTONIGHT || opt_algo == ALGO_CRYPTOLIGHT || opt_algo == ALGO_WILDKECCAK) {
+	else if (opt_algo == ALGO_CRYPTONIGHT || opt_algo == ALGO_CRYPTOLIGHT) {
 		printf(xmr_usage);
+	}
+	else if (opt_algo == ALGO_WILDKECCAK) {
+		printf(bbr_usage);
 	}
 	proper_exit(status);
 }
@@ -3185,6 +3202,20 @@ void parse_arg(int key, char *arg)
 			}
 			while (n < MAX_GPUS)
 				device_texturecache[n++] = last;
+		}
+		break;
+	case 1055: /* cryptonight --bfactor */
+		{
+			char *pch = strtok(arg, ",");
+			int n = 0, last = atoi(arg);
+			while (pch != NULL) {
+				last = atoi(pch);
+				if (last > 15) last = 15;
+				device_bfactor[n++] = last;
+				pch = strtok(NULL, ",");
+			}
+			while (n < MAX_GPUS)
+				device_bfactor[n++] = last;
 		}
 		break;
 	case 1070: /* --gpu-clock */
@@ -3659,6 +3690,7 @@ int main(int argc, char *argv[])
 		device_name[i] = NULL;
 		device_config[i] = NULL;
 		device_backoff[i] = is_windows() ? 12 : 2;
+		device_bfactor[i] = is_windows() ? 11 : 0;
 		device_lookup_gap[i] = 1;
 		device_batchsize[i] = 1024;
 		device_interactive[i] = -1;

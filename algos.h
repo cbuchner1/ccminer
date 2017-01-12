@@ -127,6 +127,8 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_AUTO;
 		else if (!strcasecmp("cryptonight-light", arg))
 			i = ALGO_CRYPTOLIGHT;
+		else if (!strcasecmp("cryptonight-lite", arg))
+			i = ALGO_CRYPTOLIGHT;
 		else if (!strcasecmp("flax", arg))
 			i = ALGO_C11;
 		else if (!strcasecmp("diamond", arg))

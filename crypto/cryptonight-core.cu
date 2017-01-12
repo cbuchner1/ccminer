@@ -4,21 +4,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include <cuda.h>
-#include <cuda_runtime.h>
-
 #include "cryptonight.h"
 #define LONG_SHL_IDX 19
 #define LONG_LOOPS32 0x80000
-
-#ifdef WIN32
-// to prevent ui freeze
-static __thread int cn_bfactor = 11;
-static __thread int cn_bsleep = 100;
-#else
-static __thread int cn_bfactor = 0;
-static __thread int cn_bsleep = 0;
-#endif
 
 #include "cn_aes.cuh"
 
@@ -264,6 +252,8 @@ void cryptonight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long
 	}
 }
 
+extern int device_bfactor[MAX_GPUS];
+
 __host__
 void cryptonight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2)
 {
@@ -272,8 +262,8 @@ void cryptonight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_
 	dim3 block4(threads << 2);
 	dim3 block8(threads << 3);
 
-	const int bfactor = cn_bfactor; // device_bfactor[thr_id];
-	const int bsleep = cn_bsleep; //device_bsleep[thr_id];
+	const int bfactor = device_bfactor[thr_id];
+	const int bsleep = bfactor ? 100 : 0;
 
 	int i, partcount = 1 << bfactor;
 	int dev_id = device_map[thr_id];

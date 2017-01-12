@@ -57,7 +57,7 @@ Vertcoin Lyra2RE
 Ziftrcoin (ZR5)
 Boolberry (Wild Keccak)
 Monero (Cryptonight)
-Aeon (Cryptonight-light)
+Aeon (Cryptonight-lite)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
 over competing AMD (OpenCL Only) implementations.
@@ -193,11 +193,16 @@ Scrypt specific options:
                         cache for mining. Kepler devices may profit.
       --no-autotune     disable auto-tuning of kernel launch parameters
 
-
-XMR and Wildkeccak specific:
+CryptoNight specific options:
   -l, --launch-config   gives the launch configuration for each kernel
                         in a comma separated list, one per device.
+      --bfactor=[0-12]  Run Cryptonight core kernel in smaller pieces,
+                        From 0 (ui freeze) to 12 (smooth), win default is 11
+                        This is a per-device setting like the launch config.
+
 Wildkeccak specific:
+  -l, --launch-config   gives the launch configuration for each kernel
+                        in a comma separated list, one per device.
   -k, --scratchpad url  Url used to download the scratchpad cache.
 
 
