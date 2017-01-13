@@ -8,8 +8,6 @@
 #define LONG_SHL_IDX 18
 #define LONG_LOOPS32 0x40000
 
-extern int device_backoff[MAX_GPUS];
-
 #include "cn_aes.cuh"
 
 #define MUL_SUM_XOR_DST(a,c,dst) { \
@@ -27,7 +25,7 @@ __device__ __forceinline__ uint64_t cuda_mul128(uint64_t multiplier, uint64_t mu
 }
 
 __global__
-void cryptolight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state, uint32_t * __restrict__ ctx_state, uint32_t * __restrict__ ctx_key1)
+void cryptolight_core_gpu_phase1(int threads, uint32_t * long_state, uint32_t * ctx_state, uint32_t * ctx_key1)
 {
 	__shared__ uint32_t __align__(16) sharedMemory[1024];
 
@@ -38,7 +36,7 @@ void cryptolight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state
 
 	if(thread < threads)
 	{
-		const int oft = thread * 50 + sub + 16; // not aligned 16!
+		const int oft = thread * 52 + sub + 16; // not aligned 16!
 		const int long_oft = (thread << LONG_SHL_IDX) + sub;
 		uint32_t __align__(16) key[40];
 		uint32_t __align__(16) text[4];
@@ -212,7 +210,7 @@ void cryptolight_core_gpu_phase2(const int threads, const int bfactor, const int
 }
 
 __global__
-void cryptolight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long_state, uint32_t * __restrict__ ctx_state, uint32_t * __restrict__ ctx_key2)
+void cryptolight_core_gpu_phase3(int threads, const uint32_t * long_state, uint32_t * ctx_state, uint32_t * ctx_key2)
 {
 	__shared__ uint32_t __align__(16) sharedMemory[1024];
 
@@ -224,9 +222,9 @@ void cryptolight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long
 	if(thread < threads)
 	{
 		const int long_oft = (thread << LONG_SHL_IDX) + sub;
-		const int oft = thread * 50 + sub + 16;
+		const int oft = thread * 52 + sub + 16;
 		uint32_t __align__(16) key[40];
-		uint32_t __align__(8) text[4];
+		uint32_t __align__(16) text[4];
 
 		#pragma unroll
 		for (int i = 0; i < 40; i += 4)
@@ -253,7 +251,8 @@ void cryptolight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long
 extern int device_bfactor[MAX_GPUS];
 
 __host__
-void cryptolight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2)
+void cryptolight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint64_t *d_ctx_state,
+	uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2)
 {
 	dim3 grid(blocks);
 	dim3 block(threads);
@@ -266,7 +265,7 @@ void cryptolight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_
 	int i, partcount = 1 << bfactor;
 	int dev_id = device_map[thr_id];
 
-	cryptolight_core_gpu_phase1 <<<grid, block8 >>>(blocks*threads, d_long_state, d_ctx_state, d_ctx_key1);
+	cryptolight_core_gpu_phase1 <<<grid, block8 >>>(blocks*threads, d_long_state, (uint32_t*)d_ctx_state, d_ctx_key1);
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 	if(partcount > 1) usleep(bsleep);
 
@@ -277,6 +276,6 @@ void cryptolight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_
 		if(partcount > 1) usleep(bsleep);
 	}
 
-	cryptolight_core_gpu_phase3 <<<grid, block8 >>>(blocks*threads, d_long_state, d_ctx_state, d_ctx_key2);
+	cryptolight_core_gpu_phase3 <<<grid, block8 >>>(blocks*threads, d_long_state, (uint32_t*)d_ctx_state, d_ctx_key2);
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 }
