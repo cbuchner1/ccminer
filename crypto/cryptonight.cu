@@ -3,8 +3,13 @@
 
 extern char *device_config[MAX_GPUS]; // -l 32x16
 
-static __thread uint32_t cn_blocks  = 32;
-static __thread uint32_t cn_threads = 16;
+static __thread uint32_t cn_blocks;
+static __thread uint32_t cn_threads;
+
+// used for gpu intensity on algo init
+static __thread bool gpu_init_shown = false;
+#define gpulog_init(p,thr,fmt, ...) if (!gpu_init_shown) \
+	gpulog(p, thr, fmt, ##__VA_ARGS__)
 
 static uint32_t *d_long_state[MAX_GPUS];
 static uint64_t *d_ctx_state[MAX_GPUS];
@@ -26,6 +31,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 	uint32_t *nonceptr = (uint32_t*) (&pdata[39]);
 	const uint32_t first_nonce = *nonceptr;
 	uint32_t nonce = first_nonce;
+	int dev_id = device_map[thr_id];
 
 	if(opt_benchmark) {
 		ptarget[7] = 0x00ff;
@@ -33,19 +39,29 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 
 	if(!init[thr_id])
 	{
+		int mem = cuda_available_memory(thr_id);
+		int mul = device_sm[dev_id] >= 300 ? 4 : 1; // see cryptonight-core.cu
+		cn_threads = device_sm[dev_id] >= 600 ? 16 : 8; // real TPB is x4 on SM3+
+		cn_blocks = device_mpcount[dev_id] * 4;
+		if (cn_blocks*cn_threads*2.2 > mem) cn_blocks = device_mpcount[dev_id] * 2;
+
+		if (!opt_quiet)
+			gpulog_init(LOG_INFO, thr_id, "%s, %d MB available, %hd SMX", device_name[dev_id],
+				mem, device_mpcount[dev_id]);
+
 		if (device_config[thr_id]) {
-			sscanf(device_config[thr_id], "%ux%u", &cn_blocks, &cn_threads);
+			int res = sscanf(device_config[thr_id], "%ux%u", &cn_blocks, &cn_threads);
 			throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
-			gpulog(LOG_INFO, thr_id, "Using %u x %u kernel launch config, %u threads",
-				cn_blocks, cn_threads, throughput);
+			gpulog_init(LOG_INFO, thr_id, "Using %ux%u(x%d) kernel launch config, %u threads",
+				cn_blocks, cn_threads, mul, throughput);
 		} else {
 			throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
 			if (throughput != cn_blocks*cn_threads && cn_threads) {
 				cn_blocks = throughput / cn_threads;
 				throughput = cn_threads * cn_blocks;
 			}
-			gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u threads (%ux%u)",
-				throughput2intensity(throughput), throughput, cn_blocks, cn_threads);
+			gpulog_init(LOG_INFO, thr_id, "%u threads (%g) with %u blocks",// of %ux%d",
+				throughput, throughput2intensity(throughput), cn_blocks);//, cn_threads, mul);
 		}
 
 		if(sizeof(size_t) == 4 && throughput > UINT32_MAX / MEMORY) {
@@ -67,7 +83,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 
 		cudaMalloc(&d_long_state[thr_id], alloc);
 		exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
-		cudaMalloc(&d_ctx_state[thr_id], 208 * throughput); // 200 is aligned 8, not 16
+		cudaMalloc(&d_ctx_state[thr_id], 208 * throughput); // 52*4 (200 is not aligned 16)
 		exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 		cudaMalloc(&d_ctx_key1[thr_id], 40 * sizeof(uint32_t) * throughput);
 		exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
@@ -80,6 +96,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 		cudaMalloc(&d_ctx_b[thr_id], 4 * sizeof(uint32_t) * throughput);
 		exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 
+		gpu_init_shown = true;
 		init[thr_id] = true;
 	}
 

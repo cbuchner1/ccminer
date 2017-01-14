@@ -25,7 +25,7 @@
 
 extern "C" short device_map[MAX_GPUS];
 extern "C"  long device_sm[MAX_GPUS];
-
+extern short device_mpcount[MAX_GPUS];
 extern int cuda_arch[MAX_GPUS];
 
 // common functions

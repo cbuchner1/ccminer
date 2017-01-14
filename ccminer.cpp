@@ -128,6 +128,7 @@ int active_gpus;
 char * device_name[MAX_GPUS];
 short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
+short device_mpcount[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 uint32_t device_gpu_clocks[MAX_GPUS] = { 0 };
 uint32_t device_mem_clocks[MAX_GPUS] = { 0 };

@@ -519,6 +519,7 @@ extern double stratum_diff;
 //#define MAX_THREADS 32 todo
 extern char* device_name[MAX_GPUS];
 extern short device_map[MAX_GPUS];
+extern short device_mpcount[MAX_GPUS];
 extern long  device_sm[MAX_GPUS];
 extern uint32_t gpus_intensity[MAX_GPUS];
 extern int opt_cudaschedule;
@@ -576,6 +577,7 @@ void cuda_clear_lasterror();
 extern void format_hashrate(double hashrate, char *output);
 extern void applog(int prio, const char *fmt, ...);
 extern void gpulog(int prio, int thr_id, const char *fmt, ...);
+
 void get_defconfig_path(char *out, size_t bufsize, char *argv0);
 extern void cbin2hex(char *out, const char *in, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);
