@@ -43,8 +43,9 @@ static const char _NR[] = {
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #include <process.h>
+#define getpid() _getpid()
 #else
 #include <sys/types.h>
 #include <unistd.h>
