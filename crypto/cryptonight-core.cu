@@ -32,12 +32,14 @@ void cryptonight_core_gpu_phase1(const uint32_t threads, uint32_t * long_state, 
 		for (uint32_t i = 0; i < 40U; i += 4U)
 			AS_UINT4(&key[i]) = AS_UINT4(&ctx_key[i]);
 
-		__threadfence_block();
+		__syncthreads();
 
 		for(uint32_t i = 0; i < LONG_LOOPS32; i += 32U) {
 			cn_aes_pseudo_round_mut(sharedMemory, (uint32_t*) &text, key);
 			AS_UL2(&long_state[long_oft + i]) = text;
 		}
+	} else {
+		__syncthreads();
 	}
 }
 
@@ -79,8 +81,8 @@ void cryptonight_core_gpu_phase2(const uint32_t threads, const uint32_t bfactor,
 {
 	__shared__ __align__(16) uint32_t sharedMemory[1024];
 
-//	cn_aes_gpu_init(sharedMemory);
-//	__syncthreads();
+	cn_aes_gpu_init(sharedMemory);
+	__syncthreads();
 
 	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -125,7 +127,7 @@ void cryptonight_core_gpu_phase3(const uint32_t threads, const uint32_t * __rest
 {
 	__shared__ __align__(16) uint32_t sharedMemory[1024];
 
-	//cn_aes_gpu_init(sharedMemory);
+	cn_aes_gpu_init(sharedMemory);
 
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 3U;
 	const uint32_t sub = (threadIdx.x & 7U) << 2U;
@@ -144,7 +146,7 @@ void cryptonight_core_gpu_phase3(const uint32_t threads, const uint32_t * __rest
 		for (uint32_t i = 0; i < 40U; i += 4U)
 			AS_UL2(&key[i]) = AS_UL2(&ctx_key[i]);
 
-		//__syncthreads();
+		__syncthreads();
 		for(uint32_t i = 0; i < LONG_LOOPS32; i += 32U)
 		{
 			ulonglong2 st = AS_UL2(&long_state[long_oft + i]);
@@ -153,13 +155,15 @@ void cryptonight_core_gpu_phase3(const uint32_t threads, const uint32_t * __rest
 		}
 
 		AS_UL2(&ctx_state[st_oft]) = text;
+	} else {
+		__syncthreads();
 	}
 }
 
 extern int device_bfactor[MAX_GPUS];
 
 __host__
-void cryptonight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint64_t *d_ctx_state,
+void cryptonight_core_cuda(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint64_t *d_ctx_state,
 	uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2)
 {
 	dim3 grid(blocks);
@@ -174,20 +178,19 @@ void cryptonight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_
 
 	const int bsleep = bfactor ? 100 : 0;
 	const int dev_id = device_map[thr_id];
-	int i;
 
-	cryptonight_core_gpu_phase1 <<<grid, block8, 4096>>> (throughput, d_long_state, (uint32_t*)d_ctx_state, d_ctx_key1);
+	cryptonight_core_gpu_phase1 <<<grid, block8>>> (throughput, d_long_state, (uint32_t*)d_ctx_state, d_ctx_key1);
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 	if(partcount > 1) usleep(bsleep);
 
-	for(i = 0; i < partcount; i++)
+	for (uint32_t i = 0; i < partcount; i++)
 	{
 		dim3 b = device_sm[dev_id] >= 300 ? block4 : block;
-		cryptonight_core_gpu_phase2 <<<grid, b, 4096>>> (throughput, bfactor, i, d_long_state, d_ctx_a, d_ctx_b);
+		cryptonight_core_gpu_phase2 <<<grid, b>>> (throughput, bfactor, i, d_long_state, d_ctx_a, d_ctx_b);
 		exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 		if(partcount > 1) usleep(bsleep);
 	}
 
-	cryptonight_core_gpu_phase3 <<<grid, block8, 4096>>> (throughput, d_long_state, (uint32_t*)d_ctx_state, d_ctx_key2);
+	cryptonight_core_gpu_phase3 <<<grid, block8>>> (throughput, d_long_state, (uint32_t*)d_ctx_state, d_ctx_key2);
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 }

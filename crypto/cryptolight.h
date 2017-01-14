@@ -14,6 +14,7 @@ struct uint3  blockDim;
 #define atomicExch(p,y) (*p) = y
 #define __funnelshift_r(a,b,c) 1
 #define __syncthreads()
+#define __threadfence_block()
 #define asm(x)
 #define __shfl(a,b,c) 1
 #define __umul64hi(a,b) a*b
