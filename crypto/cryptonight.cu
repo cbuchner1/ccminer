@@ -11,7 +11,7 @@ static __thread bool gpu_init_shown = false;
 #define gpulog_init(p,thr,fmt, ...) if (!gpu_init_shown) \
 	gpulog(p, thr, fmt, ##__VA_ARGS__)
 
-static uint32_t *d_long_state[MAX_GPUS];
+static uint64_t *d_long_state[MAX_GPUS];
 static uint64_t *d_ctx_state[MAX_GPUS];
 static uint32_t *d_ctx_key1[MAX_GPUS];
 static uint32_t *d_ctx_key2[MAX_GPUS];
@@ -100,7 +100,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 		init[thr_id] = true;
 	}
 
-	throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
+	throughput = cn_blocks*cn_threads;
 
 	do
 	{
@@ -135,8 +135,6 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 					if(vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 						res++;
 						work->nonces[1] = resNonces[1];
-					} else if (vhash[7] > Htarg) {
-						gpulog(LOG_WARNING, thr_id, "result for second nonce %08x does not validate on CPU!", resNonces[1]);
 					}
 				}
 				goto done;

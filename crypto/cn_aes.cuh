@@ -184,10 +184,19 @@ void cn_aes_single_round(uint32_t * const sharedMemory, uint32_t * const in, uin
 	out[3] = expandedKey[3] ^ SHARED_0(in[3]) ^ SHARED_1(in[0]) ^ SHARED_2(in[1]) ^ SHARED_3(in[2]);
 }
 
+//
+#ifdef _WIN64
+/* do a mul.wide.u32 to prevent a shl + cvt 32 to 64 on ld.shared [ptr] */
+#define OFF8_0(x) (x & 0xFFu) * sizeof(uint32_t)
+#define OFF8_1(x) __byte_perm(x, 0x01, 0x5541) * sizeof(uint32_t)
+#define OFF8_2(x) __byte_perm(x, 0x02, 0x5542) * sizeof(uint32_t)
+#define OFF8_3(x) __byte_perm(x, 0x03, 0x5543) * sizeof(uint32_t)
+#else
 #define OFF8_0(x) (x & 0xFFu) << 2
 #define OFF8_1(x) __byte_perm(x, 0x01, 0x5541) << 2
 #define OFF8_2(x) __byte_perm(x, 0x02, 0x5542) << 2
 #define OFF8_3(x) __byte_perm(x, 0x03, 0x5543) << 2
+#endif
 
 #define SHAR8_0(x) AS_U32(&sharedMemory[OFF8_0(x)])
 #define SHAR8_1(x) AS_U32(&sharedMemory[OFF8_1(x)])
@@ -216,20 +225,6 @@ __device__ __forceinline__
 void cn_aes_pseudo_round_mut(const uint32_t * sharedMemory, uint32_t * val, uint32_t const * expandedKey)
 {
 	asm("// aes_pseudo_round_mut");
-#if 0
-	uchar4 x[4];
-	uchar4* in = (uchar4*)val;
-	round_u4(sharedMemory, x, in, expandedKey);
-	round_u4(sharedMemory, in, x, expandedKey + (1 * N_COLS));
-	round_u4(sharedMemory, x, in, expandedKey + (2 * N_COLS));
-	round_u4(sharedMemory, in, x, expandedKey + (3 * N_COLS));
-	round_u4(sharedMemory, x, in, expandedKey + (4 * N_COLS));
-	round_u4(sharedMemory, in, x, expandedKey + (5 * N_COLS));
-	round_u4(sharedMemory, x, in, expandedKey + (6 * N_COLS));
-	round_u4(sharedMemory, in, x, expandedKey + (7 * N_COLS));
-	round_u4(sharedMemory, x, in, expandedKey + (8 * N_COLS));
-	round_u4(sharedMemory, val,x, expandedKey + (9 * N_COLS));
-#else
 	uint32_t b[4];
 	round_perm(sharedMemory, b, val, expandedKey);
 	round_perm(sharedMemory, val, b, expandedKey + (1 * N_COLS));
@@ -241,7 +236,35 @@ void cn_aes_pseudo_round_mut(const uint32_t * sharedMemory, uint32_t * val, uint
 	round_perm(sharedMemory, val, b, expandedKey + (7 * N_COLS));
 	round_perm(sharedMemory, b, val, expandedKey + (8 * N_COLS));
 	round_perm(sharedMemory, val, b, expandedKey + (9 * N_COLS));
-#endif
+}
+
+static __forceinline__ __device__ uint4 operator ^ (const uint4 &a, const uint4 &b) {
+	return make_uint4(a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w);
+}
+
+#define round_perm4(in, k) {\
+	uint4 tmp; \
+	tmp.x = SHARED_0(in.x) ^ SHARED_1(in.y) ^ SHARED_2(in.z) ^ SHARED_3(in.w); \
+	tmp.y = SHARED_0(in.y) ^ SHARED_1(in.z) ^ SHARED_2(in.w) ^ SHARED_3(in.x); \
+	tmp.z = SHARED_0(in.z) ^ SHARED_1(in.w) ^ SHARED_2(in.x) ^ SHARED_3(in.y); \
+	tmp.w = SHARED_0(in.w) ^ SHARED_1(in.x) ^ SHARED_2(in.y) ^ SHARED_3(in.z); \
+	val = tmp ^ key[k]; \
+}
+
+__device__ __forceinline__
+void cn_aes_pseudo_round_mut_uint4(uint32_t * const sharedMemory, uint4 &val, uint4 const key[10])
+{
+	asm("// aes_pseudo_round_mut_uint4");
+	round_perm4(val, 0);
+	round_perm4(val, 1);
+	round_perm4(val, 2);
+	round_perm4(val, 3);
+	round_perm4(val, 4);
+	round_perm4(val, 5);
+	round_perm4(val, 6);
+	round_perm4(val, 7);
+	round_perm4(val, 8);
+	round_perm4(val, 9);
 }
 
 /*
@@ -294,217 +317,6 @@ void cn_aes_gpu_init2(uint32_t* sharedMemory)
 
 __device__ __forceinline__
 void cn_aes_gpu_init(uint32_t* sharedMemory)
-{
-	// AES 0
-	switch (threadIdx.x) {
-	case 0:
-		AS_UL4(&sharedMemory[0x000]) = make_ulonglong4(0x847c7cf8a56363c6, 0x8d7b7bf6997777ee, 0xbd6b6bd60df2f2ff, 0x54c5c591b16f6fde);
-		AS_UL4(&sharedMemory[0x008]) = make_ulonglong4(0x0301010250303060, 0x7d2b2b56a96767ce, 0x62d7d7b519fefee7, 0x9a7676ece6abab4d);
-		AS_UL4(&sharedMemory[0x010]) = make_ulonglong4(0x9d82821f45caca8f, 0x877d7dfa40c9c989, 0xeb5959b215fafaef, 0x0bf0f0fbc947478e);
-		AS_UL4(&sharedMemory[0x018]) = make_ulonglong4(0x67d4d4b3ecadad41, 0xeaafaf45fda2a25f, 0xf7a4a453bf9c9c23, 0x5bc0c09b967272e4);
-		break;
-	case 1:
-		AS_UL4(&sharedMemory[0x020]) = make_ulonglong4(0x1cfdfde1c2b7b775, 0x6a26264cae93933d, 0x413f3f7e5a36366c, 0x4fcccc8302f7f7f5);
-		AS_UL4(&sharedMemory[0x028]) = make_ulonglong4(0xf4a5a5515c343468, 0x08f1f1f934e5e5d1, 0x73d8d8ab937171e2, 0x3f15152a53313162);
-		AS_UL4(&sharedMemory[0x030]) = make_ulonglong4(0x52c7c7950c040408, 0x5ec3c39d65232346, 0xa196963728181830, 0xb59a9a2f0f05050a);
-		AS_UL4(&sharedMemory[0x038]) = make_ulonglong4(0x361212240907070e, 0x3de2e2df9b80801b, 0x6927274e26ebebcd, 0x9f7575eacdb2b27f);
-		break;
-	case 2:
-		AS_UL4(&sharedMemory[0x040]) = make_ulonglong4(0x9e83831d1b090912, 0x2e1a1a34742c2c58, 0xb26e6edc2d1b1b36, 0xfba0a05bee5a5ab4);
-		AS_UL4(&sharedMemory[0x048]) = make_ulonglong4(0x4d3b3b76f65252a4, 0xceb3b37d61d6d6b7, 0x3ee3e3dd7b292952, 0x97848413712f2f5e);
-		AS_UL4(&sharedMemory[0x050]) = make_ulonglong4(0x68d1d1b9f55353a6, 0x2cededc100000000, 0x1ffcfce360202040, 0xed5b5bb6c8b1b179);
-		AS_UL4(&sharedMemory[0x058]) = make_ulonglong4(0x46cbcb8dbe6a6ad4, 0x4b393972d9bebe67, 0xd44c4c98de4a4a94, 0x4acfcf85e85858b0);
-		break;
-	case 3:
-		AS_UL4(&sharedMemory[0x060]) = make_ulonglong4(0x2aefefc56bd0d0bb, 0x16fbfbede5aaaa4f, 0xd74d4d9ac5434386, 0x9485851155333366);
-		AS_UL4(&sharedMemory[0x068]) = make_ulonglong4(0x10f9f9e9cf45458a, 0x817f7ffe06020204, 0x443c3c78f05050a0, 0xe3a8a84bba9f9f25);
-		AS_UL4(&sharedMemory[0x070]) = make_ulonglong4(0xfea3a35df35151a2, 0x8a8f8f05c0404080, 0xbc9d9d21ad92923f, 0x04f5f5f148383870);
-		AS_UL4(&sharedMemory[0x078]) = make_ulonglong4(0xc1b6b677dfbcbc63, 0x6321214275dadaaf, 0x1affffe530101020, 0x6dd2d2bf0ef3f3fd);
-		break;
-	case 4:
-		AS_UL4(&sharedMemory[0x080]) = make_ulonglong4(0x140c0c184ccdcd81, 0x2fececc335131326, 0xa2979735e15f5fbe, 0x3917172ecc444488);
-		AS_UL4(&sharedMemory[0x088]) = make_ulonglong4(0xf2a7a75557c4c493, 0x473d3d7a827e7efc, 0xe75d5dbaac6464c8, 0x957373e62b191932);
-		AS_UL4(&sharedMemory[0x090]) = make_ulonglong4(0x98818119a06060c0, 0x7fdcdca3d14f4f9e, 0x7e2a2a5466222244, 0x8388880bab90903b);
-		AS_UL4(&sharedMemory[0x098]) = make_ulonglong4(0x29eeeec7ca46468c, 0x3c141428d3b8b86b, 0xe25e5ebc79dedea7, 0x76dbdbad1d0b0b16);
-		break;
-	case 5:
-		AS_UL4(&sharedMemory[0x0A0]) = make_ulonglong4(0x563232643be0e0db, 0x1e0a0a144e3a3a74, 0x0a06060cdb494992, 0xe45c5cb86c242448);
-		AS_UL4(&sharedMemory[0x0A8]) = make_ulonglong4(0x6ed3d3bd5dc2c29f, 0xa66262c4efacac43, 0xa4959531a8919139, 0x8b7979f237e4e4d3);
-		AS_UL4(&sharedMemory[0x0B0]) = make_ulonglong4(0x43c8c88b32e7e7d5, 0xb76d6dda5937376e, 0x64d5d5b18c8d8d01, 0xe0a9a949d24e4e9c);
-		AS_UL4(&sharedMemory[0x0B8]) = make_ulonglong4(0xfa5656acb46c6cd8, 0x25eaeacf07f4f4f3, 0x8e7a7af4af6565ca, 0x18080810e9aeae47);
-		break;
-	case 6:
-		AS_UL4(&sharedMemory[0x0C0]) = make_ulonglong4(0x887878f0d5baba6f, 0x722e2e5c6f25254a, 0xf1a6a657241c1c38, 0x51c6c697c7b4b473);
-		AS_UL4(&sharedMemory[0x0C8]) = make_ulonglong4(0x7cdddda123e8e8cb, 0x211f1f3e9c7474e8, 0xdcbdbd61dd4b4b96, 0x858a8a0f868b8b0d);
-		AS_UL4(&sharedMemory[0x0D0]) = make_ulonglong4(0x423e3e7c907070e0, 0xaa6666ccc4b5b571, 0x05030306d8484890, 0x120e0e1c01f6f6f7);
-		AS_UL4(&sharedMemory[0x0D8]) = make_ulonglong4(0x5f35356aa36161c2, 0xd0b9b969f95757ae, 0x58c1c19991868617, 0xb99e9e27271d1d3a);
-		break;
-	case 7:
-		AS_UL4(&sharedMemory[0x0E0]) = make_ulonglong4(0x13f8f8eb38e1e1d9, 0x33111122b398982b, 0x70d9d9a9bb6969d2, 0xa7949433898e8e07);
-		AS_UL4(&sharedMemory[0x0E8]) = make_ulonglong4(0x221e1e3cb69b9b2d, 0x20e9e9c992878715, 0xff5555aa49cece87, 0x7adfdfa578282850);
-		AS_UL4(&sharedMemory[0x0F0]) = make_ulonglong4(0xf8a1a1598f8c8c03, 0x170d0d1a80898909, 0x31e6e6d7dabfbf65, 0xb86868d0c6424284);
-		AS_UL4(&sharedMemory[0x0F8]) = make_ulonglong4(0xb0999929c3414182, 0x110f0f1e772d2d5a, 0xfc5454a8cbb0b07b, 0x3a16162cd6bbbb6d);
-		break;
-	}
-	// AES 1
-	switch (threadIdx.x) {
-	case 0:
-		AS_UL4(&sharedMemory[0x100]) = make_ulonglong4(0x7c7cf8846363c6a5, 0x7b7bf68d7777ee99, 0x6b6bd6bdf2f2ff0d, 0xc5c591546f6fdeb1);
-		AS_UL4(&sharedMemory[0x108]) = make_ulonglong4(0x0101020330306050, 0x2b2b567d6767cea9, 0xd7d7b562fefee719, 0x7676ec9aabab4de6);
-		AS_UL4(&sharedMemory[0x110]) = make_ulonglong4(0x82821f9dcaca8f45, 0x7d7dfa87c9c98940, 0x5959b2ebfafaef15, 0xf0f0fb0b47478ec9);
-		AS_UL4(&sharedMemory[0x118]) = make_ulonglong4(0xd4d4b367adad41ec, 0xafaf45eaa2a25ffd, 0xa4a453f79c9c23bf, 0xc0c09b5b7272e496);
-		break;
-	case 1:
-		AS_UL4(&sharedMemory[0x120]) = make_ulonglong4(0xfdfde11cb7b775c2, 0x26264c6a93933dae, 0x3f3f7e4136366c5a, 0xcccc834ff7f7f502);
-		AS_UL4(&sharedMemory[0x128]) = make_ulonglong4(0xa5a551f43434685c, 0xf1f1f908e5e5d134, 0xd8d8ab737171e293, 0x15152a3f31316253);
-		AS_UL4(&sharedMemory[0x130]) = make_ulonglong4(0xc7c795520404080c, 0xc3c39d5e23234665, 0x969637a118183028, 0x9a9a2fb505050a0f);
-		AS_UL4(&sharedMemory[0x138]) = make_ulonglong4(0x1212243607070e09, 0xe2e2df3d80801b9b, 0x27274e69ebebcd26, 0x7575ea9fb2b27fcd);
-		break;
-	case 2:
-		AS_UL4(&sharedMemory[0x140]) = make_ulonglong4(0x83831d9e0909121b, 0x1a1a342e2c2c5874, 0x6e6edcb21b1b362d, 0xa0a05bfb5a5ab4ee);
-		AS_UL4(&sharedMemory[0x148]) = make_ulonglong4(0x3b3b764d5252a4f6, 0xb3b37dced6d6b761, 0xe3e3dd3e2929527b, 0x848413972f2f5e71);
-		AS_UL4(&sharedMemory[0x150]) = make_ulonglong4(0xd1d1b9685353a6f5, 0xededc12c00000000, 0xfcfce31f20204060, 0x5b5bb6edb1b179c8);
-		AS_UL4(&sharedMemory[0x158]) = make_ulonglong4(0xcbcb8d466a6ad4be, 0x3939724bbebe67d9, 0x4c4c98d44a4a94de, 0xcfcf854a5858b0e8);
-		break;
-	case 3:
-		AS_UL4(&sharedMemory[0x160]) = make_ulonglong4(0xefefc52ad0d0bb6b, 0xfbfbed16aaaa4fe5, 0x4d4d9ad7434386c5, 0x8585119433336655);
-		AS_UL4(&sharedMemory[0x168]) = make_ulonglong4(0xf9f9e91045458acf, 0x7f7ffe8102020406, 0x3c3c78445050a0f0, 0xa8a84be39f9f25ba);
-		AS_UL4(&sharedMemory[0x170]) = make_ulonglong4(0xa3a35dfe5151a2f3, 0x8f8f058a404080c0, 0x9d9d21bc92923fad, 0xf5f5f10438387048);
-		AS_UL4(&sharedMemory[0x178]) = make_ulonglong4(0xb6b677c1bcbc63df, 0x21214263dadaaf75, 0xffffe51a10102030, 0xd2d2bf6df3f3fd0e);
-		break;
-	case 4:
-		AS_UL4(&sharedMemory[0x180]) = make_ulonglong4(0x0c0c1814cdcd814c, 0xececc32f13132635, 0x979735a25f5fbee1, 0x17172e39444488cc);
-		AS_UL4(&sharedMemory[0x188]) = make_ulonglong4(0xa7a755f2c4c49357, 0x3d3d7a477e7efc82, 0x5d5dbae76464c8ac, 0x7373e6951919322b);
-		AS_UL4(&sharedMemory[0x190]) = make_ulonglong4(0x818119986060c0a0, 0xdcdca37f4f4f9ed1, 0x2a2a547e22224466, 0x88880b8390903bab);
-		AS_UL4(&sharedMemory[0x198]) = make_ulonglong4(0xeeeec72946468cca, 0x1414283cb8b86bd3, 0x5e5ebce2dedea779, 0xdbdbad760b0b161d);
-		break;
-	case 5:
-		AS_UL4(&sharedMemory[0x1A0]) = make_ulonglong4(0x32326456e0e0db3b, 0x0a0a141e3a3a744e, 0x06060c0a494992db, 0x5c5cb8e42424486c);
-		AS_UL4(&sharedMemory[0x1A8]) = make_ulonglong4(0xd3d3bd6ec2c29f5d, 0x6262c4a6acac43ef, 0x959531a4919139a8, 0x7979f28be4e4d337);
-		AS_UL4(&sharedMemory[0x1B0]) = make_ulonglong4(0xc8c88b43e7e7d532, 0x6d6ddab737376e59, 0xd5d5b1648d8d018c, 0xa9a949e04e4e9cd2);
-		AS_UL4(&sharedMemory[0x1B8]) = make_ulonglong4(0x5656acfa6c6cd8b4, 0xeaeacf25f4f4f307, 0x7a7af48e6565caaf, 0x08081018aeae47e9);
-		break;
-	case 6:
-		AS_UL4(&sharedMemory[0x1C0]) = make_ulonglong4(0x7878f088baba6fd5, 0x2e2e5c7225254a6f, 0xa6a657f11c1c3824, 0xc6c69751b4b473c7);
-		AS_UL4(&sharedMemory[0x1C8]) = make_ulonglong4(0xdddda17ce8e8cb23, 0x1f1f3e217474e89c, 0xbdbd61dc4b4b96dd, 0x8a8a0f858b8b0d86);
-		AS_UL4(&sharedMemory[0x1D0]) = make_ulonglong4(0x3e3e7c427070e090, 0x6666ccaab5b571c4, 0x03030605484890d8, 0x0e0e1c12f6f6f701);
-		AS_UL4(&sharedMemory[0x1D8]) = make_ulonglong4(0x35356a5f6161c2a3, 0xb9b969d05757aef9, 0xc1c1995886861791, 0x9e9e27b91d1d3a27);
-		break;
-	case 7:
-		AS_UL4(&sharedMemory[0x1E0]) = make_ulonglong4(0xf8f8eb13e1e1d938, 0x1111223398982bb3, 0xd9d9a9706969d2bb, 0x949433a78e8e0789);
-		AS_UL4(&sharedMemory[0x1E8]) = make_ulonglong4(0x1e1e3c229b9b2db6, 0xe9e9c92087871592, 0x5555aaffcece8749, 0xdfdfa57a28285078);
-		AS_UL4(&sharedMemory[0x1F0]) = make_ulonglong4(0xa1a159f88c8c038f, 0x0d0d1a1789890980, 0xe6e6d731bfbf65da, 0x6868d0b8424284c6);
-		AS_UL4(&sharedMemory[0x1F8]) = make_ulonglong4(0x999929b0414182c3, 0x0f0f1e112d2d5a77, 0x5454a8fcb0b07bcb, 0x16162c3abbbb6dd6);
-		break;
-	}
-	// AES 2
-	switch (threadIdx.x) {
-	case 0:
-		AS_UL4(&sharedMemory[0x200]) = make_ulonglong4(0x7cf8847c63c6a563, 0x7bf68d7b77ee9977, 0x6bd6bd6bf2ff0df2, 0xc59154c56fdeb16f);
-		AS_UL4(&sharedMemory[0x208]) = make_ulonglong4(0x0102030130605030, 0x2b567d2b67cea967, 0xd7b562d7fee719fe, 0x76ec9a76ab4de6ab);
-		AS_UL4(&sharedMemory[0x210]) = make_ulonglong4(0x821f9d82ca8f45ca, 0x7dfa877dc98940c9, 0x59b2eb59faef15fa, 0xf0fb0bf0478ec947);
-		AS_UL4(&sharedMemory[0x218]) = make_ulonglong4(0xd4b367d4ad41ecad, 0xaf45eaafa25ffda2, 0xa453f7a49c23bf9c, 0xc09b5bc072e49672);
-		break;
-	case 1:
-		AS_UL4(&sharedMemory[0x220]) = make_ulonglong4(0xfde11cfdb775c2b7, 0x264c6a26933dae93, 0x3f7e413f366c5a36, 0xcc834fccf7f502f7);
-		AS_UL4(&sharedMemory[0x228]) = make_ulonglong4(0xa551f4a534685c34, 0xf1f908f1e5d134e5, 0xd8ab73d871e29371, 0x152a3f1531625331);
-		AS_UL4(&sharedMemory[0x230]) = make_ulonglong4(0xc79552c704080c04, 0xc39d5ec323466523, 0x9637a19618302818, 0x9a2fb59a050a0f05);
-		AS_UL4(&sharedMemory[0x238]) = make_ulonglong4(0x12243612070e0907, 0xe2df3de2801b9b80, 0x274e6927ebcd26eb, 0x75ea9f75b27fcdb2);
-		break;
-	case 2:
-		AS_UL4(&sharedMemory[0x240]) = make_ulonglong4(0x831d9e8309121b09, 0x1a342e1a2c58742c, 0x6edcb26e1b362d1b, 0xa05bfba05ab4ee5a);
-		AS_UL4(&sharedMemory[0x248]) = make_ulonglong4(0x3b764d3b52a4f652, 0xb37dceb3d6b761d6, 0xe3dd3ee329527b29, 0x841397842f5e712f);
-		AS_UL4(&sharedMemory[0x250]) = make_ulonglong4(0xd1b968d153a6f553, 0xedc12ced00000000, 0xfce31ffc20406020, 0x5bb6ed5bb179c8b1);
-		AS_UL4(&sharedMemory[0x258]) = make_ulonglong4(0xcb8d46cb6ad4be6a, 0x39724b39be67d9be, 0x4c98d44c4a94de4a, 0xcf854acf58b0e858);
-		break;
-	case 3:
-		AS_UL4(&sharedMemory[0x260]) = make_ulonglong4(0xefc52aefd0bb6bd0, 0xfbed16fbaa4fe5aa, 0x4d9ad74d4386c543, 0x8511948533665533);
-		AS_UL4(&sharedMemory[0x268]) = make_ulonglong4(0xf9e910f9458acf45, 0x7ffe817f02040602, 0x3c78443c50a0f050, 0xa84be3a89f25ba9f);
-		AS_UL4(&sharedMemory[0x270]) = make_ulonglong4(0xa35dfea351a2f351, 0x8f058a8f4080c040, 0x9d21bc9d923fad92, 0xf5f104f538704838);
-		AS_UL4(&sharedMemory[0x278]) = make_ulonglong4(0xb677c1b6bc63dfbc, 0x21426321daaf75da, 0xffe51aff10203010, 0xd2bf6dd2f3fd0ef3);
-		break;
-	case 4:
-		AS_UL4(&sharedMemory[0x280]) = make_ulonglong4(0x0c18140ccd814ccd, 0xecc32fec13263513, 0x9735a2975fbee15f, 0x172e39174488cc44);
-		AS_UL4(&sharedMemory[0x288]) = make_ulonglong4(0xa755f2a7c49357c4, 0x3d7a473d7efc827e, 0x5dbae75d64c8ac64, 0x73e6957319322b19);
-		AS_UL4(&sharedMemory[0x290]) = make_ulonglong4(0x8119988160c0a060, 0xdca37fdc4f9ed14f, 0x2a547e2a22446622, 0x880b8388903bab90);
-		AS_UL4(&sharedMemory[0x298]) = make_ulonglong4(0xeec729ee468cca46, 0x14283c14b86bd3b8, 0x5ebce25edea779de, 0xdbad76db0b161d0b);
-		break;
-	case 5:
-		AS_UL4(&sharedMemory[0x2A0]) = make_ulonglong4(0x32645632e0db3be0, 0x0a141e0a3a744e3a, 0x060c0a064992db49, 0x5cb8e45c24486c24);
-		AS_UL4(&sharedMemory[0x2A8]) = make_ulonglong4(0xd3bd6ed3c29f5dc2, 0x62c4a662ac43efac, 0x9531a4959139a891, 0x79f28b79e4d337e4);
-		AS_UL4(&sharedMemory[0x2B0]) = make_ulonglong4(0xc88b43c8e7d532e7, 0x6ddab76d376e5937, 0xd5b164d58d018c8d, 0xa949e0a94e9cd24e);
-		AS_UL4(&sharedMemory[0x2B8]) = make_ulonglong4(0x56acfa566cd8b46c, 0xeacf25eaf4f307f4, 0x7af48e7a65caaf65, 0x08101808ae47e9ae);
-		break;
-	case 6:
-		AS_UL4(&sharedMemory[0x2C0]) = make_ulonglong4(0x78f08878ba6fd5ba, 0x2e5c722e254a6f25, 0xa657f1a61c38241c, 0xc69751c6b473c7b4);
-		AS_UL4(&sharedMemory[0x2C8]) = make_ulonglong4(0xdda17cdde8cb23e8, 0x1f3e211f74e89c74, 0xbd61dcbd4b96dd4b, 0x8a0f858a8b0d868b);
-		AS_UL4(&sharedMemory[0x2D0]) = make_ulonglong4(0x3e7c423e70e09070, 0x66ccaa66b571c4b5, 0x030605034890d848, 0x0e1c120ef6f701f6);
-		AS_UL4(&sharedMemory[0x2D8]) = make_ulonglong4(0x356a5f3561c2a361, 0xb969d0b957aef957, 0xc19958c186179186, 0x9e27b99e1d3a271d);
-		break;
-	case 7:
-		AS_UL4(&sharedMemory[0x2E0]) = make_ulonglong4(0xf8eb13f8e1d938e1, 0x11223311982bb398, 0xd9a970d969d2bb69, 0x9433a7948e07898e);
-		AS_UL4(&sharedMemory[0x2E8]) = make_ulonglong4(0x1e3c221e9b2db69b, 0xe9c920e987159287, 0x55aaff55ce8749ce, 0xdfa57adf28507828);
-		AS_UL4(&sharedMemory[0x2F0]) = make_ulonglong4(0xa159f8a18c038f8c, 0x0d1a170d89098089, 0xe6d731e6bf65dabf, 0x68d0b8684284c642);
-		AS_UL4(&sharedMemory[0x2F8]) = make_ulonglong4(0x9929b0994182c341, 0x0f1e110f2d5a772d, 0x54a8fc54b07bcbb0, 0x162c3a16bb6dd6bb);
-		break;
-	}
-	// AES 3
-	switch (threadIdx.x) {
-	case 0:
-		AS_UL4(&sharedMemory[0x300]) = make_ulonglong4(0xf8847c7cc6a56363, 0xf68d7b7bee997777, 0xd6bd6b6bff0df2f2, 0x9154c5c5deb16f6f);
-		AS_UL4(&sharedMemory[0x308]) = make_ulonglong4(0x0203010160503030, 0x567d2b2bcea96767, 0xb562d7d7e719fefe, 0xec9a76764de6abab);
-		AS_UL4(&sharedMemory[0x310]) = make_ulonglong4(0x1f9d82828f45caca, 0xfa877d7d8940c9c9, 0xb2eb5959ef15fafa, 0xfb0bf0f08ec94747);
-		AS_UL4(&sharedMemory[0x318]) = make_ulonglong4(0xb367d4d441ecadad, 0x45eaafaf5ffda2a2, 0x53f7a4a423bf9c9c, 0x9b5bc0c0e4967272);
-		break;
-	case 1:
-		AS_UL4(&sharedMemory[0x320]) = make_ulonglong4(0xe11cfdfd75c2b7b7, 0x4c6a26263dae9393, 0x7e413f3f6c5a3636, 0x834fccccf502f7f7);
-		AS_UL4(&sharedMemory[0x328]) = make_ulonglong4(0x51f4a5a5685c3434, 0xf908f1f1d134e5e5, 0xab73d8d8e2937171, 0x2a3f151562533131);
-		AS_UL4(&sharedMemory[0x330]) = make_ulonglong4(0x9552c7c7080c0404, 0x9d5ec3c346652323, 0x37a1969630281818, 0x2fb59a9a0a0f0505);
-		AS_UL4(&sharedMemory[0x338]) = make_ulonglong4(0x243612120e090707, 0xdf3de2e21b9b8080, 0x4e692727cd26ebeb, 0xea9f75757fcdb2b2);
-		break;
-	case 2:
-		AS_UL4(&sharedMemory[0x340]) = make_ulonglong4(0x1d9e8383121b0909, 0x342e1a1a58742c2c, 0xdcb26e6e362d1b1b, 0x5bfba0a0b4ee5a5a);
-		AS_UL4(&sharedMemory[0x348]) = make_ulonglong4(0x764d3b3ba4f65252, 0x7dceb3b3b761d6d6, 0xdd3ee3e3527b2929, 0x139784845e712f2f);
-		AS_UL4(&sharedMemory[0x350]) = make_ulonglong4(0xb968d1d1a6f55353, 0xc12ceded00000000, 0xe31ffcfc40602020, 0xb6ed5b5b79c8b1b1);
-		AS_UL4(&sharedMemory[0x358]) = make_ulonglong4(0x8d46cbcbd4be6a6a, 0x724b393967d9bebe, 0x98d44c4c94de4a4a, 0x854acfcfb0e85858);
-		break;
-	case 3:
-		AS_UL4(&sharedMemory[0x360]) = make_ulonglong4(0xc52aefefbb6bd0d0, 0xed16fbfb4fe5aaaa, 0x9ad74d4d86c54343, 0x1194858566553333);
-		AS_UL4(&sharedMemory[0x368]) = make_ulonglong4(0xe910f9f98acf4545, 0xfe817f7f04060202, 0x78443c3ca0f05050, 0x4be3a8a825ba9f9f);
-		AS_UL4(&sharedMemory[0x370]) = make_ulonglong4(0x5dfea3a3a2f35151, 0x058a8f8f80c04040, 0x21bc9d9d3fad9292, 0xf104f5f570483838);
-		AS_UL4(&sharedMemory[0x378]) = make_ulonglong4(0x77c1b6b663dfbcbc, 0x42632121af75dada, 0xe51affff20301010, 0xbf6dd2d2fd0ef3f3);
-		break;
-	case 4:
-		AS_UL4(&sharedMemory[0x380]) = make_ulonglong4(0x18140c0c814ccdcd, 0xc32fecec26351313, 0x35a29797bee15f5f, 0x2e39171788cc4444);
-		AS_UL4(&sharedMemory[0x388]) = make_ulonglong4(0x55f2a7a79357c4c4, 0x7a473d3dfc827e7e, 0xbae75d5dc8ac6464, 0xe6957373322b1919);
-		AS_UL4(&sharedMemory[0x390]) = make_ulonglong4(0x19988181c0a06060, 0xa37fdcdc9ed14f4f, 0x547e2a2a44662222, 0x0b8388883bab9090);
-		AS_UL4(&sharedMemory[0x398]) = make_ulonglong4(0xc729eeee8cca4646, 0x283c14146bd3b8b8, 0xbce25e5ea779dede, 0xad76dbdb161d0b0b);
-		break;
-	case 5:
-		AS_UL4(&sharedMemory[0x3A0]) = make_ulonglong4(0x64563232db3be0e0, 0x141e0a0a744e3a3a, 0x0c0a060692db4949, 0xb8e45c5c486c2424);
-		AS_UL4(&sharedMemory[0x3A8]) = make_ulonglong4(0xbd6ed3d39f5dc2c2, 0xc4a6626243efacac, 0x31a4959539a89191, 0xf28b7979d337e4e4);
-		AS_UL4(&sharedMemory[0x3B0]) = make_ulonglong4(0x8b43c8c8d532e7e7, 0xdab76d6d6e593737, 0xb164d5d5018c8d8d, 0x49e0a9a99cd24e4e);
-		AS_UL4(&sharedMemory[0x3B8]) = make_ulonglong4(0xacfa5656d8b46c6c, 0xcf25eaeaf307f4f4, 0xf48e7a7acaaf6565, 0x1018080847e9aeae);
-		break;
-	case 6:
-		AS_UL4(&sharedMemory[0x3C0]) = make_ulonglong4(0xf08878786fd5baba, 0x5c722e2e4a6f2525, 0x57f1a6a638241c1c, 0x9751c6c673c7b4b4);
-		AS_UL4(&sharedMemory[0x3C8]) = make_ulonglong4(0xa17cddddcb23e8e8, 0x3e211f1fe89c7474, 0x61dcbdbd96dd4b4b, 0x0f858a8a0d868b8b);
-		AS_UL4(&sharedMemory[0x3D0]) = make_ulonglong4(0x7c423e3ee0907070, 0xccaa666671c4b5b5, 0x0605030390d84848, 0x1c120e0ef701f6f6);
-		AS_UL4(&sharedMemory[0x3D8]) = make_ulonglong4(0x6a5f3535c2a36161, 0x69d0b9b9aef95757, 0x9958c1c117918686, 0x27b99e9e3a271d1d);
-		break;
-	case 7:
-		AS_UL4(&sharedMemory[0x3E0]) = make_ulonglong4(0xeb13f8f8d938e1e1, 0x223311112bb39898, 0xa970d9d9d2bb6969, 0x33a7949407898e8e);
-		AS_UL4(&sharedMemory[0x3E8]) = make_ulonglong4(0x3c221e1e2db69b9b, 0xc920e9e915928787, 0xaaff55558749cece, 0xa57adfdf50782828);
-		AS_UL4(&sharedMemory[0x3F0]) = make_ulonglong4(0x59f8a1a1038f8c8c, 0x1a170d0d09808989, 0xd731e6e665dabfbf, 0xd0b8686884c64242);
-		AS_UL4(&sharedMemory[0x3F8]) = make_ulonglong4(0x29b0999982c34141, 0x1e110f0f5a772d2d, 0xa8fc54547bcbb0b0, 0x2c3a16166dd6bbbb);
-		break;
-	}
-	//printf("%x\n", sharedMemory[0]);
-	//cn_aes_gpu_init2(sharedMemory);
-}
-
-__device__ __forceinline__
-void cn_aes_gpu_init_ul2(uint32_t* sharedMemory)
 {
 	// AES 0
 	switch (threadIdx.x) {
@@ -838,8 +650,6 @@ void cn_aes_gpu_init_ul2(uint32_t* sharedMemory)
 		AS_UL2(&sharedMemory[0x3FC]) = make_ulonglong2(0xa8fc54547bcbb0b0, 0x2c3a16166dd6bbbb);
 		break;
 	}
-	//printf("%x\n", sharedMemory[0]);
-	//cn_aes_gpu_init2(sharedMemory);
 }
 
 __device__ __forceinline__

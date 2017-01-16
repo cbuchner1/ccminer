@@ -23,8 +23,7 @@ struct uint3  blockDim;
 
 #define MEMORY         (1U << 21) // 2 MiB / 2097152 B
 #define ITER           (1U << 20) // 1048576
-#define E2I_MASK1       0x1FFFF0u
-#define E2I_MASK2      (0x1FFFF0u >> 2u)
+#define E2I_MASK       0x1FFFF0u
 
 #define AES_BLOCK_SIZE  16U
 #define AES_KEY_SIZE    32
@@ -137,7 +136,7 @@ static inline void exit_if_cudaerror(int thr_id, const char *src, int line)
 		exit(1);
 	}
 }
-void cryptonight_core_cuda(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint64_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2);
+void cryptonight_core_cuda(int thr_id, int blocks, int threads, uint64_t *d_long_state, uint64_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2);
 
 void cryptonight_extra_cpu_setData(int thr_id, const void *data, const void *pTargetIn);
 void cryptonight_extra_cpu_init(int thr_id, uint32_t threads);

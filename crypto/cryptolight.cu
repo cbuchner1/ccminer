@@ -83,7 +83,7 @@ extern "C" int scanhash_cryptolight(int thr_id, struct work* work, uint32_t max_
 		init[thr_id] = true;
 	}
 
-	throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
+	throughput = cn_blocks*cn_threads;
 
 	do
 	{
