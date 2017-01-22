@@ -1,7 +1,7 @@
 ﻿/*
  * Copyright 2010 Jeff Garzik
  * Copyright 2012-2014 pooler
- * Copyright 2014-2015 tpruvot
+ * Copyright 2014-2017 tpruvot
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -1869,15 +1869,24 @@ static void *miner_thread(void *userdata)
 
 		if (opt_algo == ALGO_CRYPTONIGHT || opt_algo == ALGO_CRYPTOLIGHT) {
 			uint32_t oldpos = nonceptr[0];
+			bool nicehash = strstr(pools[cur_pooln].url, "nicehash") != NULL;
 			if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
 				memcpy(&work, &g_work, sizeof(struct work));
-				nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // reset cursor
+				if (!nicehash) nonceptr[0] = (rand()*4) << 24;
+				nonceptr[0] &=  0xFF000000u; // nicehash prefix hack
+				nonceptr[0] |= (0x00FFFFFFu / opt_n_threads) * thr_id;
 			}
 			// also check the end, nonce in the middle
 			else if (memcmp(&work.data[44/4], &g_work.data[0], 76-44)) {
 				memcpy(&work, &g_work, sizeof(struct work));
 			}
-			if (oldpos & 0xFFFF) nonceptr[0] = oldpos + 0x100000;
+			if (oldpos & 0xFFFF) {
+				if (!nicehash) nonceptr[0] = oldpos + 0x1000000u;
+				else {
+					uint32_t pfx = nonceptr[0] & 0xFF000000u;
+					nonceptr[0] = pfx | ((oldpos + 0x8000u) & 0xFFFFFFu);
+				}
+			}
 		}
 
 		else if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {

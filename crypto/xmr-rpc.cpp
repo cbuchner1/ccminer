@@ -1,5 +1,5 @@
 /**
- * XMR RPC 2.0 Specific Stuff
+ * XMR RPC 2.0 Stratum and BBR Scratchpad
  * tpruvot@github - October 2016
  */
 
@@ -54,7 +54,7 @@ bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen);
 pthread_mutex_t rpc2_job_lock;
 pthread_mutex_t rpc2_work_lock;
 pthread_mutex_t rpc2_login_lock;
-pthread_mutex_t rpc2_getscratchpad_lock;
+//pthread_mutex_t rpc2_getscratchpad_lock;
 
 char* opt_scratchpad_url = NULL;
 uint64_t* pscratchpad_buff = NULL;
@@ -1310,5 +1310,5 @@ void rpc2_init()
 	pthread_mutex_init(&rpc2_job_lock, NULL);
 	pthread_mutex_init(&rpc2_work_lock, NULL);
 	pthread_mutex_init(&rpc2_login_lock, NULL);
-	pthread_mutex_init(&rpc2_getscratchpad_lock, NULL);
+	//pthread_mutex_init(&rpc2_getscratchpad_lock, NULL);
 }
