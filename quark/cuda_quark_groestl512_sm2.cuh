@@ -223,6 +223,7 @@ void quark_groestl512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32
 __host__
 void quark_groestl512_sm20_init(int thr_id, uint32_t threads)
 {
+	// Texturen mit obigem Makro initialisieren
 	texDef(0, t0up1, d_T0up, T0up_cpu, sizeof(uint32_t)*256);
 	texDef(1, t0dn1, d_T0dn, T0dn_cpu, sizeof(uint32_t)*256);
 	texDef(2, t1up1, d_T1up, T1up_cpu, sizeof(uint32_t)*256);
@@ -265,3 +266,94 @@ void quark_doublegroestl512_sm20_hash_64(int thr_id, uint32_t threads, uint32_t 
 	quark_groestl512_gpu_hash_64<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
 }
 
+// --------------------------------------------------------------------------------------------------------------------------------------------
+
+#ifdef WANT_GROESTL80
+
+// defined in groest512.cu
+// __constant__ static uint32_t c_Message80[20];
+
+__global__
+//__launch_bounds__(256)
+void groestl512_gpu_hash_80_sm2(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash)
+{
+#if __CUDA_ARCH__ < 300 || defined(_DEBUG)
+
+#if USE_SHARED
+	__shared__ char mixtabs[8 * 1024];
+	if (threadIdx.x < 256) {
+		*((uint32_t*)mixtabs + (     threadIdx.x)) = tex1Dfetch(t0up1, threadIdx.x);
+		*((uint32_t*)mixtabs + ( 256+threadIdx.x)) = tex1Dfetch(t0dn1, threadIdx.x);
+		*((uint32_t*)mixtabs + ( 512+threadIdx.x)) = tex1Dfetch(t1up1, threadIdx.x);
+		*((uint32_t*)mixtabs + ( 768+threadIdx.x)) = tex1Dfetch(t1dn1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1024+threadIdx.x)) = tex1Dfetch(t2up1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1280+threadIdx.x)) = tex1Dfetch(t2dn1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1536+threadIdx.x)) = tex1Dfetch(t3up1, threadIdx.x);
+		*((uint32_t*)mixtabs + (1792+threadIdx.x)) = tex1Dfetch(t3dn1, threadIdx.x);
+	}
+	__syncthreads();
+#endif
+
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t message[32];
+
+		#pragma unroll 5
+		for (int i=0; i < 20; i += 4)
+			AS_UINT4(&message[i]) = AS_UINT4(&c_Message80[i]);
+
+		message[19] = cuda_swab32(startNounce + thread);
+		message[20] = 0x80U; // end tag
+
+		#pragma unroll
+		for(int i=21; i<31; i++) message[i] = 0U;
+		message[31] = 0x01000000U; // end block
+
+		uint32_t state[32];
+		#pragma unroll
+		for(int i=0; i<32; i++) state[i] = message[i];
+		state[31] ^= 0x00020000U; // "...00000201"
+
+#if USE_SHARED
+		quark_groestl512_perm_P(state, mixtabs);
+		quark_groestl512_perm_Q(message, mixtabs);
+
+		state[31] ^= 0x00020000U;
+		#pragma unroll 32
+		for(int i=0; i<32; i++) state[i] ^= message[i];
+
+		#pragma unroll 16
+		for(int i=16; i<32; i++) message[i] = state[i];
+
+		quark_groestl512_perm_P(state, mixtabs);
+#else
+		tex_groestl512_perm_P(state);
+		tex_groestl512_perm_Q(message);
+
+		state[31] ^= 0x00020000U;
+		#pragma unroll 32
+		for(int i=0; i<32; i++) state[i] ^= message[i];
+
+		#pragma unroll 16
+		for(int i=16; i<32; i++) message[i] = state[i];
+
+		tex_groestl512_perm_P(state);
+#endif
+		#pragma unroll 16
+		for(int i=16; i<32; i++) state[i] ^= message[i];
+
+		// uint4 = 4 x uint32_t = 16 bytes, x 4 => 64 bytes
+		const off_t hashPosition = thread;
+
+		uint4 *outpt = (uint4*) (&g_outhash[hashPosition << 4]);
+		uint4 *phash = (uint4*) (&state[16]);
+		outpt[0] = phash[0];
+		outpt[1] = phash[1];
+		outpt[2] = phash[2];
+		outpt[3] = phash[3];
+	}
+#endif
+}
+
+#endif // WANT_GROESTL80

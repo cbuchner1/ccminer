@@ -261,6 +261,7 @@ Options:\n\
 			skein       Skein SHA2 (Skeincoin)\n\
 			skein2      Double Skein (Woodcoin)\n\
 			s3          S3 (1Coin)\n\
+			timetravel  Machinecoin permuted x8\n\
 			vanilla     Blake256-8 (VNL)\n\
 			veltor      Thorsriddle streebog\n\
 			whirlcoin   Old Whirlcoin (Whirlpool algo)\n\
@@ -1619,6 +1620,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_LBRY:
 		case ALGO_LYRA2v2:
 		case ALGO_LYRA2Z:
+		case ALGO_TIMETRAVEL:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
@@ -2121,6 +2123,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_HEAVY:
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
+			case ALGO_TIMETRAVEL:
 			case ALGO_X11EVO:
 			case ALGO_X11:
 			case ALGO_X13:
@@ -2332,6 +2335,9 @@ static void *miner_thread(void *userdata)
 		//	break;
 		case ALGO_WILDKECCAK:
 			rc = scanhash_wildkeccak(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_TIMETRAVEL:
+			rc = scanhash_timetravel(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_X11EVO:
 			rc = scanhash_x11evo(thr_id, &work, max_nonce, &hashes_done);

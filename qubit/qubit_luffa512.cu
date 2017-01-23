@@ -469,7 +469,7 @@ void qubit_luffa512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNoun
 }
 
 __host__
-void qubit_cpu_precalc(uint32_t* message)
+static void qubit_cpu_precalc(uint32_t* message)
 {
 	uint32_t statebuffer[8];
 	uint32_t statechainv[40] =

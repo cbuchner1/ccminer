@@ -233,15 +233,6 @@ void quark_keccak512_gpu_hash_64_v30(uint32_t threads, uint32_t startNounce, uin
 }
 
 __host__
-void quark_keccak512_cpu_init(int thr_id, uint32_t threads)
-{
-	cudaMemcpyToSymbol( d_keccak_round_constants,
-						host_keccak_round_constants,
-						sizeof(host_keccak_round_constants),
-						0, cudaMemcpyHostToDevice);
-}
-
-__host__
 void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = 256;
@@ -257,4 +248,30 @@ void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNou
 		quark_keccak512_gpu_hash_64_v30<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
 
 	MyStreamSynchronize(NULL, order, thr_id);
+}
+
+void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads);
+void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen);
+void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
+
+__host__
+void quark_keccak512_cpu_init(int thr_id, uint32_t threads)
+{
+	// required for the 64 bytes one
+	cudaMemcpyToSymbol(d_keccak_round_constants, host_keccak_round_constants,
+			sizeof(host_keccak_round_constants), 0, cudaMemcpyHostToDevice);
+
+	jackpot_keccak512_cpu_init(thr_id, threads);
+}
+
+__host__
+void keccak512_setBlock_80(int thr_id, uint32_t *endiandata)
+{
+	jackpot_keccak512_cpu_setBlock((void*)endiandata, 80);
+}
+
+__host__
+void keccak512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+{
+	jackpot_keccak512_cpu_hash(thr_id, threads, startNounce, d_hash, 0);
 }

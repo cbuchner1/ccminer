@@ -2243,6 +2243,9 @@ void print_hash_tests(void)
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);
 
+	timetravel_hash(&hash[0], &buf[0]);
+	printpfx("timetravel", hash);
+
 	blake256hash(&hash[0], &buf[0], 8);
 	printpfx("vanilla", hash);
 
