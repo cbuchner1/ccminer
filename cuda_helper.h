@@ -25,7 +25,7 @@
 
 extern "C" short device_map[MAX_GPUS];
 extern "C"  long device_sm[MAX_GPUS];
-extern short device_mpcount[MAX_GPUS];
+extern "C" short device_mpcount[MAX_GPUS];
 extern int cuda_arch[MAX_GPUS];
 
 // common functions
@@ -76,6 +76,12 @@ extern const uint3 threadIdx;
 #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
 #define ROTR32(x, n) __funnelshift_r( (x), (x), (n) )
 #endif
+
+#define AS_U32(addr)   *((uint32_t*)(addr))
+#define AS_U64(addr)   *((uint64_t*)(addr))
+#define AS_UINT2(addr) *((uint2*)(addr))
+#define AS_UINT4(addr) *((uint4*)(addr))
+#define AS_UL2(addr)   *((ulonglong2*)(addr))
 
 __device__ __forceinline__ uint64_t MAKE_ULONGLONG(uint32_t LO, uint32_t HI)
 {

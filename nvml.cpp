@@ -2091,7 +2091,7 @@ void *monitor_thread(void *userdata)
 			uint32_t fanpercent = 0, power = 0;
 			double tempC = 0, khs_per_watt = 0;
 			uint32_t counter = 0;
-			int max_loops = 2000;
+			int max_loops = 1000;
 
 			pthread_cond_wait(&cgpu->monitor.sampling_signal, &cgpu->monitor.lock);
 

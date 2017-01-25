@@ -141,7 +141,6 @@ static const __device__ __align__(16) uint32_t d_t_fn[1024] = {
 #define AS_UINT2(addr) *((uint2*)(addr))
 #define AS_UINT4(addr) *((uint4*)(addr))
 #define AS_UL2(addr) *((ulonglong2*)(addr))
-#define AS_UL4(addr) *((ulonglong4*)(addr))
 
 #define t_fn0(x) (sharedMemory[x])
 #define t_fn1(x) (sharedMemory[0x100U | (x)])
