@@ -205,31 +205,34 @@ extern "C" int scanhash_x15(int thr_id,  struct work* work, uint32_t max_nonce, 
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != UINT32_MAX)
+		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (work->nonces[0] != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];
-			uint32_t vhash64[8];
+			uint32_t _ALIGN(64) vhash[8];
 			/* check now with the CPU to confirm */
-			be32enc(&endiandata[19], foundNonce);
-			x15hash(vhash64, endiandata);
+			be32enc(&endiandata[19], work->nonces[0]);
+			x15hash(vhash, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				work_set_target_ratio(work, vhash64);
-				if (secNonce != 0) {
-					be32enc(&endiandata[19], secNonce);
-					x15hash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
-						work_set_target_ratio(work, vhash64);
-					pdata[21] = secNonce;
-					res++;
+			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				work_set_target_ratio(work, vhash);
+				if (work->nonces[1] != 0) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					x15hash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					work->valid_nonces++;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
-				pdata[19] = foundNonce;
-				return res;
-			} else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+				return work->valid_nonces;
+			}
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 

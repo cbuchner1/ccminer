@@ -2343,24 +2343,13 @@ static void *miner_thread(void *userdata)
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 
-		// todo: update all algos to use work->nonces and pdata[19] as counter
 		switch (opt_algo) {
-			case ALGO_BLAKE2S:
-			case ALGO_CRYPTOLIGHT:
-			case ALGO_CRYPTONIGHT:
-			case ALGO_DECRED:
-			case ALGO_LBRY:
+			// algos to migrate to replace pdata[21] by work.nonces[]
+			case ALGO_HEAVY:
+			case ALGO_SCRYPT:
+			case ALGO_SCRYPT_JANE:
 			case ALGO_SIA:
-			case ALGO_VELTOR:
-			case ALGO_WILDKECCAK:
-				// migrated algos
-				break;
-			case ALGO_ZR5:
-				// algos with only work.nonces[1] set
-				work.nonces[0] = nonceptr[0];
-				break;
-			default:
-				// algos with 2 results in pdata and work.nonces unset
+			//case ALGO_WHIRLPOOLX:
 				work.nonces[0] = nonceptr[0];
 				work.nonces[1] = nonceptr[2];
 		}
@@ -2483,7 +2472,6 @@ static void *miner_thread(void *userdata)
 				work.submit_nonce_id = 1;
 				nonceptr[0] = work.nonces[1];
 				if (opt_algo == ALGO_ZR5) {
-					// todo: use + 4..6 index for pok to allow multiple nonces
 					work.data[0] = work.data[22]; // pok
 					work.data[22] = 0;
 				}

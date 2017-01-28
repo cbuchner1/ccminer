@@ -45,7 +45,7 @@ static uint32_t *h_resNonce[MAX_GPUS];
 
 /* max count of found nonces in one call */
 #define NBN 2
-static uint32_t extra_results[NBN] = { UINT32_MAX };
+static __thread uint32_t extra_results[NBN] = { UINT32_MAX };
 
 #define GSPREC(a,b,c,d,x,y) { \
 	v[a] += (m[x] ^ c_u256[y]) + v[b]; \
@@ -519,46 +519,51 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 
 	do {
 		// GPU HASH (second block only, first is midstate)
-		uint32_t foundNonce = blake256_cpu_hash_16(thr_id, throughput, pdata[19], targetHigh, blakerounds);
+		work->nonces[0] = blake256_cpu_hash_16(thr_id, throughput, pdata[19], targetHigh, blakerounds);
 
-		if (foundNonce != UINT32_MAX)
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
+		if (work->nonces[0] != UINT32_MAX)
 		{
-			uint32_t vhashcpu[8];
-			uint32_t Htarg = ptarget[6];
+			uint32_t _ALIGN(64) vhashcpu[8];
+			const uint32_t Htarg = ptarget[6];
 
 			for (int k=16; k < 19; k++)
 				be32enc(&endiandata[k], pdata[k]);
 
-			be32enc(&endiandata[19], foundNonce);
+			be32enc(&endiandata[19], work->nonces[0]);
 			blake256hash(vhashcpu, endiandata, blakerounds);
 
 			if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget))
 			{
-				rc = 1;
+				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhashcpu);
-				*hashes_done = pdata[19] - first_nonce + throughput;
-				pdata[19] = foundNonce;
 #if NBN > 1
 				if (extra_results[0] != UINT32_MAX) {
-					be32enc(&endiandata[19], extra_results[0]);
+					work->nonces[1] = extra_results[0];
+					be32enc(&endiandata[19], work->nonces[1]);
 					blake256hash(vhashcpu, endiandata, blakerounds);
 					if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget)) {
-						pdata[21] = extra_results[0];
 						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio[0]) {
 							work_set_target_ratio(work, vhashcpu);
-							xchg(pdata[21], pdata[19]);
+							xchg(work->nonces[0], work->nonces[1]);
+						} else {
+							bn_set_target_ratio(work, vhashcpu, 1);
 						}
-						rc = 2;
+						work->valid_nonces = 2;
 					}
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
 					extra_results[0] = UINT32_MAX;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
 #endif
-				return rc;
+				return work->valid_nonces;
 			}
-			else if (opt_debug) {
-				applog_hash((uchar*)ptarget);
-				applog_compare_hash((uchar*)vhashcpu, (uchar*)ptarget);
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+			else if (vhashcpu[6] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 

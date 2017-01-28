@@ -56,7 +56,6 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-	int res = 0;
 
 	uint32_t throughput =  cuda_default_throughput(thr_id, 1 << 20); // 256*256*16
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
@@ -101,6 +100,8 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 	quark_blake512_cpu_setBlock_80(thr_id, endiandata);
 	cuda_check_cpu_setTarget(ptarget);
 
+	work->valid_nonces = 0;
+
 	do {
 		int order = 0;
 
@@ -113,31 +114,33 @@ extern "C" int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce,
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != UINT32_MAX)
+		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (work->nonces[0] != UINT32_MAX)
 		{
 			const uint32_t Htarg = ptarget[7];
-			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
-			nist5hash(vhash64, endiandata);
+			uint32_t _ALIGN(64) vhash[8];
+			be32enc(&endiandata[19], work->nonces[0]);
+			nist5hash(vhash, endiandata);
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				work_set_target_ratio(work, vhash64);
-				if (secNonce != 0) {
-					be32enc(&endiandata[19], secNonce);
-					nist5hash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
-						work_set_target_ratio(work, vhash64);
-					pdata[21] = secNonce;
-					res++;
+			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				if (work->nonces[1] != 0) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					nist5hash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					work->valid_nonces++;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
-				pdata[19] = foundNonce;
 				goto out;
 			}
-			else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 
@@ -157,7 +160,7 @@ out:
 		cudaStreamDestroy(stream[i]);
 #endif
 
-	return res;
+	return work->valid_nonces;
 }
 
 // ressources cleanup

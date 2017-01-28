@@ -431,12 +431,12 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 		if (work_restart[thr_id].restart)
 			return -1;
 
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != UINT32_MAX)
+		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (work->nonces[0] != UINT32_MAX)
 		{
-			uint32_t vhash64[8];
+			uint32_t _ALIGN(64) vhash[8];
 			uint32_t oldp19 = pdata[19];
-			uint32_t offset = foundNonce - pdata[19];
+			uint32_t offset = work->nonces[0] - pdata[19];
 			uint32_t pok = 0;
 			uint16_t h_pok;
 
@@ -444,32 +444,31 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 
 			cudaMemcpy(&h_pok, d_poks[thr_id] + offset, sizeof(uint16_t), cudaMemcpyDeviceToHost);
 			pok = version | (0x10000UL * h_pok);
-			pdata[0] = pok; pdata[19] = foundNonce;
-			zr5hash(vhash64, pdata);
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				work_set_target_ratio(work, vhash64);
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, oldp19, d_hash[thr_id], 1);
-				if (secNonce != 0) {
-					offset = secNonce - oldp19;
+			pdata[0] = pok; pdata[19] = work->nonces[0];
+			zr5hash(vhash, pdata);
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, oldp19, d_hash[thr_id], 1);
+				if (work->nonces[1] != 0) {
+					offset = work->nonces[1] - oldp19;
 					cudaMemcpy(&h_pok, d_poks[thr_id] + offset, sizeof(uint16_t), cudaMemcpyDeviceToHost);
 					pok = version | (0x10000UL * h_pok);
 					memcpy(tmpdata, pdata, 80);
-					tmpdata[0] = pok; tmpdata[19] = secNonce;
-					zr5hash(vhash64, tmpdata);
-					if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-						if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
-							work_set_target_ratio(work, vhash64);
-						pdata[21] = secNonce;
-						pdata[22] = pok;
-						res++;
+					tmpdata[0] = pok; tmpdata[19] = work->nonces[1];
+					zr5hash(vhash, tmpdata);
+					if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+						bn_set_target_ratio(work, vhash, 1);
+						pdata[19] = max(pdata[19], work->nonces[1]); // cursor
+						pdata[20] = pok; // second nonce "pok"
+						work->valid_nonces++;
 					}
+					pdata[19]++;
 				}
-				return res;
-			} else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
-
-				pdata[19]++;
+				return work->valid_nonces;
+			}
+			else if (vhash[7] > ptarget[7]) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
 				pdata[0] = oldp0;
 			}
 		} else

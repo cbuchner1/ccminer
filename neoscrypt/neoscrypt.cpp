@@ -62,28 +62,31 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 	neoscrypt_setBlockTarget(endiandata,ptarget);
 
 	do {
-		uint32_t foundNonces[2] = { UINT32_MAX, UINT32_MAX };
-		neoscrypt_hash_k4(thr_id, throughput, pdata[19], foundNonces, have_stratum);
+		memset(work->nonces, 0xff, sizeof(work->nonces));
+		neoscrypt_hash_k4(thr_id, throughput, pdata[19], work->nonces, have_stratum);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		if (foundNonces[0] != UINT32_MAX)
+		if (work->nonces[0] != UINT32_MAX)
 		{
+			const uint32_t Htarg = ptarget[7];
 			uint32_t _ALIGN(64) vhash[8];
 
 			if (have_stratum) {
-				be32enc(&endiandata[19], foundNonces[0]);
+				be32enc(&endiandata[19], work->nonces[0]);
 			} else {
-				endiandata[19] = foundNonces[0];
+				endiandata[19] = work->nonces[0];
 			}
 			neoscrypt((uchar*)vhash, (uchar*) endiandata, 0x80000620U);
 
-			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhash);
-				pdata[19] = foundNonces[0];
-				return 1;
-			} else {
-				gpulog(LOG_WARNING, thr_id, "nonce %08x does not validate on CPU!", foundNonces[0]);
+				pdata[19] = work->nonces[0] + 1; // cursor
+				return work->valid_nonces;
+			}
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "nonce %08x does not validate on CPU!", work->nonces[0]);
 			}
 		}
 

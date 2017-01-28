@@ -43,7 +43,6 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-	bool swapnonce = true;
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
@@ -77,24 +76,37 @@ extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, u
 	cuda_check_cpu_setTarget(ptarget);
 
 	do {
-		bmw256_cpu_hash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], (int) swapnonce);
-		uint32_t foundNonce = cuda_check_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		bmw256_cpu_hash_80(thr_id, (int) throughput, pdata[19], d_hash[thr_id], 1);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		if (foundNonce != UINT32_MAX)
+		work->nonces[0] = cuda_check_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (work->nonces[0] != UINT32_MAX)
 		{
-			uint32_t _ALIGN(64) vhash64[8];
-			endiandata[19] = swab32_if(foundNonce, swapnonce);
-			bmw_hash(vhash64, endiandata);
+			const uint32_t Htarg = ptarget[7];
+			uint32_t _ALIGN(64) vhash[8];
+			be32enc(&endiandata[19], work->nonces[0]);
+			bmw_hash(vhash, endiandata);
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				pdata[19] = swab32_if(foundNonce,!swapnonce);
-				work_set_target_ratio(work, vhash64);
-				return 1;
+			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				if (work->nonces[1] != 0) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					bmw_hash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					work->valid_nonces++;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
+				}
+				return work->valid_nonces;
 			}
-			else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 

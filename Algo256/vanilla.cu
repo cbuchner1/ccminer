@@ -416,6 +416,7 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 	do {
 		vanilla_gpu_hash_16_8<<<grid,block, 0, streams[thr_id]>>>(throughput, pdata[19], d_resNonce[thr_id], targetHigh);
 		cudaMemcpyAsync(h_resNonce[thr_id], d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost,streams[thr_id]);
+		*hashes_done = pdata[19] - first_nonce + throughput;
 		cudaStreamSynchronize(streams[thr_id]);
 
 		if (h_resNonce[thr_id][0] != UINT32_MAX){
@@ -429,31 +430,41 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 			vanillahash(vhashcpu, endiandata, blakerounds);
 
 			if (vhashcpu[6] <= Htarg && fulltest(vhashcpu, ptarget)) {
-				rc = 1;
+				work->valid_nonces = 1;
+				work->nonces[0] = h_resNonce[thr_id][0];
 				work_set_target_ratio(work, vhashcpu);
-				*hashes_done = pdata[19] - first_nonce + throughput;
-				pdata[19] = h_resNonce[thr_id][0];
 #if NBN > 1
 				if (h_resNonce[thr_id][1] != UINT32_MAX) {
+					work->nonces[1] = h_resNonce[thr_id][1];
 					be32enc(&endiandata[19], h_resNonce[thr_id][1]);
 					vanillahash(vhashcpu, endiandata, blakerounds);
-					pdata[21] = h_resNonce[thr_id][1];
 					if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio[0]) {
 						work_set_target_ratio(work, vhashcpu);
-						xchg(pdata[19], pdata[21]);
+						xchg(work->nonces[0], work->nonces[1]);
 					}
-					rc = 2;
+					work->valid_nonces = 2;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
 #endif
-				return rc;
+				return work->valid_nonces;
 			}
-			else {
+			else if (vhashcpu[6] > Htarg) {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", h_resNonce[thr_id][0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 
+		if ((uint64_t) throughput + pdata[19] >= max_nonce) {
+			pdata[19] = max_nonce;
+			break;
+		}
+
 		pdata[19] += throughput;
-	} while (!work_restart[thr_id].restart && ((uint64_t)max_nonce > ((uint64_t)(pdata[19]) + (uint64_t)throughput)));
+
+	} while (!work_restart[thr_id].restart);
 
 	*hashes_done = pdata[19] - first_nonce;
 	MyStreamSynchronize(NULL, 0, dev_id);

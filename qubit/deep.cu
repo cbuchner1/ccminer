@@ -96,30 +96,33 @@ extern "C" int scanhash_deep(int thr_id, struct work* work, uint32_t max_nonce, 
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		uint32_t foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != UINT32_MAX)
+		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (work->nonces[0] != UINT32_MAX)
 		{
-			uint32_t _ALIGN(64) vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
-			deephash(vhash64, endiandata);
+			const uint32_t Htarg = ptarget[7];
+			uint32_t _ALIGN(64) vhash[8];
+			be32enc(&endiandata[19], work->nonces[0]);
+			deephash(vhash, endiandata);
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				work_set_target_ratio(work, vhash64);
-				if (secNonce != 0) {
-					be32enc(&endiandata[19], secNonce);
-					deephash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
-						work_set_target_ratio(work, vhash64);
-					pdata[21] = secNonce;
-					res++;
+			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				if (work->nonces[1] != 0) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					deephash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					work->valid_nonces++;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
-				pdata[19] = foundNonce;
-				return res;
+				return work->valid_nonces;
 			}
-			else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 
@@ -127,7 +130,6 @@ extern "C" int scanhash_deep(int thr_id, struct work* work, uint32_t max_nonce, 
 			pdata[19] = max_nonce;
 			break;
 		}
-
 		pdata[19] += throughput;
 
 	} while (!work_restart[thr_id].restart);

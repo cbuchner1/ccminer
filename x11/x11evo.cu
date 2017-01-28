@@ -290,7 +290,6 @@ extern "C" int scanhash_x11evo(int thr_id, struct work* work, uint32_t max_nonce
 
 	do {
 		int order = 1;
-		uint32_t foundNonce;
 
 		// Hash with CUDA
 		quark_blake512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
@@ -344,38 +343,38 @@ extern "C" int scanhash_x11evo(int thr_id, struct work* work, uint32_t max_nonce
 				break;
 			case ECHO:
 				x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-				TRACE("echo => ");
+				TRACE("echo   :");
 				break;
 			}
 		}
 
-		foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
-		if (foundNonce != UINT32_MAX)
-		{
-			uint32_t _ALIGN(64) vhash64[8];
-			const uint32_t Htarg = ptarget[7];
-			be32enc(&endiandata[19], foundNonce);
-			x11evo_hash(vhash64, endiandata);
+		*hashes_done = pdata[19] - first_nonce + throughput;
 
-			if (vhash64[7] <= Htarg && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				// check if there was some other ones...
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				work_set_target_ratio(work, vhash64);
-				*hashes_done = pdata[19] - first_nonce + throughput;
-				if (secNonce != 0) {
-					be32enc(&endiandata[19], secNonce);
-					x11evo_hash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
-						work_set_target_ratio(work, vhash64);
-					pdata[21] = secNonce;
-					res++;
+		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		if (work->nonces[0] != UINT32_MAX)
+		{
+			const uint32_t Htarg = ptarget[7];
+			uint32_t _ALIGN(64) vhash[8];
+			be32enc(&endiandata[19], work->nonces[0]);
+			x11evo_hash(vhash, endiandata);
+
+			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				pdata[19] = work->nonces[0] + 1; // cursor
+				if (work->nonces[1] != 0) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					x11evo_hash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+					gpulog(LOG_DEBUG, thr_id, "second nonce %08x! cursor %08x", work->nonces[1], pdata[19]);
+					work->valid_nonces++;
 				}
-				pdata[19] = foundNonce;
-				return res;
-			} else if (vhash64[7] > Htarg) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
-				pdata[19] = foundNonce + 1;
+				return work->valid_nonces;
+			} else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
 				continue;
 			}
 		}
@@ -388,7 +387,7 @@ extern "C" int scanhash_x11evo(int thr_id, struct work* work, uint32_t max_nonce
 
 	} while (!work_restart[thr_id].restart);
 
-	*hashes_done = pdata[19] - first_nonce;
+	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
 

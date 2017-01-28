@@ -67,34 +67,36 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 	myriadgroestl_cpu_setBlock(thr_id, endiandata, ptarget);
 
 	do {
-		// GPU
-		uint32_t foundNonces[2] = { UINT32_MAX, UINT32_MAX };
+		memset(work->nonces, 0xff, sizeof(work->nonces));
 
-		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], foundNonces);
+		// GPU
+		myriadgroestl_cpu_hash(thr_id, throughput, pdata[19], work->nonces);
 
 		*hashes_done = pdata[19] - start_nonce + throughput;
 
-		if (foundNonces[0] < UINT32_MAX && bench_algo < 0)
+		if (work->nonces[0] < UINT32_MAX && bench_algo < 0)
 		{
 			uint32_t _ALIGN(64) vhash[8];
-			endiandata[19] = swab32(foundNonces[0]);
+			endiandata[19] = swab32(work->nonces[0]);
 			myriadhash(vhash, endiandata);
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhash);
-				work->nonces[0] = foundNonces[0];
-				pdata[19] = foundNonces[0];
-				// search for another nonce
-				if (foundNonces[1] != UINT32_MAX) {
-					endiandata[19] = swab32(foundNonces[1]);
+				if (work->nonces[1] != UINT32_MAX) {
+					endiandata[19] = swab32(work->nonces[1]);
 					myriadhash(vhash, endiandata);
-					pdata[21] = foundNonces[1]; // to drop
-					work->nonces[1] = foundNonces[1];
 					bn_set_target_ratio(work, vhash, 1);
-					return 2;
+					work->valid_nonces = 2;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
-				return 1;
-			} else if (vhash[7] > ptarget[7]) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonces[0]);
+				return work->valid_nonces;
+			}
+			else if (vhash[7] > ptarget[7]) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 

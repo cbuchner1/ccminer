@@ -214,34 +214,40 @@ extern "C" int scanhash_jackpot(int thr_id, struct work *work, uint32_t max_nonc
 
 		CUDA_LOG_ERROR();
 
-		uint32_t foundNonce = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
+		work->nonces[0] = cuda_check_hash_branch(thr_id, nrm3, pdata[19], d_branch3Nonces[thr_id], d_hash[thr_id], order++);
 
-		if (foundNonce != UINT32_MAX)
+		if (work->nonces[0] != UINT32_MAX)
 		{
-			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
+			const uint32_t Htarg = ptarget[7];
+			uint32_t _ALIGN(64) vhash[8];
+			be32enc(&endiandata[19], work->nonces[0]);
 
 			// jackpothash function gibt die Zahl der Runden zurück
-			jackpothash(vhash64, endiandata);
+			jackpothash(vhash, endiandata);
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				int res = 1;
-				work_set_target_ratio(work, vhash64);
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
 #if 0
-				uint32_t secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
-				if (secNonce != 0) {
-					be32enc(&endiandata[19], secNonce);
-					nist5hash(vhash64, endiandata);
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0])
-						work_set_target_ratio(work, vhash64);
-					pdata[21] = secNonce;
-					res++;
+				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
+				if (work->nonces[1] != 0) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					jackpothash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					work->valid_nonces++;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
+#else
+				pdata[19] = work->nonces[0] + 1; // cursor
 #endif
-				pdata[19] = foundNonce;
-				return res;
-			} else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+				return work->valid_nonces;
+			}
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 

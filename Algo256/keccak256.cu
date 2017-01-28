@@ -65,7 +65,7 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 		init[thr_id] = true;
 	}
 
-	for (int k=0; k < 20; k++) {
+	for (int k=0; k < 19; k++) {
 		be32enc(&endiandata[k], pdata[k]);
 	}
 
@@ -75,20 +75,25 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		uint32_t foundNonce = keccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		if (foundNonce != UINT32_MAX && bench_algo < 0)
+		work->nonces[0] = keccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		if (work->nonces[0] != UINT32_MAX && bench_algo < 0)
 		{
-			uint32_t _ALIGN(64) vhash64[8];
-			be32enc(&endiandata[19], foundNonce);
-			keccak256_hash(vhash64, endiandata);
+			const uint32_t Htarg = ptarget[7];
+			uint32_t _ALIGN(64) vhash[8];
 
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget)) {
-				work_set_target_ratio(work, vhash64);
-				pdata[19] = foundNonce;
-				return 1;
+			be32enc(&endiandata[19], work->nonces[0]);
+			keccak256_hash(vhash, endiandata);
+
+			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				pdata[19] = work->nonces[0] + 1;
+				return work->valid_nonces;
 			}
-			else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 

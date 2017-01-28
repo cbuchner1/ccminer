@@ -342,10 +342,6 @@ extern "C" void skeincoinhash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
-	return iftrue ? swab32(val) : val;
-}
-
 static bool init[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
@@ -355,7 +351,6 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 	uint32_t *ptarget = work->target;
 
 	const uint32_t first_nonce = pdata[19];
-	const int swap = 1;
 
 	sm5 = (device_sm[device_map[thr_id]] >= 500);
 	bool checkSecnonce = (have_stratum || have_longpoll) && !sm5;
@@ -363,7 +358,6 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 20);
 	if (init[thr_id]) throughput = min(throughput, (max_nonce - first_nonce));
 
-	uint32_t foundNonce, secNonce = 0;
 	uint64_t target64 = 0;
 
 	if (opt_benchmark)
@@ -409,54 +403,45 @@ extern "C" int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_no
 
 		if (sm5) {
 			/* cuda_skeincoin.cu */
-			foundNonce = skeincoin_hash_sm5(thr_id, throughput, pdata[19], swap, target64, &secNonce);
+			work->nonces[0] = skeincoin_hash_sm5(thr_id, throughput, pdata[19], 1, target64, &work->nonces[1]);
 		} else {
 			/* quark/cuda_skein512.cu */
-			skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], swap);
+			skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 			sha2_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
-			foundNonce = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
+			work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		}
 
-		if (foundNonce != UINT32_MAX)
+		if (work->nonces[0] != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash[8];
 
-			endiandata[19] = swab32_if(foundNonce, swap);
+			endiandata[19] = swab32(work->nonces[0]);
 			skeincoinhash(vhash, endiandata);
-
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
-				int res = 1;
-				uint8_t num = res;
+				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhash);
 				if (checkSecnonce) {
-					secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
-				}
-				while (secNonce != 0 && res < 2) /* todo: up to 6 */
-				{
-					endiandata[19] = swab32_if(secNonce, swap);
-					skeincoinhash(vhash, endiandata);
-					if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
-						// todo: use 19 20 21... zr5 pok to adapt...
-						endiandata[19] = swab32_if(secNonce, swap);
+					work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], work->valid_nonces);
+					if (work->nonces[1] != 0) {
+						endiandata[19] = swab32(work->nonces[1]);
 						skeincoinhash(vhash, endiandata);
-						if (bn_hash_target_ratio(vhash, ptarget) > work->shareratio[0])
-							work_set_target_ratio(work, vhash);
-						pdata[19+res*2] = swab32_if(secNonce, !swap);
-						res++;
+						if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+							work->valid_nonces++;
+							bn_set_target_ratio(work, vhash, 1);
+						}
+						pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+					} else {
+						pdata[19] = work->nonces[0] + 1;
 					}
-					num++;
-					//if (checkSecnonce)
-					//	secNonce = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], num);
-					//else
-						break; // only one secNonce...
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor for next scan
 				}
-				if (res > 1 && opt_debug)
-					applog(LOG_BLUE, "GPU #%d: %d/%d valid nonces !!!", device_map[thr_id], res, (int)num);
-				pdata[19] = swab32_if(foundNonce, !swap);
-				return res;
+				return work->valid_nonces;
 			}
-			else {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+			 else if (vhash[7] > ptarget[7]) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 

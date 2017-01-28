@@ -142,7 +142,6 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 
 	do {
 		int order = 0;
-		uint32_t foundNonces[2] = { 0, 0 };
 
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		TRACE("blake  :");
@@ -157,37 +156,36 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 		cubehash256_cpu_hash_32(thr_id, throughput,pdata[19], d_hash[thr_id], order++);
 		TRACE("cube   :");
 
-		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], foundNonces);
+		memset(work->nonces, 0, sizeof(work->nonces));
+		bmw256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], work->nonces);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		if (foundNonces[0] != 0)
+		if (work->nonces[0] != 0)
 		{
-			uint32_t vhash64[8];
-			be32enc(&endiandata[19], foundNonces[0]);
-			lyra2v2_hash(vhash64, endiandata);
-			if (vhash64[7] <= ptarget[7] && fulltest(vhash64, ptarget))
-			{
-				int res = 1;
-				work_set_target_ratio(work, vhash64);
-				pdata[19] = foundNonces[0];
-				// check if there was another one...
-				if (foundNonces[1] != 0)
-				{
-					be32enc(&endiandata[19], foundNonces[1]);
-					lyra2v2_hash(vhash64, endiandata);
-					pdata[21] = foundNonces[1];
-					if (bn_hash_target_ratio(vhash64, ptarget) > work->shareratio[0]) {
-						work_set_target_ratio(work, vhash64);
-						xchg(pdata[19], pdata[21]);
-					}
-					res++;
+			const uint32_t Htarg = ptarget[7];
+			uint32_t _ALIGN(64) vhash[8];
+			be32enc(&endiandata[19], work->nonces[0]);
+			lyra2v2_hash(vhash, endiandata);
+
+			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
+				work_set_target_ratio(work, vhash);
+				if (work->nonces[1] != 0) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					lyra2v2_hash(vhash, endiandata);
+					bn_set_target_ratio(work, vhash, 1);
+					work->valid_nonces++;
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1; // cursor
 				}
-				return res;
+				return work->valid_nonces;
 			}
-			else
-			{
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonces[0]);
+			else if (vhash[7] > Htarg) {
+				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				pdata[19] = work->nonces[0] + 1;
+				continue;
 			}
 		}
 
