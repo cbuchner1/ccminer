@@ -512,6 +512,9 @@
     <ClInclude Include="quark\cuda_bmw512_sm3.cuh">
       <Filter>Source Files\CUDA\quark</Filter>
     </ClInclude>
+    <ClInclude Include="quark\cuda_quark_groestl512_sm2.cuh">
+      <Filter>Source Files\CUDA\quark</Filter>
+    </ClInclude>
     <ClInclude Include="x11\cuda_x11_simd512_sm2.cuh">
       <Filter>Source Files\CUDA\x11</Filter>
     </ClInclude>

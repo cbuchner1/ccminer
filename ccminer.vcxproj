@@ -353,6 +353,7 @@
     <ClInclude Include="miner.h" />
     <ClInclude Include="nvml.h" />
     <ClInclude Include="quark\cuda_bmw512_sm3.cuh" />
+    <ClInclude Include="quark\cuda_quark_groestl512_sm2.cuh" />
     <ClInclude Include="quark\cuda_quark_blake512_sp.cuh" />
     <ClInclude Include="quark\cuda_skein512_sp.cuh" />
     <ClInclude Include="res\resource.h" />
