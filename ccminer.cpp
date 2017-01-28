@@ -2794,9 +2794,9 @@ wait_stratum_url:
 			if (stratum_gen_work(&stratum, &g_work))
 				g_work_time = time(NULL);
 			if (stratum.job.clean) {
-				static uint32_t last_bloc_height;
-				if (!opt_quiet && stratum.job.height != last_bloc_height) {
-					last_bloc_height = stratum.job.height;
+				static uint32_t last_block_height;
+				if ((!opt_quiet || !firstwork_time) && stratum.job.height != last_block_height) {
+					last_block_height = stratum.job.height;
 					if (net_diff > 0.)
 						applog(LOG_BLUE, "%s block %d, diff %.3f", algo_names[opt_algo],
 							stratum.job.height, net_diff);
