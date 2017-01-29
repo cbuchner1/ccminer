@@ -2348,7 +2348,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_HEAVY:
 			case ALGO_SCRYPT:
 			case ALGO_SCRYPT_JANE:
-			case ALGO_SIA:
 			//case ALGO_WHIRLPOOLX:
 				work.nonces[0] = nonceptr[0];
 				work.nonces[1] = nonceptr[2];

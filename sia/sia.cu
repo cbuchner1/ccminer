@@ -227,34 +227,31 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 	blake2b_setBlock(inputdata);
 
 	do {
-		uint32_t secNonce = UINT32_MAX;
-		uint32_t foundNonce = blake2b_hash_cuda(thr_id, throughput, pdata[8], target, secNonce);
+		work->nonces[0] = blake2b_hash_cuda(thr_id, throughput, pdata[8], target, work->nonces[1]);
 
 		*hashes_done = pdata[8] - first_nonce + throughput;
 
-		if (foundNonce != UINT32_MAX)
+		if (work->nonces[0] != UINT32_MAX)
 		{
 			work->valid_nonces = 0;
-			inputdata[8] = foundNonce;
+			inputdata[8] = work->nonces[0];
 			blake2b_hash(hash, inputdata);
 			if (swab32(hash[0]) <= Htarg) {
 				// sia hash target is reversed (start of hash)
 				swab256(vhashcpu, hash);
 				if (fulltest(vhashcpu, ptarget)) {
 					work_set_target_ratio(work, vhashcpu);
-					work->nonces[0] = foundNonce;
 					work->valid_nonces++;
+					pdata[8] = work->nonces[0] + 1;
 				}
 			}
 
-			if (secNonce != UINT32_MAX) {
-				inputdata[8] = secNonce;
+			if (work->nonces[1] != UINT32_MAX) {
+				inputdata[8] = work->nonces[1];
 				blake2b_hash(hash, inputdata);
 				if (swab32(hash[0]) <= Htarg) {
-					gpulog(LOG_DEBUG, thr_id, "found second nonce %08x", secNonce);
 					swab256(vhashcpu, hash);
 					if (fulltest(vhashcpu, ptarget)) {
-						work->nonces[1] = secNonce;
 						if (bn_hash_target_ratio(vhashcpu, ptarget) > work->shareratio[0]) {
 							work->sharediff[1] = work->sharediff[0];
 							work->shareratio[1] = work->shareratio[0];
@@ -264,11 +261,11 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 							bn_set_target_ratio(work, vhashcpu, 1);
 						}
 						work->valid_nonces++;
+						pdata[8] = work->nonces[1] + 1;
 					}
 				}
 			}
 			if (work->valid_nonces) {
-				pdata[8] = max_nonce;
 				return work->valid_nonces;
 			}
 		}
