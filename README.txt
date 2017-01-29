@@ -269,6 +269,13 @@ features.
 
 >>> RELEASE HISTORY <<<
 
+  Jan. 2017 (WIP)
+                  Handle cryptonight, wildkeccak and cryptonight-lite
+                  Rework the common skein512 (used in most algos except skein ;)
+                  Store the share diff of second nonce(s) in most algos
+                  Hardware monitoring thread to get more accurate power readings
+                  Small changes for the quiet mode
+
   Dec. 21th 2016  v1.8.4
                   Improve streebog based algos, veltor and sib (from alexis work)
                   Blake2s greetly improved (3x), thanks to alexis too...

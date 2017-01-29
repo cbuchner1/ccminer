@@ -275,7 +275,7 @@ extern "C" int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_n
 		init[thr_id] = true;
 	}
 
-	throughput = cuda_default_throughput(thr_id, WK_CUDABlocks*WK_CUDAThreads);
+	throughput = WK_CUDABlocks * WK_CUDAThreads;
 
 	cudaMemcpy(d_input[thr_id], pdata, 88, cudaMemcpyHostToDevice);
 //	cudaMemset(d_retnonce[thr_id], 0xFF, 2*sizeof(uint32_t));
@@ -291,7 +291,7 @@ extern "C" int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_n
 		uint32_t h_retnonce[2] = { UINT32_MAX, UINT32_MAX };
 		uint2 target = make_uint2(ptarget[6], ptarget[7]);
 
-		wildkeccak_kernel(thr_id, throughput, nonce, target, h_retnonce);
+		wildkeccak_kernel(thr_id, throughput, (uint32_t) nonce, target, h_retnonce);
 		/*
 		wk <<<block, thread, 0, kernel_stream[thr_id]>>> (d_retnonce[thr_id], d_input[thr_id], d_scratchpad[thr_id],
 			(uint32_t)(scratchpad_size >> 2), nonce, ptarget[7]);

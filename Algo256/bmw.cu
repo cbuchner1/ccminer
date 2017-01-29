@@ -33,10 +33,6 @@ extern "C" void bmw_hash(void *state, const void *input)
 
 static bool init[MAX_GPUS] = { 0 };
 
-static __inline uint32_t swab32_if(uint32_t val, bool iftrue) {
-	return iftrue ? swab32(val) : val;
-}
-
 extern "C" int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(64) endiandata[20];
