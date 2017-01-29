@@ -91,7 +91,7 @@ nvml_handle * nvml_create()
 	int i=0;
 	nvml_handle *nvmlh = NULL;
 
-#if defined(WIN32)
+#ifdef WIN32
 	/* Windows (do not use slashes, else ExpandEnvironmentStrings will mix them) */
 #define  libnvidia_ml "%PROGRAMFILES%\\NVIDIA Corporation\\NVSMI\\nvml.dll"
 #else
@@ -639,7 +639,7 @@ int nvml_get_fanpcnt(nvml_handle *nvmlh, int cudaindex, unsigned int *fanpcnt)
 }
 
 
-int nvml_get_current_clocks(int cudaindex, uint32_t *graphics_clock, uint32_t *mem_clock)
+int nvml_get_current_clocks(int cudaindex, unsigned int *graphics_clock, unsigned int *mem_clock)
 {
 	nvmlReturn_t rc;
 	int gpuindex = hnvml->cuda_nvml_device_id[cudaindex];
@@ -1496,6 +1496,22 @@ int nvapi_pstateinfo(unsigned int devNum)
 	return 0;
 }
 
+// workaround for buggy driver 378.49
+unsigned int nvapi_get_gpu_clock(unsigned int devNum)
+{
+	NvAPI_Status ret = NVAPI_OK;
+	unsigned int freq = 0;
+	NV_GPU_CLOCK_FREQUENCIES *freqs;
+	NV_INIT_STRUCT_ALLOC(NV_GPU_CLOCK_FREQUENCIES, freqs);
+	freqs->ClockType = NV_GPU_CLOCK_FREQUENCIES_CURRENT_FREQ;
+	ret = NvAPI_GPU_GetAllClockFrequencies(phys[devNum], freqs);
+	if (ret == NVAPI_OK) {
+		freq = freqs->domain[NVAPI_GPU_PUBLIC_CLOCK_GRAPHICS].frequency / 1000;
+	}
+	free(freqs);
+	return freq; // in MHz
+}
+
 uint8_t nvapi_get_plimit(unsigned int devNum)
 {
 	NvAPI_Status ret = NVAPI_OK;
@@ -2096,8 +2112,18 @@ void *monitor_thread(void *userdata)
 			pthread_cond_wait(&cgpu->monitor.sampling_signal, &cgpu->monitor.lock);
 
 			do {
-				uint32_t tmp_clock, tmp_memclock;
+				unsigned int tmp_clock=0, tmp_memclock=0;
 				nvml_get_current_clocks(dev_id, &tmp_clock, &tmp_memclock);
+				if (tmp_clock < 200) {
+#ifdef WIN32
+					// workaround for buggy driver 378.49 (real clock)
+					tmp_clock = nvapi_get_gpu_clock(nvapi_dev_map[dev_id]);
+#else
+					// some older cards only report a base clock with cuda props.
+					if (cuda_gpu_info(cgpu) == 0)
+						tmp_clock = cgpu->gpu_clock/1000;
+#endif
+				}
 				clock += tmp_clock;
 				mem_clock += tmp_memclock;
 				tempC += gpu_temp(cgpu);
