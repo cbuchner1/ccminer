@@ -312,7 +312,8 @@ Options:\n\
       --max-temp=N      Only mine if gpu temp is less than specified value\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n\
-                        Can be tuned with --resume-diff=N to set a resume value\n"
+                        Can be tuned with --resume-diff=N to set a resume value\n\
+      --max-log-rate    Interval to reduce per gpu hashrate logs (default: 3)\n"
 #if defined(__linux) || defined(_WIN64) /* via nvml */
 "\
       --mem-clock=3505  Set the gpu memory max clock (346.72+ driver)\n\
@@ -407,6 +408,7 @@ struct option options[] = {
 	{ "keep-clocks", 0, NULL, 1074 },
 	{ "tlimit", 1, NULL, 1075 },
 	{ "led", 1, NULL, 1080 },
+	{ "max-log-rate", 1, NULL, 1019 },
 #ifdef HAVE_SYSLOG_H
 	{ "syslog", 0, NULL, 'S' },
 	{ "syslog-prefix", 1, NULL, 1018 },
@@ -3337,6 +3339,9 @@ void parse_arg(int key, char *arg)
 			free(opt_syslog_pfx);
 			opt_syslog_pfx = strdup(arg);
 		}
+		break;
+	case 1019: // max-log-rate
+		opt_maxlograte = atoi(arg);
 		break;
 	case 1020:
 		p = strstr(arg, "0x");

@@ -163,6 +163,7 @@ its command line interface and options.
       --max-temp=N      Only mine if gpu temp is less than specified value
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value
       --max-diff=N      Only mine if net difficulty is less than specified value
+      --max-log-rate    Interval to reduce per gpu hashrate logs (default: 3)
       --pstate=0        will force the Geforce 9xx to run in P0 P-State
       --plimit=150W     set the gpu power limit, allow multiple values for N cards
       --tlimit=85       Set the gpu thermal limit (windows only)
@@ -274,7 +275,7 @@ features.
                   Rework the common skein512 (used in most algos except skein ;)
                   Store the share diff of second nonce(s) in most algos
                   Hardware monitoring thread to get more accurate power readings
-                  Small changes for the quiet mode
+                  Small changes for the quiet mode & max-log-rate to reduce logs
 
   Dec. 21th 2016  v1.8.4
                   Improve streebog based algos, veltor and sib (from alexis work)
