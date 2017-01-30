@@ -1,9 +1,9 @@
-#include "cuda_helper.h"
+#include <cuda_helper.h>
 
 // #include <stdio.h>  // printf
 // #include <unistd.h> // sleep
 
-/* 1344 bytes */
+/* 1344 bytes, align 16 is there to allow ld.const.v4 (made auto. by the compiler) */
 __constant__ static __align__(16) uint32_t c_E8_bslice32[42][8] = {
 	// Round 0 (Function0)
 	{ 0xa2ded572, 0x90d6ab81, 0x67f815df, 0xf6875a4d, 0x0a15847b, 0xc54f9f4e, 0x571523b7, 0x402bd1c3 },
@@ -58,11 +58,11 @@ __constant__ static __align__(16) uint32_t c_E8_bslice32[42][8] = {
 
 /*swapping bits 32i||32i+1||......||32i+15 with bits 32i+16||32i+17||......||32i+31 of 32-bit x*/
 //#define SWAP16(x)  (x) = ((((x) & 0x0000ffffUL) << 16) | (((x) & 0xffff0000UL) >> 16));
-#define SWAP16(x) (x) = __byte_perm(x, x, 0x1032);
+#define SWAP16(x) (x) = __byte_perm(x, 0, 0x1032);
 
 /*swapping bits 16i||16i+1||......||16i+7  with bits 16i+8||16i+9||......||16i+15 of 32-bit x*/
 //#define SWAP8(x)   (x) = ((((x) & 0x00ff00ffUL) << 8) | (((x) & 0xff00ff00UL) >> 8));
-#define SWAP8(x) (x) = __byte_perm(x, x, 0x2301);
+#define SWAP8(x) (x) = __byte_perm(x, 0, 0x2301);
 
 /*
 __device__ __forceinline__
@@ -90,10 +90,9 @@ static void SWAP4x4(uint32_t *x) {
 	#pragma nounroll
 	// y is used as tmp register too
 	for (uint32_t y=0; y<4; y++, ++x) {
-		asm("and.b32 %1, %0, 0xF0F0F0F0;"
-			"xor.b32 %0, %0, %1;"
-			"shr.b32 %1, %1, 4;"
-			"vshl.u32.u32.u32.clamp.add %0, %0, 4, %1;\n\t"
+		asm("and.b32 %1, %0, 0xF0F0F0F0;\n\t"
+		"xor.b32 %0, %0, %1; shr.b32 %1, %1, 4;\n\t"
+		"vshl.u32.u32.u32.clamp.add %0, %0, 4, %1;"
 		: "+r"(*x) : "r"(y));
 	}
 }
@@ -103,10 +102,9 @@ static void SWAP2x4(uint32_t *x) {
 	#pragma nounroll
 	// y is used as tmp register too
 	for (uint32_t y=0; y<4; y++, ++x) {
-		asm("and.b32 %1, %0, 0xCCCCCCCC;"
-			"xor.b32 %0, %0, %1;"
-			"shr.b32 %1, %1, 2;"
-			"vshl.u32.u32.u32.clamp.add %0, %0, 2, %1;\n\t"
+		asm("and.b32 %1, %0, 0xCCCCCCCC;\n\t"
+		"xor.b32 %0, %0, %1; shr.b32 %1, %1, 2; \n\t"
+		"vshl.u32.u32.u32.clamp.add %0, %0, 2, %1;"
 		: "+r"(*x) : "r"(y));
 	}
 }
@@ -116,10 +114,9 @@ static void SWAP1x4(uint32_t *x) {
 	#pragma nounroll
 	// y is used as tmp register too
 	for (uint32_t y=0; y<4; y++, ++x) {
-		asm("and.b32 %1, %0, 0xAAAAAAAA;"
-			"xor.b32 %0, %0, %1;"
-			"shr.b32 %1, %1, 1;"
-			"vshl.u32.u32.u32.clamp.add %0, %0, 1, %1;\n\t"
+		asm("and.b32 %1, %0, 0xAAAAAAAA;\n\t"
+		"xor.b32 %0, %0, %1; shr.b32 %1, %1, 1; \n\t"
+		"vshl.u32.u32.u32.clamp.add %0, %0, 1, %1;"
 		: "+r"(*x) : "r"(y));
 	}
 }
@@ -272,15 +269,23 @@ static void E8(uint32_t x[8][4])
 	}
 }
 
-__global__ __launch_bounds__(256, 4)
-void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t* g_hash, const uint32_t *const __restrict__ g_nonceVector)
+__global__
+//__launch_bounds__(256,2)
+void quark_jh512_gpu_hash_64(const uint32_t threads, const uint32_t startNounce, uint32_t* g_hash, uint32_t * g_nonceVector)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		const uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-		uint32_t hashPosition = nounce - startNounce;
-		uint32_t *Hash = &g_hash[hashPosition * 16U];
+		const uint32_t hashPosition = nounce - startNounce;
+		uint32_t *Hash = &g_hash[(size_t)16 * hashPosition];
+
+		uint32_t h[16];
+		AS_UINT4(&h[ 0]) = AS_UINT4(&Hash[ 0]);
+		AS_UINT4(&h[ 4]) = AS_UINT4(&Hash[ 4]);
+		AS_UINT4(&h[ 8]) = AS_UINT4(&Hash[ 8]);
+		AS_UINT4(&h[12]) = AS_UINT4(&Hash[12]);
+
 		uint32_t x[8][4] = { /* init */
 			{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
 			{ 0x8d5e228a, 0x0bef970c, 0x591234e9, 0x61c3b3f2 },
@@ -294,40 +299,26 @@ void quark_jh512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint32_t* g
 
 		#pragma unroll
 		for (int i = 0; i < 16; i++)
-			x[i/4][i & 3] ^= Hash[i];
+			x[i/4][i & 3] ^= h[i];
 
 		E8(x);
 
 		#pragma unroll
-		for (uint8_t i = 0; i < 16; i++)
-			x[(i+16)/4][(i+16) & 3] ^= Hash[i];
+		for (int i = 0; i < 16; i++)
+			x[(i+16)/4][(i+16) & 3] ^= h[i];
 
 		x[0][0] ^= 0x80U;
 		x[3][3] ^= 0x00020000U;
+
 		E8(x);
 
 		x[4][0] ^= 0x80U;
 		x[7][3] ^= 0x00020000U;
 
-		Hash[0] = x[4][0];
-		Hash[1] = x[4][1];
-		Hash[2] = x[4][2];
-		Hash[3] = x[4][3];
-
-		Hash[4] = x[5][0];
-		Hash[5] = x[5][1];
-		Hash[6] = x[5][2];
-		Hash[7] = x[5][3];
-
-		Hash[8] = x[6][0];
-		Hash[9] = x[6][1];
-		Hash[10] = x[6][2];
-		Hash[11] = x[6][3];
-
-		Hash[12] = x[7][0];
-		Hash[13] = x[7][1];
-		Hash[14] = x[7][2];
-		Hash[15] = x[7][3];
+		AS_UINT4(&Hash[ 0]) = AS_UINT4(&x[4][0]);
+		AS_UINT4(&Hash[ 4]) = AS_UINT4(&x[5][0]);
+		AS_UINT4(&Hash[ 8]) = AS_UINT4(&x[6][0]);
+		AS_UINT4(&Hash[12]) = AS_UINT4(&x[7][0]);
 	}
 }
 

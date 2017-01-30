@@ -139,6 +139,9 @@ x17/cuda_x17_sha512.o: x17/cuda_x17_sha512.cu
 quark/cuda_quark_blake512.o: quark/cuda_quark_blake512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
 
+quark/cuda_jh512.o: quark/cuda_jh512.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=80 -o $@ -c $<
+
 quark/cuda_quark_keccak512.o: quark/cuda_quark_keccak512.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=88 -o $@ -c $<
 
