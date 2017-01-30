@@ -284,11 +284,11 @@ static void sha2_step(const uint32_t a, const uint32_t b,const uint32_t c, uint3
 	const uint32_t t1 = h + bsg2_1(e) + Ch(e, f, g) + Kshared + in;
 	h = t1 + Maj(a, b, c) + bsg2_0(a);
 	d+= t1;
-
 }
 
 __device__
-static void sha256_round_first(uint32_t *in,uint32_t *buf,const uint32_t *state,const uint32_t* __restrict__ Kshared)
+static void sha256_round_first(uint32_t *in, uint32_t *buf,
+	const uint32_t *state, const uint32_t* __restrict__ Kshared)
 {
 	uint32_t a = buf[0] + in[11];
 	uint32_t b = buf[1];
@@ -326,7 +326,7 @@ static void sha256_round_first(uint32_t *in,uint32_t *buf,const uint32_t *state,
 	sha2_step(h,a,b,c,d,e,f,g,in[9], Kshared[25]);
 
 	#pragma unroll 6
-	for (uint32_t j = 10; j < 16; j++){
+	for (uint32_t j = 10; j < 16; j++) {
 		const uint32_t x2_0 = ssg2_0(in[(j + 1) & 15]);
 		const uint32_t x2_1 = ssg2_1(in[(j + 14) & 15]) + x2_0;
 		in[j] = in[j] + in[(j + 9) & 15] + x2_1;
@@ -340,7 +340,7 @@ static void sha256_round_first(uint32_t *in,uint32_t *buf,const uint32_t *state,
 	sha2_step(b,c,d,e,f,g,h,a,in[15],Kshared[31]);
 
 	#pragma unroll 16
-	for (uint32_t j = 0; j < 16; j++){
+	for (uint32_t j = 0; j < 16; j++) {
 		const uint32_t x2_0 = ssg2_0(in[(j + 1) & 15]);
 		const uint32_t x2_1 = ssg2_1(in[(j + 14) & 15]) + x2_0;
 		in[j] = in[j] + in[(j + 9) & 15] + x2_1;
@@ -364,7 +364,7 @@ static void sha256_round_first(uint32_t *in,uint32_t *buf,const uint32_t *state,
 	sha2_step(b,c,d,e,f,g,h,a,in[15],Kshared[31+16]);
 
 	#pragma unroll 16
-	for (uint32_t j = 0; j < 16; j++){
+	for (uint32_t j = 0; j < 16; j++) {
 		const uint32_t x2_0 = ssg2_0(in[(j + 1) & 15]);
 		const uint32_t x2_1 = ssg2_1(in[(j + 14) & 15]) + x2_0;
 		in[j] = in[j] + in[(j + 9) & 15] + x2_1;
@@ -409,42 +409,42 @@ static void sha256_round_body(uint32_t *in, uint32_t *state,const uint32_t* Ksha
 	uint32_t g = state[6];
 	uint32_t h = state[7];
 
-	sha2_step(a,b,c,d,e,f,g,h,in[0], Kshared[0]);
-	sha2_step(h,a,b,c,d,e,f,g,in[1], Kshared[1]);
-	sha2_step(g,h,a,b,c,d,e,f,in[2], Kshared[2]);
-	sha2_step(f,g,h,a,b,c,d,e,in[3], Kshared[3]);
-	sha2_step(e,f,g,h,a,b,c,d,in[4], Kshared[4]);
-	sha2_step(d,e,f,g,h,a,b,c,in[5], Kshared[5]);
-	sha2_step(c,d,e,f,g,h,a,b,in[6], Kshared[6]);
-	sha2_step(b,c,d,e,f,g,h,a,in[7], Kshared[7]);
-	sha2_step(a,b,c,d,e,f,g,h,in[8], Kshared[8]);
-	sha2_step(h,a,b,c,d,e,f,g,in[9], Kshared[9]);
-	sha2_step(g,h,a,b,c,d,e,f,in[10],Kshared[10]);
-	sha2_step(f,g,h,a,b,c,d,e,in[11],Kshared[11]);
-	sha2_step(e,f,g,h,a,b,c,d,in[12],Kshared[12]);
-	sha2_step(d,e,f,g,h,a,b,c,in[13],Kshared[13]);
-	sha2_step(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
-	sha2_step(b,c,d,e,f,g,h,a,in[15],Kshared[15]);
+	sha2_step(a,b,c,d,e,f,g,h,in[ 0], Kshared[ 0]);
+	sha2_step(h,a,b,c,d,e,f,g,in[ 1], Kshared[ 1]);
+	sha2_step(g,h,a,b,c,d,e,f,in[ 2], Kshared[ 2]);
+	sha2_step(f,g,h,a,b,c,d,e,in[ 3], Kshared[ 3]);
+	sha2_step(e,f,g,h,a,b,c,d,in[ 4], Kshared[ 4]);
+	sha2_step(d,e,f,g,h,a,b,c,in[ 5], Kshared[ 5]);
+	sha2_step(c,d,e,f,g,h,a,b,in[ 6], Kshared[ 6]);
+	sha2_step(b,c,d,e,f,g,h,a,in[ 7], Kshared[ 7]);
+	sha2_step(a,b,c,d,e,f,g,h,in[ 8], Kshared[ 8]);
+	sha2_step(h,a,b,c,d,e,f,g,in[ 9], Kshared[ 9]);
+	sha2_step(g,h,a,b,c,d,e,f,in[10], Kshared[10]);
+	sha2_step(f,g,h,a,b,c,d,e,in[11], Kshared[11]);
+	sha2_step(e,f,g,h,a,b,c,d,in[12], Kshared[12]);
+	sha2_step(d,e,f,g,h,a,b,c,in[13], Kshared[13]);
+	sha2_step(c,d,e,f,g,h,a,b,in[14], Kshared[14]);
+	sha2_step(b,c,d,e,f,g,h,a,in[15], Kshared[15]);
 
 	#pragma unroll 3
-	for (uint32_t i=0; i<3; i++)
+	for (int i=0; i<3; i++)
 	{
 		#pragma unroll 16
-		for (uint32_t j = 0; j < 16; j++){
+		for (uint32_t j = 0; j < 16; j++) {
 			const uint32_t x2_0 = ssg2_0(in[(j + 1) & 15]);
 			const uint32_t x2_1 = ssg2_1(in[(j + 14) & 15]) + x2_0;
 			in[j] = in[j] + in[(j + 9) & 15] + x2_1;
 		}
-		sha2_step(a, b, c, d, e, f, g, h, in[0], Kshared[16 + 16 * i]);
-		sha2_step(h, a, b, c, d, e, f, g, in[1], Kshared[17 + 16 * i]);
-		sha2_step(g, h, a, b, c, d, e, f, in[2], Kshared[18 + 16 * i]);
-		sha2_step(f, g, h, a, b, c, d, e, in[3], Kshared[19 + 16 * i]);
-		sha2_step(e, f, g, h, a, b, c, d, in[4], Kshared[20 + 16 * i]);
-		sha2_step(d, e, f, g, h, a, b, c, in[5], Kshared[21 + 16 * i]);
-		sha2_step(c, d, e, f, g, h, a, b, in[6], Kshared[22 + 16 * i]);
-		sha2_step(b, c, d, e, f, g, h, a, in[7], Kshared[23 + 16 * i]);
-		sha2_step(a, b, c, d, e, f, g, h, in[8], Kshared[24 + 16 * i]);
-		sha2_step(h, a, b, c, d, e, f, g, in[9], Kshared[25 + 16 * i]);
+		sha2_step(a, b, c, d, e, f, g, h, in[ 0], Kshared[16 + 16 * i]);
+		sha2_step(h, a, b, c, d, e, f, g, in[ 1], Kshared[17 + 16 * i]);
+		sha2_step(g, h, a, b, c, d, e, f, in[ 2], Kshared[18 + 16 * i]);
+		sha2_step(f, g, h, a, b, c, d, e, in[ 3], Kshared[19 + 16 * i]);
+		sha2_step(e, f, g, h, a, b, c, d, in[ 4], Kshared[20 + 16 * i]);
+		sha2_step(d, e, f, g, h, a, b, c, in[ 5], Kshared[21 + 16 * i]);
+		sha2_step(c, d, e, f, g, h, a, b, in[ 6], Kshared[22 + 16 * i]);
+		sha2_step(b, c, d, e, f, g, h, a, in[ 7], Kshared[23 + 16 * i]);
+		sha2_step(a, b, c, d, e, f, g, h, in[ 8], Kshared[24 + 16 * i]);
+		sha2_step(h, a, b, c, d, e, f, g, in[ 9], Kshared[25 + 16 * i]);
 		sha2_step(g, h, a, b, c, d, e, f, in[10], Kshared[26 + 16 * i]);
 		sha2_step(f, g, h, a, b, c, d, e, in[11], Kshared[27 + 16 * i]);
 		sha2_step(e, f, g, h, a, b, c, d, in[12], Kshared[28 + 16 * i]);
@@ -464,7 +464,7 @@ static void sha256_round_body(uint32_t *in, uint32_t *state,const uint32_t* Ksha
 }
 
 __device__
-static void sha256_round_body_final(uint32_t *in, uint32_t *state,const uint32_t *Kshared)
+static void sha256_round_body_final(uint32_t *in, uint32_t *state, const uint32_t *Kshared)
 {
 	uint32_t a = state[0];
 	uint32_t b = state[1];
@@ -475,42 +475,42 @@ static void sha256_round_body_final(uint32_t *in, uint32_t *state,const uint32_t
 	uint32_t g = state[6];
 	uint32_t h = state[7];
 
-	sha2_step(a,b,c,d,e,f,g,h,in[0], Kshared[0]);
-	sha2_step(h,a,b,c,d,e,f,g,in[1], Kshared[1]);
-	sha2_step(g,h,a,b,c,d,e,f,in[2], Kshared[2]);
-	sha2_step(f,g,h,a,b,c,d,e,in[3], Kshared[3]);
-	sha2_step(e,f,g,h,a,b,c,d,in[4], Kshared[4]);
-	sha2_step(d,e,f,g,h,a,b,c,in[5], Kshared[5]);
-	sha2_step(c,d,e,f,g,h,a,b,in[6], Kshared[6]);
-	sha2_step(b,c,d,e,f,g,h,a,in[7], Kshared[7]);
-	sha2_step(a,b,c,d,e,f,g,h,in[8], Kshared[8]);
-	sha2_step(h,a,b,c,d,e,f,g,in[9], Kshared[9]);
-	sha2_step(g,h,a,b,c,d,e,f,in[10],Kshared[10]);
-	sha2_step(f,g,h,a,b,c,d,e,in[11],Kshared[11]);
-	sha2_step(e,f,g,h,a,b,c,d,in[12],Kshared[12]);
-	sha2_step(d,e,f,g,h,a,b,c,in[13],Kshared[13]);
-	sha2_step(c,d,e,f,g,h,a,b,in[14],Kshared[14]);
-	sha2_step(b,c,d,e,f,g,h,a,in[15],Kshared[15]);
+	sha2_step(a,b,c,d,e,f,g,h,in[ 0], Kshared[0]);
+	sha2_step(h,a,b,c,d,e,f,g,in[ 1], Kshared[1]);
+	sha2_step(g,h,a,b,c,d,e,f,in[ 2], Kshared[2]);
+	sha2_step(f,g,h,a,b,c,d,e,in[ 3], Kshared[3]);
+	sha2_step(e,f,g,h,a,b,c,d,in[ 4], Kshared[4]);
+	sha2_step(d,e,f,g,h,a,b,c,in[ 5], Kshared[5]);
+	sha2_step(c,d,e,f,g,h,a,b,in[ 6], Kshared[6]);
+	sha2_step(b,c,d,e,f,g,h,a,in[ 7], Kshared[7]);
+	sha2_step(a,b,c,d,e,f,g,h,in[ 8], Kshared[8]);
+	sha2_step(h,a,b,c,d,e,f,g,in[ 9], Kshared[9]);
+	sha2_step(g,h,a,b,c,d,e,f,in[10], Kshared[10]);
+	sha2_step(f,g,h,a,b,c,d,e,in[11], Kshared[11]);
+	sha2_step(e,f,g,h,a,b,c,d,in[12], Kshared[12]);
+	sha2_step(d,e,f,g,h,a,b,c,in[13], Kshared[13]);
+	sha2_step(c,d,e,f,g,h,a,b,in[14], Kshared[14]);
+	sha2_step(b,c,d,e,f,g,h,a,in[15], Kshared[15]);
 
 	#pragma unroll 2
-	for (uint32_t i=0; i<2; i++){
-
+	for (int i=0; i<2; i++)
+	{
 		#pragma unroll 16
-		for (uint32_t j = 0; j < 16; j++){
+		for (uint32_t j = 0; j < 16; j++) {
 			const uint32_t x2_0 = ssg2_0(in[(j + 1) & 15]);
 			const uint32_t x2_1 = ssg2_1(in[(j + 14) & 15]) + x2_0;
 			in[j] = in[j] + in[(j + 9) & 15] + x2_1;
 		}
-		sha2_step(a, b, c, d, e, f, g, h, in[0], Kshared[16 + 16 * i]);
-		sha2_step(h, a, b, c, d, e, f, g, in[1], Kshared[17 + 16 * i]);
-		sha2_step(g, h, a, b, c, d, e, f, in[2], Kshared[18 + 16 * i]);
-		sha2_step(f, g, h, a, b, c, d, e, in[3], Kshared[19 + 16 * i]);
-		sha2_step(e, f, g, h, a, b, c, d, in[4], Kshared[20 + 16 * i]);
-		sha2_step(d, e, f, g, h, a, b, c, in[5], Kshared[21 + 16 * i]);
-		sha2_step(c, d, e, f, g, h, a, b, in[6], Kshared[22 + 16 * i]);
-		sha2_step(b, c, d, e, f, g, h, a, in[7], Kshared[23 + 16 * i]);
-		sha2_step(a, b, c, d, e, f, g, h, in[8], Kshared[24 + 16 * i]);
-		sha2_step(h, a, b, c, d, e, f, g, in[9], Kshared[25 + 16 * i]);
+		sha2_step(a, b, c, d, e, f, g, h, in[ 0], Kshared[16 + 16 * i]);
+		sha2_step(h, a, b, c, d, e, f, g, in[ 1], Kshared[17 + 16 * i]);
+		sha2_step(g, h, a, b, c, d, e, f, in[ 2], Kshared[18 + 16 * i]);
+		sha2_step(f, g, h, a, b, c, d, e, in[ 3], Kshared[19 + 16 * i]);
+		sha2_step(e, f, g, h, a, b, c, d, in[ 4], Kshared[20 + 16 * i]);
+		sha2_step(d, e, f, g, h, a, b, c, in[ 5], Kshared[21 + 16 * i]);
+		sha2_step(c, d, e, f, g, h, a, b, in[ 6], Kshared[22 + 16 * i]);
+		sha2_step(b, c, d, e, f, g, h, a, in[ 7], Kshared[23 + 16 * i]);
+		sha2_step(a, b, c, d, e, f, g, h, in[ 8], Kshared[24 + 16 * i]);
+		sha2_step(h, a, b, c, d, e, f, g, in[ 9], Kshared[25 + 16 * i]);
 		sha2_step(g, h, a, b, c, d, e, f, in[10], Kshared[26 + 16 * i]);
 		sha2_step(f, g, h, a, b, c, d, e, in[11], Kshared[27 + 16 * i]);
 		sha2_step(e, f, g, h, a, b, c, d, in[12], Kshared[28 + 16 * i]);
@@ -519,21 +519,21 @@ static void sha256_round_body_final(uint32_t *in, uint32_t *state,const uint32_t
 		sha2_step(b, c, d, e, f, g, h, a, in[15], Kshared[31 + 16 * i]);
 	}
 	#pragma unroll 16
-	for (uint32_t j = 0; j < 16; j++){
+	for (uint32_t j = 0; j < 16; j++) {
 		const uint32_t x2_0 = ssg2_0(in[(j + 1) & 15]);
 		const uint32_t x2_1 = ssg2_1(in[(j + 14) & 15]) + x2_0;
 		in[j] = in[j] + in[(j + 9) & 15] + x2_1;
 	}
-	sha2_step(a, b, c, d, e, f, g, h, in[0], Kshared[16 + 16 * 2]);
-	sha2_step(h, a, b, c, d, e, f, g, in[1], Kshared[17 + 16 * 2]);
-	sha2_step(g, h, a, b, c, d, e, f, in[2], Kshared[18 + 16 * 2]);
-	sha2_step(f, g, h, a, b, c, d, e, in[3], Kshared[19 + 16 * 2]);
-	sha2_step(e, f, g, h, a, b, c, d, in[4], Kshared[20 + 16 * 2]);
-	sha2_step(d, e, f, g, h, a, b, c, in[5], Kshared[21 + 16 * 2]);
-	sha2_step(c, d, e, f, g, h, a, b, in[6], Kshared[22 + 16 * 2]);
-	sha2_step(b, c, d, e, f, g, h, a, in[7], Kshared[23 + 16 * 2]);
-	sha2_step(a, b, c, d, e, f, g, h, in[8], Kshared[24 + 16 * 2]);
-	sha2_step(h, a, b, c, d, e, f, g, in[9], Kshared[25 + 16 * 2]);
+	sha2_step(a, b, c, d, e, f, g, h, in[ 0], Kshared[16 + 16 * 2]);
+	sha2_step(h, a, b, c, d, e, f, g, in[ 1], Kshared[17 + 16 * 2]);
+	sha2_step(g, h, a, b, c, d, e, f, in[ 2], Kshared[18 + 16 * 2]);
+	sha2_step(f, g, h, a, b, c, d, e, in[ 3], Kshared[19 + 16 * 2]);
+	sha2_step(e, f, g, h, a, b, c, d, in[ 4], Kshared[20 + 16 * 2]);
+	sha2_step(d, e, f, g, h, a, b, c, in[ 5], Kshared[21 + 16 * 2]);
+	sha2_step(c, d, e, f, g, h, a, b, in[ 6], Kshared[22 + 16 * 2]);
+	sha2_step(b, c, d, e, f, g, h, a, in[ 7], Kshared[23 + 16 * 2]);
+	sha2_step(a, b, c, d, e, f, g, h, in[ 8], Kshared[24 + 16 * 2]);
+	sha2_step(h, a, b, c, d, e, f, g, in[ 9], Kshared[25 + 16 * 2]);
 	sha2_step(g, h, a, b, c, d, e, f, in[10], Kshared[26 + 16 * 2]);
 	sha2_step(f, g, h, a, b, c, d, e, in[11], Kshared[27 + 16 * 2]);
 	sha2_step(e, f, g, h, a, b, c, d, in[12], Kshared[28 + 16 * 2]);
@@ -547,16 +547,26 @@ static void sha256_round_body_final(uint32_t *in, uint32_t *state,const uint32_t
 
 //SHA512 MACROS ---------------------------------------------------------------------------
 static __constant__ _ALIGN(8) uint64_t K_512[80] = {
-	0x428A2F98D728AE22, 0x7137449123EF65CD, 0xB5C0FBCFEC4D3B2F, 0xE9B5DBA58189DBBC, 0x3956C25BF348B538, 0x59F111F1B605D019, 0x923F82A4AF194F9B, 0xAB1C5ED5DA6D8118,
-	0xD807AA98A3030242, 0x12835B0145706FBE, 0x243185BE4EE4B28C, 0x550C7DC3D5FFB4E2, 0x72BE5D74F27B896F, 0x80DEB1FE3B1696B1, 0x9BDC06A725C71235, 0xC19BF174CF692694,
-	0xE49B69C19EF14AD2, 0xEFBE4786384F25E3, 0x0FC19DC68B8CD5B5, 0x240CA1CC77AC9C65, 0x2DE92C6F592B0275, 0x4A7484AA6EA6E483, 0x5CB0A9DCBD41FBD4, 0x76F988DA831153B5,
-	0x983E5152EE66DFAB, 0xA831C66D2DB43210, 0xB00327C898FB213F, 0xBF597FC7BEEF0EE4,	0xC6E00BF33DA88FC2, 0xD5A79147930AA725, 0x06CA6351E003826F, 0x142929670A0E6E70,
-	0x27B70A8546D22FFC, 0x2E1B21385C26C926, 0x4D2C6DFC5AC42AED, 0x53380D139D95B3DF,	0x650A73548BAF63DE, 0x766A0ABB3C77B2A8, 0x81C2C92E47EDAEE6, 0x92722C851482353B,
-	0xA2BFE8A14CF10364, 0xA81A664BBC423001, 0xC24B8B70D0F89791, 0xC76C51A30654BE30,	0xD192E819D6EF5218, 0xD69906245565A910, 0xF40E35855771202A, 0x106AA07032BBD1B8,
-	0x19A4C116B8D2D0C8, 0x1E376C085141AB53, 0x2748774CDF8EEB99, 0x34B0BCB5E19B48A8,	0x391C0CB3C5C95A63, 0x4ED8AA4AE3418ACB, 0x5B9CCA4F7763E373, 0x682E6FF3D6B2B8A3,
-	0x748F82EE5DEFB2FC, 0x78A5636F43172F60, 0x84C87814A1F0AB72, 0x8CC702081A6439EC,	0x90BEFFFA23631E28, 0xA4506CEBDE82BDE9, 0xBEF9A3F7B2C67915, 0xC67178F2E372532B,
-	0xCA273ECEEA26619C, 0xD186B8C721C0C207, 0xEADA7DD6CDE0EB1E, 0xF57D4F7FEE6ED178,	0x06F067AA72176FBA, 0x0A637DC5A2C898A6, 0x113F9804BEF90DAE, 0x1B710B35131C471B,
-	0x28DB77F523047D84, 0x32CAAB7B40C72493, 0x3C9EBE0A15C9BEBC, 0x431D67C49C100D4C,	0x4CC5D4BECB3E42B6, 0x597F299CFC657E2A, 0x5FCB6FAB3AD6FAEC, 0x6C44198C4A475817
+	0x428A2F98D728AE22, 0x7137449123EF65CD, 0xB5C0FBCFEC4D3B2F, 0xE9B5DBA58189DBBC,
+	0x3956C25BF348B538, 0x59F111F1B605D019, 0x923F82A4AF194F9B, 0xAB1C5ED5DA6D8118,
+	0xD807AA98A3030242, 0x12835B0145706FBE, 0x243185BE4EE4B28C, 0x550C7DC3D5FFB4E2,
+	0x72BE5D74F27B896F, 0x80DEB1FE3B1696B1, 0x9BDC06A725C71235, 0xC19BF174CF692694,
+	0xE49B69C19EF14AD2, 0xEFBE4786384F25E3, 0x0FC19DC68B8CD5B5, 0x240CA1CC77AC9C65,
+	0x2DE92C6F592B0275, 0x4A7484AA6EA6E483, 0x5CB0A9DCBD41FBD4, 0x76F988DA831153B5,
+	0x983E5152EE66DFAB, 0xA831C66D2DB43210, 0xB00327C898FB213F, 0xBF597FC7BEEF0EE4,
+	0xC6E00BF33DA88FC2, 0xD5A79147930AA725, 0x06CA6351E003826F, 0x142929670A0E6E70,
+	0x27B70A8546D22FFC, 0x2E1B21385C26C926, 0x4D2C6DFC5AC42AED, 0x53380D139D95B3DF,
+	0x650A73548BAF63DE, 0x766A0ABB3C77B2A8, 0x81C2C92E47EDAEE6, 0x92722C851482353B,
+	0xA2BFE8A14CF10364, 0xA81A664BBC423001, 0xC24B8B70D0F89791, 0xC76C51A30654BE30,
+	0xD192E819D6EF5218, 0xD69906245565A910, 0xF40E35855771202A, 0x106AA07032BBD1B8,
+	0x19A4C116B8D2D0C8, 0x1E376C085141AB53, 0x2748774CDF8EEB99, 0x34B0BCB5E19B48A8,
+	0x391C0CB3C5C95A63, 0x4ED8AA4AE3418ACB, 0x5B9CCA4F7763E373, 0x682E6FF3D6B2B8A3,
+	0x748F82EE5DEFB2FC, 0x78A5636F43172F60, 0x84C87814A1F0AB72, 0x8CC702081A6439EC,
+	0x90BEFFFA23631E28, 0xA4506CEBDE82BDE9, 0xBEF9A3F7B2C67915, 0xC67178F2E372532B,
+	0xCA273ECEEA26619C, 0xD186B8C721C0C207, 0xEADA7DD6CDE0EB1E, 0xF57D4F7FEE6ED178,
+	0x06F067AA72176FBA, 0x0A637DC5A2C898A6, 0x113F9804BEF90DAE, 0x1B710B35131C471B,
+	0x28DB77F523047D84, 0x32CAAB7B40C72493, 0x3C9EBE0A15C9BEBC, 0x431D67C49C100D4C,
+	0x4CC5D4BECB3E42B6, 0x597F299CFC657E2A, 0x5FCB6FAB3AD6FAEC, 0x6C44198C4A475817
 };
 
 #undef xor3
@@ -564,9 +574,8 @@ static __constant__ _ALIGN(8) uint64_t K_512[80] = {
 
 #define bsg5_0(x) xor3(ROTR64(x,28),ROTR64(x,34),ROTR64(x,39))
 #define bsg5_1(x) xor3(ROTR64(x,14),ROTR64(x,18),ROTR64(x,41))
-#define ssg5_0(x) xor3(ROTR64(x,1),ROTR64(x,8),x>>7)
+#define ssg5_0(x) xor3(ROTR64(x, 1),ROTR64(x, 8),x>>7)
 #define ssg5_1(x) xor3(ROTR64(x,19),ROTR64(x,61),x>>6)
-
 
 #define andor64(a,b,c) ((a & (b | c)) | (b & c))
 #define xandx64(e,f,g) (g ^ (e & (g ^ f)))
@@ -584,7 +593,6 @@ uint64_t cuda_swab64ll(const uint32_t x, const uint32_t y)
 
 // RIPEMD MACROS-----------------------------------------------------------------------------
 static __constant__ const uint32_t c_IV[5] = { 0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u };
-
 static __constant__ const uint32_t c_K1[5] = { 0, 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xA953FD4E };
 static __constant__ const uint32_t c_K2[5] = { 0x50A28BE6, 0x5C4DD124, 0x6D703EF3, 0x7A6D76E9, 0 };
 
@@ -601,7 +609,7 @@ static uint32_t ROTATE(const uint32_t x,const uint32_t r) {
  */
 //#define F1(x, y, z)   xor3x(x, y, z)
 __device__ __forceinline__
-uint32_t F1(const uint32_t a,const uint32_t b,const uint32_t c){
+uint32_t F1(const uint32_t a, const uint32_t b, const uint32_t c) {
 	uint32_t result;
 	#if __CUDA_ARCH__ >= 500 && CUDA_VERSION >= 7050
 		asm volatile ("lop3.b32 %0, %1, %2, %3, 0x96;" : "=r"(result) : "r"(a), "r"(b),"r"(c));
@@ -612,7 +620,7 @@ uint32_t F1(const uint32_t a,const uint32_t b,const uint32_t c){
 }
 //#define F2(x, y, z)   ((x & (y ^ z)) ^ z)
 __device__ __forceinline__
-uint32_t F2(const uint32_t a,const uint32_t b,const uint32_t c){
+uint32_t F2(const uint32_t a, const uint32_t b, const uint32_t c) {
 	uint32_t result;
 	#if __CUDA_ARCH__ >= 500 && CUDA_VERSION >= 7050
 		asm volatile ("lop3.b32 %0, %1, %2, %3, 0xCA;" : "=r"(result) : "r"(a), "r"(b),"r"(c)); //0xCA=((F0∧(CC⊻AA))⊻AA)
@@ -623,7 +631,7 @@ uint32_t F2(const uint32_t a,const uint32_t b,const uint32_t c){
 }
 //#define F3(x, y, z)   ((x | ~y) ^ z)
 __device__ __forceinline__
-uint32_t F3(const uint32_t x,const uint32_t y,const uint32_t z){
+uint32_t F3(const uint32_t x, const uint32_t y, const uint32_t z) {
 	uint32_t result;
 	#if __CUDA_ARCH__ >= 500 && CUDA_VERSION >= 7050
 		asm volatile ("lop3.b32 %0, %1, %2, %3, 0x59;" : "=r"(result) : "r"(x), "r"(y),"r"(z)); //0x59=((F0∨(¬CC))⊻AA)
@@ -634,7 +642,7 @@ uint32_t F3(const uint32_t x,const uint32_t y,const uint32_t z){
 }
 //#define F4(x, y, z)   (y ^ ((x ^ y) & z))
 __device__ __forceinline__
-uint32_t F4(const uint32_t x,const uint32_t y,const uint32_t z){
+uint32_t F4(const uint32_t x, const uint32_t y, const uint32_t z) {
 	uint32_t result;
 	#if __CUDA_ARCH__ >= 500 && CUDA_VERSION >= 7050
 		asm volatile ("lop3.b32 %0, %1, %2, %3, 0xE4;" : "=r"(result) : "r"(x), "r"(y),"r"(z)); //0xE4=(CC⊻((F0⊻CC)∧AA))
@@ -645,7 +653,7 @@ uint32_t F4(const uint32_t x,const uint32_t y,const uint32_t z){
 }
 //#define F5(x, y, z)   (x ^ (y | ~z))
 __device__ __forceinline__
-uint32_t F5(const uint32_t x,const uint32_t y,const uint32_t z){
+uint32_t F5(const uint32_t x, const uint32_t y, const uint32_t z) {
 	uint32_t result;
 	#if __CUDA_ARCH__ >= 500 && CUDA_VERSION >= 7050
 		asm volatile ("lop3.b32 %0, %1, %2, %3, 0x2D;" : "=r"(result) : "r"(x), "r"(y),"r"(z)); //0x2D=(F0⊻(CC∨(¬AA)))
@@ -858,26 +866,25 @@ uint32_t F5(const uint32_t x,const uint32_t y,const uint32_t z){
 }
 // END OF RIPEMD MACROS----------------------------------------------------------------------
 
-__global__ __launch_bounds__(768,1) /* to force 32 regs */
-void gpu_lbry_merged(const uint32_t threads,const uint32_t startNonce, uint32_t *resNonces,const uint64_t target64)
+__global__
+__launch_bounds__(768,1) /* will force 64 regs max on SM 3+ */
+void gpu_lbry_merged(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonces, const uint64_t target64)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	uint32_t buf[8], state[8];
 
 	const uint64_t IV512[8] = {
 		0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
 		0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179
 	};
-	uint64_t r[8];
-	uint64_t W[16];
 
-	uint32_t dat[16];
-	uint32_t h[5];
-	if (thread < threads){
+	if (thread < threads)
+	{
+		uint64_t r[8];
+		uint64_t W[16];
+		uint32_t dat[16];
+		uint32_t buf[8], state[8];
+		uint32_t h[5];
 
-		//#pragma unroll 11
-		//for (uint32_t i=0; i<11; i++)
-		//	dat[i] = c_dataEnd112[i];
 		*(uint2x4*)&dat[0] = *(uint2x4*)&c_dataEnd112[0];
 		dat[ 8] = c_dataEnd112[ 8];
 		dat[ 9] = c_dataEnd112[ 9];
@@ -896,26 +903,26 @@ void gpu_lbry_merged(const uint32_t threads,const uint32_t startNonce, uint32_t 
 		// second sha256
 
 		#pragma unroll 8
-		for(int i=0;i<8;i++){
-			dat[ i] = buf[ i];
+		for(int i=0; i<8; i++){
+			dat[i] = buf[i];
 		}
-
 		dat[8] = 0x80000000;
 
 		#pragma unroll 6
-		for (uint32_t i=9; i<15; i++) dat[i] = 0;
+		for(int i=9; i<15; i++) dat[i] = 0;
 		dat[15] = 0x100;
 
 		#pragma unroll 8
-		for(int i=0;i<8;i++)
-			buf[ i] = c_H256[ i];
+		for(int i=0; i<8; i++)
+			buf[i] = c_H256[i];
 
 		sha256_round_body(dat, buf, c_K);
 
-//SHA512-------------------------------------------------------------------------------------
+// SHA512-------------------------------------------------------------------------------------
+
 		#pragma unroll 8
-		for(int i=0;i<8;i++)
-			r[ i] = IV512[ i];
+		for(int i=0; i<8; i++)
+			r[i] = IV512[i];
 
 		W[0] = vectorizeswap(((uint64_t*)buf)[0]);
 		W[1] = vectorizeswap(((uint64_t*)buf)[1]);
@@ -924,47 +931,50 @@ void gpu_lbry_merged(const uint32_t threads,const uint32_t startNonce, uint32_t 
 		W[4] = 0x8000000000000000; // end tag
 
 		#pragma unroll 10
-		for (uint32_t i = 5; i < 15; i++)
+		for (int i = 5; i < 15; i++)
 			W[i] = 0;
 
 		W[15] = 0x100; // 256 bits
 
 		#pragma unroll 16
-		for (int i = 0; i < 16; i ++){
+		for (uint32_t i = 0; i < 16; i++)
+		{
 //			sha512_step2(r, W[ i], K_512[ i], i&7);
 			const uint32_t ord = i&7;
+			const uint64_t T1 = r[(15-ord) & 7] + K_512[ i] + W[ i] + bsg5_1(r[(12-ord) & 7]) +
+				xandx64(r[(12-ord) & 7], r[(13-ord) & 7], r[(14-ord) & 7]);
 
-			const uint64_t T1 = r[(15-ord) & 7] + K_512[ i] + W[ i] + bsg5_1(r[(12-ord) & 7]) + xandx64(r[(12-ord) & 7],r[(13-ord) & 7],r[(14-ord) & 7]);
-
-			r[(15-ord)& 7] = andor64(r[( 8-ord) & 7],r[( 9-ord) & 7],r[(10-ord) & 7]) + bsg5_0(r[( 8-ord) & 7]) + T1;
+			r[(15-ord)& 7] = andor64(r[( 8-ord) & 7], r[( 9-ord) & 7], r[(10-ord) & 7]) + bsg5_0(r[( 8-ord) & 7]) + T1;
 			r[(11-ord)& 7] = r[(11-ord)& 7] + T1;
 		}
 
 		#pragma unroll 5
-		for (uint32_t i = 16; i < 80; i+=16){
+		for (uint32_t i = 16; i < 80; i+=16)
+		{
 			#pragma unroll 16
 			for (uint32_t j = 0; j<16; j++)
 				W[(i + j) & 15] = W[((i + j) - 7) & 15] + W[(i + j) & 15] + ssg5_0(W[((i + j) - 15) & 15]) + ssg5_1(W[((i + j) - 2) & 15]);
 
 			#pragma unroll 16
-			for (uint32_t j = 0; j<16; j++){
+			for (uint32_t j = 0; j<16; j++) {
 
 				const uint32_t ord = (i+j)&7;
-				const uint64_t T1 = K_512[i+j] + W[ j] + r[(15-ord) & 7] + bsg5_1(r[(12-ord) & 7]) + xandx64(r[(12-ord) & 7],r[(13-ord) & 7],r[(14-ord) & 7]);
+				const uint64_t T1 = K_512[i+j] + W[ j] + r[(15-ord) & 7] + bsg5_1(r[(12-ord) & 7]) +
+					xandx64(r[(12-ord) & 7], r[(13-ord) & 7], r[(14-ord) & 7]);
 
-				r[(15-ord)& 7] = andor64(r[( 8-ord) & 7],r[( 9-ord) & 7],r[(10-ord) & 7]) + bsg5_0(r[( 8-ord) & 7]) + T1;
+				r[(15-ord)& 7] = andor64(r[( 8-ord) & 7], r[( 9-ord) & 7], r[(10-ord) & 7]) + bsg5_0(r[( 8-ord) & 7]) + T1;
 				r[(11-ord)& 7] = r[(11-ord)& 7] + T1;
 			}
 		}
 
 //END OF SHA512------------------------------------------------------------------------------
 		#pragma unroll 4
-		for (uint32_t i = 0; i < 4; i++)
-			*(uint64_t*)&dat[i<<1] = cuda_swab64(r[i] + IV512[i]);
+		for (int i = 0; i < 4; i++)
+			*(uint64_t*)&dat[i*2] = cuda_swab64(r[i] + IV512[i]);
 		dat[8] = 0x80;
 
 		#pragma unroll 7
-		for (int i=9;i<16;i++) dat[i] = 0;
+		for (int i=9; i<16; i++) dat[i] = 0;
 
 		dat[14] = 0x100; // size in bits
 
@@ -980,13 +990,13 @@ void gpu_lbry_merged(const uint32_t threads,const uint32_t startNonce, uint32_t 
 
 		// second 32 bytes block hash
 		#pragma unroll 4
-		for (uint32_t i = 0; i < 4; i++)
-			*(uint64_t*)&dat[i<<1] = cuda_swab64(r[i+4] + IV512[i+4]);
+		for (int i=0; i < 4; i++)
+			*(uint64_t*)&dat[i*2] = cuda_swab64(r[i+4] + IV512[i+4]);
 
 		dat[8] = 0x80;
 
 		#pragma unroll 7
-		for (int i=9;i<16;i++) dat[i] = 0;
+		for (int i=9; i<16; i++) dat[i] = 0;
 
 		dat[14] = 0x100; // size in bits
 
@@ -999,35 +1009,32 @@ void gpu_lbry_merged(const uint32_t threads,const uint32_t startNonce, uint32_t 
 		// first final sha256
 
 		#pragma unroll 5
-		for (int i=0;i<5;i++) dat[i] = cuda_swab32(buf[i]);
+		for (int i=0; i<5; i++) dat[i] = cuda_swab32(buf[i]);
 		#pragma unroll 5
-		for (int i=0;i<5;i++) dat[i+5] = cuda_swab32(h[i]);
+		for (int i=0; i<5; i++) dat[i+5] = cuda_swab32(h[i]);
 		dat[10] = 0x80000000;
 		#pragma unroll 4
 		for (int i=11; i<15; i++) dat[i] = 0;
 
 		dat[15] = 0x140;
 
-//		*(uint2x4*)&buf[0] = *(uint2x4*)&c_H256[0];
 		#pragma unroll 8
-		for(int i=0;i<8;i++){
-			buf[ i] = c_H256[ i];
-		}
+		for(int i=0; i<8; i++)
+			buf[i] = c_H256[i];
 
 		sha256_round_body(dat, buf, c_K);
 
 		// second sha256
 
 		#pragma unroll 8
-		for(int i=0;i<8;i++){
-			dat[ i] = buf[ i];
+		for(int i=0; i<8; i++) {
+			dat[i] = buf[i];
 		}
 		dat[8] = 0x80000000;
 
 		#pragma unroll 8
-		for(int i=0;i<8;i++){
-			buf[ i] = c_H256[ i];
-		}
+		for(int i=0; i<8; i++)
+			buf[i] = c_H256[i];
 
 		#pragma unroll 6
 		for (int i=9; i<15; i++) dat[i] = 0;
@@ -1045,7 +1052,7 @@ void gpu_lbry_merged(const uint32_t threads,const uint32_t startNonce, uint32_t 
 }
 
 __host__
-void lbry_merged(int thr_id,uint32_t startNonce, uint32_t threads, uint32_t *d_resNonce, const uint64_t target64)
+void lbry_merged(int thr_id, uint32_t startNonce, uint32_t threads, uint32_t *d_resNonce, const uint64_t target64)
 {
 	uint32_t threadsperblock = 768;
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);

@@ -64,7 +64,10 @@ static void sha512_step2(uint64_t *const r,const uint64_t W,const uint64_t K, co
 
 /**************************************************************************************************/
 
-__global__ __launch_bounds__(512,2)
+__global__
+#if CUDA_VERSION > 6050
+__launch_bounds__(512,2)
+#endif
 void lbry_sha512_gpu_hash_32(const uint32_t threads, uint64_t *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);

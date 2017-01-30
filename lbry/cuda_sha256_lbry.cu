@@ -453,7 +453,10 @@ uint64_t cuda_swab64ll(const uint32_t x, const uint32_t y) {
 	return r;
 }
 
-__global__ __launch_bounds__(768,2) /* to force 32 regs */
+__global__
+#if CUDA_VERSION > 6050
+__launch_bounds__(768,2) /* to force 32 regs */
+#endif
 void lbry_sha256d_gpu_hash_112(const uint32_t threads, const uint32_t startNonce, uint64_t *outputHash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -833,7 +836,10 @@ static uint32_t ROTATE(const uint32_t x,const uint32_t r){
 	h[0] = tmp; \
 }
 
-__global__ __launch_bounds__(1024,2) /* to force 32 regs */
+__global__
+#if CUDA_VERSION > 6050
+__launch_bounds__(1024,2) /* to force 32 regs */
+#endif
 void lbry_ripemd(const uint32_t threads, uint64_t *Hash512){
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t dat[16];
@@ -889,7 +895,10 @@ void lbry_ripemd(const uint32_t threads, uint64_t *Hash512){
 	}
 }
 
-__global__ __launch_bounds__(768,2) /* to force 32 regs */
+__global__
+#if CUDA_VERSION > 6050
+__launch_bounds__(768,2) /* to force 32 regs */
+#endif
 void lbry_sha256d_gpu_hash_final(const uint32_t threads, uint64_t *Hash512, uint32_t *resNonces,const uint64_t target64)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
