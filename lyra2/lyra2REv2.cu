@@ -97,6 +97,7 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	const uint32_t first_nonce = pdata[19];
 	int dev_id = device_map[thr_id];
 	int intensity = (device_sm[dev_id] < 500) ? 18 : is_windows() ? 19 : 20;
+	if (strstr(device_name[dev_id], "GTX 10")) intensity = 20;
 	uint32_t throughput = cuda_default_throughput(dev_id, 1UL << intensity);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 

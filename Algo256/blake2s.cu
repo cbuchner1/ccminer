@@ -440,7 +440,7 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 
 	const int dev_id = device_map[thr_id];
 	int rc = 0;
-	int intensity = 28;
+	int intensity = is_windows() ? 25 : 28;
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
