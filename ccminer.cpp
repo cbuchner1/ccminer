@@ -756,6 +756,7 @@ int share_result(int result, int pooln, double sharediff, const char *reason)
 {
 	const char *flag;
 	char suppl[32] = { 0 };
+	char solved[16] = { 0 };
 	char s[32] = { 0 };
 	double hashrate = 0.;
 	struct pool_infos *p = &pools[pooln];
@@ -789,12 +790,13 @@ int share_result(int result, int pooln, double sharediff, const char *reason)
 		flag = use_colors ?
 			(result ? CL_GRN YAY : CL_RED BOO)
 		:	(result ? "(" YAY ")" : "(" BOO ")");
+		sprintf(solved, " solved: %u", p->solved_count);
 	}
 
-	applog(LOG_NOTICE, "accepted: %lu/%lu (%s), %s %s",
+	applog(LOG_NOTICE, "accepted: %lu/%lu (%s), %s %s%s",
 			p->accepted_count,
 			p->accepted_count + p->rejected_count,
-			suppl, s, flag);
+			suppl, s, flag, solved);
 	if (reason) {
 		applog(LOG_WARNING, "reject reason: %s", reason);
 		if (!check_dups && strncasecmp(reason, "duplicate", 9) == 0) {
