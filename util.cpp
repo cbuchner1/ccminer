@@ -1627,6 +1627,7 @@ static bool stratum_get_algo(struct stratum_ctx *sctx, json_t *id, json_t *param
 #include "nvml.h"
 extern char driver_version[32];
 extern int cuda_arch[MAX_GPUS];
+extern uint32_t device_plimit[MAX_GPUS];
 
 static bool json_object_set_error(json_t *result, int code, const char *msg)
 {
@@ -1643,7 +1644,7 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 	char vid[32], arch[8], driver[32];
 	char *card;
 	char os[8];
-	uint32_t watts = 0;
+	uint32_t watts = 0, plimit = 0;
 	int dev_id = device_map[thr_id];
 	int cuda_ver = cuda_version();
 	struct cgpu_info *cgpu = &thr_info[thr_id].gpu;
@@ -1660,9 +1661,13 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 	cuda_gpu_info(cgpu);
 #ifdef USE_WRAPNVML
 	cgpu->has_monitoring = true;
-	cgpu->gpu_power = gpu_power(cgpu); // mWatts
+	if (cgpu->monitor.gpu_power)
+		cgpu->gpu_power = cgpu->monitor.gpu_power;
+	else
+		cgpu->gpu_power = gpu_power(cgpu); // mWatts
 	watts = (cgpu->gpu_power >= 1000) ? cgpu->gpu_power / 1000 : 0; // ignore nvapi %
-	gpu_info(cgpu);
+	plimit = device_plimit[dev_id] > 0 ? device_plimit[dev_id] : 0;
+	gpu_info(cgpu); // vid/pid
 #endif
 	get_currentalgo(algo, sizeof(algo));
 
@@ -1686,7 +1691,10 @@ static bool stratum_benchdata(json_t *result, json_t *params, int thr_id)
 	json_object_set_new(val, "arch", json_string(arch));
 	json_object_set_new(val, "freq", json_integer(cgpu->gpu_clock/1000));
 	json_object_set_new(val, "memf", json_integer(cgpu->gpu_memclock/1000));
+	json_object_set_new(val, "curr_freq", json_integer(cgpu->monitor.gpu_clock));
+	json_object_set_new(val, "curr_memf", json_integer(cgpu->monitor.gpu_memclock));
 	json_object_set_new(val, "power", json_integer(watts));
+	json_object_set_new(val, "plimit", json_integer(plimit));
 	json_object_set_new(val, "khashes", json_real(cgpu->khashes));
 	json_object_set_new(val, "intensity", json_real(cgpu->intensity));
 	json_object_set_new(val, "throughput", json_integer(cgpu->throughput));

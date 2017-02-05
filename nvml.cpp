@@ -526,6 +526,8 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 	if (rc != NVML_SUCCESS) {
 		applog(LOG_WARNING, "GPU #%d: plimit %s", dev_id, nvmlh->nvmlErrorString(rc));
 		return -1;
+	} else {
+		device_plimit[dev_id] = plimit / 1000;
 	}
 
 	if (!opt_quiet) {
