@@ -34,7 +34,6 @@ static uint32_t device_bus_ids[MAX_GPUS] = { 0 };
 
 extern uint32_t device_gpu_clocks[MAX_GPUS];
 extern uint32_t device_mem_clocks[MAX_GPUS];
-extern uint32_t device_plimit[MAX_GPUS];
 extern uint8_t device_tlimit[MAX_GPUS];
 extern int8_t device_pstate[MAX_GPUS];
 extern int32_t device_led[MAX_GPUS];
@@ -537,6 +536,19 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 
 	limit_prev[dev_id] = prev_limit;
 	return 1;
+}
+
+uint32_t nvml_get_plimit(nvml_handle *nvmlh, int dev_id)
+{
+	uint32_t plimit = 0;
+	int n = nvmlh ? nvmlh->cuda_nvml_device_id[dev_id] : -1;
+	if (n < 0 || n >= nvmlh->nvml_gpucount)
+		return 0;
+
+	if (nvmlh->nvmlDeviceGetPowerManagementLimit) {
+		nvmlh->nvmlDeviceGetPowerManagementLimit(nvmlh->devs[n], &plimit);
+	}
+	return plimit;
 }
 
 // ccminer -D -n
@@ -1788,7 +1800,7 @@ int nvapi_init_settings()
 
 	for (int n=0; n < opt_n_threads; n++) {
 		int dev_id = device_map[n % MAX_GPUS];
-		if (device_plimit[dev_id]) {
+		if (device_plimit[dev_id] && !hnvml) {
 			if (nvapi_set_plimit(nvapi_dev_map[dev_id], device_plimit[dev_id]) == NVAPI_OK) {
 				uint32_t res = nvapi_get_plimit(nvapi_dev_map[dev_id]);
 				gpulog(LOG_INFO, n, "Power limit is set to %u%%", res);
@@ -1949,6 +1961,23 @@ unsigned int gpu_power(struct cgpu_info *gpu)
 		// average
 		mw = (gpu->gpu_power + mw) / 2;
 	}
+	return mw;
+}
+
+unsigned int gpu_plimit(struct cgpu_info *gpu)
+{
+	unsigned int mw = 0;
+	int support = -1;
+	if (hnvml) {
+		mw = nvml_get_plimit(hnvml, gpu->gpu_id);
+		support = (mw > 0);
+	}
+#ifdef WIN32
+	// NVAPI value is in % (< 100 so)
+	if (support == -1) {
+		mw = nvapi_get_plimit(nvapi_dev_map[gpu->gpu_id]);
+	}
+#endif
 	return mw;
 }
 
@@ -2116,15 +2145,18 @@ void *monitor_thread(void *userdata)
 			do {
 				unsigned int tmp_clock=0, tmp_memclock=0;
 				nvml_get_current_clocks(dev_id, &tmp_clock, &tmp_memclock);
-				if (tmp_clock < 200) {
 #ifdef WIN32
-					// workaround for buggy driver 378.49 (real clock)
+				if (tmp_clock < 200) {
+					// workaround for buggy drivers 378.x (real clock)
 					tmp_clock = nvapi_get_gpu_clock(nvapi_dev_map[dev_id]);
-#else
-					// some older cards only report a base clock with cuda props.
-					if (cuda_gpu_info(cgpu) == 0)
-						tmp_clock = cgpu->gpu_clock/1000;
+				}
 #endif
+				if (tmp_clock < 200) {
+					// some older cards only report a base clock with cuda props.
+					if (cuda_gpu_info(cgpu) == 0) {
+						tmp_clock = cgpu->gpu_clock/1000;
+						tmp_memclock = cgpu->gpu_memclock/1000;
+					}
 				}
 				clock += tmp_clock;
 				mem_clock += tmp_memclock;
@@ -2148,14 +2180,14 @@ void *monitor_thread(void *userdata)
 				khs_per_watt = stats_get_speed(thr_id, thr_hashrates[thr_id]);
 				khs_per_watt = khs_per_watt / ((double)power / counter);
 				format_hashrate(khs_per_watt * 1000, khw);
-				if (strlen(khw)) khw[strlen(khw)-1] = 'W';
+				if (strlen(khw))
+					sprintf(&khw[strlen(khw)-1], "W %uW ", cgpu->monitor.gpu_power / 1000);
 			}
 
 			if (opt_hwmonitor && (time(NULL) - cgpu->monitor.tm_displayed) > 60) {
-				gpulog(LOG_INFO, thr_id, "%u MHz %s %uW %uC FAN %u%%",
+				gpulog(LOG_INFO, thr_id, "%u MHz %s%uC FAN %u%%",
 					cgpu->monitor.gpu_clock/*, cgpu->monitor.gpu_memclock*/,
-					khw, cgpu->monitor.gpu_power / 1000,
-					cgpu->monitor.gpu_temp, cgpu->monitor.gpu_fan
+					khw, cgpu->monitor.gpu_temp, cgpu->monitor.gpu_fan
 				);
 				cgpu->monitor.tm_displayed = (uint32_t)time(NULL);
 			}

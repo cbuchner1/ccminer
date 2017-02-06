@@ -391,6 +391,7 @@ struct cgpu_info {
 	uint64_t gpu_mem;
 	uint64_t gpu_memfree;
 	uint32_t gpu_power;
+	uint32_t gpu_plimit;
 	double gpu_vddc;
 	int16_t gpu_pstate;
 	int16_t gpu_bus;
@@ -521,6 +522,7 @@ extern char* device_name[MAX_GPUS];
 extern short device_map[MAX_GPUS];
 extern short device_mpcount[MAX_GPUS];
 extern long  device_sm[MAX_GPUS];
+extern uint32_t device_plimit[MAX_GPUS];
 extern uint32_t gpus_intensity[MAX_GPUS];
 extern int opt_cudaschedule;
 

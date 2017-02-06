@@ -211,6 +211,7 @@ unsigned int gpu_fanpercent(struct cgpu_info *gpu);
 unsigned int gpu_fanrpm(struct cgpu_info *gpu);
 float gpu_temp(struct cgpu_info *gpu);
 unsigned int gpu_power(struct cgpu_info *gpu);
+unsigned int gpu_plimit(struct cgpu_info *gpu);
 int gpu_pstate(struct cgpu_info *gpu);
 int gpu_busid(struct cgpu_info *gpu);
 

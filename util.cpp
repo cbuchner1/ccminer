@@ -1627,7 +1627,6 @@ static bool stratum_get_algo(struct stratum_ctx *sctx, json_t *id, json_t *param
 #include "nvml.h"
 extern char driver_version[32];
 extern int cuda_arch[MAX_GPUS];
-extern uint32_t device_plimit[MAX_GPUS];
 
 static bool json_object_set_error(json_t *result, int code, const char *msg)
 {
