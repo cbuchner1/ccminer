@@ -451,7 +451,9 @@ extern "C" int scanhash_vanilla(int thr_id, struct work* work, uint32_t max_nonc
 				return work->valid_nonces;
 			}
 			else if (vhashcpu[6] > Htarg) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", h_resNonce[thr_id][0]);
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
+					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", h_resNonce[thr_id][0]);
 				pdata[19] = work->nonces[0] + 1;
 				continue;
 			}

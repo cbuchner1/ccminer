@@ -2183,6 +2183,8 @@ static void *miner_thread(void *userdata)
 		if (err != cudaSuccess && !opt_quiet)
 			gpulog(LOG_WARNING, thr_id, "%s", cudaGetErrorString(err));
 
+		work.valid_nonces = 0;
+
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
 
@@ -2446,6 +2448,8 @@ static void *miner_thread(void *userdata)
 
 		if (firstwork_time == 0)
 			firstwork_time = time(NULL);
+
+		if (cgpu) cgpu->accepted += work.valid_nonces;
 
 		/* if nonce found, submit work */
 		if (rc > 0 && !opt_benchmark) {

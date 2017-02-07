@@ -435,13 +435,17 @@ extern "C" int scanhash_decred(int thr_id, struct work* work, uint32_t max_nonce
 							work->nonces[0], work->sharediff[0], n, work->nonces[1], work->sharediff[1]);
 
 					} else if (vhash[6] > ptarget[6]) {
+						gpu_increment_reject(thr_id);
+						if (!opt_quiet)
 						gpulog(LOG_WARNING, thr_id, "result %u for %08x does not validate on CPU!", n, resNonces[n]);
 					}
 				}
 				return work->valid_nonces;
 
 			} else if (vhash[6] > ptarget[6]) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", resNonces[1]);
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
+					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", resNonces[1]);
 			}
 		}
 		*pnonce += throughput;

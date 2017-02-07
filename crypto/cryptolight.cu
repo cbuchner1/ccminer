@@ -119,12 +119,14 @@ extern "C" int scanhash_cryptolight(int thr_id, struct work* work, uint32_t max_
 						res++;
 						work->nonces[1] = resNonces[1];
 					} else if (vhash[7] > Htarg) {
-						gpulog(LOG_WARNING, thr_id, "result for second nonce %08x does not validate on CPU!", resNonces[1]);
+						gpu_increment_reject(thr_id);
 					}
 				}
 				goto done;
 			} else if (vhash[7] > Htarg) {
-				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", resNonces[0]);
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
+					gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", resNonces[0]);
 			}
 		}
 

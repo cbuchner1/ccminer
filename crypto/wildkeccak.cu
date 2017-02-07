@@ -318,6 +318,10 @@ extern "C" int scanhash_wildkeccak(int thr_id, struct work* work, uint32_t max_n
 				}
 				work->valid_nonces = 1;
 				return 1;
+			} else if (vhash[7] > ptarget[7]) {
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
+				gpulog(LOG_WARNING, thr_id, "result for nonce %08x does not validate on CPU!", h_retnonce[0]);
 			}
 		}
 

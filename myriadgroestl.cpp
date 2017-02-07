@@ -94,7 +94,9 @@ int scanhash_myriad(int thr_id, struct work *work, uint32_t max_nonce, unsigned 
 				return work->valid_nonces;
 			}
 			else if (vhash[7] > ptarget[7]) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
+					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
 				pdata[19] = work->nonces[0] + 1;
 				continue;
 			}

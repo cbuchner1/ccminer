@@ -360,6 +360,7 @@ extern void free_scrypt_jane(int thr_id);
 /* api related */
 void *api_thread(void *userdata);
 void api_set_throughput(int thr_id, uint32_t throughput);
+void gpu_increment_reject(int thr_id);
 
 struct monitor_info {
 	uint32_t gpu_temp;
@@ -377,9 +378,9 @@ struct monitor_info {
 struct cgpu_info {
 	uint8_t gpu_id;
 	uint8_t thr_id;
-	int accepted;
-	int rejected;
-	int hw_errors;
+	uint16_t hw_errors;
+	unsigned accepted;
+	uint32_t rejected;
 	double khashes;
 	int has_monitoring;
 	float gpu_temp;

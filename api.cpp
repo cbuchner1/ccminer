@@ -129,11 +129,6 @@ static void gpustatus(int thr_id)
 		cgpu->gpu_power = gpu_power(cgpu); // mWatts
 		cgpu->gpu_plimit = gpu_plimit(cgpu); // mW or %
 #endif
-
-		// todo: per gpu
-		cgpu->accepted = p->accepted_count;
-		cgpu->rejected = p->rejected_count;
-
 		cgpu->khashes = stats_get_speed(thr_id, 0.0) / 1000.0;
 		if (cgpu->monitor.gpu_power) {
 			cgpu->gpu_power = cgpu->monitor.gpu_power;
@@ -148,13 +143,14 @@ static void gpustatus(int thr_id)
 			"POWER=%u;FAN=%hu;RPM=%hu;"
 			"FREQ=%u;MEMFREQ=%u;GPUF=%u;MEMF=%u;"
 			"KHS=%.2f;KHW=%.5f;PLIM=%u;"
-			"HWF=%d;I=%.1f;THR=%u|",
+			"ACC=%u;REJ=%u;HWF=%u;I=%.1f;THR=%u|",
 			gpuid, cgpu->gpu_bus, card, cgpu->gpu_temp,
 			cgpu->gpu_power, cgpu->gpu_fan, cgpu->gpu_fan_rpm,
 			cgpu->gpu_clock/1000, cgpu->gpu_memclock/1000, // base freqs in MHz
 			cgpu->monitor.gpu_clock, cgpu->monitor.gpu_memclock, // current
 			cgpu->khashes, khashes_per_watt, cgpu->gpu_plimit,
-			cgpu->hw_errors, cgpu->intensity, cgpu->throughput);
+			cgpu->accepted, (unsigned) cgpu->rejected, (unsigned) cgpu->hw_errors,
+			cgpu->intensity, cgpu->throughput);
 
 		// append to buffer for multi gpus
 		strcat(buffer, buf);

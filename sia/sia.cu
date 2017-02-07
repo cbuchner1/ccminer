@@ -244,6 +244,8 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 					work->valid_nonces++;
 					pdata[8] = work->nonces[0] + 1;
 				}
+			} else {
+				gpu_increment_reject(thr_id);
 			}
 
 			if (work->nonces[1] != UINT32_MAX) {
@@ -263,6 +265,8 @@ int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned lon
 						work->valid_nonces++;
 						pdata[8] = work->nonces[1] + 1;
 					}
+				} else {
+					gpu_increment_reject(thr_id);
 				}
 			}
 			if (work->valid_nonces) {

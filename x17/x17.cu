@@ -255,11 +255,13 @@ extern "C" int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, u
 			}
 			else if (vhash[7] > Htarg) {
 				// x11+ coins could do some random error, but not on retry
+				gpu_increment_reject(thr_id);
 				if (!warn) {
 					warn++;
 					pdata[19] = work->nonces[0] + 1;
 					continue;
 				} else {
+					if (!opt_quiet)
 					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
 					warn = 0;
 				}

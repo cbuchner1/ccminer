@@ -468,7 +468,9 @@ extern "C" int scanhash_zr5(int thr_id, struct work *work,
 				return work->valid_nonces;
 			}
 			else if (vhash[7] > ptarget[7]) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
+					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
 				pdata[0] = oldp0;
 			}
 		} else

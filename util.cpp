@@ -1628,6 +1628,12 @@ static bool stratum_get_algo(struct stratum_ctx *sctx, json_t *id, json_t *param
 extern char driver_version[32];
 extern int cuda_arch[MAX_GPUS];
 
+void gpu_increment_reject(int thr_id)
+{
+	struct cgpu_info *gpu = &thr_info[thr_id].gpu;
+	if (gpu) gpu->rejected++;
+}
+
 static bool json_object_set_error(json_t *result, int code, const char *msg)
 {
 	json_t *val = json_object();

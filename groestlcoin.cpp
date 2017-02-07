@@ -61,25 +61,28 @@ int scanhash_groestlcoin(int thr_id, struct work *work, uint32_t max_nonce, unsi
 	groestlcoin_cpu_setBlock(thr_id, endiandata, (void*)ptarget);
 
 	do {
-		uint32_t foundNounce = UINT32_MAX;
+		memset(work->nonces, 0xff, sizeof(work->nonces));
 
 		*hashes_done = pdata[19] - start_nonce + throughput;
 
 		// GPU hash
-		groestlcoin_cpu_hash(thr_id, throughput, pdata[19], &foundNounce);
+		groestlcoin_cpu_hash(thr_id, throughput, pdata[19], &work->nonces[0]);
 
-		if (foundNounce < UINT32_MAX && bench_algo < 0)
+		if (work->nonces[0] < UINT32_MAX && bench_algo < 0)
 		{
 			uint32_t _ALIGN(64) vhash[8];
-			endiandata[19] = swab32(foundNounce);
+			endiandata[19] = swab32(work->nonces[0]);
 			groestlhash(vhash, endiandata);
 
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhash);
-				pdata[19] = foundNounce;
-				return true;
+				pdata[19] = work->nonces[0] + 1; // cursor
+				return work->valid_nonces;
 			} else if (vhash[7] > ptarget[7]) {
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNounce);
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
+					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
 			}
 		}
 

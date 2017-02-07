@@ -86,6 +86,8 @@ int scanhash_neoscrypt(int thr_id, struct work* work, uint32_t max_nonce, unsign
 				return work->valid_nonces;
 			}
 			else if (vhash[7] > Htarg) {
+				gpu_increment_reject(thr_id);
+				if (!opt_quiet)
 				gpulog(LOG_WARNING, thr_id, "nonce %08x does not validate on CPU!", work->nonces[0]);
 			}
 		}
