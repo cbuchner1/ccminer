@@ -1,9 +1,9 @@
 /* SM 2/3/3.5 Variant for lyra2REv2 */
 
 #ifdef __INTELLISENSE__
-/* just for vstudio code colors */
-#undef __CUDA_ARCH__
-#define __CUDA_ARCH__ 350
+/* just for vstudio code colors, only uncomment that temporary, dont commit it */
+//#undef __CUDA_ARCH__
+//#define __CUDA_ARCH__ 500
 #endif
 
 #define TPB20 64
