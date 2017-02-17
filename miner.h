@@ -118,6 +118,16 @@ static inline bool is_windows(void) {
 #endif
 }
 
+static inline bool is_x64(void) {
+#if defined(__x86_64__) || defined(_WIN64) || defined(__aarch64__)
+	return 1;
+#elif defined(__amd64__) || defined(__amd64) || defined(_M_X64) || defined(_M_IA64)
+	return 1;
+#else
+	return 0;
+#endif
+}
+
 #if ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
 #define WANT_BUILTIN_BSWAP
 #else
