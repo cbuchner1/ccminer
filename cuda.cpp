@@ -27,25 +27,21 @@ extern "C" {
 // CUDA Devices on the System
 int cuda_num_devices()
 {
-	int version;
+	int version = 0, GPU_N = 0;
 	cudaError_t err = cudaDriverGetVersion(&version);
-	if (err != cudaSuccess)
-	{
+	if (err != cudaSuccess) {
 		applog(LOG_ERR, "Unable to query CUDA driver version! Is an nVidia driver installed?");
 		exit(1);
 	}
 
-	int maj = version / 1000, min = version % 100; // same as in deviceQuery sample
-	if (maj < 5 || (maj == 5 && min < 5))
-	{
-		applog(LOG_ERR, "Driver does not support CUDA %d.%d API! Update your nVidia driver!", 5, 5);
+	if (version < CUDART_VERSION) {
+		applog(LOG_ERR, "Your system does not support CUDA %d.%d API!",
+			CUDART_VERSION / 1000, (CUDART_VERSION % 1000) / 10);
 		exit(1);
 	}
 
-	int GPU_N;
 	err = cudaGetDeviceCount(&GPU_N);
-	if (err != cudaSuccess)
-	{
+	if (err != cudaSuccess) {
 		applog(LOG_ERR, "Unable to query number of CUDA devices! Is an nVidia driver installed?");
 		exit(1);
 	}
