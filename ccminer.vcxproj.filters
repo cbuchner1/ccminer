@@ -255,6 +255,9 @@
     <ClCompile Include="lyra2\Sponge.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="lyra2\Lyra2Z.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
     <ClCompile Include="scrypt.cpp">
       <Filter>Source Files\CUDA\scrypt</Filter>
     </ClCompile>
@@ -473,6 +476,9 @@
     <ClInclude Include="lyra2\Lyra2.h">
       <Filter>Header Files\lyra2</Filter>
     </ClInclude>
+    <ClInclude Include="lyra2\Lyra2Z.h">
+      <Filter>Header Files\lyra2</Filter>
+    </ClInclude>
     <ClInclude Include="lyra2\Sponge.h">
       <Filter>Header Files\lyra2</Filter>
     </ClInclude>
@@ -504,6 +510,9 @@
       <Filter>Source Files\CUDA\lyra2</Filter>
     </ClInclude>
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </ClInclude>
+    <ClInclude Include="lyra2\cuda_lyra2Z_sm5.cuh">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </ClInclude>
     <ClInclude Include="quark\cuda_quark_blake512_sp.cuh">
@@ -818,6 +827,12 @@
       <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2REv2.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2Z.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="lyra2\lyra2Z.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
     <CudaCompile Include="Algo256\blake2s.cu">

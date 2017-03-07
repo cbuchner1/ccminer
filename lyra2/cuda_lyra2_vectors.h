@@ -36,11 +36,11 @@ typedef struct __align__(128) ulonglong8to16 {
 	ulonglong2to8 lo, hi;
 } ulonglong8to16;
 
-typedef struct __align__(256) ulonglong16to32 {
+typedef struct __align__(128) ulonglong16to32{
 	ulonglong8to16 lo, hi;
 } ulonglong16to32;
 
-typedef struct __align__(512) ulonglong32to64 {
+typedef struct __align__(128) ulonglong32to64{
 	ulonglong16to32 lo, hi;
 } ulonglong32to64;
 
@@ -79,7 +79,7 @@ struct __align__(128) ulong8 {
 };
 typedef __device_builtin__ struct ulong8 ulong8;
 
-typedef struct __align__(256) ulonglong16 {
+typedef struct __align__(128) ulonglong16{
 	ulonglong4 s0, s1, s2, s3, s4, s5, s6, s7;
 } ulonglong16;
 
@@ -92,7 +92,7 @@ typedef struct __builtin_align__(32) uint48 {
 		uint4 s0,s1;
 } uint48;
 
-typedef struct __align__(256) uint4x16 {
+typedef struct __builtin_align__(128) uint4x16{
 	uint4 s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15;
 } uint4x16;
 
