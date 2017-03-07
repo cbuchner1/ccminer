@@ -417,6 +417,8 @@
     <CudaCompile Include="scrypt\titan_kernel.cu">
       <CodeGeneration>compute_35,sm_35;compute_50,sm_50</CodeGeneration>
     </CudaCompile>
+    <CudaCompile Include="sha256\cuda_sha256t.cu" />
+    <CudaCompile Include="sha256\sha256t.cu" />
     <CudaCompile Include="zr5.cu" />
     <CudaCompile Include="heavy\cuda_blake512.cu">
     </CudaCompile>

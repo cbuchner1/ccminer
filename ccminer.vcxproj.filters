@@ -85,6 +85,9 @@
     <Filter Include="Source Files\CUDA\lbry">
       <UniqueIdentifier>{3079ea1f-f768-455a-acd6-f517fac535b4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\sha256">
+      <UniqueIdentifier>{86a896c0-1688-4854-98e3-285d166069a3}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\sia">
       <UniqueIdentifier>{86a896c0-1688-4854-98e0-285d166069a3}</UniqueIdentifier>
     </Filter>
@@ -831,6 +834,12 @@
     </CudaCompile>
     <CudaCompile Include="lbry\lbry.cu">
       <Filter>Source Files\CUDA\lbry</Filter>
+    </CudaCompile>
+    <CudaCompile Include="sha256\cuda_sha256t.cu">
+      <Filter>Source Files\sha256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="sha256\sha256t.cu">
+      <Filter>Source Files\sha256</Filter>
     </CudaCompile>
     <CudaCompile Include="sia\sia.cu">
       <Filter>Source Files\sia</Filter>
