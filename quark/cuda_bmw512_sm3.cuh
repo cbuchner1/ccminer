@@ -226,8 +226,6 @@ void quark_bmw512_gpu_hash_64_30(uint32_t threads, uint32_t startNounce, uint64_
 	}
 }
 
-#ifdef WANT_BMW512_80
-
 __global__
 void quark_bmw512_gpu_hash_80_30(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
@@ -265,8 +263,6 @@ void quark_bmw512_gpu_hash_80_30(uint32_t threads, uint32_t startNounce, uint64_
 			outpHash[i] = ((uint2*)message)[i+8];
 	}
 }
-
-#endif
 
 #else /* stripped stubs for other archs */
 __global__ void quark_bmw512_gpu_hash_64_30(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector) {}

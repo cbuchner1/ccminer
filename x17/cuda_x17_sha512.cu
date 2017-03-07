@@ -89,13 +89,12 @@ uint64_t Tone(uint64_t* K, uint64_t* r, uint64_t* W, const int a, const int i)
 
 __global__
 /*__launch_bounds__(256, 4)*/
-void x17_sha512_gpu_hash_64(const uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x17_sha512_gpu_hash_64(const uint32_t threads, uint64_t *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-		uint64_t hashPosition = nounce - startNounce;
+		const uint64_t hashPosition = thread;
 		uint64_t *pHash = &g_hash[hashPosition*8U];
 
 		uint64_t W[80];
@@ -161,14 +160,12 @@ void x17_sha512_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void x17_sha512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x17_sha512_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-
-	//MyStreamSynchronize(NULL, order, thr_id);
+	x17_sha512_gpu_hash_64 <<<grid, block>>> (threads, (uint64_t*)d_hash);
 }

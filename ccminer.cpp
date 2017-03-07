@@ -237,6 +237,7 @@ Options:\n\
 			fugue256    Fuguecoin\n\
 			groestl     Groestlcoin\n\
 			heavy       Heavycoin\n\
+			hmq1725     Doubloons / Espers\n\
 			jackpot     Jackpot\n\
 			keccak      Keccak-256 (Maxcoin)\n\
 			lbry        LBRY Credits (Sha/Ripemd)\n\
@@ -1600,6 +1601,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		opt_difficulty = 1.;
 
 	switch (opt_algo) {
+		case ALGO_HMQ1725: // should be 256 but... suprnova...
 		case ALGO_JACKPOT:
 		case ALGO_NEOSCRYPT:
 		case ALGO_SCRYPT:
@@ -2232,12 +2234,17 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_myriad(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
+		case ALGO_HMQ1725:
+			rc = scanhash_hmq17(thr_id, &work, max_nonce, &hashes_done);
+			break;
+
 		case ALGO_HEAVY:
 			rc = scanhash_heavy(thr_id, &work, max_nonce, &hashes_done, work.maxvote, HEAVYCOIN_BLKHDR_SZ);
 			break;
 		case ALGO_MJOLLNIR:
 			rc = scanhash_heavy(thr_id, &work, max_nonce, &hashes_done, 0, MNR_BLKHDR_SZ);
 			break;
+
 		case ALGO_KECCAK:
 			rc = scanhash_keccak256(thr_id, &work, max_nonce, &hashes_done);
 			break;

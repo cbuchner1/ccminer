@@ -259,14 +259,13 @@
 }
 
 __global__ /* __launch_bounds__(256, 6) */
-void x17_haval256_gpu_hash_64(const uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+void x17_haval256_gpu_hash_64(const uint32_t threads, uint64_t *g_hash, const int outlen)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-		uint64_t hashPosition = nounce - startNounce;
-		uint64_t *pHash = &g_hash[hashPosition*8U];
+		const uint64_t hashPosition = thread*8U;
+		uint64_t *pHash = &g_hash[hashPosition];
 
 		uint32_t s0, s1, s2, s3, s4, s5, s6, s7;
 		const uint32_t u0 = s0 = 0x243F6A88;
@@ -288,7 +287,7 @@ void x17_haval256_gpu_hash_64(const uint32_t threads, uint32_t startNounce, uint
 			hash.h8[i] = pHash[i];
 		}
 
-///////// input big /////////////////////
+		///////// input big /////////////////////
 
 		uint32_t buf[32];
 
@@ -325,12 +324,13 @@ void x17_haval256_gpu_hash_64(const uint32_t threads, uint32_t startNounce, uint
 		pHash[1] = hash.h8[1];
 		pHash[2] = hash.h8[2];
 		pHash[3] = hash.h8[3];
-#ifdef NEED_HASH_512
-		pHash[4] = hash.h8[4];
-		pHash[5] = hash.h8[5];
-		pHash[6] = hash.h8[6];
-		pHash[7] = hash.h8[7];
-#endif
+
+		if (outlen == 512) {
+			pHash[4] = 0; //hash.h8[4];
+			pHash[5] = 0; //hash.h8[5];
+			pHash[6] = 0; //hash.h8[6];
+			pHash[7] = 0; //hash.h8[7];
+		}
 	}
 }
 
@@ -340,14 +340,12 @@ void x17_haval256_cpu_init(int thr_id, uint32_t threads)
 }
 
 __host__
-void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, const int outlen)
 {
 	const uint32_t threadsperblock = 256;
 
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	x17_haval256_gpu_hash_64 <<<grid, block>>> (threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-
-	//MyStreamSynchronize(NULL, order, thr_id);
+	x17_haval256_gpu_hash_64 <<<grid, block>>> (threads, (uint64_t*)d_hash, outlen);
 }

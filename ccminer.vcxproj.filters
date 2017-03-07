@@ -703,6 +703,9 @@
     <CudaCompile Include="x17\cuda_x17_sha512.cu">
       <Filter>Source Files\CUDA\x17</Filter>
     </CudaCompile>
+    <CudaCompile Include="x17\hmq17.cu">
+      <Filter>Source Files\CUDA\x17</Filter>
+    </CudaCompile>
     <CudaCompile Include="x17\x17.cu">
       <Filter>Source Files\CUDA\x17</Filter>
     </CudaCompile>

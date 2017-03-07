@@ -19,6 +19,7 @@ enum sha_algos {
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
 	ALGO_HEAVY,		/* Heavycoin hash */
+	ALGO_HMQ1725,
 	ALGO_KECCAK,
 	ALGO_JACKPOT,
 	ALGO_LBRY,
@@ -73,6 +74,7 @@ static const char *algo_names[] = {
 	"fugue256",
 	"groestl",
 	"heavy",
+	"hmq1725",
 	"keccak",
 	"jackpot",
 	"lbry",
@@ -135,6 +137,8 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_DMD_GR;
 		else if (!strcasecmp("doom", arg))
 			i = ALGO_LUFFA;
+		else if (!strcasecmp("hmq17", arg))
+			i = ALGO_HMQ1725;
 		else if (!strcasecmp("lyra2re", arg))
 			i = ALGO_LYRA2;
 		else if (!strcasecmp("lyra2rev2", arg))

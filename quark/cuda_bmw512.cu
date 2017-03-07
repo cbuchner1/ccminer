@@ -1,13 +1,11 @@
 #include <stdio.h>
 #include <memory.h>
 
-#undef WANT_BMW512_80
+#define WANT_BMW512_80
 
 #include "cuda_helper.h"
 
-#ifdef WANT_BMW512_80
 __constant__ uint64_t c_PaddedMessage80[16]; // padded message (80 bytes + padding)
-#endif
 
 #include "cuda_bmw512_sm3.cuh"
 
@@ -390,8 +388,6 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *
 	}
 }
 
-#ifdef WANT_BMW512_80
-
 __global__ __launch_bounds__(256, 2)
 void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
@@ -473,8 +469,6 @@ void quark_bmw512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 	else
 		quark_bmw512_gpu_hash_80_30<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
 }
-
-#endif
 
 __host__
 void quark_bmw512_cpu_init(int thr_id, uint32_t threads)
