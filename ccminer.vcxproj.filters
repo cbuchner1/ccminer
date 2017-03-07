@@ -619,6 +619,12 @@
     <CudaCompile Include="heavy\heavy.cu">
       <Filter>Source Files\CUDA\heavy</Filter>
     </CudaCompile>
+    <CudaCompile Include="heavy\bastion.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
+    <CudaCompile Include="heavy\cuda_bastion.cu">
+      <Filter>Source Files\CUDA\heavy</Filter>
+    </CudaCompile>
     <CudaCompile Include="quark\cuda_bmw512.cu">
       <Filter>Source Files\CUDA\quark</Filter>
     </CudaCompile>

@@ -435,6 +435,8 @@
     </CudaCompile>
     <CudaCompile Include="heavy\heavy.cu">
     </CudaCompile>
+    <CudaCompile Include="heavy\bastion.cu" />
+    <CudaCompile Include="heavy\cuda_bastion.cu" />
     <CudaCompile Include="JHA\cuda_jha_compactionTest.cu">
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>

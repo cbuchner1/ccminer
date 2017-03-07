@@ -417,3 +417,31 @@ void hefty_cpu_hash(int thr_id, uint32_t threads, int startNounce)
     // Strategisches Sleep Kommando zur Senkung der CPU Last
     MyStreamSynchronize(NULL, 0, thr_id);
 }
+
+__global__
+__launch_bounds__(128, 8)
+void hefty_gpu_copy(const uint32_t threads, uint32_t* d_heftyhash, uint64_t* d_hash)
+{
+    const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    if (thread < threads)
+    {
+        const uint32_t offset = thread * 8U; // 32 / sizeof(uint32_t);
+        uint4 *psrc = (uint4*) (&d_heftyhash[offset]);
+        uint4 *pdst = (uint4*) (&d_hash[offset]);
+        pdst[0] = psrc[0];
+        pdst[1] = psrc[1];
+        pdst[2] = make_uint4(0,0,0,0);
+        pdst[3] = make_uint4(0,0,0,0);
+    }
+}
+
+__host__
+void hefty_copy_hashes(int thr_id, uint32_t threads, uint32_t* d_outputhash)
+{
+    const uint32_t threadsperblock = 128;
+    dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+    dim3 block(threadsperblock);
+    hefty_gpu_copy <<< grid, block >>> (threads, heavy_heftyHashes[thr_id], (uint64_t*) d_outputhash);
+    cudaStreamSynchronize(NULL);
+}
+

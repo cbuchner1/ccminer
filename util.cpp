@@ -2139,6 +2139,9 @@ void print_hash_tests(void)
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
+	bastionhash(&hash[0], &buf[0]);
+	printpfx("bastion", hash);
+
 	blake256hash(&hash[0], &buf[0], 8);
 	printpfx("blakecoin", hash);
 

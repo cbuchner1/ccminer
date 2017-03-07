@@ -44,6 +44,7 @@ void bench_free()
 void algo_free_all(int thr_id)
 {
 	// only initialized algos will be freed
+	free_bastion(thr_id);
 	free_blake256(thr_id);
 	free_blake2s(thr_id);
 	free_bmw(thr_id);

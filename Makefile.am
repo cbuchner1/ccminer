@@ -28,6 +28,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  heavy/cuda_hefty1.cu heavy/cuda_hefty1.h \
 			  heavy/cuda_keccak512.cu heavy/cuda_keccak512.h \
 			  heavy/cuda_sha256.cu heavy/cuda_sha256.h \
+			  heavy/bastion.cu heavy/cuda_bastion.cu \
 			  fuguecoin.cpp Algo256/cuda_fugue256.cu sph/fugue.c uint256.h \
 			  groestlcoin.cpp cuda_groestlcoin.cu cuda_groestlcoin.h \
 			  myriadgroestl.cpp cuda_myriadgroestl.cu \

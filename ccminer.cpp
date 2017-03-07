@@ -223,6 +223,7 @@ static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
+			bastion     Hefty bastion\n\
 			blake       Blake 256 (SFR)\n\
 			blake2s     Blake2-S 256 (NEVA)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
@@ -2196,6 +2197,9 @@ static void *miner_thread(void *userdata)
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
 
+		case ALGO_BASTION:
+			rc = scanhash_bastion(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_BLAKECOIN:
 			rc = scanhash_blake256(thr_id, &work, max_nonce, &hashes_done, 8);
 			break;
