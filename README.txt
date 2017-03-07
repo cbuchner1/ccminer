@@ -1,5 +1,5 @@
 
-ccminer 2.0 (January 2016)  "Cryptonight & other RPC 2.0 algos"
+ccminer 2.0 (March 2017)      "Cryptonight & other funny algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -76,6 +76,7 @@ This code is based on the pooler cpuminer and inherits
 its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
+                          bastion     use to mine Joincoin
                           blake       use to mine Saffroncoin (Blake256)
                           blakecoin   use to mine Old Blake 256
                           blake2s     use to mine Nevacoin (Blake2-S 256)
@@ -94,7 +95,9 @@ its command line interface and options.
                           keccak      use to mine Maxcoin
                           lbry        use to mine LBRY Credits
                           luffa       use to mine Joincoin
-                          lyra2       use to mine Vertcoin
+                          lyra2       use to mine CryptoCoin
+                          lyra2v2     use to mine Vertcoin
+                          lyra2z      use to mine Zerocoin (XZC)
                           mjollnir    use to mine Mjollnircoin
                           myr-gr      use to mine Myriad-Groest
                           neoscrypt   use to mine FeatherCoin
@@ -105,11 +108,13 @@ its command line interface and options.
                           scrypt      use to mine Scrypt coins
                           scrypt:N    use to mine Scrypt-N (:10 for 2048 iterations)
                           scrypt-jane use to mine Chacha coins like Cache and Ultracoin
-                          s3          use to mine 1coin
+                          s3          use to mine 1coin (ONE)
+                          sha256t     use to mine OneCoin (OC)
                           sia         use to mine SIA
                           sib         use to mine Sibcoin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
+                          timetravel  use to mine MachineCoin
                           x11evo      use to mine Revolver
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
@@ -270,8 +275,10 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Jan. 2017 (WIP)
+  Mar. 08th 2017
                   Handle cryptonight, wildkeccak and cryptonight-lite
+                  Add a serie of new algos: timetravel, bastion, hmq1725, sha256t
+                  Import lyra2z from djm34 work...
                   Rework the common skein512 (used in most algos except skein ;)
                   Store the share diff of second nonce(s) in most algos
                   Hardware monitoring thread to get more accurate power readings
