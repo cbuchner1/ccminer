@@ -506,6 +506,8 @@ extern "C" int scanhash_blake256(int thr_id, struct work* work, uint32_t max_non
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
+		cuda_get_arch(thr_id);
+
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), -1);
 		CUDA_CALL_OR_RET_X(cudaMallocHost(&h_resNonce[thr_id], NBN * sizeof(uint32_t)), -1);
 		init[thr_id] = true;

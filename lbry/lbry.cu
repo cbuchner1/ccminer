@@ -119,6 +119,7 @@ extern "C" int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, 
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
+		cuda_get_arch(thr_id);
 
 		if (CUDART_VERSION == 6050) {
 			applog(LOG_ERR, "This lbry kernel is not compatible with CUDA 6.5!");
