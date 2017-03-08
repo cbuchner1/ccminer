@@ -531,7 +531,7 @@ extern "C" int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonc
 				}
 				pdata[19] = max(work->nonces[0], work->nonces[1]); // next scan start
 				return rc;
-			} else if (vhashcpu[6] > ptarget[6]) {
+			} else if (vhashcpu[7] > ptarget[7]) {
 				gpu_increment_reject(thr_id);
 				if (!opt_quiet)
 					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", resNonces[0]);

@@ -242,6 +242,7 @@ void blake256_cpu_setBlock_80(uint32_t *pdata)
 __host__
 void blake256_cpu_init(int thr_id, uint32_t threads)
 {
+	cuda_get_arch(thr_id);
 	cudaMemcpyToSymbol(u256, c_u256, sizeof(c_u256), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(sigma, c_sigma, sizeof(c_sigma), 0, cudaMemcpyHostToDevice);
 }

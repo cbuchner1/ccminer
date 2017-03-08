@@ -1471,6 +1471,8 @@ static __thread uint32_t *Trans3 = NULL; // 2 streams
 __host__
 void neoscrypt_init(int thr_id, uint32_t threads)
 {
+	cuda_get_arch(thr_id);
+
 	CUDA_SAFE_CALL(cudaMalloc(&d_NNonce[thr_id], 2 * sizeof(uint32_t)));
 	CUDA_SAFE_CALL(cudaMalloc(&hash1, 32 * 128 * sizeof(uint64_t) * min(8192, threads)));
 	CUDA_SAFE_CALL(cudaMalloc(&Trans1, 32 * sizeof(uint64_t) * threads));
