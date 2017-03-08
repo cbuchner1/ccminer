@@ -275,11 +275,12 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Mar. 08th 2017
+  Mar. 08th 2017  v2.0
                   Handle cryptonight, wildkeccak and cryptonight-lite
                   Add a serie of new algos: timetravel, bastion, hmq1725, sha256t
                   Import lyra2z from djm34 work...
                   Rework the common skein512 (used in most algos except skein ;)
+                  Upgrade whirlpool algo with alexis version (2x faster)
                   Store the share diff of second nonce(s) in most algos
                   Hardware monitoring thread to get more accurate power readings
                   Small changes for the quiet mode & max-log-rate to reduce logs

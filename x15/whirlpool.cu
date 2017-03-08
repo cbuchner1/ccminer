@@ -9,15 +9,18 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[MAX_GPUS];
+//static uint32_t *d_hash[MAX_GPUS];
 
 extern void x15_whirlpool_cpu_init(int thr_id, uint32_t threads, int mode);
-extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void x15_whirlpool_cpu_free(int thr_id);
 
 extern void whirlpool512_setBlock_80(void *pdata, const void *ptarget);
-extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
-extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+//extern void x15_whirlpool_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+//extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
+//extern uint32_t whirlpool512_cpu_finalhash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+
+extern void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *resNonces, const uint64_t target);
 
 //#define _DEBUG
 #define _DEBUG_PREFIX "whirl"
@@ -88,7 +91,7 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
+		//CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
 		x15_whirlpool_cpu_init(thr_id, throughput, 1 /* old whirlpool */);
 
 		init[thr_id] = true;
@@ -101,18 +104,20 @@ extern "C" int scanhash_whirl(int thr_id, struct work* work, uint32_t max_nonce,
 	whirlpool512_setBlock_80((void*)endiandata, ptarget);
 
 	do {
+/*
 		int order = 0;
-
-		*hashes_done = pdata[19] - first_nonce + throughput;
-
 		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		TRACE64(" 80 :", d_hash);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		TRACE64(" 64 :", d_hash);
 		x15_whirlpool_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		TRACE64(" 64 :", d_hash);
-
 		work->nonces[0] = whirlpool512_cpu_finalhash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+*/
+		*hashes_done = pdata[19] - first_nonce + throughput;
+
+		whirlpool512_cpu_hash_80(thr_id, throughput, pdata[19], work->nonces, *(uint64_t*)&ptarget[6]);
+
 		if (work->nonces[0] != UINT32_MAX && bench_algo < 0)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -154,7 +159,7 @@ extern "C" void free_whirl(int thr_id)
 
 	cudaThreadSynchronize();
 
-	cudaFree(d_hash[thr_id]);
+	//cudaFree(d_hash[thr_id]);
 
 	x15_whirlpool_cpu_free(thr_id);
 	init[thr_id] = false;

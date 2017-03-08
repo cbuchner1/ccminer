@@ -444,6 +444,7 @@ void sha256t_gpu_hash_shared(const uint32_t threads, const uint32_t startNonce, 
 __host__
 void sha256t_init(int thr_id)
 {
+	cuda_get_arch(thr_id);
 	cudaMemcpyToSymbol(c_K, cpu_K, sizeof(cpu_K), 0, cudaMemcpyHostToDevice);
 	CUDA_SAFE_CALL(cudaMalloc(&d_resNonces[thr_id], 2*sizeof(uint32_t)));
 }
