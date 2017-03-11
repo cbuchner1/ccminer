@@ -8,6 +8,7 @@
 
 #include "miner.h"
 #include "algos.h"
+#include <cuda_runtime.h>
 
 int bench_algo = -1;
 
@@ -114,6 +115,13 @@ bool bench_algo_switch_next(int thr_id)
 	if (algo == ALGO_MJOLLNIR) algo++; // same as heavy
 	if (algo == ALGO_WHIRLCOIN) algo++; // same as whirlpool
 	if (algo == ALGO_WHIRLPOOLX) algo++; // disabled
+	// todo: algo switch from RPC 2.0
+	if (algo == ALGO_CRYPTOLIGHT) algo++;
+	if (algo == ALGO_CRYPTONIGHT) algo++;
+	if (algo == ALGO_WILDKECCAK) algo++;
+	if (algo == ALGO_JACKPOT) algo++; // to fix
+	if (algo == ALGO_QUARK) algo++; // to fix
+	if (algo == ALGO_LBRY && CUDART_VERSION < 7000) algo++;
 
 	if (device_sm[dev_id] && device_sm[dev_id] < 300) {
 		// incompatible SM 2.1 kernels...

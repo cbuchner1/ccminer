@@ -320,10 +320,8 @@ void whirlpool512_setBlock_80(void *pdata, const void *ptarget)
 __host__
 extern void x15_whirlpool_cpu_free(int thr_id)
 {
-	cudaFree(InitVector_RC);
-	cudaFree(b0);
-	cudaFree(b7);
-	cudaFree(d_resNonce[thr_id]);
+	if (d_resNonce[thr_id])
+		cudaFree(d_resNonce[thr_id]);
 }
 
 __global__

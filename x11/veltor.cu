@@ -174,8 +174,8 @@ extern "C" void free_veltor(int thr_id)
 	cudaThreadSynchronize();
 
 	cudaFree(d_hash[thr_id]);
+	cudaFree(d_resNonce[thr_id]);
 
-	cuda_check_cpu_free(thr_id);
 	init[thr_id] = false;
 
 	cudaDeviceSynchronize();
