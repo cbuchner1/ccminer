@@ -253,6 +253,7 @@ Options:\n\
 			penta       Pentablake hash (5x Blake 512)\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
+			sha256d     SHA256d (bitcoin)\n\
 			sha256t     SHA256 x3\n\
 			sia         SIA (Blake2B)\n\
 			sib         Sibcoin (X11+Streebog)\n\
@@ -882,6 +883,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		case ALGO_BLAKECOIN:
 		case ALGO_BLAKE2S:
 		case ALGO_BMW:
+		case ALGO_SHA256D:
 		case ALGO_SHA256T:
 		case ALGO_VANILLA:
 			// fast algos require that... (todo: regen hash)
@@ -2106,6 +2108,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_BLAKE:
 			case ALGO_BMW:
 			case ALGO_DECRED:
+			case ALGO_SHA256D:
 			case ALGO_SHA256T:
 			//case ALGO_WHIRLPOOLX:
 				minmax = 0x40000000U;
@@ -2307,6 +2310,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_SKEIN2:
 			rc = scanhash_skein2(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_SHA256D:
+			rc = scanhash_sha256d(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_SHA256T:
 			rc = scanhash_sha256t(thr_id, &work, max_nonce, &hashes_done);

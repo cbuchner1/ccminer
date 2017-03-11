@@ -300,6 +300,7 @@ extern int scanhash_nist5(int thr_id, struct work *work, uint32_t max_nonce, uns
 extern int scanhash_pentablake(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_quark(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_qubit(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_sha256d(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_sha256t(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -319,7 +320,6 @@ extern int scanhash_x15(int thr_id, struct work* work, uint32_t max_nonce, unsig
 extern int scanhash_x17(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_zr5(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 
-extern int scanhash_sha256d(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_scrypt(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done,
 	unsigned char *scratchbuf, struct timeval *tv_start, struct timeval *tv_end);
 extern int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done,
@@ -355,6 +355,7 @@ extern void free_nist5(int thr_id);
 extern void free_pentablake(int thr_id);
 extern void free_quark(int thr_id);
 extern void free_qubit(int thr_id);
+extern void free_sha256d(int thr_id);
 extern void free_sha256t(int thr_id);
 extern void free_sia(int thr_id);
 extern void free_sib(int thr_id);
@@ -879,6 +880,7 @@ void quarkhash(void *state, const void *input);
 void qubithash(void *state, const void *input);
 void scrypthash(void* output, const void* input);
 void scryptjane_hash(void* output, const void* input);
+void sha256d_hash(void *output, const void *input);
 void sha256t_hash(void *output, const void *input);
 void sibhash(void *output, const void *input);
 void skeincoinhash(void *output, const void *input);

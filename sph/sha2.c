@@ -581,6 +581,7 @@ static inline int scanhash_sha256d_8way(int thr_id, uint32_t *pdata,
 
 #endif /* HAVE_SHA256_8WAY */
 
+#if 0
 int scanhash_sha256d(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(128) data[64];
@@ -629,3 +630,5 @@ int scanhash_sha256d(int thr_id, struct work* work, uint32_t max_nonce, unsigned
 	pdata[19] = n;
 	return 0;
 }
+
+#endif

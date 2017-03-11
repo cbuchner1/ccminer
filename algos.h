@@ -37,6 +37,7 @@ enum sha_algos {
 	ALGO_QUBIT,
 	ALGO_SCRYPT,
 	ALGO_SCRYPT_JANE,
+	ALGO_SHA256D,
 	ALGO_SHA256T,
 	ALGO_SIA,
 	ALGO_SIB,
@@ -96,6 +97,7 @@ static const char *algo_names[] = {
 	"qubit",
 	"scrypt",
 	"scrypt-jane",
+	"sha256d",
 	"sha256t",
 	"sia",
 	"sib",
@@ -151,6 +153,10 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_LYRA2;
 		else if (!strcasecmp("lyra2rev2", arg))
 			i = ALGO_LYRA2v2;
+		else if (!strcasecmp("bitcoin", arg))
+			i = ALGO_SHA256D;
+		else if (!strcasecmp("sha256", arg))
+			i = ALGO_SHA256D;
 		else if (!strcasecmp("thorsriddle", arg))
 			i = ALGO_VELTOR;
 		else if (!strcasecmp("whirl", arg))
