@@ -147,7 +147,7 @@ extern "C" int scanhash_veltor(int thr_id, struct work* work, uint32_t max_nonce
 				if (!opt_quiet)
 					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", h_resNonce[0]);
 				cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t));
-				pdata[19] = h_resNonce[0] + 1;
+				pdata[19] = startNounce + h_resNonce[0] + 1;
 				continue;
 			}
 		}

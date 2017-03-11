@@ -85,7 +85,7 @@
     <Filter Include="Source Files\CUDA\lbry">
       <UniqueIdentifier>{3079ea1f-f768-455a-acd6-f517fac535b4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\sha256">
+    <Filter Include="Source Files\CUDA\sha256">
       <UniqueIdentifier>{86a896c0-1688-4854-98e3-285d166069a3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\sia">
@@ -518,9 +518,6 @@
     <ClInclude Include="quark\cuda_quark_blake512_sp.cuh">
       <Filter>Source Files\CUDA\quark</Filter>
     </ClInclude>
-    <ClInclude Include="quark\cuda_skein512_sp.cuh">
-      <Filter>Source Files\CUDA\quark</Filter>
-    </ClInclude>
     <ClInclude Include="quark\cuda_bmw512_sm3.cuh">
       <Filter>Source Files\CUDA\quark</Filter>
     </ClInclude>
@@ -860,16 +857,16 @@
       <Filter>Source Files\CUDA\lbry</Filter>
     </CudaCompile>
     <CudaCompile Include="sha256\cuda_sha256d.cu">
-      <Filter>Source Files\sha256</Filter>
+      <Filter>Source Files\CUDA\sha256</Filter>
     </CudaCompile>
     <CudaCompile Include="sha256\sha256d.cu">
-      <Filter>Source Files\sha256</Filter>
+      <Filter>Source Files\CUDA\sha256</Filter>
     </CudaCompile>
     <CudaCompile Include="sha256\cuda_sha256t.cu">
-      <Filter>Source Files\sha256</Filter>
+      <Filter>Source Files\CUDA\sha256</Filter>
     </CudaCompile>
     <CudaCompile Include="sha256\sha256t.cu">
-      <Filter>Source Files\sha256</Filter>
+      <Filter>Source Files\CUDA\sha256</Filter>
     </CudaCompile>
     <CudaCompile Include="sia\sia.cu">
       <Filter>Source Files\sia</Filter>

@@ -62,7 +62,7 @@ __device__ static uint2 c_PaddedMessage80[16];
  */
 __device__ uint2 InitVector_RC[10];
 
-static uint32_t *d_resNonce[MAX_GPUS];
+static uint32_t *d_resNonce[MAX_GPUS] = { 0 };
 
 //--------START OF WHIRLPOOL DEVICE MACROS---------------------------------------------------------------------------
 __device__ __forceinline__
