@@ -1,6 +1,6 @@
 /**
  * XMR RPC 2.0 Stratum and BBR Scratchpad
- * tpruvot@github - October 2016
+ * tpruvot@github - October 2016 - Under GPLv3 Licence
  */
 
 #include <errno.h>

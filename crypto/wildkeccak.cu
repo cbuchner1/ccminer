@@ -1,3 +1,8 @@
+// WildKeccak CUDA Kernel, Code based on Linux Wolf0 bbr-miner implementation from 2014
+// Adapted to ccminer 2.0 - tpruvot 2016-2017
+//
+// NOTE FOR SP: this ccminer version is licensed under GPLv3 Licence
+
 extern "C" {
 #include <errno.h>
 #include <stdio.h>
@@ -110,11 +115,16 @@ __noinline__ __device__ uint64_t bitselect(const uint64_t a, const uint64_t b, c
 	st7  = ROTL64(st10 ^ bc[4], 3); \
 	st10 = ROTL641(tmp1); \
 	\
-	tmp1 = st0; tmp2 = st1; st0 = bitselect(st0 ^ st2, st0, st1); st1 = bitselect(st1 ^ st3, st1, st2); st2 = bitselect(st2 ^ st4, st2, st3); st3 = bitselect(st3 ^ tmp1, st3, st4); st4 = bitselect(st4 ^ tmp2, st4, tmp1); \
-	tmp1 = st5; tmp2 = st6; st5 = bitselect(st5 ^ st7, st5, st6); st6 = bitselect(st6 ^ st8, st6, st7); st7 = bitselect(st7 ^ st9, st7, st8); st8 = bitselect(st8 ^ tmp1, st8, st9); st9 = bitselect(st9 ^ tmp2, st9, tmp1); \
-	tmp1 = st10; tmp2 = st11; st10 = bitselect(st10 ^ st12, st10, st11); st11 = bitselect(st11 ^ st13, st11, st12); st12 = bitselect(st12 ^ st14, st12, st13); st13 = bitselect(st13 ^ tmp1, st13, st14); st14 = bitselect(st14 ^ tmp2, st14, tmp1); \
-	tmp1 = st15; tmp2 = st16; st15 = bitselect(st15 ^ st17, st15, st16); st16 = bitselect(st16 ^ st18, st16, st17); st17 = bitselect(st17 ^ st19, st17, st18); st18 = bitselect(st18 ^ tmp1, st18, st19); st19 = bitselect(st19 ^ tmp2, st19, tmp1); \
-	tmp1 = st20; tmp2 = st21; st20 = bitselect(st20 ^ st22, st20, st21); st21 = bitselect(st21 ^ st23, st21, st22); st22 = bitselect(st22 ^ st24, st22, st23); st23 = bitselect(st23 ^ tmp1, st23, st24); st24 = bitselect(st24 ^ tmp2, st24, tmp1); \
+	tmp1 = st0; tmp2 = st1; st0 = bitselect(st0 ^ st2, st0, st1); st1 = bitselect(st1 ^ st3, st1, st2); \
+	 st2 = bitselect(st2 ^ st4, st2, st3); st3 = bitselect(st3 ^ tmp1, st3, st4); st4 = bitselect(st4 ^ tmp2, st4, tmp1); \
+	tmp1 = st5; tmp2 = st6; st5 = bitselect(st5 ^ st7, st5, st6); st6 = bitselect(st6 ^ st8, st6, st7); \
+	 st7 = bitselect(st7 ^ st9, st7, st8); st8 = bitselect(st8 ^ tmp1, st8, st9); st9 = bitselect(st9 ^ tmp2, st9, tmp1); \
+	tmp1 = st10; tmp2 = st11; st10 = bitselect(st10 ^ st12, st10, st11); st11 = bitselect(st11 ^ st13, st11, st12); \
+	st12 = bitselect(st12 ^ st14, st12, st13); st13 = bitselect(st13 ^ tmp1, st13, st14); st14 = bitselect(st14 ^ tmp2, st14, tmp1); \
+	tmp1 = st15; tmp2 = st16; st15 = bitselect(st15 ^ st17, st15, st16); st16 = bitselect(st16 ^ st18, st16, st17); \
+	st17 = bitselect(st17 ^ st19, st17, st18); st18 = bitselect(st18 ^ tmp1, st18, st19); st19 = bitselect(st19 ^ tmp2, st19, tmp1); \
+	tmp1 = st20; tmp2 = st21; st20 = bitselect(st20 ^ st22, st20, st21); st21 = bitselect(st21 ^ st23, st21, st22); \
+	st22 = bitselect(st22 ^ st24, st22, st23); st23 = bitselect(st23 ^ tmp1, st23, st24); st24 = bitselect(st24 ^ tmp2, st24, tmp1); \
 	st0 ^= 1;
 
 #define LASTRND1() \
