@@ -1723,7 +1723,7 @@ int nvapi_init()
 {
 	int num_gpus = cuda_num_devices();
 	NvAPI_Status ret = NvAPI_Initialize();
-	if (!ret == NVAPI_OK){
+	if (ret != NVAPI_OK) {
 		NvAPI_ShortString string;
 		NvAPI_GetErrorMessage(ret, string);
 		if (opt_debug)
