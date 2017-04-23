@@ -1532,13 +1532,15 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		vote = (opt_vote << 1) | (vote & 1);
 		memcpy(&work->data[25], &vote, 2);
 		// extradata
-		if (sctx->xnonce1_size > sizeof(work->data)-(36*4)) {
+		if (sctx->xnonce1_size > sizeof(work->data)-(32*4)) {
 			// should never happen...
 			applog(LOG_ERR, "extranonce size overflow!");
-			sctx->xnonce1_size = sizeof(work->data)-(36*4);
+			sctx->xnonce1_size = sizeof(work->data)-(32*4);
 		}
 		memcpy(&work->data[36], sctx->xnonce1, sctx->xnonce1_size);
 		work->data[37] = (rand()*4) << 8; // random work data
+		// block header suffix from coinb2 (stake version)
+		memcpy(&work->data[44], &sctx->job.coinbase[sctx->job.coinbase_size-4], 4);
 		sctx->job.height = work->data[32];
 		//applog_hex(work->data, 180);
 	} else if (opt_algo == ALGO_LBRY) {
