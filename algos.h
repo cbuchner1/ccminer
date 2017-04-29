@@ -45,6 +45,7 @@ enum sha_algos {
 	ALGO_SKEIN2,
 	ALGO_S3,
 	ALGO_TIMETRAVEL,
+	ALGO_BITCORE,
 	ALGO_X11EVO,
 	ALGO_X11,
 	ALGO_X13,
@@ -105,6 +106,7 @@ static const char *algo_names[] = {
 	"skein2",
 	"s3",
 	"timetravel",
+	"bitcore",
 	"x11evo",
 	"x11",
 	"x13",
@@ -159,6 +161,8 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_SHA256D;
 		else if (!strcasecmp("thorsriddle", arg))
 			i = ALGO_VELTOR;
+		else if (!strcasecmp("timetravel10", arg))
+			i = ALGO_BITCORE;
 		else if (!strcasecmp("whirl", arg))
 			i = ALGO_WHIRLPOOL;
 		else if (!strcasecmp("ziftr", arg))

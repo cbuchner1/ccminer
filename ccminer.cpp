@@ -224,6 +224,7 @@ Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
 			bastion     Hefty bastion\n\
+			bitcore     Timetravel-10\n\
 			blake       Blake 256 (SFR)\n\
 			blake2s     Blake2-S 256 (NEVA)\n\
 			blakecoin   Fast Blake 256 (8 rounds)\n\
@@ -1625,6 +1626,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_LYRA2v2:
 		case ALGO_LYRA2Z:
 		case ALGO_TIMETRAVEL:
+		case ALGO_BITCORE:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
@@ -2129,6 +2131,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
 			case ALGO_TIMETRAVEL:
+			case ALGO_BITCORE:
 			case ALGO_X11EVO:
 			case ALGO_X11:
 			case ALGO_X13:
@@ -2346,6 +2349,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_TIMETRAVEL:
 			rc = scanhash_timetravel(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_BITCORE:
+			rc = scanhash_bitcore(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_X11EVO:
 			rc = scanhash_x11evo(thr_id, &work, max_nonce, &hashes_done);
