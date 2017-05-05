@@ -21,9 +21,11 @@ void *monitor_thread(void *userdata);
 
 typedef void * nvmlDevice_t;
 
+#define NVML_DEVICE_PCI_BUS_ID_BUFFER_SIZE 16
+
 /* our own version of the PCI info struct */
 typedef struct {
-	char bus_id_str[16];             /* string form of bus info */
+	char bus_id_str[NVML_DEVICE_PCI_BUS_ID_BUFFER_SIZE];
 	unsigned int domain;
 	unsigned int bus;
 	unsigned int device;
@@ -121,6 +123,7 @@ typedef struct {
 	unsigned int *nvml_pci_domain_id;
 	unsigned int *nvml_pci_bus_id;
 	unsigned int *nvml_pci_device_id;
+	unsigned int *nvml_pci_vendor_id;
 	unsigned int *nvml_pci_subsys_id;
 	int *nvml_cuda_device_id;          /* map NVML dev to CUDA dev */
 	int *cuda_nvml_device_id;          /* map CUDA dev to NVML dev */

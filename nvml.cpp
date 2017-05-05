@@ -240,6 +240,7 @@ nvml_handle * nvml_create()
 	nvmlh->nvml_pci_domain_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_pci_bus_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_pci_device_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
+	nvmlh->nvml_pci_vendor_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_pci_subsys_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_cuda_device_id = (int*) calloc(nvmlh->nvml_gpucount, sizeof(int));
 	nvmlh->cuda_nvml_device_id = (int*) calloc(nvmlh->cuda_gpucount, sizeof(int));
@@ -259,6 +260,7 @@ nvml_handle * nvml_create()
 		nvmlh->nvml_pci_domain_id[i] = pciinfo.domain;
 		nvmlh->nvml_pci_bus_id[i]    = pciinfo.bus;
 		nvmlh->nvml_pci_device_id[i] = pciinfo.device;
+		nvmlh->nvml_pci_vendor_id[i] = pciinfo.pci_device_id;
 		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_subsystem_id;
 
 		nvmlh->app_clocks[i] = NVML_FEATURE_UNKNOWN;
@@ -563,6 +565,15 @@ void nvml_print_device_info(int dev_id)
 
 	nvmlReturn_t rc;
 
+	// fprintf(stderr, "------ Hardware ------\n");
+	int gvid = hnvml->nvml_pci_vendor_id[n] & 0xFFFF;
+	int gpid = hnvml->nvml_pci_vendor_id[n] >> 16;
+	int svid = hnvml->nvml_pci_subsys_id[n] & 0xFFFF;
+	int spid = hnvml->nvml_pci_subsys_id[n] >> 16;
+
+	fprintf(stderr, LSTDEV_PFX "ID %04x:%04x/%04x:%04x BUS %04x:%02x:%02x.0\n", gvid, gpid, svid, spid,
+		(int) hnvml->nvml_pci_domain_id[n], (int) hnvml->nvml_pci_bus_id[n], (int) hnvml->nvml_pci_device_id[n]);
+
 	if (hnvml->nvmlDeviceGetClock) {
 		uint32_t gpu_clk = 0, mem_clk = 0;
 
@@ -778,11 +789,11 @@ int nvml_get_info(nvml_handle *nvmlh, int cudaindex, uint16_t &vid, uint16_t &pi
 		return -ENODEV;
 
 	subids = nvmlh->nvml_pci_subsys_id[gpuindex];
-	if (!subids) subids = nvmlh->nvml_pci_device_id[gpuindex];
+	if (!subids) subids = nvmlh->nvml_pci_vendor_id[gpuindex];
 	pid = subids >> 16;
 	vid = subids & 0xFFFF;
 	// Colorful and Inno3D
-	if (pid == 0) pid = nvmlh->nvml_pci_device_id[gpuindex] >> 16;
+	if (pid == 0) pid = nvmlh->nvml_pci_vendor_id[gpuindex] >> 16;
 	return 0;
 }
 
@@ -795,6 +806,7 @@ int nvml_destroy(nvml_handle *nvmlh)
 	free(nvmlh->nvml_pci_bus_id);
 	free(nvmlh->nvml_pci_device_id);
 	free(nvmlh->nvml_pci_domain_id);
+	free(nvmlh->nvml_pci_vendor_id);
 	free(nvmlh->nvml_pci_subsys_id);
 	free(nvmlh->nvml_cuda_device_id);
 	free(nvmlh->cuda_nvml_device_id);
