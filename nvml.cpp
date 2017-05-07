@@ -44,6 +44,8 @@ uint32_t clock_prev[MAX_GPUS] = { 0 };
 uint32_t clock_prev_mem[MAX_GPUS] = { 0 };
 uint32_t limit_prev[MAX_GPUS] = { 0 };
 
+static bool nvml_plimit_set = false;
+
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
  */
@@ -525,10 +527,13 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 	plimit = max(plimit, pmin);
 	rc = nvmlh->nvmlDeviceSetPowerManagementLimit(nvmlh->devs[n], plimit);
 	if (rc != NVML_SUCCESS) {
+#ifndef WIN32
 		applog(LOG_WARNING, "GPU #%d: plimit %s", dev_id, nvmlh->nvmlErrorString(rc));
+#endif
 		return -1;
 	} else {
 		device_plimit[dev_id] = plimit / 1000;
+		nvml_plimit_set = true;
 	}
 
 	if (!opt_quiet) {
@@ -1381,7 +1386,16 @@ int nvapi_pstateinfo(unsigned int devNum)
 	}
 
 	uint32_t plim = nvapi_get_plimit(devNum);
-	applog(LOG_RAW, " Power limit is set to %u%%", plim);
+	double min_pw = 0, max_pw = 0; // percent
+
+	NVAPI_GPU_POWER_INFO nfo = { 0 };
+	nfo.version = NVAPI_GPU_POWER_INFO_VER;
+	ret = NvAPI_DLL_ClientPowerPoliciesGetInfo(phys[devNum], &nfo);
+	if (ret == NVAPI_OK && nfo.valid) {
+		min_pw = (double)nfo.entries[0].min_power / 1000;
+		max_pw = (double)nfo.entries[0].max_power / 1000;
+	}
+	applog(LOG_RAW, " Power limit is set to %u%%, range [%.0f-%.0f%%]", plim, min_pw, max_pw);
 
 #if 0
 	NVAPI_COOLER_SETTINGS *cooler;
@@ -1812,7 +1826,7 @@ int nvapi_init_settings()
 
 	for (int n=0; n < opt_n_threads; n++) {
 		int dev_id = device_map[n % MAX_GPUS];
-		if (device_plimit[dev_id] && !hnvml) {
+		if (device_plimit[dev_id] && !nvml_plimit_set) {
 			if (nvapi_set_plimit(nvapi_dev_map[dev_id], device_plimit[dev_id]) == NVAPI_OK) {
 				uint32_t res = nvapi_get_plimit(nvapi_dev_map[dev_id]);
 				gpulog(LOG_INFO, n, "Power limit is set to %u%%", res);

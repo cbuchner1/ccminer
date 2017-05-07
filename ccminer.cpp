@@ -321,7 +321,7 @@ Options:\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n\
                         Can be tuned with --resume-diff=N to set a resume value\n\
       --max-log-rate    Interval to reduce per gpu hashrate logs (default: 3)\n"
-#if defined(__linux) || defined(_WIN64) /* via nvml */
+#if defined(__linux) /* via nvml */
 "\
       --mem-clock=3505  Set the gpu memory max clock (346.72+ driver)\n\
       --gpu-clock=1150  Set the gpu engine max clock (346.72+ driver)\n\

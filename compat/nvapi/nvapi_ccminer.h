@@ -7,7 +7,8 @@ NvAPI_Status nvapi_dll_init();
 
 typedef struct {
 	NvU32 version;
-	NvU32 flags;
+	NvU8  valid;
+	NvU8  count;
 	struct
 	{
 		NvU32 pstate; // Assumption
