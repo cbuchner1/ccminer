@@ -1611,8 +1611,8 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		opt_difficulty = 1.;
 
 	switch (opt_algo) {
-		case ALGO_HMQ1725: // should be 256 but... suprnova...
-		case ALGO_JACKPOT:
+		case ALGO_HMQ1725:
+		case ALGO_JHA:
 		case ALGO_NEOSCRYPT:
 		case ALGO_SCRYPT:
 		case ALGO_SCRYPT_JANE:
@@ -2128,6 +2128,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_C11:
 			case ALGO_DEEP:
 			case ALGO_HEAVY:
+			case ALGO_JHA:
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
 			case ALGO_TIMETRAVEL:
@@ -2139,7 +2140,6 @@ static void *miner_thread(void *userdata)
 			case ALGO_WHIRLPOOL:
 				minmax = 0x400000;
 				break;
-			case ALGO_JACKPOT:
 			case ALGO_X14:
 			case ALGO_X15:
 				minmax = 0x300000;
@@ -2269,8 +2269,8 @@ static void *miner_thread(void *userdata)
 		case ALGO_KECCAK:
 			rc = scanhash_keccak256(thr_id, &work, max_nonce, &hashes_done);
 			break;
-		case ALGO_JACKPOT:
-			rc = scanhash_jackpot(thr_id, &work, max_nonce, &hashes_done);
+		case ALGO_JHA:
+			rc = scanhash_jha(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_LBRY:
 			rc = scanhash_lbry(thr_id, &work, max_nonce, &hashes_done);
@@ -2426,7 +2426,7 @@ static void *miner_thread(void *userdata)
 			/* hashrate factors for some algos */
 			double rate_factor = 1.0;
 			switch (opt_algo) {
-				case ALGO_JACKPOT:
+				//case ALGO_JACKPOT:
 				case ALGO_QUARK:
 					// to stay comparable to other ccminer forks or pools
 					rate_factor = 0.5;

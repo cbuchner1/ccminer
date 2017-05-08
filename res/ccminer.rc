@@ -77,7 +77,7 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "FileVersion", "2.0"
-            VALUE "LegalCopyright", "Copyright (C) 2016"
+            VALUE "LegalCopyright", "Copyright (C) 2017"
             VALUE "ProductName", "ccminer"
             VALUE "ProductVersion", "2.0"
         END

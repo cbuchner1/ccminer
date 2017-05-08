@@ -1,5 +1,5 @@
 
-ccminer 2.0 (March 2017)      "Cryptonight & other funny algos"
+ccminer 2.0 (May 2017)
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -33,7 +33,7 @@ HeavyCoin & MjollnirCoin
 FugueCoin
 GroestlCoin & Myriad-Groestl
 Lbry Credits
-JackpotCoin
+JackpotCoin (JHA)
 QuarkCoin family & AnimeCoin
 TalkCoin
 DarkCoin and other X11 coins
@@ -77,6 +77,7 @@ its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
                           bastion     use to mine Joincoin
+                          bitcore     use to mine Bitcore's Timetravel10
                           blake       use to mine Saffroncoin (Blake256)
                           blakecoin   use to mine Old Blake 256
                           blake2s     use to mine Nevacoin (Blake2-S 256)
@@ -91,7 +92,7 @@ its command line interface and options.
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
                           heavy       use to mine Heavycoin
-                          jackpot     use to mine Jackpotcoin
+                          jha         use to mine JackpotCoin
                           keccak      use to mine Maxcoin
                           lbry        use to mine LBRY Credits
                           luffa       use to mine Joincoin
@@ -171,6 +172,7 @@ its command line interface and options.
       --max-log-rate    Interval to reduce per gpu hashrate logs (default: 3)
       --pstate=0        will force the Geforce 9xx to run in P0 P-State
       --plimit=150W     set the gpu power limit, allow multiple values for N cards
+                          on windows this parameter use percentages (like OC tools)
       --tlimit=85       Set the gpu thermal limit (windows only)
       --keep-clocks     prevent reset clocks and/or power limit on exit
       --hide-diff       Hide submitted shares diff and net difficulty
@@ -275,7 +277,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  Mar. 08th 2017  v2.0
+  May. 08th 2017  v2.0
                   Handle cryptonight, wildkeccak and cryptonight-lite
                   Add a serie of new algos: timetravel, bastion, hmq1725, sha256t
                   Import lyra2z from djm34 work...
@@ -284,6 +286,7 @@ features.
                   Store the share diff of second nonce(s) in most algos
                   Hardware monitoring thread to get more accurate power readings
                   Small changes for the quiet mode & max-log-rate to reduce logs
+                  Add bitcore and a compatible jha algo (quark and jackpot to fix)
 
   Dec. 21th 2016  v1.8.4
                   Improve streebog based algos, veltor and sib (from alexis work)

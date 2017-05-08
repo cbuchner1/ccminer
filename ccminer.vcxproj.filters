@@ -574,7 +574,7 @@
     <CudaCompile Include="JHA\cuda_jha_keccak512.cu">
       <Filter>Source Files\CUDA\JHA</Filter>
     </CudaCompile>
-    <CudaCompile Include="JHA\jackpotcoin.cu">
+    <CudaCompile Include="JHA\jha.cu">
       <Filter>Source Files\CUDA\JHA</Filter>
     </CudaCompile>
     <CudaCompile Include="cuda_myriadgroestl.cu">

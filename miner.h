@@ -288,7 +288,8 @@ extern int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, 
 extern int scanhash_groestlcoin(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_hmq17(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_heavy(int thr_id,struct work *work, uint32_t max_nonce, unsigned long *hashes_done, uint32_t maxvote, int blocklen);
-extern int scanhash_jackpot(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_jha(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_jackpot(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done); // quark method
 extern int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_luffa(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -330,6 +331,7 @@ extern int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonc
 void algo_free_all(int thr_id);
 
 extern void free_bastion(int thr_id);
+extern void free_bitcore(int thr_id);
 extern void free_blake256(int thr_id);
 extern void free_blake2s(int thr_id);
 extern void free_bmw(int thr_id);
@@ -345,6 +347,7 @@ extern void free_groestlcoin(int thr_id);
 extern void free_heavy(int thr_id);
 extern void free_hmq17(int thr_id);
 extern void free_jackpot(int thr_id);
+extern void free_jha(int thr_id);
 extern void free_lbry(int thr_id);
 extern void free_luffa(int thr_id);
 extern void free_lyra2(int thr_id);
@@ -870,6 +873,7 @@ void hmq17hash(void *output, const void *input);
 void keccak256_hash(void *state, const void *input);
 unsigned int jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
+void jha_hash(void *output, const void *input);
 void lbry_hash(void *output, const void *input);
 void lyra2re_hash(void *state, const void *input);
 void lyra2v2_hash(void *state, const void *input);

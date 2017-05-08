@@ -2185,8 +2185,8 @@ void print_hash_tests(void)
 	hmq17hash(&hash[0], &buf[0]);
 	printpfx("hmq1725", hash);
 
-	jackpothash(&hash[0], &buf[0]);
-	printpfx("jackpot", hash);
+	jha_hash(&hash[0], &buf[0]);
+	printpfx("jha", hash);
 
 	keccak256_hash(&hash[0], &buf[0]);
 	printpfx("keccak", hash);
