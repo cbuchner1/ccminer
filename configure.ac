@@ -63,6 +63,10 @@ case $target in
     PTHREAD_FLAGS=""
     WS2_LIBS="-lws2_32"
     ;;
+  *86*-apple-darwin*)
+    have_osx=true
+    PTHREAD_FLAGS=""
+    ;;
 esac
 
 AC_CHECK_LIB(jansson, json_loads, request_jansson=false, request_jansson=true)
@@ -78,6 +82,7 @@ AC_CHECK_LIB([crypto],[EVP_DigestFinal_ex], [], [AC_MSG_ERROR([OpenSSL library r
 
 AM_CONDITIONAL([WANT_JANSSON], [test x$request_jansson = xtrue])
 AM_CONDITIONAL([HAVE_WINDOWS], [test x$have_win32 = xtrue])
+AM_CONDITIONAL([HAVE_OSX], [test x$have_osx = xtrue])
 AM_CONDITIONAL([ARCH_x86], [test x$have_x86 = xtrue])
 AM_CONDITIONAL([ARCH_x86_64], [test x$have_x86_64 = xtrue])
 
@@ -108,6 +113,11 @@ if [[ $ARCH == "x86_64" ]];
 then
   SUFFIX="64"
 else
+  SUFFIX=""
+fi
+
+if test x$have_osx = xtrue
+then
   SUFFIX=""
 fi
 

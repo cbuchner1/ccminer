@@ -23,6 +23,13 @@
 #include <sys/mman.h> // mmap
 #endif
 
+#if defined(__APPLE__) && !defined(MAP_HUGETLB)
+#define MAP_ANONYMOUS MAP_ANON
+#define MAP_HUGETLB 0
+#define MAP_POPULATE 0
+#define MADV_HUGEPAGE 0
+#endif
+
 #ifndef PRIu64
 #define PRIu64 "I64u"
 #endif
