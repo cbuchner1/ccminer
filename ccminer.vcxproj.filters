@@ -103,6 +103,9 @@
     <Filter Include="Source Files\CUDA\xmr">
       <UniqueIdentifier>{0f9aec5e-5409-488f-992a-2c108590d1ac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\equi">
+      <UniqueIdentifier>{031afae7-2a78-4e32-9738-4b589b6f7ff3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -320,6 +323,18 @@
     </ClCompile>
     <ClCompile Include="crypto\wildkeccak-cpu.cpp">
       <Filter>Source Files\crypto\bbr</Filter>
+    </ClCompile>
+    <ClCompile Include="equi\equi.cpp">
+      <Filter>Source Files\equi</Filter>
+    </ClCompile>
+    <ClCompile Include="equi\equihash.cpp">
+      <Filter>Source Files\equi</Filter>
+    </ClCompile>
+    <ClCompile Include="equi\equi-stratum.cpp">
+      <Filter>Source Files\equi</Filter>
+    </ClCompile>
+    <ClCompile Include="equi\blake2\blake2bx.cpp">
+      <Filter>Source Files\equi</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -562,6 +577,12 @@
     </ClInclude>
     <ClInclude Include="crypto\cryptonight.h">
       <Filter>Source Files\CUDA\xmr</Filter>
+    </ClInclude>
+    <ClInclude Include="equi\eqcuda.hpp">
+      <Filter>Source Files\equi</Filter>
+    </ClInclude>
+    <ClInclude Include="equi\equihash.h">
+      <Filter>Source Files\equi</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -894,6 +915,9 @@
     </CudaCompile>
     <CudaCompile Include="crypto\wildkeccak.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="equi\cuda_equi.cu">
+      <Filter>Source Files\equi</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

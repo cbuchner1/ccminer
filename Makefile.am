@@ -21,6 +21,8 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  crc32.c hefty1.c \
 			  ccminer.cpp pools.cpp util.cpp bench.cpp bignum.cpp \
 			  api.cpp hashlog.cpp nvml.cpp stats.cpp sysinfos.cpp cuda.cpp \
+			  equi/equi-stratum.cpp equi/equi.cpp equi/blake2/blake2bx.cpp \
+			  equi/equihash.cpp equi/cuda_equi.cu \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
 			  heavy/cuda_combine.cu heavy/cuda_combine.h \
@@ -97,6 +99,10 @@ ccminer_LDFLAGS += -L/usr/local/llvm/lib
 ccminer_LDADD += -lomp
 endif
 
+#ccminer_CPPFLAGS += -DUSE_LIBSODIUM
+#ccminer_LDFLAGS += -Lequi/lib
+#ccminer_LDADD += -lsodium
+ccminer_LDADD += -lcuda
 
 nvcc_ARCH  = -gencode=arch=compute_50,code=\"sm_50,compute_50\"
 

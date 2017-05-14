@@ -211,35 +211,31 @@ void get_defconfig_path(char *out, size_t bufsize, char *argv0)
 #endif
 }
 
-void format_hashrate(double hashrate, char *output)
+void format_hashrate_unit(double hashrate, char *output, const char *unit)
 {
-	char prefix = '\0';
+	char prefix[2] = { 0, 0 };
 
 	if (hashrate < 10000) {
 		// nop
 	}
 	else if (hashrate < 1e7) {
-		prefix = 'k';
+		prefix[0] = 'k';
 		hashrate *= 1e-3;
 	}
 	else if (hashrate < 1e10) {
-		prefix = 'M';
+		prefix[0] = 'M';
 		hashrate *= 1e-6;
 	}
 	else if (hashrate < 1e13) {
-		prefix = 'G';
+		prefix[0] = 'G';
 		hashrate *= 1e-9;
 	}
 	else {
-		prefix = 'T';
+		prefix[0] = 'T';
 		hashrate *= 1e-12;
 	}
 
-	sprintf(
-		output,
-		prefix ? "%.2f %cH/s" : "%.2f H/s%c",
-		hashrate, prefix
-	);
+	sprintf(output, "%.2f %s%s", hashrate, prefix, unit);
 }
 
 static void databuf_free(struct data_buffer *db)
@@ -1179,14 +1175,27 @@ static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, i
 	}
 	xn2_size = (int) json_integer_value(json_array_get(params, pndx+1));
 	if (!xn2_size) {
-		applog(LOG_ERR, "Failed to get extranonce2_size");
-		goto out;
+		char algo[64] = { 0 };
+		get_currentalgo(algo, sizeof(algo));
+		if (strcmp(algo, "equihash") == 0) {
+			int xn1_size = (int)strlen(xnonce1) / 2;
+			xn2_size = 32 - xn1_size;
+			if (xn1_size < 4 || xn1_size > 12) {
+				// This miner iterates the nonces at data32[30]
+				applog(LOG_ERR, "Unsupported extranonce size of %d (12 maxi)", xn1_size);
+				goto out;
+			}
+			goto skip_n2;
+		} else {
+			applog(LOG_ERR, "Failed to get extranonce2_size");
+			goto out;
+		}
 	}
 	if (xn2_size < 2 || xn2_size > 16) {
-		applog(LOG_INFO, "Failed to get valid n2size in parse_extranonce");
+		applog(LOG_ERR, "Failed to get valid n2size in parse_extranonce (%d)", xn2_size);
 		goto out;
 	}
-
+skip_n2:
 	pthread_mutex_lock(&stratum_work_lock);
 	if (sctx->xnonce1)
 		free(sctx->xnonce1);
@@ -1440,6 +1449,10 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	char algo[64] = { 0 };
 	get_currentalgo(algo, sizeof(algo));
 	bool has_claim = !strcasecmp(algo, "lbry");
+
+	if (sctx->is_equihash) {
+		return equi_stratum_notify(sctx, params);
+	}
 
 	job_id = json_string_value(json_array_get(params, p++));
 	prevhash = json_string_value(json_array_get(params, p++));
@@ -1840,6 +1853,11 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 	}
 	if (!strcasecmp(method, "mining.set_difficulty")) {
 		ret = stratum_set_difficulty(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "mining.set_target")) {
+		sctx->is_equihash = true;
+		ret = equi_stratum_set_target(sctx, params);
 		goto out;
 	}
 	if (!strcasecmp(method, "mining.set_extranonce")) {
