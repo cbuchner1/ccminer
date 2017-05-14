@@ -1,5 +1,5 @@
 
-ccminer 2.0 (May 2017)
+ccminer 2.0 (14 May 2017) 
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -277,7 +277,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  May. 08th 2017  v2.0
+  May. 14th 2017  v2.0
                   Handle cryptonight, wildkeccak and cryptonight-lite
                   Add a serie of new algos: timetravel, bastion, hmq1725, sha256t
                   Import lyra2z from djm34 work...
@@ -286,7 +286,7 @@ features.
                   Store the share diff of second nonce(s) in most algos
                   Hardware monitoring thread to get more accurate power readings
                   Small changes for the quiet mode & max-log-rate to reduce logs
-                  Add bitcore and a compatible jha algo (quark and jackpot to fix)
+                  Add bitcore and a compatible jha algo
 
   Dec. 21th 2016  v1.8.4
                   Improve streebog based algos, veltor and sib (from alexis work)
