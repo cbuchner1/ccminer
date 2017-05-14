@@ -436,6 +436,7 @@
     <CudaCompile Include="heavy\bastion.cu" />
     <CudaCompile Include="heavy\cuda_bastion.cu" />
     <CudaCompile Include="JHA\jha.cu" />
+    <CudaCompile Include="JHA\jackpotcoin.cu" />
     <CudaCompile Include="JHA\cuda_jha_compactionTest.cu">
       <AdditionalOptions>-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>

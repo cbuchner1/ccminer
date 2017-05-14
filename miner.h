@@ -871,7 +871,7 @@ void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
 void hmq17hash(void *output, const void *input);
 void keccak256_hash(void *state, const void *input);
-unsigned int jackpothash(void *state, const void *input);
+void jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
 void jha_hash(void *output, const void *input);
 void lbry_hash(void *output, const void *input);

@@ -240,7 +240,7 @@ Options:\n\
 			groestl     Groestlcoin\n\
 			heavy       Heavycoin\n\
 			hmq1725     Doubloons / Espers\n\
-			jackpot     Jackpot\n\
+			jha         JHA v8 (JackpotCoin)\n\
 			keccak      Keccak-256 (Maxcoin)\n\
 			lbry        LBRY Credits (Sha/Ripemd)\n\
 			luffa       Joincoin\n\
@@ -1612,6 +1612,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	switch (opt_algo) {
 		case ALGO_HMQ1725:
+		case ALGO_JACKPOT:
 		case ALGO_JHA:
 		case ALGO_NEOSCRYPT:
 		case ALGO_SCRYPT:
@@ -2128,6 +2129,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_C11:
 			case ALGO_DEEP:
 			case ALGO_HEAVY:
+			case ALGO_JACKPOT:
 			case ALGO_JHA:
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
@@ -2269,9 +2271,14 @@ static void *miner_thread(void *userdata)
 		case ALGO_KECCAK:
 			rc = scanhash_keccak256(thr_id, &work, max_nonce, &hashes_done);
 			break;
+
+		case ALGO_JACKPOT:
+			rc = scanhash_jackpot(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_JHA:
 			rc = scanhash_jha(thr_id, &work, max_nonce, &hashes_done);
 			break;
+
 		case ALGO_LBRY:
 			rc = scanhash_lbry(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -2426,7 +2433,7 @@ static void *miner_thread(void *userdata)
 			/* hashrate factors for some algos */
 			double rate_factor = 1.0;
 			switch (opt_algo) {
-				//case ALGO_JACKPOT:
+				case ALGO_JACKPOT:
 				case ALGO_QUARK:
 					// to stay comparable to other ccminer forks or pools
 					rate_factor = 0.5;

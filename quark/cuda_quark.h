@@ -17,7 +17,7 @@ extern void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uin
 extern void quark_groestl512_cpu_free(int thr_id);
 
 extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
-extern void quark_skein512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
+extern void quark_skein512_cpu_hash_64(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
 extern void quark_keccak512_cpu_init(int thr_id, uint32_t threads);
 extern void quark_keccak512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
