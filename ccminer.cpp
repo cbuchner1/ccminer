@@ -213,7 +213,8 @@ int opt_statsavg = 30;
 
 // strdup on char* to allow a common free() if used
 static char* opt_syslog_pfx = strdup(PROGRAM_NAME);
-char *opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
+char *opt_api_bind = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
+char *opt_api_allow = NULL; /* unimplemented */
 int opt_api_remote = 0;
 int opt_api_listen = 4068; /* 0 to disable */
 
@@ -576,7 +577,7 @@ void proper_exit(int reason)
 	}
 #endif
 	free(opt_syslog_pfx);
-	free(opt_api_allow);
+	free(opt_api_bind);
 	//free(work_restart);
 	//free(thr_info);
 	exit(reason);
@@ -2972,16 +2973,16 @@ void parse_arg(int key, char *arg)
 		if (p) {
 			/* ip:port */
 			if (p - arg > 0) {
-				free(opt_api_allow);
-				opt_api_allow = strdup(arg);
-				opt_api_allow[p - arg] = '\0';
+				free(opt_api_bind);
+				opt_api_bind = strdup(arg);
+				opt_api_bind[p - arg] = '\0';
 			}
 			opt_api_listen = atoi(p + 1);
 		}
 		else if (arg && strstr(arg, ".")) {
 			/* ip only */
-			free(opt_api_allow);
-			opt_api_allow = strdup(arg);
+			free(opt_api_bind);
+			opt_api_bind = strdup(arg);
 		}
 		else if (arg) {
 			/* port or 0 to disable */
