@@ -324,7 +324,8 @@ Options:\n\
       --cpu-affinity    set process affinity to cpu core(s), mask 0x3 for cores 0 and 1\n\
       --cpu-priority    set process priority (default: 3) 0 idle, 2 normal to 5 highest\n\
   -b, --api-bind=port   IP:port for the miner API (default: 127.0.0.1:4068), 0 disabled\n\
-      --api-remote      Allow remote control, like pool switching\n\
+      --api-remote      Allow remote control, like pool switching, imply --api-allow=0/0\n\
+      --api-allow=...   IP/mask of the allowed api client(s), 0/0 for all\n\
       --max-temp=N      Only mine if gpu temp is less than specified value\n\
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value\n\
       --max-diff=N      Only mine if net difficulty is less than specified value\n\
@@ -593,6 +594,11 @@ void proper_exit(int reason)
 #endif
 	free(opt_syslog_pfx);
 	free(opt_api_bind);
+	if (opt_api_allow) free(opt_api_allow);
+	if (opt_api_groups) free(opt_api_groups);
+	free(opt_api_mcast_addr);
+	free(opt_api_mcast_code);
+	free(opt_api_mcast_des);
 	//free(work_restart);
 	//free(thr_info);
 	exit(reason);
@@ -3005,14 +3011,18 @@ void parse_arg(int key, char *arg)
 		}
 		break;
 	case 1030: /* --api-remote */
+		if (opt_api_allow) free(opt_api_allow);
 		opt_api_allow = strdup("0/0");
 		break;
 	case 1031: /* --api-allow */
-		free(opt_api_allow);
+		// --api-allow 0/0 means opened to all, so assume -b 0.0.0.0
+		if (!strcmp(arg, "0/0") && !strcmp(opt_api_bind, "127.0.0.1"))
+			parse_arg('b', (char*)"0.0.0.0");
+		if (opt_api_allow) free(opt_api_allow);
 		opt_api_allow = strdup(arg);
 		break;
 	case 1032: /* --api-groups */
-		free(opt_api_groups);
+		if (opt_api_groups) free(opt_api_groups);
 		opt_api_groups = strdup(arg);
 		break;
 	case 1033: /* --api-mcast */
