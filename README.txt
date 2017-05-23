@@ -1,5 +1,5 @@
 
-ccminer 2.0 (14 May 2017) 
+ccminer 2.1-dev (June 2017) "Equihash"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -88,6 +88,7 @@ its command line interface and options.
                           decred      use to mine Decred 180 bytes Blake256-14
                           deep        use to mine Deepcoin
                           dmd-gr      use to mine Diamond-Groestl
+                          equihash    use to mine ZEC, HUSH and KMD
                           fresh       use to mine Freshcoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
@@ -164,8 +165,9 @@ its command line interface and options.
       --no-color        disable colored output
   -D, --debug           enable debug output
   -P, --protocol-dump   verbose dump of protocol-level activities
-  -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)
-      --api-remote      Allow remote control
+  -b, --api-bind=port   IP:port for the miner API (default: 127.0.0.1:4068), 0 disabled
+      --api-remote      Allow remote control, like pool switching, imply --api-allow=0/0
+      --api-allow=...   IP/mask of the allowed api client(s), 0/0 for all
       --max-temp=N      Only mine if gpu temp is less than specified value
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value
       --max-diff=N      Only mine if net difficulty is less than specified value
@@ -276,6 +278,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+
+  v2.1 (unfinished)
+                  Interface equihash algo with djeZo solver (from nheqminer 0.5c)
+                  New api parameters (and multicast announces for local networks)
 
   May. 14th 2017  v2.0
                   Handle cryptonight, wildkeccak and cryptonight-lite
