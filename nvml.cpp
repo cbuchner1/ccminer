@@ -582,7 +582,7 @@ void nvml_print_device_info(int dev_id)
 	if (hnvml->nvmlDeviceGetClock) {
 		uint32_t gpu_clk = 0, mem_clk = 0;
 
-		fprintf(stderr, "------- Clocks -------\n");
+		// fprintf(stderr, "------- Clocks -------\n");
 
 		hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_APP_CLOCK_DEFAULT, &gpu_clk);
 		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_APP_CLOCK_DEFAULT, &mem_clk);
