@@ -297,6 +297,9 @@
     <ClCompile Include="nvapi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="nvsettings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="sia\sia-rpc.cpp">
       <Filter>Source Files\sia</Filter>
     </ClCompile>

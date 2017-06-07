@@ -243,6 +243,7 @@
     <ClCompile Include="equi\equi.cpp" />
     <ClCompile Include="equi\equihash.cpp" />
     <ClCompile Include="nvapi.cpp" />
+    <ClCompile Include="nvsettings.cpp" />
     <ClCompile Include="pools.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="bench.cpp" />

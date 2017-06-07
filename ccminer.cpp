@@ -126,6 +126,7 @@ bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 int num_cpus;
 int active_gpus;
+bool need_nvsettings = false;
 char * device_name[MAX_GPUS];
 short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
@@ -133,6 +134,7 @@ short device_mpcount[MAX_GPUS] = { 0 };
 uint32_t gpus_intensity[MAX_GPUS] = { 0 };
 uint32_t device_gpu_clocks[MAX_GPUS] = { 0 };
 uint32_t device_mem_clocks[MAX_GPUS] = { 0 };
+int32_t device_mem_offsets[MAX_GPUS] = { 0 };
 uint32_t device_plimit[MAX_GPUS] = { 0 };
 uint8_t device_tlimit[MAX_GPUS] = { 0 };
 int8_t device_pstate[MAX_GPUS] = { -1, -1 };
@@ -2058,8 +2060,10 @@ static void *miner_thread(void *userdata)
 		}
 
 		/* conditional mining */
-		if (!wanna_mine(thr_id)) {
-
+		if (!wanna_mine(thr_id))
+		{
+			// reset default mem offset before idle..
+			if (need_nvsettings) nvs_reset_clocks(dev_id);
 			// free gpu resources
 			algo_free_all(thr_id);
 			// clear any free error (algo switch)
@@ -2084,7 +2088,11 @@ static void *miner_thread(void *userdata)
 			sleep(5);
 			if (!thr_id) pools[cur_pooln].wait_time += 5;
 			continue;
+		} else {
+			// reapply mem offset if needed
+			if (need_nvsettings) nvs_set_clocks(dev_id);
 		}
+
 		pool_on_hold = false;
 
 		work_restart[thr_id].restart = 0;
@@ -3164,6 +3172,7 @@ void parse_arg(int key, char *arg)
 		nvapi_init_settings();
 		#endif
 		#endif
+		nvs_init();
 		cuda_print_devices();
 		proper_exit(EXIT_CODE_OK);
 		break;
@@ -3389,7 +3398,11 @@ void parse_arg(int key, char *arg)
 			int n = 0;
 			while (pch != NULL && n < MAX_GPUS) {
 				int dev_id = device_map[n++];
-				device_mem_clocks[dev_id] = atoi(pch);
+				if (*pch == '+' || *pch == '-')
+					device_mem_offsets[dev_id] = atoi(pch);
+				else
+					device_mem_clocks[dev_id] = atoi(pch);
+				need_nvsettings = true;
 				pch = strtok(NULL, ",");
 			}
 		}
@@ -4060,6 +4073,13 @@ int main(int argc, char *argv[])
 	if (want_stratum && have_stratum) {
 		tq_push(thr_info[stratum_thr_id].q, strdup(rpc_url));
 	}
+
+#ifdef __linux__
+	if (need_nvsettings) {
+		if (nvs_init() < 0)
+			need_nvsettings = false;
+	}
+#endif
 
 #ifdef USE_WRAPNVML
 #if defined(__linux__) || defined(_WIN64)

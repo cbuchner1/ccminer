@@ -250,3 +250,15 @@ void gpu_led_off(int dev_id);
 #define LED_MODE_SHARES 1
 #define LED_MODE_MINING 2
 
+/* ------ nvidia-settings stuff for linux -------------------- */
+
+int nvs_init();
+int nvs_set_clocks(int dev_id);
+void nvs_reset_clocks(int dev_id);
+
+// nvidia-settings (X) devNum from dev_id (cuda GPU #N)
+int8_t nvs_devnum(int dev_id);
+int nvs_devid(int8_t devNum);
+
+extern bool need_nvsettings;
+
