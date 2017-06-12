@@ -3172,7 +3172,6 @@ void parse_arg(int key, char *arg)
 		nvapi_init_settings();
 		#endif
 		#endif
-		nvs_init();
 		cuda_print_devices();
 		proper_exit(EXIT_CODE_OK);
 		break;
