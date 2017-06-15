@@ -277,6 +277,7 @@ Options:\n\
 			skein2      Double Skein (Woodcoin)\n\
 			s3          S3 (1Coin)\n\
 			timetravel  Machinecoin permuted x8\n\
+			tribus      Denerius\n\
 			vanilla     Blake256-8 (VNL)\n\
 			veltor      Thorsriddle streebog\n\
 			whirlcoin   Old Whirlcoin (Whirlpool algo)\n\
@@ -2197,6 +2198,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_SIA:
 			case ALGO_SKEIN:
 			case ALGO_SKEIN2:
+			case ALGO_TRIBUS:
 				minmax = 0x1000000;
 				break;
 			case ALGO_C11:
@@ -2432,6 +2434,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_TIMETRAVEL:
 			rc = scanhash_timetravel(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_TRIBUS:
+			rc = scanhash_tribus(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_BITCORE:
 			rc = scanhash_bitcore(thr_id, &work, max_nonce, &hashes_done);

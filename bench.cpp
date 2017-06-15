@@ -100,6 +100,7 @@ void algo_free_all(int thr_id)
 	free_scrypt(thr_id);
 	free_scrypt_jane(thr_id);
 	free_timetravel(thr_id);
+	free_tribus(thr_id);
 	free_bitcore(thr_id);
 }
 

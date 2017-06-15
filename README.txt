@@ -117,6 +117,7 @@ its command line interface and options.
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
                           timetravel  use to mine MachineCoin
+                          tribus      use to mine Denarius
                           x11evo      use to mine Revolver
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
@@ -282,6 +283,7 @@ features.
   v2.1 (unfinished)
                   Interface equihash algo with djeZo solver (from nheqminer 0.5c)
                   New api parameters (and multicast announces for local networks)
+                  New tribus algo
 
   May. 14th 2017  v2.0
                   Handle cryptonight, wildkeccak and cryptonight-lite
