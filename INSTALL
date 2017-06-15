@@ -11,6 +11,10 @@ but some distros may have a different default location)
 
 ** How to compile on Fedora 25 **
 
+Note: You may find an alternative method via rpms :
+see https://negativo17.org/nvidia-driver/ and https://negativo17.org/repos/multimedia/
+
+
 # Step 1: gcc and dependencies
 dnf install gcc gcc-c++ autoconf automake
 dnf install jansson-devel openssl-devel libcurl-devel zlib-devel
@@ -29,7 +33,7 @@ ln -s libnvidia-ml.so.1 /usr/lib64/libnvidia-ml.so
 nvcc --version
 
 # add the nvcc binary path to the system
-ln -s /usr/local/cuda-6.5 /usr/local/cuda
+ln -s /usr/local/cuda-8.0 /usr/local/cuda # (if not already made)
 echo 'export PATH=$PATH:/usr/local/cuda/bin' > /etc/profile.d/cuda.sh
 
 # add the cudart library path to the system
@@ -40,6 +44,7 @@ ldconfig
 
 # You need to build yourself an older GCC/G++ version, i recommend the 5.4
 # see https://gcc.gnu.org/mirrors.html
+# Note: this manual method will override the default gcc, it could be better to use a custom toolchain prefix
 
 wget ftp://ftp.lip6.fr/pub/gcc/releases/gcc-5.4.0/gcc-5.4.0.tar.bz2
 dnf install libmpc-devel mpfr-devel gmp-devel
@@ -56,6 +61,7 @@ make -j 8 && make install
 
 
 ** How to compile on macOS **
+
 # Step 1: download and install CUDA Toolkit 8 or more recent
 # https://developer.nvidia.com/cuda-toolkit-archive
 
