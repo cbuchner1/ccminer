@@ -78,9 +78,13 @@ int nvs_query_int(int nvs_id, const char* field, int showerr)
 	fp = popen(command, "r");
 	if (fp) {
 		int intval = -1;
-		if (!showerr)
-			fscanf(fp, "%d", &intval);
-		else {
+		if (!showerr) {
+			int b = fscanf(fp, "%d", &intval);
+			if (!b) {
+				pclose(fp);
+				return -1;
+			}
+		} else {
 			char msg[512] = { 0 };
 			char buf[64] = { 0 };
 			ssize_t bytes, len=0, maxlen=sizeof(msg)-1;
