@@ -1843,10 +1843,11 @@ __global__ void digit_last_wdc(equi<RB, SM>* eq)
 			soli = atomicAdd(&eq->edata.srealcont.nsols, 1);
 		}
 #if __CUDA_ARCH__ >= 300
-		// useful ?
+		// all threads get the value from lane 0
 		soli = __shfl(soli, 0);
 #else
 		__syncthreads();
+		soli = eq->edata.srealcont.nsols;
 #endif
 		if (soli < MAXREALSOLS)
 		{
