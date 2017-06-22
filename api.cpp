@@ -321,8 +321,12 @@ static const char* os_name()
 	return "windows";
 #else
 	FILE *fd = fopen("/proc/version", "r");
-	if (!fd || !fscanf(fd, "Linux version %48s", &os_version[6]))
+	if (!fd)
 		return "linux";
+	if (!fscanf(fd, "Linux version %48s", &os_version[6])) {
+		fclose(fd);
+		return "linux";
+	}
 	fclose(fd);
 	os_version[48] = '\0';
 	return (const char*) os_version;
