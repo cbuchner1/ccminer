@@ -1,3 +1,8 @@
+/**
+ * JH512 64 and 80 kernels
+ *
+ * JH80 by tpruvot - 2017 - under GPLv3
+ **/
 #include <cuda_helper.h>
 
 // #include <stdio.h>  // printf
@@ -335,7 +340,7 @@ void quark_jh512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce,
 // Setup function
 __host__ void  quark_jh512_cpu_init(int thr_id, uint32_t threads) {}
 
-#define WANT_JH80
+#define WANT_JH80_MIDSTATE
 #ifdef WANT_JH80
 
 __constant__
@@ -414,6 +419,90 @@ void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t
 	dim3 block(threadsperblock);
 
 	jh512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_hash);
+}
+
+#endif
+
+#ifdef WANT_JH80_MIDSTATE
+
+__constant__ static uint32_t c_JHState[32];
+__constant__ static uint32_t c_Message[4];
+
+__global__
+void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash)
+{
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		// 1 (precomputed state)
+		uint32_t x[8][4];
+		AS_UINT4(&x[0][0]) = AS_UINT4(&c_JHState[ 0]);
+		AS_UINT4(&x[1][0]) = AS_UINT4(&c_JHState[ 4]);
+		AS_UINT4(&x[2][0]) = AS_UINT4(&c_JHState[ 8]);
+		AS_UINT4(&x[3][0]) = AS_UINT4(&c_JHState[12]);
+
+		AS_UINT4(&x[4][0]) = AS_UINT4(&c_JHState[16]);
+		AS_UINT4(&x[5][0]) = AS_UINT4(&c_JHState[20]);
+		AS_UINT4(&x[6][0]) = AS_UINT4(&c_JHState[24]);
+		AS_UINT4(&x[7][0]) = AS_UINT4(&c_JHState[28]);
+
+		// 2 (16 bytes with nonce)
+		uint32_t h[4];
+		AS_UINT2(&h[0]) = AS_UINT2(&c_Message[0]);
+		h[2] = c_Message[2];
+		h[3] = cuda_swab32(startNounce + thread);
+
+		#pragma unroll
+		for (int i = 0; i < 4; i++)
+			x[0][i] ^= h[i];
+		x[1][0] ^= 0x80U;
+		E8(x);
+		#pragma unroll
+		for (int i = 0; i < 4; i++)
+			x[4][i] ^= h[i];
+		x[5][0] ^= 0x80U;
+
+		// 3 close
+		x[3][3] ^= 0x80020000U; // 80 bytes = 640bits (0x280)
+		E8(x);
+		x[7][3] ^= 0x80020000U;
+
+		uint32_t *Hash = &g_outhash[(size_t)16 * thread];
+		AS_UINT4(&Hash[ 0]) = AS_UINT4(&x[4][0]);
+		AS_UINT4(&Hash[ 4]) = AS_UINT4(&x[5][0]);
+		AS_UINT4(&Hash[ 8]) = AS_UINT4(&x[6][0]);
+		AS_UINT4(&Hash[12]) = AS_UINT4(&x[7][0]);
+	}
+}
+
+__host__
+void jh512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+{
+	const uint32_t threadsperblock = 256;
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	jh512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, d_hash);
+}
+
+extern "C" {
+#undef SPH_C32
+#undef SPH_T32
+#undef SPH_C64
+#undef SPH_T64
+#include <sph/sph_jh.h>
+}
+
+__host__
+void jh512_setBlock_80(int thr_id, uint32_t *endiandata)
+{
+	sph_jh512_context ctx_jh;
+
+	sph_jh512_init(&ctx_jh);
+	sph_jh512(&ctx_jh, endiandata, 64);
+
+	cudaMemcpyToSymbol(c_JHState, ctx_jh.H.narrow, 128, 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_Message, &endiandata[16], sizeof(c_Message), 0, cudaMemcpyHostToDevice);
 }
 
 #endif
