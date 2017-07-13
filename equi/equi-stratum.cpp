@@ -185,6 +185,38 @@ out:
 	return ret;
 }
 
+// equihash stratum protocol is not standard, use client.show_message to pass block height
+bool equi_stratum_show_message(struct stratum_ctx *sctx, json_t *id, json_t *params)
+{
+	char *s;
+	json_t *val;
+	bool ret;
+
+	val = json_array_get(params, 0);
+	if (val) {
+		const char* data = json_string_value(val);
+		if (data && strlen(data)) {
+			char symbol[32] = { 0 };
+			int ss = sscanf(data, "equihash %s block %u", symbol, &sctx->job.height);
+			if (opt_debug && ss > 1) applog(LOG_DEBUG, "%s", data);
+		}
+	}
+
+	if (!id || json_is_null(id))
+		return true;
+
+	val = json_object();
+	json_object_set(val, "id", id);
+	json_object_set_new(val, "error", json_null());
+	json_object_set_new(val, "result", json_true());
+	s = json_dumps(val, 0);
+	ret = stratum_send_line(sctx, s);
+	json_decref(val);
+	free(s);
+
+	return ret;
+}
+
 void equi_store_work_solution(struct work* work, uint32_t* hash, void* sol_data)
 {
 	int nonce = work->valid_nonces-1;

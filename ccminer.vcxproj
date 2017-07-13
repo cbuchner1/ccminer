@@ -297,6 +297,7 @@
       <CodeGeneration>compute_52,sm_52;compute_50,sm_50;compute_30,sm_30</CodeGeneration>
       <AdditionalOptions> -Xptxas -dlcm=ca -Xptxas -dscm=cs %(AdditionalOptions)</AdditionalOptions>
       <MaxRegCount>0</MaxRegCount>
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compute_61,sm_61;compute_52,sm_52;compute_50,sm_50;compute_30,sm_30</CodeGeneration>
     </CudaCompile>
     <CudaCompile Include="neoscrypt\cuda_neoscrypt.cu">
       <MaxRegCount>160</MaxRegCount>

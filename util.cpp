@@ -1782,6 +1782,9 @@ static bool stratum_show_message(struct stratum_ctx *sctx, json_t *id, json_t *p
 	json_t *val;
 	bool ret;
 
+	if (sctx->is_equihash)
+		return equi_stratum_show_message(sctx, id, params);
+
 	val = json_array_get(params, 0);
 	if (val)
 		applog(LOG_NOTICE, "MESSAGE FROM SERVER: %s", json_string_value(val));
