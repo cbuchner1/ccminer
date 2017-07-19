@@ -2270,6 +2270,9 @@ void print_hash_tests(void)
 	skein2hash(&hash[0], &buf[0]);
 	printpfx("skein2", hash);
 
+	skunk_hash(&hash[0], &buf[0]);
+	printpfx("skunk", hash);
+
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);
 

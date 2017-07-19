@@ -275,6 +275,7 @@ Options:\n\
 			scrypt-jane Scrypt-jane Chacha\n\
 			skein       Skein SHA2 (Skeincoin)\n\
 			skein2      Double Skein (Woodcoin)\n\
+			skunk       Skein Cube Fugue Streebog\n\
 			s3          S3 (1Coin)\n\
 			timetravel  Machinecoin permuted x8\n\
 			tribus      Denerius\n\
@@ -2400,6 +2401,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_SKEIN2:
 			rc = scanhash_skein2(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_SKUNK:
+			rc = scanhash_skunk(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_SHA256D:
 			rc = scanhash_sha256d(thr_id, &work, max_nonce, &hashes_done);

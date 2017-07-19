@@ -1,5 +1,5 @@
 
-ccminer 2.1-dev (June 2017) "Equihash"
+ccminer 2.2-dev (July 2017) "Equihash, tribus and skunk"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -9,7 +9,6 @@ If you find this tool useful and like to support its continuous
 tpruvot@github:
   BTC  : 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
   DCR  : DsUCcACGcyP8McNMRXQwbtpDxaVUYLDQDeU
-  LBC  : bKe6pLqELL3HHSbpJXxSdn5RrY2bfrkRhF
 
 Alexis:
   BTC  : 14EgXD7fPYD4sHBXWUi46VeiTVXNq765B8
@@ -51,6 +50,8 @@ Scrypt and Scrypt:N
 Scrypt-Jane (Chacha)
 Sibcoin (sib)
 Skein (Skein + SHA)
+Signatum (Skein cubehash fugue Streebog)
+Tribus (JH, keccak, simd)
 Woodcoin (Double Skein)
 Vanilla (Blake256 8-rounds - double sha256)
 Vertcoin Lyra2RE
@@ -116,6 +117,7 @@ its command line interface and options.
                           sib         use to mine Sibcoin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
+                          skunk       use to mine Signatum
                           timetravel  use to mine MachineCoin
                           tribus      use to mine Denarius
                           x11evo      use to mine Revolver
@@ -280,7 +282,12 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  v2.1 (unfinished)
+  v2.2 (under dev)
+                  New skunk algo, using the heavy streebog algorithm
+                  Enhance tribus algo (+10%)
+                  equihash protocol enhancement on yiimp.ccminer.org and zpool.ca
+
+  June 16th 2017  v2.1-tribus
                   Interface equihash algo with djeZo solver (from nheqminer 0.5c)
                   New api parameters (and multicast announces for local networks)
                   New tribus algo

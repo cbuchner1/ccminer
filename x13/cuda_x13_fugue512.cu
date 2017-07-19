@@ -254,7 +254,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
 	mixtabs[thr+256] = ROR8(tmp);
 	mixtabs[thr+512] = ROL16(tmp);
 	mixtabs[thr+768] = ROL8(tmp);
-#if TPB < 256
+#if TPB <= 256
 	if (blockDim.x < 256) {
 		const uint32_t thr = (threadIdx.x + 0x80) & 0xFF;
 		const uint32_t tmp = tex1Dfetch(mixTab0Tex, thr);

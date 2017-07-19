@@ -754,6 +754,9 @@
     <CudaCompile Include="pentablake.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="skunk.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
     <CudaCompile Include="tribus.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
