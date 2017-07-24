@@ -127,6 +127,7 @@ uint16_t opt_vote = 9999;
 int num_cpus;
 int active_gpus;
 bool need_nvsettings = false;
+bool need_memclockrst = false;
 char * device_name[MAX_GPUS];
 short device_map[MAX_GPUS] = { 0 };
 long  device_sm[MAX_GPUS] = { 0 };
@@ -346,6 +347,7 @@ Options:\n\
 #else /* via nvapi.dll */
 "\
       --mem-clock=3505  Set the gpu memory boost clock\n\
+      --mem-clock=+500  Set the gpu memory offset\n\
       --gpu-clock=1150  Set the gpu engine boost clock\n\
       --plimit=100      Set the gpu power limit in percentage\n\
       --tlimit=80       Set the gpu thermal limit in degrees\n\
@@ -604,6 +606,13 @@ void proper_exit(int reason)
 			nvml_reset_clocks(hnvml, device_map[n]);
 		}
 		nvml_destroy(hnvml);
+	}
+	if (need_memclockrst) {
+#	ifdef WIN32
+		for (int n = 0; n < opt_n_threads && !opt_keep_clocks; n++) {
+			nvapi_toggle_clocks(n, false);
+		}
+#	endif
 	}
 #endif
 	free(opt_syslog_pfx);
@@ -2065,7 +2074,11 @@ static void *miner_thread(void *userdata)
 		if (!wanna_mine(thr_id))
 		{
 			// reset default mem offset before idle..
+#if defined(WIN32) && defined(USE_WRAPNVML)
+			if (need_memclockrst) nvapi_toggle_clocks(thr_id, false);
+#else
 			if (need_nvsettings) nvs_reset_clocks(dev_id);
+#endif
 			// free gpu resources
 			algo_free_all(thr_id);
 			// clear any free error (algo switch)
@@ -2092,7 +2105,11 @@ static void *miner_thread(void *userdata)
 			continue;
 		} else {
 			// reapply mem offset if needed
+#if defined(WIN32) && defined(USE_WRAPNVML)
+			if (need_memclockrst) nvapi_toggle_clocks(thr_id, true);
+#else
 			if (need_nvsettings) nvs_set_clocks(dev_id);
+#endif
 		}
 
 		pool_on_hold = false;

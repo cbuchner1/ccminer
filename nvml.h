@@ -236,6 +236,8 @@ uint8_t nvapi_get_plimit(unsigned int devNum);
 unsigned int nvapi_devnum(int dev_id);
 int nvapi_devid(unsigned int devNum);
 
+void nvapi_toggle_clocks(int thr_id, bool enable);
+
 // cuda Replacement for 6.5 compat
 int nvapiMemGetInfo(int dev_id, uint64_t *free, uint64_t *total);
 #endif
