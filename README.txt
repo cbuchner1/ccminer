@@ -10,10 +10,6 @@ tpruvot@github:
   BTC  : 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
   DCR  : DsUCcACGcyP8McNMRXQwbtpDxaVUYLDQDeU
 
-Alexis:
-  BTC  : 14EgXD7fPYD4sHBXWUi46VeiTVXNq765B8
-  XVC  : Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W
-
 DJM34:
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
 
