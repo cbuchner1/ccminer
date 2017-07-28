@@ -642,12 +642,12 @@ static void GOST_E12(uint2* K, uint2* state,const uint2 shared[8][256]){
 	}
 }
 
-#define TPB 256
+#define TPB 128
 __global__
 __launch_bounds__(TPB, 4)
 void streebog_gpu_hash_64(uint64_t *g_hash)
 {
-		const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint2 buf[8], t[8], temp[8],K0[8], hash[8];
 
 	__shared__ uint2 shared[8][256];
@@ -660,7 +660,13 @@ void streebog_gpu_hash_64(uint64_t *g_hash)
 	shared[6][threadIdx.x] = T62[threadIdx.x];
 	shared[7][threadIdx.x] = T72[threadIdx.x];
 
-//	__syncthreads();
+	const uint32_t t2 = (threadIdx.x & 0x7f) + 0x80;
+	shared[0][t2] = T02[t2]; shared[1][t2] = T12[t2];
+	shared[2][t2] = T22[t2]; shared[3][t2] = T32[t2];
+	shared[4][t2] = T42[t2]; shared[5][t2] = T52[t2];
+	shared[6][t2] = T62[t2]; shared[7][t2] = T72[t2];
+
+	__syncthreads();
 //	if (thread < threads)
 //	{
 	uint64_t* inout = &g_hash[thread<<3];
@@ -823,7 +829,13 @@ void streebog_gpu_hash_64_final(uint64_t *g_hash, uint32_t* resNonce)
 	shared[6][threadIdx.x] = T62[threadIdx.x];
 	shared[7][threadIdx.x] = T72[threadIdx.x];
 
-//	__syncthreads();
+	const uint32_t t2 = (threadIdx.x & 0x7f) + 0x80;
+	shared[0][t2] = T02[t2]; shared[1][t2] = T12[t2];
+	shared[2][t2] = T22[t2]; shared[3][t2] = T32[t2];
+	shared[4][t2] = T42[t2]; shared[5][t2] = T52[t2];
+	shared[6][t2] = T62[t2]; shared[7][t2] = T72[t2];
+
+	__syncthreads();
 //	if (thread < threads)
 //	{
 	uint64_t* inout = &g_hash[thread<<3];
