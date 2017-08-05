@@ -1,21 +1,19 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+#include <stdio.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned int uint32_t;
+#include "cuda_helper.h"
 
-// globaler Speicher für unsere Ergebnisse
-uint32_t *d_hashoutput[8];
+// globaler Speicher fÃ¼r unsere Ergebnisse
+static uint32_t *d_hashoutput[MAX_GPUS];
+extern uint32_t *d_hash2output[MAX_GPUS];
+extern uint32_t *d_hash3output[MAX_GPUS];
+extern uint32_t *d_hash4output[MAX_GPUS];
+extern uint32_t *d_hash5output[MAX_GPUS];
 
-extern uint32_t *d_hash2output[8];
-extern uint32_t *d_hash3output[8];
-extern uint32_t *d_hash4output[8];
-extern uint32_t *d_hash5output[8];
-extern uint32_t *d_nonceVector[8];
+extern uint32_t *heavy_nonceVector[MAX_GPUS];
 
 /* Combines top 64-bits from each hash into a single hash */
-static void __device__ combine_hashes(uint32_t *out, uint32_t *hash1, uint32_t *hash2, uint32_t *hash3, uint32_t *hash4)
+__device__
+static void combine_hashes(uint32_t *out, uint32_t *hash1, uint32_t *hash2, uint32_t *hash3, uint32_t *hash4)
 {
 	uint32_t lout[8]; // Combining in Registern machen
 
@@ -103,9 +101,10 @@ static void __device__ combine_hashes(uint32_t *out, uint32_t *hash1, uint32_t *
 		out[i] = lout[i];
 }
 
-__global__ void combine_gpu_hash(int threads, uint32_t startNounce, uint32_t *out, uint32_t *hash2, uint32_t *hash3, uint32_t *hash4, uint32_t *hash5, uint32_t *nonceVector)
+__global__
+void combine_gpu_hash(uint32_t threads, uint32_t startNounce, uint32_t *out, uint32_t *hash2, uint32_t *hash3, uint32_t *hash4, uint32_t *hash5, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint32_t nounce = nonceVector[thread];
@@ -121,28 +120,26 @@ __global__ void combine_gpu_hash(int threads, uint32_t startNounce, uint32_t *ou
 	}
 }
 
-// Setup-Funktionen
-__host__ void combine_cpu_init(int thr_id, int threads)
+__host__
+void combine_cpu_init(int thr_id, uint32_t threads)
 {
-	// Speicher für alle Ergebnisse belegen
-	cudaMalloc(&d_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads);
+	// Speicher fÃ¼r alle Ergebnisse belegen
+	CUDA_SAFE_CALL(cudaMalloc(&d_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads));
 }
 
-void combine_cpu_hash(int thr_id, int threads, uint32_t startNounce, uint32_t *hash)
+__host__
+void combine_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *hash)
 {
 	// diese Kopien sind optional, da die Hashes jetzt bereits auf der GPU liegen sollten
 
-	const int threadsperblock = 128;
+	const uint32_t threadsperblock = 128;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
-	size_t shared_size = 0;
+	combine_gpu_hash <<<grid, block>>> (threads, startNounce, d_hashoutput[thr_id], d_hash2output[thr_id], d_hash3output[thr_id], d_hash4output[thr_id], d_hash5output[thr_id], heavy_nonceVector[thr_id]);
 
-	combine_gpu_hash<<<grid, block, shared_size>>>(threads, startNounce, d_hashoutput[thr_id], d_hash2output[thr_id], d_hash3output[thr_id], d_hash4output[thr_id], d_hash5output[thr_id], d_nonceVector[thr_id]);
-
-	// da die Hash Auswertung noch auf der CPU erfolgt, müssen die Ergebnisse auf jeden Fall zum Host kopiert werden
-	cudaMemcpy(hash, d_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads, cudaMemcpyDeviceToHost);
+	// da die Hash Auswertung noch auf der CPU erfolgt, mÃ¼ssen die Ergebnisse auf jeden Fall zum Host kopiert werden
+	CUDA_SAFE_CALL(cudaMemcpy(hash, d_hashoutput[thr_id], 8 * sizeof(uint32_t) * threads, cudaMemcpyDeviceToHost));
 }

@@ -1,19 +1,14 @@
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned int uint32_t;
+#include "cuda_helper.h"
 
-// globaler Speicher für alle HeftyHashes aller Threads
-extern uint32_t *d_heftyHashes[8];
-extern uint32_t *d_nonceVector[8];
+// globaler Speicher fÃ¼r alle HeftyHashes aller Threads
+extern uint32_t *heavy_heftyHashes[MAX_GPUS];
+extern uint32_t *heavy_nonceVector[MAX_GPUS];
 
-// globaler Speicher für unsere Ergebnisse
-uint32_t *d_hash2output[8];
+// globaler Speicher fÃ¼r unsere Ergebnisse
+uint32_t *d_hash2output[MAX_GPUS];
 
 
 /* Hash-Tabellen */
@@ -47,15 +42,15 @@ uint32_t sha256_cpu_constantTable[] = {
 #define SWAB32(x)		( ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24) )
 
 // Die Hash-Funktion
-template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
+template <int BLOCKSIZE> __global__ void sha256_gpu_hash(uint32_t threads, uint32_t startNounce, void *outputHash, uint32_t *heftyHashes, uint32_t *nonceVector)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
-		// bestimme den aktuellen Zähler
+		// bestimme den aktuellen ZÃ¤hler
 		uint32_t nounce = startNounce + thread;
 		nonceVector[thread] = nounce;
-	
+
 		// jeder thread in diesem  Block bekommt sein eigenes W Array im Shared memory
 		uint32_t W1[16];
 		uint32_t W2[16];
@@ -71,10 +66,10 @@ template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t s
 			regs[k] = sha256_gpu_register[k];
 			hash[k] = regs[k];
 		}
-	
+
 		// 2. Runde
-		//memcpy(W, &sha256_gpu_blockHeader[0], sizeof(uint32_t) * 16); // TODO: aufsplitten in zwei Teilblöcke
-		//memcpy(&W[5], &heftyHashes[8 * (blockDim.x * blockIdx.x + threadIdx.x)], sizeof(uint32_t) * 8); // den richtigen Hefty1 Hash holen		
+		//memcpy(W, &sha256_gpu_blockHeader[0], sizeof(uint32_t) * 16); // TODO: aufsplitten in zwei TeilblÃ¶cke
+		//memcpy(&W[5], &heftyHashes[8 * (blockDim.x * blockIdx.x + threadIdx.x)], sizeof(uint32_t) * 8); // den richtigen Hefty1 Hash holen
 #pragma unroll 16
 		for(int k=0;k<16;k++)
 			W1[k] = sha256_gpu_blockHeader[k];
@@ -95,7 +90,7 @@ template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t s
 			uint32_t T1, T2;
 			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_gpu_constantTable[j] + W1[j];
 			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
-		
+
 			#pragma unroll 7
 			for (int k=6; k >= 0; k--) regs[k+1] = regs[k];
 			regs[0] = T1 + T2;
@@ -126,7 +121,7 @@ template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t s
 				uint32_t T1, T2;
 				T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_gpu_constantTable[j + 16 * (k+1)] + W2[j];
 				T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
-		
+
 				#pragma unroll 7
 				for (int l=6; l >= 0; l--) regs[l+1] = regs[l];
 				regs[0] = T1 + T2;
@@ -141,14 +136,14 @@ template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t s
 /*
 		for(int j=16;j<64;j++)
 			W[j] = s1(W[j-2]) + W[j-7] + s0(W[j-15]) + W[j-16];
-	
+
 #pragma unroll 64
 		for(int j=0;j<64;j++)
 		{
 			uint32_t T1, T2;
 			T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_gpu_constantTable[j] + W[j];
 			T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
-		
+
 			#pragma unroll 7
 			for (int k=6; k >= 0; k--) regs[k+1] = regs[k];
 			regs[0] = T1 + T2;
@@ -166,14 +161,14 @@ template <int BLOCKSIZE> __global__ void sha256_gpu_hash(int threads, uint32_t s
 }
 
 // Setup-Funktionen
-__host__ void sha256_cpu_init(int thr_id, int threads)
+__host__ void sha256_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
 	cudaMemcpyToSymbol(	sha256_gpu_constantTable,
 						sha256_cpu_constantTable,
 						sizeof(uint32_t) * 64 );
 
-	// Speicher für alle Ergebnisse belegen
+	// Speicher fÃ¼r alle Ergebnisse belegen
 	cudaMalloc(&d_hash2output[thr_id], 8 * sizeof(uint32_t) * threads);
 }
 
@@ -189,25 +184,25 @@ __host__ void sha256_cpu_setBlock(void *data, int len)
 	memset(msgBlock, 0, sizeof(uint32_t) * 32);
 	memcpy(&msgBlock[0], data, len);
 	if (len == 84) {
-		memset(&msgBlock[21], 0, 32); // vorläufig  Nullen anstatt der Hefty1 Hashes einfüllen
+		memset(&msgBlock[21], 0, 32); // vorlÃ¤ufig  Nullen anstatt der Hefty1 Hashes einfÃ¼llen
 		msgBlock[29] |= 0x80;
 		msgBlock[31] = 928; // bitlen
 	} else if (len == 80) {
-		memset(&msgBlock[20], 0, 32); // vorläufig  Nullen anstatt der Hefty1 Hashes einfüllen
+		memset(&msgBlock[20], 0, 32); // vorlÃ¤ufig  Nullen anstatt der Hefty1 Hashes einfÃ¼llen
 		msgBlock[28] |= 0x80;
 		msgBlock[31] = 896; // bitlen
 	}
-	
+
 	for(int i=0;i<31;i++) // Byteorder drehen
 		msgBlock[i] = SWAB32(msgBlock[i]);
 
-	// die erste Runde wird auf der CPU durchgeführt, da diese für
+	// die erste Runde wird auf der CPU durchgefÃ¼hrt, da diese fÃ¼r
 	// alle Threads gleich ist. Der Hash wird dann an die Threads
-	// übergeben
+	// Ã¼bergeben
 	uint32_t W[64];
 
 	// Erstelle expandierten Block W
-	memcpy(W, &msgBlock[0], sizeof(uint32_t) * 16);	
+	memcpy(W, &msgBlock[0], sizeof(uint32_t) * 16);
 	for(int j=16;j<64;j++)
 		W[j] = s1(W[j-2]) + W[j-7] + s0(W[j-15]) + W[j-16];
 
@@ -228,7 +223,7 @@ __host__ void sha256_cpu_setBlock(void *data, int len)
 		uint32_t T1, T2;
 		T1 = regs[7] + S1(regs[4]) + Ch(regs[4], regs[5], regs[6]) + sha256_cpu_constantTable[j] + W[j];
 		T2 = S0(regs[0]) + Maj(regs[0], regs[1], regs[2]);
-		
+
 		//#pragma unroll 7
 		for (int k=6; k >= 0; k--) regs[k+1] = regs[k];
 		// sollte mal noch durch memmov ersetzt werden!
@@ -253,27 +248,28 @@ __host__ void sha256_cpu_setBlock(void *data, int len)
 	BLOCKSIZE = len;
 }
 
-__host__ void sha256_cpu_copyHeftyHash(int thr_id, int threads, void *heftyHashes, int copy)
+__host__ void sha256_cpu_copyHeftyHash(int thr_id, uint32_t threads, void *heftyHashes, int copy)
 {
 	// Hefty1 Hashes kopieren
-	if (copy) cudaMemcpy( d_heftyHashes[thr_id], heftyHashes, 8 * sizeof(uint32_t) * threads, cudaMemcpyHostToDevice );
+	if (copy)
+		CUDA_SAFE_CALL(cudaMemcpy(heavy_heftyHashes[thr_id], heftyHashes, 8 * sizeof(uint32_t) * threads, cudaMemcpyHostToDevice));
 	//else cudaThreadSynchronize();
 }
 
-__host__ void sha256_cpu_hash(int thr_id, int threads, int startNounce)
+__host__ void sha256_cpu_hash(int thr_id, uint32_t threads, int startNounce)
 {
-	const int threadsperblock = 256;
+	const uint32_t threadsperblock = 256;
 
 	// berechne wie viele Thread Blocks wir brauchen
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	// Größe des dynamischen Shared Memory Bereichs
+	// GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
 	size_t shared_size = 0;
 
 	if (BLOCKSIZE == 84)
-		sha256_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
+		sha256_gpu_hash<84><<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 	else if (BLOCKSIZE == 80) {
-		sha256_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], d_heftyHashes[thr_id], d_nonceVector[thr_id]);
+		sha256_gpu_hash<80><<<grid, block, shared_size>>>(threads, startNounce, d_hash2output[thr_id], heavy_heftyHashes[thr_id], heavy_nonceVector[thr_id]);
 	}
 }

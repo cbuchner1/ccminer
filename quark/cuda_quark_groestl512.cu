@@ -1,53 +1,47 @@
 // Auf QuarkCoin spezialisierte Version von Groestl inkl. Bitslice
 
-#include <cuda.h>
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <memory.h>
+#include <sys/types.h> // off_t
 
-// aus cpu-miner.c
-extern int device_map[8];
+#include "cuda_helper.h"
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+#define TPB 256
+#define THF 4
 
-// Folgende Definitionen später durch header ersetzen
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
+#if __CUDA_ARCH__ >= 300
+#include "quark/groestl_functions_quad.h"
+#include "quark/groestl_transf_quad.h"
+#endif
 
-// diese Struktur wird in der Init Funktion angefordert
-static cudaDeviceProp props[8];
+#include "quark/cuda_quark_groestl512_sm20.cu"
 
-// 64 Register Variante für Compute 3.0
-#include "groestl_functions_quad.cu"
-#include "bitslice_transformations_quad.cu"
-
-__global__ void __launch_bounds__(256, 4)
- quark_groestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
+__global__ __launch_bounds__(TPB, THF)
+void quark_groestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t * __restrict g_hash, uint32_t * __restrict g_nonceVector)
 {
+#if __CUDA_ARCH__ >= 300
     // durch 4 dividieren, weil jeweils 4 Threads zusammen ein Hash berechnen
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x) >> 2;
     if (thread < threads)
     {
         // GROESTL
         uint32_t message[8];
         uint32_t state[8];
 
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+        uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
+        off_t hashPosition = nounce - startNounce;
+        uint32_t *pHash = &g_hash[hashPosition << 4];
 
-        int hashPosition = nounce - startNounce;
-        uint32_t *inpHash = &g_hash[hashPosition<<4];
+        const uint32_t thr = threadIdx.x % THF;
 
-#pragma unroll 4
-        for(int k=0;k<4;k++) message[k] = inpHash[(k<<2) + (threadIdx.x&0x03)];
-#pragma unroll 4
+        #pragma unroll
+        for(int k=0;k<4;k++) message[k] = pHash[thr + (k * THF)];
+
+        #pragma unroll
         for(int k=4;k<8;k++) message[k] = 0;
 
-        if ((threadIdx.x&0x03) == 0) message[4] = 0x80;
-        if ((threadIdx.x&0x03) == 3) message[7] = 0x01000000;
+        if (thr == 0) message[4] = 0x80U;
+        if (thr == 3) message[7] = 0x01000000U;
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(message, msgBitsliced);
@@ -55,40 +49,53 @@ __global__ void __launch_bounds__(256, 4)
         groestl512_progressMessage_quad(state, msgBitsliced);
 
         // Nur der erste von jeweils 4 Threads bekommt das Ergebns-Hash
-        uint32_t *outpHash = &g_hash[hashPosition<<4];
         uint32_t hash[16];
         from_bitslice_quad(state, hash);
 
-        if ((threadIdx.x & 0x03) == 0)
-        {
-#pragma unroll 16
+        // uint4 = 4x4 uint32_t = 16 bytes
+        if (thr == 0) {
+            uint4 *phash = (uint4*) hash;
+            uint4 *outpt = (uint4*) pHash;
+            outpt[0] = phash[0];
+            outpt[1] = phash[1];
+            outpt[2] = phash[2];
+            outpt[3] = phash[3];
+        }
+/*
+        if (thr == 0) {
+            #pragma unroll
             for(int k=0;k<16;k++) outpHash[k] = hash[k];
         }
+*/
     }
+#endif
 }
 
-__global__ void __launch_bounds__(256, 4)
- quark_doublegroestl512_gpu_hash_64_quad(int threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
+__global__ void __launch_bounds__(TPB, THF)
+ quark_doublegroestl512_gpu_hash_64_quad(uint32_t threads, uint32_t startNounce, uint32_t *g_hash, uint32_t *g_nonceVector)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x)>>2;
+#if __CUDA_ARCH__ >= 300
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x)>>2;
     if (thread < threads)
     {
         // GROESTL
         uint32_t message[8];
         uint32_t state[8];
 
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+        uint32_t nounce = g_nonceVector ? g_nonceVector[thread] : (startNounce + thread);
 
-        int hashPosition = nounce - startNounce;
-        uint32_t *inpHash = &g_hash[hashPosition<<4];
+        off_t hashPosition = nounce - startNounce;
+        uint32_t * inpHash = &g_hash[hashPosition<<4];
+        const uint16_t thr = threadIdx.x % THF;
 
-#pragma unroll 4
-        for(int k=0;k<4;k++) message[k] = inpHash[(k<<2)+(threadIdx.x&0x03)];
-#pragma unroll 4
+        #pragma unroll
+        for(int k=0;k<4;k++) message[k] = inpHash[(k * THF) + thr];
+
+        #pragma unroll
         for(int k=4;k<8;k++) message[k] = 0;
 
-        if ((threadIdx.x&0x03) == 0) message[4] = 0x80;
-        if ((threadIdx.x&0x03) == 3) message[7] = 0x01000000;
+        if (thr == 0) message[4] = 0x80;
+        if (thr == 3) message[7] = 0x01000000;
 
         uint32_t msgBitsliced[8];
         to_bitslice_quad(message, msgBitsliced);
@@ -112,62 +119,67 @@ __global__ void __launch_bounds__(256, 4)
         }
 
         // Nur der erste von jeweils 4 Threads bekommt das Ergebns-Hash
-        uint32_t *outpHash = &g_hash[hashPosition<<4];
+        uint32_t *outpHash = inpHash;
         uint32_t hash[16];
         from_bitslice_quad(state, hash);
 
-        if ((threadIdx.x & 0x03) == 0)
+        if (thr == 0)
         {
-#pragma unroll 16
+            #pragma unroll
             for(int k=0;k<16;k++) outpHash[k] = hash[k];
         }
     }
+#endif
 }
 
-// Setup-Funktionen
-__host__ void quark_groestl512_cpu_init(int thr_id, int threads)
+__host__
+void quark_groestl512_cpu_init(int thr_id, uint32_t threads)
 {
-    cudaGetDeviceProperties(&props[thr_id], device_map[thr_id]);
+    int dev_id = device_map[thr_id];
+    cuda_get_arch(thr_id);
+    if (device_sm[dev_id] < 300 || cuda_arch[dev_id] < 300)
+        quark_groestl512_sm20_init(thr_id, threads);
 }
 
-__host__ void quark_groestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__
+void quark_groestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    int threadsperblock = 256;
+    int threadsperblock = TPB;
 
     // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
     // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
-    const int factor = 4;
+    const int factor = THF;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
+    int dev_id = device_map[thr_id];
 
-    quark_groestl512_gpu_hash_64_quad<<<grid, block, shared_size>>>(threads, startNounce, d_hash, d_nonceVector);
+    if (device_sm[dev_id] >= 300 && cuda_arch[dev_id] >= 300)
+        quark_groestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
+    else
+        quark_groestl512_sm20_hash_64(thr_id, threads, startNounce, d_nonceVector, d_hash, order);
 
     // Strategisches Sleep Kommando zur Senkung der CPU Last
     MyStreamSynchronize(NULL, order, thr_id);
 }
 
-__host__ void quark_doublegroestl512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__
+void quark_doublegroestl512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    int threadsperblock = 256;
+    const int factor = THF;
+    int threadsperblock = TPB;
 
-    // Compute 3.0 benutzt die registeroptimierte Quad Variante mit Warp Shuffle
-    // mit den Quad Funktionen brauchen wir jetzt 4 threads pro Hash, daher Faktor 4 bei der Blockzahl
-    const int factor = 4;
-
-    // berechne wie viele Thread Blocks wir brauchen
     dim3 grid(factor*((threads + threadsperblock-1)/threadsperblock));
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
+    int dev_id = device_map[thr_id];
 
-    quark_doublegroestl512_gpu_hash_64_quad<<<grid, block, shared_size>>>(threads, startNounce, d_hash, d_nonceVector);
+    if (device_sm[dev_id] >= 300 && cuda_arch[dev_id] >= 300)
+        quark_doublegroestl512_gpu_hash_64_quad<<<grid, block>>>(threads, startNounce, d_hash, d_nonceVector);
+    else
+        quark_doublegroestl512_sm20_hash_64(thr_id, threads, startNounce, d_nonceVector, d_hash, order);
 
-    // Strategisches Sleep Kommando zur Senkung der CPU Last
     MyStreamSynchronize(NULL, order, thr_id);
 }

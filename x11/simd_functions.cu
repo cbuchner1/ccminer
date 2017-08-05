@@ -1,10 +1,9 @@
 __device__ __forceinline__ void STEP8_IF_0(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for(int j=0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -24,17 +23,16 @@ __device__ __forceinline__ void STEP8_IF_0(const uint32_t *w, const int r, const
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[6];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for(int j=0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_1(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -54,17 +52,16 @@ __device__ __forceinline__ void STEP8_IF_1(const uint32_t *w, const int r, const
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[1];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_2(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -84,17 +81,16 @@ __device__ __forceinline__ void STEP8_IF_2(const uint32_t *w, const int r, const
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[5];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_3(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int  j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -114,17 +110,16 @@ __device__ __forceinline__ void STEP8_IF_3(const uint32_t *w, const int r, const
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[4];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_4(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int  j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -144,17 +139,16 @@ __device__ __forceinline__ void STEP8_MAJ_4(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[2];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_5(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -174,17 +168,16 @@ __device__ __forceinline__ void STEP8_MAJ_5(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[0];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_6(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -204,17 +197,16 @@ __device__ __forceinline__ void STEP8_MAJ_6(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[3];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_7(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -234,17 +226,16 @@ __device__ __forceinline__ void STEP8_MAJ_7(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[6];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_8(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -264,17 +255,16 @@ __device__ __forceinline__ void STEP8_IF_8(const uint32_t *w, const int r, const
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[1];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_9(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -294,17 +284,17 @@ __device__ __forceinline__ void STEP8_IF_9(const uint32_t *w, const int r, const
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[5];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_10(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
+
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -324,17 +314,16 @@ __device__ __forceinline__ void STEP8_IF_10(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[4];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_11(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -354,17 +343,16 @@ __device__ __forceinline__ void STEP8_IF_11(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[2];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_12(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -384,17 +372,16 @@ __device__ __forceinline__ void STEP8_MAJ_12(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[0];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_13(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -414,17 +401,16 @@ __device__ __forceinline__ void STEP8_MAJ_13(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[3];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_14(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -444,17 +430,16 @@ __device__ __forceinline__ void STEP8_MAJ_14(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[6];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_15(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -474,17 +459,16 @@ __device__ __forceinline__ void STEP8_MAJ_15(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[1];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_16(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -504,17 +488,16 @@ __device__ __forceinline__ void STEP8_IF_16(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[5];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_17(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -534,17 +517,16 @@ __device__ __forceinline__ void STEP8_IF_17(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[4];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_18(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -564,17 +546,16 @@ __device__ __forceinline__ void STEP8_IF_18(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[2];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_19(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -594,17 +575,16 @@ __device__ __forceinline__ void STEP8_IF_19(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[0];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_20(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -624,17 +604,16 @@ __device__ __forceinline__ void STEP8_MAJ_20(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[3];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_21(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -654,17 +633,16 @@ __device__ __forceinline__ void STEP8_MAJ_21(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[6];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_22(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -684,17 +662,16 @@ __device__ __forceinline__ void STEP8_MAJ_22(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[1];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_23(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -714,17 +691,16 @@ __device__ __forceinline__ void STEP8_MAJ_23(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[5];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_24(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -744,17 +720,16 @@ __device__ __forceinline__ void STEP8_IF_24(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[4];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_25(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -774,17 +749,16 @@ __device__ __forceinline__ void STEP8_IF_25(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[2];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_26(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -804,17 +778,16 @@ __device__ __forceinline__ void STEP8_IF_26(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[0];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_27(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -834,17 +807,16 @@ __device__ __forceinline__ void STEP8_IF_27(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[3];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_28(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -864,17 +836,16 @@ __device__ __forceinline__ void STEP8_MAJ_28(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[6];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_29(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -894,17 +865,16 @@ __device__ __forceinline__ void STEP8_MAJ_29(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[1];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_30(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -924,17 +894,16 @@ __device__ __forceinline__ void STEP8_MAJ_30(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[5];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_MAJ_31(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + MAJ(A[0], B[0], C[0]);
@@ -954,17 +923,16 @@ __device__ __forceinline__ void STEP8_MAJ_31(const uint32_t *w, const int r, con
 	temp = D[7] + w[7] + MAJ(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[4];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_32(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -984,17 +952,16 @@ __device__ __forceinline__ void STEP8_IF_32(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[2];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_33(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -1014,17 +981,16 @@ __device__ __forceinline__ void STEP8_IF_33(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[0];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_34(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -1044,17 +1010,16 @@ __device__ __forceinline__ void STEP8_IF_34(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[3];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
 __device__ __forceinline__ void STEP8_IF_35(const uint32_t *w, const int r, const int s, uint32_t * A, const uint32_t * B, const uint32_t * C, uint32_t * D)
 {
-	int j;
 	uint32_t temp;
 	uint32_t R[8];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		R[j] = ROTL32(A[j], r);
 	}
 	temp = D[0] + w[0] + IF(A[0], B[0], C[0]);
@@ -1074,7 +1039,7 @@ __device__ __forceinline__ void STEP8_IF_35(const uint32_t *w, const int r, cons
 	temp = D[7] + w[7] + IF(A[7], B[7], C[7]);
 	D[7] = ROTL32(temp, s) + R[6];
 #pragma unroll 8
-	for(j=0; j<8; j++) {
+	for (int j = 0; j<8; j++) {
 		A[j] = R[j];
 	}
 }
@@ -1327,7 +1292,7 @@ __device__ __forceinline__ void SIMD_Compress1(uint32_t *A, const int thr_id, co
 	Round8_1(A, thr_offset, 28, 19, 22, 7, g_fft4);
 }
 
-__device__ __forceinline__ void Compression1(const uint32_t *hashval, const int texture_id, uint4 *g_fft4, int *g_state) {
+__device__ __forceinline__ void Compression1(const uint32_t *hashval, const int texture_id, uint4 *g_fft4, uint32_t *g_state) {
 	uint32_t A[32];
 	int i;
 #pragma unroll 32
@@ -1360,10 +1325,10 @@ __device__ __forceinline__ void SIMD_Compress2(uint32_t *A, const int thr_id, ui
 	STEP8_IF_35(IV[3], 25,  4, &A[8], &A[16], &A[24], A);
 }
 
-__device__ __forceinline__ void Compression2(const int texture_id, uint4 *g_fft4, int *g_state) {
+__device__ __forceinline__ void Compression2(const int texture_id, uint4 *g_fft4, uint32_t *g_state) {
 	uint32_t A[32];
 	int i;
-	uint32_t *state = (uint32_t*)&g_state[blockIdx.x * (blockDim.x*32)];
+	uint32_t *state = &g_state[blockIdx.x * (blockDim.x*32)];
 #pragma unroll 32
 	for (i=0; i < 32; i++) A[i] = state[threadIdx.x+blockDim.x*i];
 	SIMD_Compress2(A, texture_id, g_fft4);
@@ -1396,10 +1361,10 @@ __device__ __forceinline__ void SIMD_Compress_Final(uint32_t *A, const uint32_t 
 	STEP8_IF_35(IV[3], 25,  4, &A[8], &A[16], &A[24], A);
 }
 
-__device__ __forceinline__ void Final(uint32_t *hashval, const int texture_id, uint4 *g_fft4, int *g_state) {
+__device__ __forceinline__ void Final(uint32_t *hashval, const int texture_id, uint4 *g_fft4, uint32_t *g_state) {
 	uint32_t A[32];
 	int i;
-	uint32_t *state = (uint32_t*)&g_state[blockIdx.x * (blockDim.x*32)];
+	uint32_t *state = &g_state[blockIdx.x * (blockDim.x*32)];
 #pragma unroll 32
 	for (i=0; i < 32; i++) A[i] = state[threadIdx.x+blockDim.x*i];
 	uint32_t buffer[16];
