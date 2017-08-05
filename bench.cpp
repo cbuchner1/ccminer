@@ -64,7 +64,9 @@ void algo_free_all(int thr_id)
 	free_fresh(thr_id);
 	free_fugue256(thr_id);
 	free_groestlcoin(thr_id);
+#ifdef WITH_HEAVY_ALGO
 	free_heavy(thr_id);
+#endif
 	free_hmq17(thr_id);
 	free_hsr(thr_id);
 	free_jackpot(thr_id);
@@ -125,6 +127,7 @@ bool bench_algo_switch_next(int thr_id)
 	// skip some duplicated algos
 	if (algo == ALGO_C11) algo++; // same as x11
 	if (algo == ALGO_DMD_GR) algo++; // same as groestl
+	if (algo == ALGO_HEAVY) algo++; // dead
 	if (algo == ALGO_MJOLLNIR) algo++; // same as heavy
 	if (algo == ALGO_KECCAKC) algo++; // same as keccak
 	if (algo == ALGO_WHIRLCOIN) algo++; // same as whirlpool

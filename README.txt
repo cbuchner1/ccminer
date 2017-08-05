@@ -89,7 +89,6 @@ its command line interface and options.
                           fresh       use to mine Freshcoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
-                          heavy       use to mine Heavycoin
                           hsr         use to mine Hshare
                           jackpot     use to mine Sweepcoin
                           keccak      use to mine Maxcoin
@@ -99,7 +98,6 @@ its command line interface and options.
                           lyra2       use to mine CryptoCoin
                           lyra2v2     use to mine Vertcoin
                           lyra2z      use to mine Zerocoin (XZC)
-                          mjollnir    use to mine Mjollnircoin
                           myr-gr      use to mine Myriad-Groest
                           neoscrypt   use to mine FeatherCoin
                           nist5       use to mine TalkCoin
@@ -142,8 +140,6 @@ its command line interface and options.
       --cuda-schedule   Set device threads scheduling mode (default: auto)
   -f, --diff-factor     Divide difficulty by this factor (default 1.0)
   -m, --diff-multiplier Multiply difficulty by this value (default 1.0)
-      --vote=VOTE       block reward vote (for HeavyCoin)
-      --trust-pool      trust the max block reward vote (maxvote) sent by the pool
   -o, --url=URL         URL of mining server
   -O, --userpass=U:P    username:password pair for mining server
   -u, --user=USERNAME   username for mining server
