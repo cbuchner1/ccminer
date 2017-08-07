@@ -1,5 +1,5 @@
 
-#define WILD_KECCAK_SCRATCHPAD_BUFFSIZE   1ULL << 28
+#define WILD_KECCAK_SCRATCHPAD_BUFFSIZE   1ULL << 29
 #define WILD_KECCAK_ADDENDUMS_ARRAY_SIZE  10
 
 extern uint64_t scratchpad_size;
