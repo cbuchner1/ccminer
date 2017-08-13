@@ -100,7 +100,7 @@ extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce,
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		skunk_cpu_init(thr_id, throughput);
-		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500 || CUDART_VERSION < 7500 || CUDART_VERSION > 8000);
+		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500);
 		if (use_compat_kernels[thr_id]) x13_fugue512_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
