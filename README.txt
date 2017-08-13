@@ -1,5 +1,5 @@
 
-ccminer 2.2-dev (July 2017) "Equihash, tribus and skunk"
+ccminer 2.2 (August 2017) "Equihash, tribus and optimized skunk"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -278,7 +278,7 @@ features.
 
 >>> RELEASE HISTORY <<<
 
-  v2.2 (under dev)
+  Aug. 13th 2017  v2.2
                   New skunk algo, using the heavy streebog algorithm
                   Enhance tribus algo (+10%)
                   equihash protocol enhancement on yiimp.ccminer.org and zpool.ca
