@@ -197,7 +197,9 @@ bool equi_stratum_show_message(struct stratum_ctx *sctx, json_t *id, json_t *par
 		const char* data = json_string_value(val);
 		if (data && strlen(data)) {
 			char symbol[32] = { 0 };
-			int ss = sscanf(data, "equihash %s block %u", symbol, &sctx->job.height);
+			uint32_t height = 0;
+			int ss = sscanf(data, "equihash %s block %u", symbol, &height);
+			if (height && ss > 1) sctx->job.height = height;
 			if (opt_debug && ss > 1) applog(LOG_DEBUG, "%s", data);
 		}
 	}

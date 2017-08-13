@@ -101,7 +101,7 @@ extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce,
 
 		skunk_cpu_init(thr_id, throughput);
 		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500 || CUDART_VERSION < 7500 || CUDART_VERSION > 8000);
-		x13_fugue512_cpu_init(thr_id, throughput);
+		if (use_compat_kernels[thr_id]) x13_fugue512_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_resNonce[thr_id], NBN * sizeof(uint32_t)), -1);
@@ -200,7 +200,8 @@ extern "C" void free_skunk(int thr_id)
 
 	cudaThreadSynchronize();
 
-	x13_fugue512_cpu_free(thr_id);
+	if (use_compat_kernels[thr_id])
+		x13_fugue512_cpu_free(thr_id);
 
 	cudaFree(d_hash[thr_id]);
 	cudaFree(d_resNonce[thr_id]);
