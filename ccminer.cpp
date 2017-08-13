@@ -2226,6 +2226,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_JHA:
 			case ALGO_LYRA2v2:
 			case ALGO_S3:
+			case ALGO_SKUNK:
 			case ALGO_TIMETRAVEL:
 			case ALGO_BITCORE:
 			case ALGO_X11EVO:

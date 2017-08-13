@@ -2,7 +2,7 @@
  * Skunk Algo for Signatum
  * (skein, cube, fugue, gost streebog)
  *
- * tpruvot@github 06 2017 - GPLv3
+ * tpruvot@github 08 2017 - GPLv3
  */
 extern "C" {
 #include "sph/sph_skein.h"
@@ -14,19 +14,24 @@ extern "C" {
 #include "miner.h"
 #include "cuda_helper.h"
 
+//#define WANT_COMPAT_KERNEL
+
+// compatibility kernels
 extern void skein512_cpu_setBlock_80(void *pdata);
-extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
-
-extern void x11_cubehash512_cpu_init(int thr_id, uint32_t threads);
 extern void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-
 extern void x13_fugue512_cpu_init(int thr_id, uint32_t threads);
 extern void x13_fugue512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 extern void x13_fugue512_cpu_free(int thr_id);
-
 extern void streebog_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t *d_hash, uint32_t* d_resNonce);
 extern void streebog_set_target(const uint32_t* ptarget);
+
+// krnlx merged kernel (for high-end cards only)
+extern void skunk_cpu_init(int thr_id, uint32_t threads);
+extern void skunk_set_target(uint32_t* ptarget);
+extern void skunk_setBlock_80(int thr_id, void *pdata);
+extern void skunk_cuda_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void skunk_cuda_streebog(int thr_id, uint32_t threads, uint32_t *d_hash, uint32_t* d_resNonce);
 
 #include <stdio.h>
 #include <memory.h>
@@ -65,6 +70,7 @@ extern "C" void skunk_hash(void *output, const void *input)
 }
 
 static bool init[MAX_GPUS] = { 0 };
+static bool use_compat_kernels[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -74,7 +80,8 @@ extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce,
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	int intensity = (device_sm[device_map[thr_id]] > 500) ? 18 : 17;
-	if (strstr(device_name[dev_id], "GTX 10")) intensity = 19;
+	if (strstr(device_name[dev_id], "GTX 10")) intensity = 20;
+	if (strstr(device_name[dev_id], "GTX 1080")) intensity = 21;
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	//if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
@@ -92,8 +99,8 @@ extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce,
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
-		quark_skein512_cpu_init(thr_id, throughput);
-		x11_cubehash512_cpu_init(thr_id, throughput);
+		skunk_cpu_init(thr_id, throughput);
+		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500 || CUDART_VERSION < 7500 || CUDART_VERSION > 8000);
 		x13_fugue512_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
@@ -107,18 +114,26 @@ extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce,
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
-	skein512_cpu_setBlock_80(endiandata);
-
 	cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t));
-	streebog_set_target(ptarget);
+	if (use_compat_kernels[thr_id]) {
+		skein512_cpu_setBlock_80(endiandata);
+		streebog_set_target(ptarget);
+	} else {
+		skunk_setBlock_80(thr_id, endiandata);
+		skunk_set_target(ptarget);
+	}
 
 	do {
 		int order = 0;
-		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], 1); order++;
-		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		streebog_cpu_hash_64_final(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
-
+		if (use_compat_kernels[thr_id]) {
+			skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+			x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+			x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+			streebog_cpu_hash_64_final(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
+		} else {
+			skunk_cuda_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]);
+			skunk_cuda_streebog(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
+		}
 		cudaMemcpy(h_resNonce, d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
@@ -158,6 +173,7 @@ extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce,
 			else if (vhash[7] > Htarg) {
 				gpu_increment_reject(thr_id);
 				cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t));
+				gpulog(LOG_WARNING, thr_id, "result does not validate on CPU!");
 				pdata[19] = startNounce + h_resNonce[0] + 1;
 				continue;
 			}
@@ -185,6 +201,7 @@ extern "C" void free_skunk(int thr_id)
 	cudaThreadSynchronize();
 
 	x13_fugue512_cpu_free(thr_id);
+
 	cudaFree(d_hash[thr_id]);
 	cudaFree(d_resNonce[thr_id]);
 

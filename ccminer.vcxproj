@@ -532,7 +532,12 @@
     <CudaCompile Include="cuda_skeincoin.cu">
       <MaxRegCount>48</MaxRegCount>
     </CudaCompile>
-    <CudaCompile Include="skunk.cu" />
+    <CudaCompile Include="skunk\skunk.cu" />
+    <CudaCompile Include="skunk\cuda_skunk.cu">
+      <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
+      <MaxRegCount>64</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="skunk\cuda_skunk_streebog.cu" />
     <CudaCompile Include="tribus.cu" />
     <ClInclude Include="x11\cuda_x11_aes.cuh" />
     <CudaCompile Include="x11\cuda_x11_cubehash512.cu" />

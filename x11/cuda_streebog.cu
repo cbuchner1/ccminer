@@ -808,7 +808,9 @@ void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
 
 __constant__ uint64_t target64[4];
 
-void streebog_set_target(const uint32_t* ptarget){
+__host__
+void streebog_set_target(const uint32_t* ptarget)
+{
 	cudaMemcpyToSymbol(target64,ptarget,4*sizeof(uint64_t),0,cudaMemcpyHostToDevice);
 }
 

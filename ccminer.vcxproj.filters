@@ -46,6 +46,9 @@
     <Filter Include="Source Files\CUDA\qubit">
       <UniqueIdentifier>{f3ed23a2-8ce7-41a5-b051-6da56047dc35}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\skunk">
+      <UniqueIdentifier>{23ed23a2-8e7a-65a2-b051-8aa63047d352}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\CUDA\x11">
       <UniqueIdentifier>{dd751f2d-bfd6-42c1-8f9b-cbe94e539353}</UniqueIdentifier>
     </Filter>
@@ -754,8 +757,14 @@
     <CudaCompile Include="pentablake.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
-    <CudaCompile Include="skunk.cu">
-      <Filter>Source Files\CUDA</Filter>
+    <CudaCompile Include="skunk\skunk.cu">
+      <Filter>Source Files\CUDA\skunk</Filter>
+    </CudaCompile>
+    <CudaCompile Include="skunk\cuda_skunk.cu">
+      <Filter>Source Files\CUDA\skunk</Filter>
+    </CudaCompile>
+    <CudaCompile Include="skunk\cuda_skunk_streebog.cu">
+      <Filter>Source Files\CUDA\skunk</Filter>
     </CudaCompile>
     <CudaCompile Include="tribus.cu">
       <Filter>Source Files\CUDA</Filter>
