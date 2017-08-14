@@ -1,6 +1,7 @@
 /**
- * skein + cube + fugue (to fix)
- * Based on krnlx work
+ * skein + cube + fugue merged kernel, based on krnlx work
+ *
+ * based on alexis78 sib kernels, final touch by tpruvot
  */
 
 #include <miner.h>
@@ -34,7 +35,8 @@ static void rrounds(uint32_t *x){
 		SWAP(x[ 4], x[12]);x[ 4] ^= x[20];x[12] ^= x[28];SWAP(x[ 5], x[13]);x[ 5] ^= x[21];x[13] ^= x[29];
 		SWAP(x[ 6], x[14]);x[ 6] ^= x[22];x[14] ^= x[30];SWAP(x[ 7], x[15]);x[ 7] ^= x[23];x[15] ^= x[31];
 		/* "swap x_1jk0m with x_1jk1m" */
-		SWAP(x[16], x[18]); SWAP(x[17], x[19]); SWAP(x[20], x[22]); SWAP(x[21], x[23]);SWAP(x[24], x[26]); SWAP(x[25], x[27]); SWAP(x[28], x[30]); SWAP(x[29], x[31]);
+		SWAP(x[16], x[18]); SWAP(x[17], x[19]); SWAP(x[20], x[22]); SWAP(x[21], x[23]);
+		SWAP(x[24], x[26]); SWAP(x[25], x[27]); SWAP(x[28], x[30]); SWAP(x[29], x[31]);
 		/* "add x_0jklm into x_1jklm modulo 2^32 rotate x_0jklm upwards by 11 bits" */
 		x[16] = x[16] + x[ 0]; x[ 0] = ROTL32(x[ 0],11);x[17] = x[17] + x[ 1];x[ 1] = ROTL32(x[ 1],11);
 		x[18] = x[18] + x[ 2]; x[ 2] = ROTL32(x[ 2],11);x[19] = x[19] + x[ 3];x[ 3] = ROTL32(x[ 3],11);
@@ -50,7 +52,8 @@ static void rrounds(uint32_t *x){
 		SWAP(x[ 8], x[12]); x[ 8] ^= x[24]; x[12] ^= x[28]; SWAP(x[ 9], x[13]); x[ 9] ^= x[25]; x[13] ^= x[29];
 		SWAP(x[10], x[14]); x[10] ^= x[26]; x[14] ^= x[30]; SWAP(x[11], x[15]); x[11] ^= x[27]; x[15] ^= x[31];
 		/* "swap x_1jkl0 with x_1jkl1" */
-		SWAP(x[16], x[17]); SWAP(x[18], x[19]); SWAP(x[20], x[21]); SWAP(x[22], x[23]);SWAP(x[24], x[25]); SWAP(x[26], x[27]); SWAP(x[28], x[29]); SWAP(x[30], x[31]);
+		SWAP(x[16], x[17]); SWAP(x[18], x[19]); SWAP(x[20], x[21]); SWAP(x[22], x[23]);
+		SWAP(x[24], x[25]); SWAP(x[26], x[27]); SWAP(x[28], x[29]); SWAP(x[30], x[31]);
 	}
 }
 
@@ -65,7 +68,7 @@ static __constant__ const uint32_t c_S[16] = {
 static __device__ uint32_t mixtab0[256] = {
 	0x63633297, 0x7c7c6feb, 0x77775ec7, 0x7b7b7af7, 0xf2f2e8e5, 0x6b6b0ab7,	0x6f6f16a7, 0xc5c56d39,
 	0x303090c0, 0x01010704, 0x67672e87, 0x2b2bd1ac, 0xfefeccd5, 0xd7d71371, 0xabab7c9a, 0x767659c3,
-	0xcaca4005, 0x8282a33e, 0xc9c94909, 0x7d7d68ef, 0xfafad0c5,	0x5959947f, 0x4747ce07, 0xf0f0e6ed,
+	0xcaca4005, 0x8282a33e, 0xc9c94909, 0x7d7d68ef, 0xfafad0c5, 0x5959947f, 0x4747ce07, 0xf0f0e6ed,
 	0xadad6e82, 0xd4d41a7d, 0xa2a243be, 0xafaf608a, 0x9c9cf946, 0xa4a451a6, 0x727245d3, 0xc0c0762d,
 	0xb7b728ea, 0xfdfdc5d9, 0x9393d47a, 0x2626f298, 0x363682d8, 0x3f3fbdfc, 0xf7f7f3f1, 0xcccc521d,
 	0x34348cd0, 0xa5a556a2, 0xe5e58db9, 0xf1f1e1e9, 0x71714cdf, 0xd8d83e4d, 0x313197c4, 0x15156b54,
@@ -430,7 +433,7 @@ void skunk_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output6
 		TFBIG_4o_UI2(17);
 		TFBIG_ADDKEY_UI2(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], h, t, 18);
 
-		//cubehash
+		// cubehash512
 		uint32_t x[32] = {
 			0x2AEA2A61, 0x50F494D4, 0x2D538B8B, 0x4167D83E,
 			0x3FEE2313, 0xC701CF8C, 0xCC39968E, 0x50AC5695,
@@ -445,8 +448,8 @@ void skunk_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output6
 //		*(uint2x4*)&x[ 0] ^= *((uint2x4*)&p[0]);
 		#pragma unroll 4
 		for(int i=0;i<4;i++){
-				x[i*2] ^= p[i].x;
-				x[i*2+1] ^= p[i].y;
+			x[i*2] ^= p[i].x;
+			x[i*2+1] ^= p[i].y;
 		}
 		rrounds(x);
 
@@ -470,6 +473,7 @@ void skunk_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output6
 		for (int i = 0;i < 10;++i)
 			rrounds(x);
 
+		// fugue512
 		uint32_t Hash[16];
 		#pragma unroll 16
 		for(int i = 0; i < 16; i++)
@@ -488,6 +492,7 @@ void skunk_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output6
 		FUGUE512_3(Hash[0x9], Hash[0xA], Hash[0xB]);
 		FUGUE512_3(Hash[0xC], Hash[0xD], Hash[0xE]);
 		FUGUE512_3(Hash[0xF], 0U, 512U);
+
 		//#pragma unroll 16
 		for (uint32_t i = 0; i < 32; i+=2){
 			mROR3;
@@ -514,10 +519,14 @@ void skunk_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *output6
 		}
 		S[ 4] ^= S[ 0];	S[ 9] ^= S[ 0];	S[18] ^= S[ 0];	S[27] ^= S[ 0];
 
-		S[ 0] = cuda_swab32(S[ 1]);	S[ 1] = cuda_swab32(S[ 2]);	S[ 2] = cuda_swab32(S[ 3]);	S[ 3] = cuda_swab32(S[ 4]);
-		S[ 4] = cuda_swab32(S[ 9]);	S[ 5] = cuda_swab32(S[10]);	S[ 6] = cuda_swab32(S[11]);	S[ 7] = cuda_swab32(S[12]);
-		S[ 8] = cuda_swab32(S[18]);	S[ 9] = cuda_swab32(S[19]);	S[10] = cuda_swab32(S[20]);	S[11] = cuda_swab32(S[21]);
-		S[12] = cuda_swab32(S[27]);	S[13] = cuda_swab32(S[28]);	S[14] = cuda_swab32(S[29]);	S[15] = cuda_swab32(S[30]);
+		S[ 0] = cuda_swab32(S[ 1]);	S[ 1] = cuda_swab32(S[ 2]);
+		S[ 2] = cuda_swab32(S[ 3]);	S[ 3] = cuda_swab32(S[ 4]);
+		S[ 4] = cuda_swab32(S[ 9]);	S[ 5] = cuda_swab32(S[10]);
+		S[ 6] = cuda_swab32(S[11]);	S[ 7] = cuda_swab32(S[12]);
+		S[ 8] = cuda_swab32(S[18]);	S[ 9] = cuda_swab32(S[19]);
+		S[10] = cuda_swab32(S[20]);	S[11] = cuda_swab32(S[21]);
+		S[12] = cuda_swab32(S[27]);	S[13] = cuda_swab32(S[28]);
+		S[14] = cuda_swab32(S[29]);	S[15] = cuda_swab32(S[30]);
 
 		uint64_t *outpHash = &output64[thread<<3];
 		*(uint2x4*)&outpHash[ 0] = *(uint2x4*)&S[ 0];
@@ -621,8 +630,10 @@ void skunk_setBlock_80(int thr_id, void *pdata)
 	p[2] += p[3];
 	p[4] += p[5]; p[6] += p[7];
 
-	p[3] = ROTL64(p[3], 36) ^ p[2];	p[5] = ROTL64(p[5], 19) ^ p[4];	p[7] = ROTL64(p[7], 37) ^ p[6];
-	p[4] += p[7];	p[6] += p[5];
+	p[3] = ROTL64(p[3], 36) ^ p[2];
+	p[5] = ROTL64(p[5], 19) ^ p[4];
+	p[7] = ROTL64(p[7], 37) ^ p[6];
+	p[4] += p[7]; p[6] += p[5];
 
 	p[7] = ROTL64(p[7], 27) ^ p[4];
 	p[5] = ROTL64(p[5], 14) ^ p[6];

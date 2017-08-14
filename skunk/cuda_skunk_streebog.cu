@@ -1,12 +1,12 @@
 /*
- * Streebog GOST R 34.10-2012 CUDA implementation.
+ * Streebog GOST R 34.10-2012 stripped CUDA implementation for final hash
  *
  * https://tools.ietf.org/html/rfc6986
  * https://en.wikipedia.org/wiki/Streebog
  *
  * ==========================(LICENSE BEGIN)============================
  *
- * @author   Tanguy Pruvot - 2015
+ * @author   Tanguy Pruvot - 2017
  * @author   Alexis Provos - 2016
  */
 
@@ -150,8 +150,8 @@ static void GOST_FS_LDG(const uint2 shared[8][256],const uint2 *const __restrict
 			^ shared[2][__byte_perm(state[5].y,0,0x44441)]
 			^ shared[3][__byte_perm(state[4].y,0,0x44441)]
 			^ shared[4][__byte_perm(state[3].y,0,0x44441)]
-			^ shared[5][__byte_perm(state[2].y,0,0x44441)] 
-			^ __ldg(&T72[__byte_perm(state[0].y,0,0x44441)]) 
+			^ shared[5][__byte_perm(state[2].y,0,0x44441)]
+			^ __ldg(&T72[__byte_perm(state[0].y,0,0x44441)])
 			^ __ldg(&T62[__byte_perm(state[1].y,0,0x44441)]);
 
 	return_state[6] = __ldg(&T02[__byte_perm(state[7].y,0,0x44442)])
