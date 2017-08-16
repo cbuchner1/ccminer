@@ -806,10 +806,11 @@ void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
 #define T6(x) shared[6][x]
 #define T7(x) shared[7][x]
 
+// Streebog final for Veltor and skunk on SM 3.x
 __constant__ uint64_t target64[4];
 
 __host__
-void streebog_set_target(const uint32_t* ptarget)
+void streebog_sm3_set_target(uint32_t* ptarget)
 {
 	cudaMemcpyToSymbol(target64,ptarget,4*sizeof(uint64_t),0,cudaMemcpyHostToDevice);
 }
@@ -995,7 +996,7 @@ void streebog_gpu_hash_64_final(uint64_t *g_hash, uint32_t* resNonce)
 }
 
 __host__
-void streebog_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t *d_hash,uint32_t* d_resNonce)
+void streebog_sm3_hash_64_final(int thr_id, uint32_t threads, uint32_t *d_hash,uint32_t* d_resNonce)
 {
 	dim3 grid((threads + TPB-1) / TPB);
 	dim3 block(TPB);

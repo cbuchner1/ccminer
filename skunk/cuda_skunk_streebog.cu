@@ -204,7 +204,7 @@ static void GOST_E12(const uint2 shared[8][256],uint2 *const __restrict__ K, uin
 __constant__ uint64_t target64[4];
 
 __host__
-void skunk_set_target(uint32_t* ptarget)
+void skunk_streebog_set_target(uint32_t* ptarget)
 {
 	cudaMemcpyToSymbol(target64, ptarget, 4*sizeof(uint64_t), 0, cudaMemcpyHostToDevice);
 }

@@ -10,11 +10,17 @@ extern "C" {
 #include "cuda_x11.h"
 
 extern void skein512_cpu_setBlock_80(void *pdata);
-extern void quark_skein512_cpu_init(int thr_id, uint32_t threads);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int swap);
 extern void x14_shabal512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
-extern void streebog_cpu_hash_64_final(int thr_id, uint32_t threads, uint32_t *d_hash, uint32_t* d_resNonce);
-extern void streebog_set_target(const uint32_t* ptarget);
+
+// for SM3.x
+extern void streebog_sm3_set_target(uint32_t* ptarget);
+extern void streebog_sm3_hash_64_final(int thr_id, uint32_t threads, uint32_t *d_hash, uint32_t* d_resNonce);
+
+// for latest cards only
+extern void skunk_cpu_init(int thr_id, uint32_t threads);
+extern void skunk_streebog_set_target(uint32_t* ptarget);
+extern void skunk_cuda_streebog(int thr_id, uint32_t threads, uint32_t *d_hash, uint32_t* d_resNonce);
 
 #include <stdio.h>
 #include <memory.h>
@@ -23,7 +29,7 @@ extern void streebog_set_target(const uint32_t* ptarget);
 static uint32_t *d_hash[MAX_GPUS];
 static uint32_t *d_resNonce[MAX_GPUS];
 
-// veltorcoin CPU Hash
+// veltor CPU Hash
 extern "C" void veltorhash(void *output, const void *input)
 {
 	unsigned char _ALIGN(128) hash[128] = { 0 };
@@ -53,6 +59,7 @@ extern "C" void veltorhash(void *output, const void *input)
 }
 
 static bool init[MAX_GPUS] = { 0 };
+static bool use_compat_kernels[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_veltor(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -80,7 +87,9 @@ extern "C" int scanhash_veltor(int thr_id, struct work* work, uint32_t max_nonce
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
-		quark_skein512_cpu_init(thr_id, throughput);
+		skunk_cpu_init(thr_id, throughput);
+		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500);
+
 		x11_shavite512_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
@@ -97,14 +106,20 @@ extern "C" int scanhash_veltor(int thr_id, struct work* work, uint32_t max_nonce
 	skein512_cpu_setBlock_80(endiandata);
 
 	cudaMemset(d_resNonce[thr_id], 0xff, NBN*sizeof(uint32_t));
-	streebog_set_target(ptarget);
+	if(use_compat_kernels[thr_id])
+		streebog_sm3_set_target(ptarget);
+	else
+		skunk_streebog_set_target(ptarget);
 
 	do {
 		int order = 0;
 		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], 1); order++;
 		x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x14_shabal512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-		streebog_cpu_hash_64_final(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
+		if(use_compat_kernels[thr_id])
+			streebog_sm3_hash_64_final(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
+		else
+			skunk_cuda_streebog(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
 
 		cudaMemcpy(h_resNonce, d_resNonce[thr_id], NBN*sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
