@@ -167,6 +167,9 @@ extern "C" int cuda_num_devices()
 // Gerätenamen holen
 extern char *device_name[8];
 extern int device_map[8];
+int device_major[8]; 
+int device_minor[8];
+int compute_version[8];
 
 extern "C" void cuda_devicenames()
 {
@@ -185,6 +188,9 @@ extern "C" void cuda_devicenames()
         cudaGetDeviceProperties(&props, device_map[i]);
 
         device_name[i] = strdup(props.name);
+		device_major[i] = props.major; 
+		device_minor[i] = props.minor;
+		compute_version[i]= props.major*10+props.minor;
     }
 }
 

@@ -57,6 +57,7 @@ esac
 PTHREAD_FLAGS="-pthread"
 WS2_LIBS=""
 
+
 case $target in
   *-*-mingw*)
     have_win32=true

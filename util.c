@@ -7,7 +7,7 @@
  * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.  See COPYING for more details.
  */
-
+ 
 #define _GNU_SOURCE
 #include "cpuminer-config.h"
 
@@ -74,21 +74,23 @@ void applog(int prio, const char *fmt, ...)
 
 #ifdef HAVE_SYSLOG_H
 	if (use_syslog) {
-		va_list ap2;
+		va_list ap2, ap3;
 		char *buf;
 		int len;
 		
 		va_copy(ap2, ap);
+		va_copy(ap3, ap);
 		len = vsnprintf(NULL, 0, fmt, ap2) + 1;
 		va_end(ap2);
 		buf = alloca(len);
-		if (vsnprintf(buf, len, fmt, ap) >= 0)
+		if (vsnprintf(buf, len, fmt, ap3) >= 0)
 			syslog(prio, "%s", buf);
+		va_end(ap3);
 	}
 #else
 	if (0) {}
 #endif
-	else {
+	if (1) {
 		char *f;
 		int len;
 		time_t now;
@@ -296,6 +298,7 @@ static int sockopt_keepalive_cb(void *userdata, curl_socket_t fd,
 }
 #endif
 
+
 json_t *json_rpc_call(CURL *curl, const char *url,
 		      const char *userpass, const char *rpc_req,
 		      bool longpoll_scan, bool longpoll, int *curl_err)
@@ -449,6 +452,229 @@ err_out:
 	return NULL;
 }
 
+
+
+static char *hack_json_numbers(const char *in)
+{
+	char *out;
+	int i, off, intoff;
+	bool in_str, in_int;
+
+	out =(char*) calloc(2 * strlen(in) + 1, 1);
+	if (!out)
+		return NULL;
+	off = intoff = 0;
+	in_str = in_int = false;
+	for (i = 0; in[i]; i++) {
+		char c = in[i];
+		if (c == '"') {
+			in_str = !in_str;
+		}
+		else if (c == '\\') {
+			out[off++] = c;
+			if (!in[++i])
+				break;
+		}
+		else if (!in_str && !in_int && isdigit(c)) {
+			intoff = off;
+			in_int = true;
+		}
+		else if (in_int && !isdigit(c)) {
+			if (c != '.' && c != 'e' && c != 'E' && c != '+' && c != '-') {
+				in_int = false;
+				if (off - intoff > 4) {
+					char *end;
+#if JSON_INTEGER_IS_LONG_LONG
+					errno = 0;
+					strtoll(out + intoff, &end, 10);
+					if (!*end && errno == ERANGE) {
+#else
+					long l;
+					errno = 0;
+					l = strtol(out + intoff, &end, 10);
+					if (!*end && (errno == ERANGE || l > INT_MAX)) {
+#endif
+						out[off++] = '.';
+						out[off++] = '0';
+					}
+					}
+				}
+			}
+		out[off++] = in[i];
+		}
+	return out;
+	}
+
+
+json_t *json_rpc_call2(CURL *curl, const char *url,
+	const char *userpass, const char *rpc_req,
+	int *curl_err, int flags)
+{
+	json_t *val, *err_val, *res_val;
+	int rc;
+	long http_rc;
+	struct data_buffer all_data = { 0 };
+	struct upload_buffer upload_data;
+	char *json_buf;
+	json_error_t err;
+	struct curl_slist *headers = NULL;
+	char len_hdr[64];
+	char curl_err_str[CURL_ERROR_SIZE];
+	long timeout = (flags & JSON_RPC_LONGPOLL) ? opt_timeout : 30;
+	struct header_info hi = { 0 };
+
+	/* it is assumed that 'curl' is freshly [re]initialized at this pt */
+
+	if (opt_protocol)
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	if (opt_cert)
+		curl_easy_setopt(curl, CURLOPT_CAINFO, opt_cert);
+	curl_easy_setopt(curl, CURLOPT_ENCODING, "");
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, all_data_cb);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &all_data);
+	curl_easy_setopt(curl, CURLOPT_READFUNCTION, upload_data_cb);
+	curl_easy_setopt(curl, CURLOPT_READDATA, &upload_data);
+#if LIBCURL_VERSION_NUM >= 0x071200
+	curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, &seek_data_cb);
+	curl_easy_setopt(curl, CURLOPT_SEEKDATA, &upload_data);
+#endif
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_err_str);
+	if (opt_redirect)
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
+	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, resp_hdr_cb);
+	curl_easy_setopt(curl, CURLOPT_HEADERDATA, &hi);
+	if (opt_proxy) {
+		curl_easy_setopt(curl, CURLOPT_PROXY, opt_proxy);
+		curl_easy_setopt(curl, CURLOPT_PROXYTYPE, opt_proxy_type);
+	}
+	if (userpass) {
+		curl_easy_setopt(curl, CURLOPT_USERPWD, userpass);
+		curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+	}
+#if LIBCURL_VERSION_NUM >= 0x070f06
+	if (flags & JSON_RPC_LONGPOLL)
+		curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_keepalive_cb);
+#endif
+	curl_easy_setopt(curl, CURLOPT_POST, 1);
+
+	if (opt_protocol)
+		applog(LOG_DEBUG, "JSON protocol request:\n%s\n", rpc_req);
+
+	upload_data.buf = rpc_req;
+	upload_data.len = strlen(rpc_req);
+	upload_data.pos = 0;
+	sprintf(len_hdr, "Content-Length: %lu",
+		(unsigned long)upload_data.len);
+
+	headers = curl_slist_append(headers, "Content-Type: application/json");
+	headers = curl_slist_append(headers, len_hdr);
+	headers = curl_slist_append(headers, "User-Agent: " USER_AGENT);
+	headers = curl_slist_append(headers, "X-Mining-Extensions: midstate");
+	headers = curl_slist_append(headers, "Accept:"); /* disable Accept hdr*/
+	headers = curl_slist_append(headers, "Expect:"); /* disable Expect hdr*/
+
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+	rc = curl_easy_perform(curl);
+	if (curl_err != NULL)
+		*curl_err = rc;
+	if (rc) {
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_rc);
+		if (!((flags & JSON_RPC_LONGPOLL) && rc == CURLE_OPERATION_TIMEDOUT) &&
+			!((flags & JSON_RPC_QUIET_404) && http_rc == 404))
+			applog(LOG_ERR, "HTTP request failed: %s", curl_err_str);
+		if (curl_err && (flags & JSON_RPC_QUIET_404) && http_rc == 404)
+			*curl_err = CURLE_OK;
+		goto err_out;
+	}
+
+	/* If X-Stratum was found, activate Stratum */
+	if (want_stratum && hi.stratum_url &&
+		!strncasecmp(hi.stratum_url, "stratum+tcp://", 14)) {
+		have_stratum = true;
+		tq_push(thr_info[stratum_thr_id].q, hi.stratum_url);
+		hi.stratum_url = NULL;
+	}
+
+	/* If X-Long-Polling was found, activate long polling */
+	if (!have_longpoll && want_longpoll && hi.lp_path && !have_gbt &&
+		allow_getwork && !have_stratum) {
+		have_longpoll = true;
+		tq_push(thr_info[longpoll_thr_id].q, hi.lp_path);
+		hi.lp_path = NULL;
+	}
+
+	if (!all_data.buf) {
+		applog(LOG_ERR, "Empty data received in json_rpc_call.");
+		goto err_out;
+	}
+
+	json_buf = hack_json_numbers((const char*)all_data.buf);
+	errno = 0; /* needed for Jansson < 2.1 */
+	val = JSON_LOADS(json_buf, &err);
+	free(json_buf);
+	if (!val) {
+		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+		goto err_out;
+	}
+
+	if (opt_protocol) {
+		char *s = json_dumps(val, JSON_INDENT(3));
+		applog(LOG_DEBUG, "JSON protocol response:\n%s", s);
+		free(s);
+	}
+
+	/* JSON-RPC valid response returns a 'result' and a null 'error'. */
+	res_val = json_object_get(val, "result");
+	err_val = json_object_get(val, "error");
+
+	if (!res_val || (err_val && !json_is_null(err_val))) {
+		char *s;
+
+		if (err_val)
+			s = json_dumps(err_val, JSON_INDENT(3));
+		else
+			s = strdup("(unknown reason)");
+
+		applog(LOG_ERR, "JSON-RPC call failed: %s", s);
+
+		free(s);
+
+		goto err_out;
+	}
+
+	if (hi.reason)
+		json_object_set_new(val, "reject-reason", json_string(hi.reason));
+
+	databuf_free(&all_data);
+	curl_slist_free_all(headers);
+	curl_easy_reset(curl);
+	return val;
+
+err_out:
+	free(hi.lp_path);
+	free(hi.reason);
+	free(hi.stratum_url);
+	databuf_free(&all_data);
+	curl_slist_free_all(headers);
+	curl_easy_reset(curl);
+	return NULL;
+}
+
+
+void abin2hex(char *s, const unsigned char *p, size_t len)
+{
+	int i;
+	for (i = 0; i < len; i++)
+		sprintf(s + (i * 2), "%02x", (unsigned int) p[i]);
+}
+
+
 char *bin2hex(const unsigned char *p, size_t len)
 {
 	unsigned int i;
@@ -488,6 +714,140 @@ bool hex2bin(unsigned char *p, const char *hexstr, size_t len)
 
 	return (len == 0 && *hexstr == 0) ? true : false;
 }
+
+int varint_encode(unsigned char *p, uint64_t n)
+{
+	int i;
+	if (n < 0xfd) {
+		p[0] = n;
+		return 1;
+	}
+	if (n <= 0xffff) {
+		p[0] = 0xfd;
+		p[1] = n & 0xff;
+		p[2] = n >> 8;
+		return 3;
+	}
+	if (n <= 0xffffffff) {
+		p[0] = 0xfe;
+		for (i = 1; i < 5; i++) {
+			p[i] = n & 0xff;
+			n >>= 8;
+		}
+		return 5;
+	}
+	p[0] = 0xff;
+	for (i = 1; i < 9; i++) {
+		p[i] = n & 0xff;
+		n >>= 8;
+	}
+	return 9;
+}
+
+static const char b58digits[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+static bool b58dec(unsigned char *bin, size_t binsz, const char *b58)
+{
+	size_t i, j;
+	uint64_t t;
+	uint32_t c;
+	uint32_t *outi;
+	size_t outisz = (binsz + 3) / 4;
+	int rem = binsz % 4;
+	uint32_t remmask = 0xffffffff << (8 * rem);
+	size_t b58sz = strlen(b58);
+	bool rc = false;
+
+	outi = (uint32_t*) calloc(outisz, sizeof(*outi));
+
+	for (i = 0; i < b58sz; ++i) {
+		for (c = 0; b58digits[c] != b58[i]; c++)
+			if (!b58digits[c])
+				goto out;
+		for (j = outisz; j--;) {
+			t = (uint64_t)outi[j] * 58 + c;
+			c = t >> 32;
+			outi[j] = t & 0xffffffff;
+		}
+		if (c || outi[0] & remmask)
+			goto out;
+	}
+
+	j = 0;
+	switch (rem) {
+	case 3:
+		*(bin++) = (outi[0] >> 16) & 0xff;
+	case 2:
+		*(bin++) = (outi[0] >> 8) & 0xff;
+	case 1:
+		*(bin++) = outi[0] & 0xff;
+		++j;
+	default:
+		break;
+	}
+	for (; j < outisz; ++j) {
+		be32enc((uint32_t *)bin, outi[j]);
+		bin += sizeof(uint32_t);
+	}
+
+	rc = true;
+out:
+	free(outi);
+	return rc;
+}
+
+static int b58check(unsigned char *bin, size_t binsz, const char *b58)
+{
+	unsigned char buf[32];
+	int i;
+
+	sha256d(buf, bin, binsz - 4);
+	if (memcmp(&bin[binsz - 4], buf, 4))
+		return -1;
+
+	/* Check number of zeros is correct AFTER verifying checksum
+	* (to avoid possibility of accessing the string beyond the end) */
+	for (i = 0; bin[i] == '\0' && b58[i] == '1'; ++i);
+	if (bin[i] == '\0' || b58[i] == '1')
+		return -3;
+
+	return bin[0];
+}
+
+size_t address_to_script(unsigned char *out, size_t outsz, const char *addr)
+{
+	unsigned char addrbin[25];
+	int addrver;
+	size_t rv;
+
+	if (!b58dec(addrbin, sizeof(addrbin), addr))
+		return 0;
+	addrver = b58check(addrbin, sizeof(addrbin), addr);
+	if (addrver < 0)
+		return 0;
+	switch (addrver) {
+	case 5:    /* Bitcoin script hash */
+	case 196:  /* Testnet script hash */
+		if (outsz < (rv = 23))
+			return rv;
+		out[0] = 0xa9;  /* OP_HASH160 */
+		out[1] = 0x14;  /* push 20 bytes */
+		memcpy(&out[2], &addrbin[1], 20);
+		out[22] = 0x87;  /* OP_EQUAL */
+		return rv;
+	default:
+		if (outsz < (rv = 25))
+			return rv;
+		out[0] = 0x76;  /* OP_DUP */
+		out[1] = 0xa9;  /* OP_HASH160 */
+		out[2] = 0x14;  /* push 20 bytes */
+		memcpy(&out[3], &addrbin[1], 20);
+		out[23] = 0x88;  /* OP_EQUALVERIFY */
+		out[24] = 0xac;  /* OP_CHECKSIG */
+		return rv;
+	}
+}
+
 
 /* Subtract the `struct timeval' values X and Y,
    storing the result in RESULT.
@@ -981,6 +1341,54 @@ out:
 
 	return ret;
 }
+static bool stratum_notify_m7(struct stratum_ctx *sctx, json_t *params)
+{
+	const char *job_id, *prevblock, *accroot, *merkleroot, *version, *ntime;
+	int height;
+	bool clean;
+
+	job_id = json_string_value(json_array_get(params, 0));
+	prevblock = json_string_value(json_array_get(params, 1));
+	accroot = json_string_value(json_array_get(params, 2));
+	merkleroot = json_string_value(json_array_get(params, 3));
+	height = json_integer_value(json_array_get(params, 4));
+	version = json_string_value(json_array_get(params, 5));
+	ntime = json_string_value(json_array_get(params, 6));
+	clean = json_is_true(json_array_get(params, 7));
+
+	if (!job_id || !prevblock || !accroot || !merkleroot || 
+		!version || !height || !ntime ||
+		strlen(prevblock) != 32*2 || 
+		strlen(accroot) != 32*2 || 
+		strlen(merkleroot) != 32*2 || 
+		strlen(ntime) != 8*2 || strlen(version) != 2*2) {
+		applog(LOG_ERR, "Stratum (M7) notify: invalid parameters");
+		return false;
+	}
+
+	pthread_mutex_lock(&sctx->work_lock);
+
+	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id)) {
+		sctx->job.xnonce2 = (unsigned char *)realloc(sctx->job.xnonce2, sctx->xnonce2_size);
+		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
+	}
+	free(sctx->job.job_id);
+	sctx->job.job_id = strdup(job_id);
+
+	hex2bin(sctx->job.m7prevblock, prevblock, 32);
+	hex2bin(sctx->job.m7accroot, accroot, 32);
+	hex2bin(sctx->job.m7merkleroot, merkleroot, 32);
+	be64enc(sctx->job.m7height, height);
+	hex2bin(sctx->job.m7version, version, 2);
+	hex2bin(sctx->job.m7ntime, ntime, 8);
+	sctx->job.clean = clean;
+
+	sctx->job.diff = sctx->next_diff;
+
+	pthread_mutex_unlock(&sctx->work_lock);
+
+	return true;
+}
 
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
@@ -1177,11 +1585,12 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		goto out;
 	id = json_object_get(val, "id");
 	params = json_object_get(val, "params");
-
+	
 	if (!strcasecmp(method, "mining.notify")) {
 		ret = stratum_notify(sctx, params);
 		goto out;
 	}
+	
 	if (!strcasecmp(method, "mining.set_difficulty")) {
 		ret = stratum_set_difficulty(sctx, params);
 		goto out;
@@ -1205,6 +1614,65 @@ out:
 
 	return ret;
 }
+
+bool stratum_handle_method_m7(struct stratum_ctx *sctx, const char *s)
+{
+	json_t *val, *id, *params;
+	json_error_t err;
+	const char *method;
+	bool ret = false;
+
+	val = JSON_LOADS(s, &err);
+	if (!val) {
+		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+		goto out;
+	}
+
+	method = json_string_value(json_object_get(val, "method"));
+	if (!method)
+		goto out;
+	id = json_object_get(val, "id");
+	params = json_object_get(val, "params");
+	/*
+	if (!strcasecmp(method, "mining.notify")) {
+		ret = stratum_notify(sctx, params);
+		goto out;
+	}
+	*/
+	if (!strcasecmp(method, "mining.notify")) {
+//		if (opt_algo == ALGO_M7) {
+			ret = stratum_notify_m7(sctx, params);
+//		} else {
+//			ret = stratum_notify(sctx, params);
+//		}
+		goto out;
+	}
+
+
+	if (!strcasecmp(method, "mining.set_difficulty")) {
+		ret = stratum_set_difficulty(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.reconnect")) {
+		ret = stratum_reconnect(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.get_version")) {
+		ret = stratum_get_version(sctx, id);
+		goto out;
+	}
+	if (!strcasecmp(method, "client.show_message")) {
+		ret = stratum_show_message(sctx, id, params);
+		goto out;
+	}
+
+out:
+	if (val)
+		json_decref(val);
+
+	return ret;
+}
+
 
 struct thread_q *tq_new(void)
 {
