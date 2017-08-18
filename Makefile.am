@@ -193,3 +193,6 @@ scrypt/titan_kernel.o: scrypt/titan_kernel.cu
 skein.o: skein.cu
 	$(NVCC) $(nvcc_FLAGS) --maxrregcount=64 -o $@ -c $<
 
+lyra2/cuda_lyra2v2.o: lyra2/cuda_lyra2v2.cu
+	$(NVCC) $(nvcc_FLAGS) --maxrregcount=255 -o $@ -c $<
+
