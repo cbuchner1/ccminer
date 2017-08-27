@@ -30,6 +30,10 @@
 #define MADV_HUGEPAGE 0
 #endif
 
+#ifndef MADV_HUGEPAGE
+#define MADV_HUGEPAGE 0
+#endif
+
 #ifndef PRIu64
 #define PRIu64 "I64u"
 #endif
