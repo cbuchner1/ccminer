@@ -109,6 +109,9 @@
     <Filter Include="Source Files\equi">
       <UniqueIdentifier>{031afae7-2a78-4e32-9738-4b589b6f7ff3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\tribus">
+      <UniqueIdentifier>{1e548d79-c217-4203-989a-a592fe2b2de3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -766,9 +769,15 @@
     <CudaCompile Include="skunk\cuda_skunk_streebog.cu">
       <Filter>Source Files\CUDA\skunk</Filter>
     </CudaCompile>
-    <CudaCompile Include="tribus.cu">
-      <Filter>Source Files\CUDA</Filter>
+    <CudaCompile Include="tribus\tribus.cu">
+      <Filter>Source Files\CUDA\tribus</Filter>
     </CudaCompile>
+    <CudaCompile Include="tribus\cuda_echo512_final.cu">
+      <Filter>Source Files\CUDA\tribus</Filter>
+    </CudaCompile>
+    <ClInclude Include="tribus\cuda_echo512_aes.cuh">
+      <Filter>Source Files\CUDA\tribus</Filter>
+    </ClInclude>
     <CudaCompile Include="x11\sib.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
