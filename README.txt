@@ -1,5 +1,5 @@
 
-ccminer 2.2 (August 2017) "Equihash, tribus and optimized skunk"
+ccminer 2.2.1 (Sept. 2017) "optimized tribus kernel (Maxwell+)"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -277,6 +277,8 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  Sep. 01st 2017  v2.2.1
+                  Improve tribus algo on recent cards (up to +10%)
 
   Aug. 13th 2017  v2.2
                   New skunk algo, using the heavy streebog algorithm
