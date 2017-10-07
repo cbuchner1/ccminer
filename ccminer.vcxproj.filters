@@ -778,6 +778,9 @@
     <ClInclude Include="tribus\cuda_echo512_aes.cuh">
       <Filter>Source Files\CUDA\tribus</Filter>
     </ClInclude>
+    <CudaCompile Include="x11\phi.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
     <CudaCompile Include="x11\sib.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>

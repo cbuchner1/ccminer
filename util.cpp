@@ -2240,6 +2240,9 @@ void print_hash_tests(void)
 	pentablakehash(&hash[0], &buf[0]);
 	printpfx("pentablake", hash);
 
+	phihash(&hash[0], &buf[0]);
+	printpfx("phi", hash);
+
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
 

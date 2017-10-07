@@ -1,5 +1,5 @@
 
-ccminer 2.2.1 (Sept. 2017) "optimized tribus kernel (Maxwell+)"
+ccminer 2.2.2 (Oct. 2017) "phi algo"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -102,6 +102,7 @@ its command line interface and options.
                           neoscrypt   use to mine FeatherCoin
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
+                          phi         use to mine BHCoin
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit
                           scrypt      use to mine Scrypt coins
@@ -277,6 +278,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  Oct. 07th 217   v2.2.2
+                  Import phi algo from BHCoin repository (anorganix)
+
   Sep. 01st 2017  v2.2.1
                   Improve tribus algo on recent cards (up to +10%)
 

@@ -266,6 +266,7 @@ Options:\n\
 			neoscrypt   FeatherCoin, Phoenix, UFO...\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
+			phi         BHCoin\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
 			sha256d     SHA256d (bitcoin)\n\
@@ -279,7 +280,7 @@ Options:\n\
 			skunk       Skein Cube Fugue Streebog\n\
 			s3          S3 (1Coin)\n\
 			timetravel  Machinecoin permuted x8\n\
-			tribus      Denerius\n\
+			tribus      Denarius\n\
 			vanilla     Blake256-8 (VNL)\n\
 			veltor      Thorsriddle streebog\n\
 			whirlcoin   Old Whirlcoin (Whirlpool algo)\n\
@@ -2225,6 +2226,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_JACKPOT:
 			case ALGO_JHA:
 			case ALGO_LYRA2v2:
+			case ALGO_PHI:
 			case ALGO_S3:
 			case ALGO_SKUNK:
 			case ALGO_TIMETRAVEL:
@@ -2405,6 +2407,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_PENTABLAKE:
 			rc = scanhash_pentablake(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_PHI:
+			rc = scanhash_phi(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_SCRYPT:
 			rc = scanhash_scrypt(thr_id, &work, max_nonce, &hashes_done,
@@ -3847,7 +3852,7 @@ int main(int argc, char *argv[])
 #endif
 			CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10, arch);
 		printf("  Originally based on Christian Buchner and Christian H. project\n");
-		printf("  Include some algos from alexis78, djm34, sp, tsiv and klausT.\n\n");
+		printf("  Include some kernels from alexis78, djm34, djEzo, tsiv and krnlx.\n\n");
 		printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
 	}
 

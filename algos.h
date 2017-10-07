@@ -35,6 +35,7 @@ enum sha_algos {
 	ALGO_NEOSCRYPT,
 	ALGO_NIST5,
 	ALGO_PENTABLAKE,
+	ALGO_PHI,
 	ALGO_QUARK,
 	ALGO_QUBIT,
 	ALGO_SCRYPT,
@@ -100,6 +101,7 @@ static const char *algo_names[] = {
 	"neoscrypt",
 	"nist5",
 	"penta",
+	"phi",
 	"quark",
 	"qubit",
 	"scrypt",
@@ -167,6 +169,8 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_LYRA2;
 		else if (!strcasecmp("lyra2rev2", arg))
 			i = ALGO_LYRA2v2;
+		else if (!strcasecmp("phi1612", arg))
+			i = ALGO_PHI;
 		else if (!strcasecmp("bitcoin", arg))
 			i = ALGO_SHA256D;
 		else if (!strcasecmp("sha256", arg))

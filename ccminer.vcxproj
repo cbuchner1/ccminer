@@ -487,6 +487,7 @@
       <AdditionalOptions Condition="'$(Configuration)'=='Release'">--ptxas-options="-dlcm=cg" %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
     </CudaCompile>
+    <CudaCompile Include="x11\phi.cu" />
     <CudaCompile Include="quark\cuda_bmw512.cu">
       <MaxRegCount>128</MaxRegCount>
     </CudaCompile>
