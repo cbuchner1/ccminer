@@ -18,6 +18,7 @@ extern "C" {
 #include "cuda_x11.h"
 
 extern void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
+extern void streebog_hash_64_maxwell(int thr_id, uint32_t threads, uint32_t *d_hash);
 
 #include <stdio.h>
 #include <memory.h>
@@ -98,6 +99,7 @@ extern "C" void sibhash(void *output, const void *input)
 #include "cuda_debug.cuh"
 
 static bool init[MAX_GPUS] = { 0 };
+static bool use_compat_kernels[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -123,6 +125,9 @@ extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, u
 			CUDA_LOG_ERROR();
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
+
+		cuda_get_arch(thr_id);
+		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500);
 
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
@@ -166,7 +171,10 @@ extern "C" int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, u
 		TRACE("jh512  :");
 		quark_keccak512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		TRACE("keccak :");
-		streebog_cpu_hash_64(thr_id, throughput, d_hash[thr_id]);
+		if (use_compat_kernels[thr_id])
+			streebog_cpu_hash_64(thr_id, throughput, d_hash[thr_id]);
+		else
+			streebog_hash_64_maxwell(thr_id, throughput, d_hash[thr_id]);
 		TRACE("gost   :");
 		x11_luffaCubehash512_cpu_hash_64(thr_id, throughput, d_hash[thr_id], order++);
 		TRACE("luffa+c:");
