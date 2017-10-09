@@ -2227,6 +2227,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_HEAVY:
 			case ALGO_JACKPOT:
 			case ALGO_JHA:
+			case ALGO_HSR:
 			case ALGO_LYRA2v2:
 			case ALGO_PHI:
 			case ALGO_S3:
@@ -2360,6 +2361,9 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_HMQ1725:
 			rc = scanhash_hmq17(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_HSR:
+			rc = scanhash_hsr(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
 		case ALGO_HEAVY:

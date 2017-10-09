@@ -289,6 +289,7 @@ extern int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, 
 extern int scanhash_groestlcoin(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_hmq17(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_heavy(int thr_id,struct work *work, uint32_t max_nonce, unsigned long *hashes_done, uint32_t maxvote, int blocklen);
+extern int scanhash_hsr(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_jha(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_jackpot(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done); // quark method
 extern int scanhash_lbry(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -351,6 +352,7 @@ extern void free_fugue256(int thr_id);
 extern void free_groestlcoin(int thr_id);
 extern void free_heavy(int thr_id);
 extern void free_hmq17(int thr_id);
+extern void free_hsr(int thr_id);
 extern void free_jackpot(int thr_id);
 extern void free_jha(int thr_id);
 extern void free_lbry(int thr_id);
@@ -892,6 +894,7 @@ void fresh_hash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
 void hmq17hash(void *output, const void *input);
+void hsr_hash(void *output, const void *input);
 void keccak256_hash(void *state, const void *input);
 void jackpothash(void *state, const void *input);
 void groestlhash(void *state, const void *input);
