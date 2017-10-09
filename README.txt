@@ -1,5 +1,5 @@
 
-ccminer 2.2.2 (Oct. 2017) "phi algo"
+ccminer 2.2.2 (Oct. 2017) "phi and hsr algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -90,7 +90,8 @@ its command line interface and options.
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
                           heavy       use to mine Heavycoin
-                          jha         use to mine JackpotCoin
+                          hsr         use to mine Hshare
+                          jackpot     use to mine Sweepcoin
                           keccak      use to mine Maxcoin
                           lbry        use to mine LBRY Credits
                           luffa       use to mine Joincoin
@@ -102,7 +103,7 @@ its command line interface and options.
                           neoscrypt   use to mine FeatherCoin
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
-                          phi         use to mine BHCoin
+                          phi         use to mine LUXCoin
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit
                           scrypt      use to mine Scrypt coins
@@ -156,6 +157,7 @@ its command line interface and options.
   -T, --timeout=N       network timeout, in seconds (default: 300)
   -s, --scantime=N      upper bound on time spent scanning current work when
                         long polling is unavailable, in seconds (default: 5)
+      --submit-stale    ignore stale job checks, may create more rejected shares
   -n, --ndevs           list cuda devices
   -N, --statsavg        number of samples used to display hashrate (default: 30)
       --no-gbt          disable getblocktemplate support (height check in solo)
@@ -278,8 +280,13 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
-  Oct. 07th 217   v2.2.2
-                  Import phi algo from BHCoin repository (anorganix)
+  Oct. 09th 2017  v2.2.2
+                  Import and clean the hsr algo (x13 + custom hash)
+                  Import and optimise phi algo from LuxCoin repository
+                  Improve sib algo too for maxwell and pascal cards
+                  Small fix to handle more than 9 cards on linux (-d 10+)
+                  Attempt to free equihash memory "properly"
+                  --submit-stale parameter for supernova pool (which change diff too fast)
 
   Sep. 01st 2017  v2.2.1
                   Improve tribus algo on recent cards (up to +10%)

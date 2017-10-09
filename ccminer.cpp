@@ -254,7 +254,7 @@ Options:\n\
 			groestl     Groestlcoin\n\
 			heavy       Heavycoin\n\
 			hmq1725     Doubloons / Espers\n\
-			jha         JHA v8 (JackpotCoin)\n\
+			jackpot     JHA v8\n\
 			keccak      Keccak-256 (Maxcoin)\n\
 			lbry        LBRY Credits (Sha/Ripemd)\n\
 			luffa       Joincoin\n\
