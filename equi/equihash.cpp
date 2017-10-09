@@ -281,7 +281,11 @@ void free_equihash(int thr_id)
 	if (!init[thr_id])
 		return;
 
-	delete(solvers[thr_id]);
+	// assume config 1 was used... interface destructor seems bad
+	eq_cuda_context<CONFIG_MODE_1>* ptr = dynamic_cast<eq_cuda_context<CONFIG_MODE_1>*>(solvers[thr_id]);
+	ptr->freemem();
+	ptr = NULL;
+
 	solvers[thr_id] = NULL;
 
 	init[thr_id] = false;
@@ -291,4 +295,3 @@ void free_equihash(int thr_id)
 void eq_cuda_context_interface::solve(const char *tequihash_header, unsigned int tequihash_header_len,
 	const char* nonce, unsigned int nonce_len,
 	fn_cancel cancelf, fn_solution solutionf, fn_hashdone hashdonef) { }
-eq_cuda_context_interface::~eq_cuda_context_interface() { }

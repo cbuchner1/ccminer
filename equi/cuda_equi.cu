@@ -2081,7 +2081,7 @@ __host__ void eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::solve(const char *t
 // destructor
 template <u32 RB, u32 SM, u32 SSM, u32 THREADS, typename PACKER>
 __host__
-eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::~eq_cuda_context()
+void eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::freemem()
 {
 	if (solutions)
 		free(solutions);
@@ -2104,6 +2104,12 @@ eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::~eq_cuda_context()
 	}
 }
 
+template <u32 RB, u32 SM, u32 SSM, u32 THREADS, typename PACKER>
+__host__
+eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::~eq_cuda_context()
+{
+	freemem();
+}
 
 #ifdef CONFIG_MODE_1
 template class eq_cuda_context<CONFIG_MODE_1>;

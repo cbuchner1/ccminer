@@ -147,6 +147,9 @@ extern "C" int scanhash_jha(int thr_id, struct work *work, uint32_t max_nonce, u
 			CUDA_LOG_ERROR();
 		}
 		cuda_get_arch(thr_id);
+		if (cuda_arch[dev_id] >= 500) {
+			applog(LOG_WARNING, "You are not using the optimal algo, please try -a jackpot");
+		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput));
