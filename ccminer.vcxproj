@@ -526,6 +526,7 @@
     <CudaCompile Include="lyra2\lyra2Z.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2Z.cu" />
     <ClInclude Include="lyra2\cuda_lyra2Z_sm5.cuh" />
+    <CudaCompile Include="polytimos.cu" />
     <CudaCompile Include="sia\sia.cu" />
     <CudaCompile Include="skein.cu">
       <MaxRegCount>64</MaxRegCount>

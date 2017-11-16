@@ -2246,6 +2246,9 @@ void print_hash_tests(void)
 	phihash(&hash[0], &buf[0]);
 	printpfx("phi", hash);
 
+	polytimos_hash(&hash[0], &buf[0]);
+	printpfx("polytimos", hash);
+
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
 

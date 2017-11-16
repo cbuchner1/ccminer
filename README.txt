@@ -1,5 +1,5 @@
 
-ccminer 2.2.2 (Oct. 2017) "phi and hsr algos"
+ccminer 2.2.3-dev (Nov. 2017) "polytimos algo"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -104,6 +104,7 @@ its command line interface and options.
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
                           phi         use to mine LUXCoin
+                          polytimos   use to mine Polytimos
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit
                           scrypt      use to mine Scrypt coins
@@ -280,6 +281,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  Nov. 16th 2017  v2.2.3
+                  Polytimos Algo
+
   Oct. 09th 2017  v2.2.2
                   Import and clean the hsr algo (x13 + custom hash)
                   Import and optimise phi algo from LuxCoin repository

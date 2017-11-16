@@ -769,6 +769,9 @@
     <CudaCompile Include="pentablake.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="polytimos.cu">
+      <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
     <CudaCompile Include="skunk\skunk.cu">
       <Filter>Source Files\CUDA\skunk</Filter>
     </CudaCompile>
