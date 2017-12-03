@@ -126,13 +126,13 @@ bool bench_algo_switch_next(int thr_id)
 	if (algo == ALGO_C11) algo++; // same as x11
 	if (algo == ALGO_DMD_GR) algo++; // same as groestl
 	if (algo == ALGO_MJOLLNIR) algo++; // same as heavy
+	if (algo == ALGO_KECCAKC) algo++; // same as keccak
 	if (algo == ALGO_WHIRLCOIN) algo++; // same as whirlpool
 	if (algo == ALGO_WHIRLPOOLX) algo++; // disabled
 	// todo: algo switch from RPC 2.0
 	if (algo == ALGO_CRYPTOLIGHT) algo++;
 	if (algo == ALGO_CRYPTONIGHT) algo++;
 	if (algo == ALGO_WILDKECCAK) algo++;
-	//if (algo == ALGO_JACKPOT) algo++; // to fix
 	if (algo == ALGO_QUARK) algo++; // to fix
 	if (algo == ALGO_LBRY && CUDART_VERSION < 7000) algo++;
 
@@ -140,7 +140,6 @@ bool bench_algo_switch_next(int thr_id)
 		// incompatible SM 2.1 kernels...
 		if (algo == ALGO_GROESTL) algo++;
 		if (algo == ALGO_MYR_GR) algo++;
-		//if (algo == ALGO_JACKPOT) algo++; // compact shuffle
 		if (algo == ALGO_NEOSCRYPT) algo++;
 		if (algo == ALGO_WHIRLPOOLX) algo++;
 	}

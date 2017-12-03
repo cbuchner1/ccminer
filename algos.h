@@ -24,6 +24,7 @@ enum sha_algos {
 	ALGO_HMQ1725,
 	ALGO_HSR,
 	ALGO_KECCAK,
+	ALGO_KECCAKC,		/* refreshed Keccak with pool factor 256 */
 	ALGO_JACKPOT,
 	ALGO_JHA,
 	ALGO_LBRY,
@@ -92,6 +93,7 @@ static const char *algo_names[] = {
 	"hmq1725",
 	"hsr",
 	"keccak",
+	"keccakc",
 	"jackpot",
 	"jha",
 	"lbry",
@@ -169,8 +171,6 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_HMQ1725;
 		else if (!strcasecmp("hshare", arg))
 			i = ALGO_HSR;
-		//else if (!strcasecmp("jackpot", arg))
-		//	i = ALGO_JHA;
 		else if (!strcasecmp("lyra2re", arg))
 			i = ALGO_LYRA2;
 		else if (!strcasecmp("lyra2rev2", arg))

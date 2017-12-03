@@ -1695,6 +1695,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
+		case ALGO_KECCAKC:
 		case ALGO_LBRY:
 		case ALGO_LYRA2v2:
 		case ALGO_LYRA2Z:
@@ -2215,6 +2216,7 @@ static void *miner_thread(void *userdata)
 				minmax = 0x40000000U;
 				break;
 			case ALGO_KECCAK:
+			case ALGO_KECCAKC:
 			case ALGO_LBRY:
 			case ALGO_LUFFA:
 			case ALGO_SIA:
@@ -2376,6 +2378,7 @@ static void *miner_thread(void *userdata)
 			break;
 
 		case ALGO_KECCAK:
+		case ALGO_KECCAKC:
 			rc = scanhash_keccak256(thr_id, &work, max_nonce, &hashes_done);
 			break;
 
