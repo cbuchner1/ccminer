@@ -1,5 +1,5 @@
 
-ccminer 2.2.3-dev (Nov. 2017) "polytimos algo"
+ccminer 2.2.3 (Dec. 2017)    "polytimos algo and keccakc (opt)"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -93,6 +93,7 @@ its command line interface and options.
                           hsr         use to mine Hshare
                           jackpot     use to mine Sweepcoin
                           keccak      use to mine Maxcoin
+                          keccakc     use to mine CreativeCoin
                           lbry        use to mine LBRY Credits
                           luffa       use to mine Joincoin
                           lyra2       use to mine CryptoCoin
@@ -281,8 +282,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
-  Nov. 16th 2017  v2.2.3
+  Dec. 04th 2017  v2.2.3
                   Polytimos Algo
+                  Handle keccakc variant (with refreshed sha256d merkle)
+                  Optimised keccak for SM5+, based on alexis improvements
 
   Oct. 09th 2017  v2.2.2
                   Import and clean the hsr algo (x13 + custom hash)

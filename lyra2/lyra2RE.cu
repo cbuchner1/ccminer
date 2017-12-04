@@ -16,9 +16,10 @@ extern void blake256_cpu_init(int thr_id, uint32_t threads);
 extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
 
-extern void keccak256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void keccak256_cpu_init(int thr_id, uint32_t threads);
-extern void keccak256_cpu_free(int thr_id);
+extern void keccak256_sm3_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+extern void keccak256_sm3_init(int thr_id, uint32_t threads);
+extern void keccak256_sm3_free(int thr_id);
+
 extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
@@ -97,7 +98,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		blake256_cpu_init(thr_id, throughput);
-		keccak256_cpu_init(thr_id, throughput);
+		keccak256_sm3_init(thr_id, throughput);
 		skein256_cpu_init(thr_id, throughput);
 		groestl256_cpu_init(thr_id, throughput);
 
@@ -124,7 +125,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 		int order = 0;
 
 		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		keccak256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		keccak256_sm3_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], gtx750ti);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
@@ -186,7 +187,7 @@ extern "C" void free_lyra2(int thr_id)
 	cudaFree(d_hash[thr_id]);
 	cudaFree(d_matrix[thr_id]);
 
-	keccak256_cpu_free(thr_id);
+	keccak256_sm3_free(thr_id);
 	groestl256_cpu_free(thr_id);
 
 	init[thr_id] = false;

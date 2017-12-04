@@ -844,6 +844,9 @@
     <CudaCompile Include="Algo256\cuda_keccak256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
+    <CudaCompile Include="Algo256\cuda_keccak256_sm3.cu">
+      <Filter>Source Files\CUDA\Algo256</Filter>
+    </CudaCompile>
     <CudaCompile Include="Algo256\cuda_skein256.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>

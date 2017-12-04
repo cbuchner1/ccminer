@@ -475,7 +475,8 @@
     <CudaCompile Include="Algo256\cuda_cubehash256.cu" />
     <CudaCompile Include="Algo256\cuda_fugue256.cu" />
     <CudaCompile Include="Algo256\cuda_groestl256.cu" />
-    <CudaCompile Include="Algo256\cuda_keccak256.cu">
+    <CudaCompile Include="Algo256\cuda_keccak256.cu" />
+    <CudaCompile Include="Algo256\cuda_keccak256_sm3.cu">
       <MaxRegCount>92</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="Algo256\cuda_skein256.cu" />

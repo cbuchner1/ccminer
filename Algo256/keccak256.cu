@@ -16,10 +16,18 @@ extern "C"
 
 static uint32_t *d_hash[MAX_GPUS];
 
-extern void keccak256_cpu_init(int thr_id, uint32_t threads);
+// SM5+ cuda
+extern void keccak256_cpu_init(int thr_id);
 extern void keccak256_cpu_free(int thr_id);
-extern void keccak256_setBlock_80(void *pdata,const void *ptarget);
-extern uint32_t keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order);
+extern void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces, const uint2 highTarget);
+extern void keccak256_setBlock_80(uint64_t *endiandata);
+extern void keccak256_setOutput(int thr_id);
+
+// compat
+extern void keccak256_sm3_init(int thr_id, uint32_t threads);
+extern void keccak256_sm3_free(int thr_id);
+extern void keccak256_sm3_setBlock_80(void *pdata, const void *ptarget);
+extern uint32_t keccak256_sm3_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_hash, int order);
 
 // CPU Hash
 extern "C" void keccak256_hash(void *state, const void *input)
@@ -35,6 +43,7 @@ extern "C" void keccak256_hash(void *state, const void *input)
 }
 
 static bool init[MAX_GPUS] = { 0 };
+static bool use_compat_kernels[MAX_GPUS] = { 0 };
 
 extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -42,6 +51,7 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
+	const int dev_id = device_map[thr_id];
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21); // 256*256*8*4
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
@@ -50,17 +60,28 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 
 	if (!init[thr_id])
 	{
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(dev_id);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
 			cudaDeviceReset();
 			// reduce cpu usage
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 			CUDA_LOG_ERROR();
 		}
-		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
+		cuda_get_arch(thr_id);
+		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500);
 
-		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
-		keccak256_cpu_init(thr_id, throughput);
+		if(!use_compat_kernels[thr_id]) {
+			uint32_t intensity = 23;
+			if (strstr(device_name[dev_id], "GTX 1080")) intensity = 25;
+			throughput = cuda_default_throughput(thr_id, 1U << intensity);
+			keccak256_cpu_init(thr_id);
+		} else {
+			// really useful ?
+			CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
+			keccak256_sm3_init(thr_id, throughput);
+		}
+
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		init[thr_id] = true;
 	}
@@ -69,13 +90,25 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 		be32enc(&endiandata[k], pdata[k]);
 	}
 
-	keccak256_setBlock_80((void*)endiandata, ptarget);
+	const uint2 highTarget = make_uint2(ptarget[6], ptarget[7]);
+	if(use_compat_kernels[thr_id])
+		keccak256_sm3_setBlock_80((void*)endiandata, ptarget);
+	else {
+		keccak256_setBlock_80((uint64_t*)endiandata);
+		keccak256_setOutput(thr_id);
+	}
+
 	do {
 		int order = 0;
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
-		work->nonces[0] = keccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		if(use_compat_kernels[thr_id])
+			work->nonces[0] = keccak256_sm3_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		else {
+			keccak256_cpu_hash_80(thr_id, throughput, pdata[19], work->nonces, highTarget);
+		}
+
 		if (work->nonces[0] != UINT32_MAX && bench_algo < 0)
 		{
 			const uint32_t Htarg = ptarget[7];
@@ -95,6 +128,7 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 				if (!opt_quiet)
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
 				pdata[19] = work->nonces[0] + 1;
+				//keccak256_setOutput(thr_id);
 				continue;
 			}
 		}
@@ -120,9 +154,12 @@ extern "C" void free_keccak256(int thr_id)
 
 	cudaThreadSynchronize();
 
-	cudaFree(d_hash[thr_id]);
-
-	keccak256_cpu_free(thr_id);
+	if(!use_compat_kernels[thr_id])
+		keccak256_cpu_free(thr_id);
+	else {
+		cudaFree(d_hash[thr_id]);
+		keccak256_sm3_free(thr_id);
+	}
 
 	cudaDeviceSynchronize();
 	init[thr_id] = false;
