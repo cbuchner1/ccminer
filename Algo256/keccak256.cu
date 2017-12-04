@@ -72,7 +72,8 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 
 		if(!use_compat_kernels[thr_id]) {
 			uint32_t intensity = 23;
-			if (strstr(device_name[dev_id], "GTX 1080")) intensity = 25;
+			if (strstr(device_name[dev_id], "GTX 1070")) intensity = 25;
+			if (strstr(device_name[dev_id], "GTX 1080")) intensity = 26;
 			throughput = cuda_default_throughput(thr_id, 1U << intensity);
 			keccak256_cpu_init(thr_id);
 		} else {
@@ -120,7 +121,17 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
 				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhash);
-				pdata[19] = work->nonces[0] + 1;
+				if (!use_compat_kernels[thr_id] && work->nonces[1] != UINT32_MAX) {
+					be32enc(&endiandata[19], work->nonces[1]);
+					keccak256_hash(vhash, endiandata);
+					if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+						work->valid_nonces++;
+						bn_set_target_ratio(work, vhash, 1);
+					}
+					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+				} else {
+					pdata[19] = work->nonces[0] + 1;
+				}
 				return work->valid_nonces;
 			}
 			else if (vhash[7] > Htarg) {
