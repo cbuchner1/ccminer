@@ -1,63 +1,15 @@
 /*
- * Quick and dirty addition of Hamsi-512 for X13
- * 
- * Built on cbuchner1's implementation, actual hashing code
- * heavily based on phm's sgminer
- *
+ * Quick Hamsi-512 for X13
+ * by tsiv - 2014
  */
 
-/*
- * X13 kernel implementation.
- *
- * ==========================(LICENSE BEGIN)============================
- *
- * Copyright (c) 2014  phm
- * 
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- * 
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * ===========================(LICENSE END)=============================
- *
- * @author   phm <phm@inbox.com>
- */
+#include <stdio.h>
+#include <stdint.h>
+#include <memory.h>
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+#include "cuda_helper.h"
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
-
-#define SPH_C64(x)    ((uint64_t)(x ## ULL))
-#define SPH_C32(x)    ((uint32_t)(x ## U))
-#define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
-
-#define SWAB32(x) ( __byte_perm(x, x, 0x0123) )
-
-#if __CUDA_ARCH__ < 350 
-    // Kepler (Compute 3.0)
-    #define ROTL32(x, n) SPH_T32(((x) << (n)) | ((x) >> (32 - (n))))
-#else
-    // Kepler (Compute 3.5)
-    #define ROTL32(x, n) __funnelshift_l( (x), (x), (n) )
-#endif
+typedef unsigned char BitSequence;
 
 static __constant__ uint32_t d_alpha_n[32];
 static __constant__ uint32_t d_alpha_f[32];
@@ -125,73 +77,73 @@ static const uint32_t alpha_f[] = {
 #define hamsi_s1F   mF
 
 #define SBOX(a, b, c, d) { \
-        uint32_t t; \
-        t = (a); \
-        (a) &= (c); \
-        (a) ^= (d); \
-        (c) ^= (b); \
-        (c) ^= (a); \
-        (d) |= t; \
-        (d) ^= (b); \
-        t ^= (c); \
-        (b) = (d); \
-        (d) |= t; \
-        (d) ^= (a); \
-        (a) &= (b); \
-        t ^= (a); \
-        (b) ^= (d); \
-        (b) ^= t; \
-        (a) = (c); \
-        (c) = (b); \
-        (b) = (d); \
-        (d) = SPH_T32(~t); \
-    }
+		uint32_t t; \
+		t = (a); \
+		(a) &= (c); \
+		(a) ^= (d); \
+		(c) ^= (b); \
+		(c) ^= (a); \
+		(d) |= t; \
+		(d) ^= (b); \
+		t ^= (c); \
+		(b) = (d); \
+		(d) |= t; \
+		(d) ^= (a); \
+		(a) &= (b); \
+		t ^= (a); \
+		(b) ^= (d); \
+		(b) ^= t; \
+		(a) = (c); \
+		(c) = (b); \
+		(b) = (d); \
+		(d) = SPH_T32(~t); \
+	}
 
 #define HAMSI_L(a, b, c, d) { \
-        (a) = ROTL32(a, 13); \
-        (c) = ROTL32(c, 3); \
-        (b) ^= (a) ^ (c); \
-        (d) ^= (c) ^ SPH_T32((a) << 3); \
-        (b) = ROTL32(b, 1); \
-        (d) = ROTL32(d, 7); \
-        (a) ^= (b) ^ (d); \
-        (c) ^= (d) ^ SPH_T32((b) << 7); \
-        (a) = ROTL32(a, 5); \
-        (c) = ROTL32(c, 22); \
-    }
+		(a) = ROTL32(a, 13); \
+		(c) = ROTL32(c, 3); \
+		(b) ^= (a) ^ (c); \
+		(d) ^= (c) ^ ((a) << 3); \
+		(b) = ROTL32(b, 1); \
+		(d) = ROTL32(d, 7); \
+		(a) ^= (b) ^ (d); \
+		(c) ^= (d) ^ ((b) << 7); \
+		(a) = ROTL32(a, 5); \
+		(c) = ROTL32(c, 22); \
+	}
 
 #define ROUND_BIG(rc, alpha) { \
 		hamsi_s00 ^= alpha[0x00]; \
-		hamsi_s01 ^= alpha[0x01] ^ (uint32_t)(rc); \
-		hamsi_s02 ^= alpha[0x02]; \
-		hamsi_s03 ^= alpha[0x03]; \
-		hamsi_s04 ^= alpha[0x04]; \
-		hamsi_s05 ^= alpha[0x05]; \
-		hamsi_s06 ^= alpha[0x06]; \
-		hamsi_s07 ^= alpha[0x07]; \
 		hamsi_s08 ^= alpha[0x08]; \
-		hamsi_s09 ^= alpha[0x09]; \
-		hamsi_s0A ^= alpha[0x0A]; \
-		hamsi_s0B ^= alpha[0x0B]; \
-		hamsi_s0C ^= alpha[0x0C]; \
-		hamsi_s0D ^= alpha[0x0D]; \
-		hamsi_s0E ^= alpha[0x0E]; \
-		hamsi_s0F ^= alpha[0x0F]; \
 		hamsi_s10 ^= alpha[0x10]; \
-		hamsi_s11 ^= alpha[0x11]; \
-		hamsi_s12 ^= alpha[0x12]; \
-		hamsi_s13 ^= alpha[0x13]; \
-		hamsi_s14 ^= alpha[0x14]; \
-		hamsi_s15 ^= alpha[0x15]; \
-		hamsi_s16 ^= alpha[0x16]; \
-		hamsi_s17 ^= alpha[0x17]; \
 		hamsi_s18 ^= alpha[0x18]; \
+		hamsi_s01 ^= alpha[0x01] ^ (uint32_t)(rc); \
+		hamsi_s09 ^= alpha[0x09]; \
+		hamsi_s11 ^= alpha[0x11]; \
 		hamsi_s19 ^= alpha[0x19]; \
+		hamsi_s02 ^= alpha[0x02]; \
+		hamsi_s0A ^= alpha[0x0A]; \
+		hamsi_s12 ^= alpha[0x12]; \
 		hamsi_s1A ^= alpha[0x1A]; \
+		hamsi_s03 ^= alpha[0x03]; \
+		hamsi_s0B ^= alpha[0x0B]; \
+		hamsi_s13 ^= alpha[0x13]; \
 		hamsi_s1B ^= alpha[0x1B]; \
+		hamsi_s04 ^= alpha[0x04]; \
+		hamsi_s0C ^= alpha[0x0C]; \
+		hamsi_s14 ^= alpha[0x14]; \
 		hamsi_s1C ^= alpha[0x1C]; \
+		hamsi_s05 ^= alpha[0x05]; \
+		hamsi_s0D ^= alpha[0x0D]; \
+		hamsi_s15 ^= alpha[0x15]; \
 		hamsi_s1D ^= alpha[0x1D]; \
+		hamsi_s06 ^= alpha[0x06]; \
+		hamsi_s0E ^= alpha[0x0E]; \
+		hamsi_s16 ^= alpha[0x16]; \
 		hamsi_s1E ^= alpha[0x1E]; \
+		hamsi_s07 ^= alpha[0x07]; \
+		hamsi_s0F ^= alpha[0x0F]; \
+		hamsi_s17 ^= alpha[0x17]; \
 		hamsi_s1F ^= alpha[0x1F]; \
 		SBOX(hamsi_s00, hamsi_s08, hamsi_s10, hamsi_s18); \
 		SBOX(hamsi_s01, hamsi_s09, hamsi_s11, hamsi_s19); \
@@ -217,30 +169,16 @@ static const uint32_t alpha_f[] = {
 
 
 #define P_BIG  { \
-		ROUND_BIG(0, d_alpha_n); \
-		ROUND_BIG(1, d_alpha_n); \
-		ROUND_BIG(2, d_alpha_n); \
-		ROUND_BIG(3, d_alpha_n); \
-		ROUND_BIG(4, d_alpha_n); \
-		ROUND_BIG(5, d_alpha_n); \
+		for( int r = 0; r < 6; r++ ) \
+			ROUND_BIG(r, d_alpha_n); \
 	}
 
-#define PF_BIG  { \
-		ROUND_BIG(0, d_alpha_f); \
-		ROUND_BIG(1, d_alpha_f); \
-		ROUND_BIG(2, d_alpha_f); \
-		ROUND_BIG(3, d_alpha_f); \
-		ROUND_BIG(4, d_alpha_f); \
-		ROUND_BIG(5, d_alpha_f); \
-		ROUND_BIG(6, d_alpha_f); \
-		ROUND_BIG(7, d_alpha_f); \
-		ROUND_BIG(8, d_alpha_f); \
-		ROUND_BIG(9, d_alpha_f); \
-		ROUND_BIG(10, d_alpha_f); \
-		ROUND_BIG(11, d_alpha_f); \
+#define PF_BIG { \
+		for( int r = 0; r < 12; r++ ) \
+			ROUND_BIG(r, d_alpha_f); \
 	}
 
-#define T_BIG   { \
+#define T_BIG  { \
 		/* order is important */ \
 		cF = (h[0xF] ^= hamsi_s17); \
 		cE = (h[0xE] ^= hamsi_s16); \
@@ -648,117 +586,113 @@ static const uint32_t T512[64][16] = {
 	  SPH_C32(0xe7e00a94) }
 };
 
-#define INPUT_BIG  { \
-		const uint32_t *tp = &d_T512[0][0]; \
-		unsigned u, v; \
-		m0 = 0; \
-		m1 = 0; \
-		m2 = 0; \
-		m3 = 0; \
-		m4 = 0; \
-		m5 = 0; \
-		m6 = 0; \
-		m7 = 0; \
-		m8 = 0; \
-		m9 = 0; \
-		mA = 0; \
-		mB = 0; \
-		mC = 0; \
-		mD = 0; \
-		mE = 0; \
-		mF = 0; \
-        for (u = 0; u < 8; u ++) { \
-			unsigned db = buf(u); \
-			for (v = 0; v < 8; v ++, db >>= 1) { \
-				uint32_t dm = SPH_T32(-(uint32_t)(db & 1)); \
-				m0 ^= dm & *tp ++; \
-				m1 ^= dm & *tp ++; \
-				m2 ^= dm & *tp ++; \
-				m3 ^= dm & *tp ++; \
-				m4 ^= dm & *tp ++; \
-				m5 ^= dm & *tp ++; \
-				m6 ^= dm & *tp ++; \
-				m7 ^= dm & *tp ++; \
-				m8 ^= dm & *tp ++; \
-				m9 ^= dm & *tp ++; \
-				mA ^= dm & *tp ++; \
-				mB ^= dm & *tp ++; \
-				mC ^= dm & *tp ++; \
-				mD ^= dm & *tp ++; \
-				mE ^= dm & *tp ++; \
-				mF ^= dm & *tp ++; \
-			} \
-		} \
-	}
-
-
-/***************************************************/
-// Die Hash-Funktion
-__global__ void x13_hamsi512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__
+void x13_hamsi512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-    if (thread < threads)
-    {
-        uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
 
-        int hashPosition = nounce - startNounce;
-        uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
-        unsigned char *h1 = (unsigned char *)Hash;
+		int hashPosition = nounce - startNounce;
+		uint32_t *Hash = (uint32_t*)&g_hash[hashPosition<<3];
+		unsigned char *h1 = (unsigned char *)Hash;
 
-        uint32_t c0 = SPH_C32(0x73746565), c1 = SPH_C32(0x6c706172), c2 = SPH_C32(0x6b204172), c3 = SPH_C32(0x656e6265);
-        uint32_t c4 = SPH_C32(0x72672031), c5 = SPH_C32(0x302c2062), c6 = SPH_C32(0x75732032), c7 = SPH_C32(0x3434362c);
-        uint32_t c8 = SPH_C32(0x20422d33), c9 = SPH_C32(0x30303120), cA = SPH_C32(0x4c657576), cB = SPH_C32(0x656e2d48);
-        uint32_t cC = SPH_C32(0x65766572), cD = SPH_C32(0x6c65652c), cE = SPH_C32(0x2042656c), cF = SPH_C32(0x6769756d);
-        uint32_t m0, m1, m2, m3, m4, m5, m6, m7;
-        uint32_t m8, m9, mA, mB, mC, mD, mE, mF;
-        uint32_t h[16] = { c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF };
+		uint32_t c0 = SPH_C32(0x73746565), c1 = SPH_C32(0x6c706172), c2 = SPH_C32(0x6b204172), c3 = SPH_C32(0x656e6265);
+		uint32_t c4 = SPH_C32(0x72672031), c5 = SPH_C32(0x302c2062), c6 = SPH_C32(0x75732032), c7 = SPH_C32(0x3434362c);
+		uint32_t c8 = SPH_C32(0x20422d33), c9 = SPH_C32(0x30303120), cA = SPH_C32(0x4c657576), cB = SPH_C32(0x656e2d48);
+		uint32_t cC = SPH_C32(0x65766572), cD = SPH_C32(0x6c65652c), cE = SPH_C32(0x2042656c), cF = SPH_C32(0x6769756d);
+		uint32_t m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, mA, mB, mC, mD, mE, mF;
+		uint32_t h[16] = { c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF };
+		uint32_t *tp, db, dm;
 
-#define buf(u) (h1[i+u])
-		#pragma unroll 8
-        for(int i = 0; i < 64; i += 8) {
-            INPUT_BIG;
-            P_BIG;
-            T_BIG;
-        }
-#undef buf
-#define buf(u) (u == 0 ? 0x80 : 0)
-        INPUT_BIG;
-        P_BIG;
-        T_BIG;
-#undef buf
-#define buf(u) (u == 6 ? 2 : 0)
-        INPUT_BIG;
-        PF_BIG;
-        T_BIG;
+		for(int i = 0; i < 64; i += 8) {
+
+			m0 = 0; m1 = 0; m2 = 0; m3 = 0; m4 = 0; m5 = 0; m6 = 0; m7 = 0;
+			m8 = 0; m9 = 0; mA = 0; mB = 0; mC = 0; mD = 0; mE = 0; mF = 0;
+			tp = &d_T512[0][0];
+
+			#pragma unroll 2
+			for (int u = 0; u < 8; u ++) {
+				db = h1[i+u];
+				#pragma unroll 2
+				for (int v = 0; v < 8; v ++, db >>= 1) {
+					dm = -(uint32_t)(db & 1);
+					m0 ^= dm & *(tp+ 0); m1 ^= dm & *(tp+ 1);
+					m2 ^= dm & *(tp+ 2); m3 ^= dm & *(tp+ 3);
+					m4 ^= dm & *(tp+ 4); m5 ^= dm & *(tp+ 5);
+					m6 ^= dm & *(tp+ 6); m7 ^= dm & *(tp+ 7);
+					m8 ^= dm & *(tp+ 8); m9 ^= dm & *(tp+ 9);
+					mA ^= dm & *(tp+10); mB ^= dm & *(tp+11);
+					mC ^= dm & *(tp+12); mD ^= dm & *(tp+13);
+					mE ^= dm & *(tp+14); mF ^= dm & *(tp+15);
+					tp += 16;
+				}
+			}
+
+			for( int r = 0; r < 6; r += 2 ) {
+				ROUND_BIG(r, d_alpha_n);
+				ROUND_BIG(r+1, d_alpha_n);
+			}
+			T_BIG;
+		}
+
+		tp = &d_T512[0][0] + 112;
+
+		m0 = *(tp+ 0); m1 = *(tp+ 1);
+		m2 = *(tp+ 2); m3 = *(tp+ 3);
+		m4 = *(tp+ 4); m5 = *(tp+ 5);
+		m6 = *(tp+ 6); m7 = *(tp+ 7);
+		m8 = *(tp+ 8); m9 = *(tp+ 9);
+		mA = *(tp+10); mB = *(tp+11);
+		mC = *(tp+12); mD = *(tp+13);
+		mE = *(tp+14); mF = *(tp+15);
+
+		for( int r = 0; r < 6; r += 2 ) {
+			ROUND_BIG(r, d_alpha_n);
+			ROUND_BIG(r+1, d_alpha_n);
+		}
+		T_BIG;
+
+		tp = &d_T512[0][0] + 784;
+
+		m0 = *(tp+ 0); m1 = *(tp+ 1);
+		m2 = *(tp+ 2); m3 = *(tp+ 3);
+		m4 = *(tp+ 4); m5 = *(tp+ 5);
+		m6 = *(tp+ 6); m7 = *(tp+ 7);
+		m8 = *(tp+ 8); m9 = *(tp+ 9);
+		mA = *(tp+10); mB = *(tp+11);
+		mC = *(tp+12); mD = *(tp+13);
+		mE = *(tp+14); mF = *(tp+15);
+
+		for( int r = 0; r < 12; r += 2 ) {
+			ROUND_BIG(r, d_alpha_f);
+			ROUND_BIG(r+1, d_alpha_f);
+		}
+		T_BIG;
 
 		#pragma unroll 16
-        for (int i = 0; i < 16; i++)
-            Hash[i] = SWAB32(h[i]);
-    }
+		for (int i = 0; i < 16; i++)
+			Hash[i] = cuda_swab32(h[i]);
+	}
 }
 
-
-__host__ void x13_hamsi512_cpu_init(int thr_id, int threads)
+__host__
+void x13_hamsi512_cpu_init(int thr_id, uint32_t threads)
 {
-	cudaMemcpyToSymbol( d_alpha_n, alpha_n, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol( d_alpha_f, alpha_f, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol( d_T512, T512, sizeof(uint32_t)*64*16, 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(d_alpha_n, alpha_n, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(d_alpha_f, alpha_f, sizeof(uint32_t)*32, 0, cudaMemcpyHostToDevice);
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_T512, T512, sizeof(uint32_t)*64*16, 0, cudaMemcpyHostToDevice));
 }
 
-__host__ void x13_hamsi512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__
+void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 256;
+	const uint32_t threadsperblock = 128;
 
-    // berechne wie viele Thread Blocks wir brauchen
-    dim3 grid((threads + threadsperblock-1)/threadsperblock);
-    dim3 block(threadsperblock);
+	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
-    size_t shared_size = 0;
-
-//    fprintf(stderr, "threads=%d, %d blocks, %d threads per block, %d bytes shared\n", threads, grid.x, block.x, shared_size);
-
-    x13_hamsi512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-    MyStreamSynchronize(NULL, order, thr_id);
+	x13_hamsi512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+	//MyStreamSynchronize(NULL, order, thr_id);
 }
-
