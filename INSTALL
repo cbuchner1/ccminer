@@ -1,9 +1,42 @@
 
-It is advised to run ./autogen.sh before./configure (autoconf and automake
+You can use ./build.sh to configure and build with default options.
+
+It is advised to run ./autogen.sh before ./configure (autoconf and automake
 need to be installed on your system for autogen.sh to work)
 
 ./configure has an option named --with-cuda that allows you to specify
-where your CUDA 5.5 toolkit is installed (usually /usr/local/cuda-5.5,
+where your CUDA 6.5 toolkit is installed (usually /usr/local/cuda,
 but some distros may have a different default location)
 
-See README.txt
+
+** How to compile on Fedora 22 (2015) **
+
+# Step 1: gcc and dependencies
+dnf install gcc gcc-c++ automake
+dnf install jansson-devel openssl-devel libcurl-devel zlib-devel pciutils-devel
+
+# Step 2: nvidia drivers (Download common linux drivers from nvidia site)
+dnf install kernel-devel
+modprobe -r nouveau
+./NVIDIA-Linux-x86_64-346.72.run
+
+# Step 3: CUDA SDK (Download from nvidia archive)
+dnf install cuda-repo-fedora20-6-5-prod-6.5-19.x86_64.rpm
+dnf install cuda-minimal-build-6-5.x86_64
+
+# add the nvcc binary path to the system
+ln -s /usr/local/cuda-6.5 /usr/local/cuda
+echo 'export PATH=$PATH:/usr/local/cuda/bin' > /etc/profile.d/cuda.sh
+
+# add the cudart library path to the system
+echo /usr/local/cuda/lib64 > /etc/ld.so.conf.d/cuda.conf
+ldconfig
+
+# Step 4: Fix the toolkit warning with gcc 5.1
+edit the file /usr/local/cuda/include/host_config.h
+and comment/delete the line 82 : #error -- unsupported GNU version! gcc 4.9
+
+./build.sh
+
+./ccminer -n
+

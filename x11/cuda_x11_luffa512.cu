@@ -18,25 +18,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// aus heavy.cu
-extern cudaError_t MyStreamSynchronize(cudaStream_t stream, int situation, int thr_id);
+#include "cuda_helper.h"
 
 typedef unsigned char BitSequence;
-
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long uint64_t;
 
 typedef struct {
     uint32_t buffer[8]; /* Buffer to be hashed */
     uint32_t chainv[40];   /* Chaining values */
 } hashState;
-
-
-static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
-{
-	return __byte_perm(x, x, 0x0123);
-}
 
 #define MULT2(a,j)\
     tmp = a[7+(8*j)];\
@@ -49,11 +38,17 @@ static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
     a[1+(8*j)] = a[0+(8*j)] ^ tmp;\
     a[0+(8*j)] = tmp;
 
+#if __CUDA_ARCH__ < 350
+#define LROT(x,bits) ((x << bits) | (x >> (32 - bits)))
+#else
+#define LROT(x, bits) __funnelshift_l(x, x, bits)
+#endif
+
 #define TWEAK(a0,a1,a2,a3,j)\
-    a0 = (a0<<(j))|(a0>>(32-j));\
-    a1 = (a1<<(j))|(a1>>(32-j));\
-    a2 = (a2<<(j))|(a2>>(32-j));\
-    a3 = (a3<<(j))|(a3>>(32-j));
+    a0 = LROT(a0,j);\
+    a1 = LROT(a1,j);\
+    a2 = LROT(a2,j);\
+    a3 = LROT(a3,j);
 
 #define STEP(c0,c1)\
     SUBCRUMB(chainv[0],chainv[1],chainv[2],chainv[3],tmp);\
@@ -85,20 +80,20 @@ static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
 
 #define MIXWORD(a0,a4)\
     a4 ^= a0;\
-    a0  = (a0<<2) | (a0>>(30));\
+    a0  = LROT(a0,2);\
     a0 ^= a4;\
-    a4  = (a4<<14) | (a4>>(18));\
+    a4  = LROT(a4,14);\
     a4 ^= a0;\
-    a0  = (a0<<10) | (a0>>(22));\
+    a0  = LROT(a0,10);\
     a0 ^= a4;\
-    a4  = (a4<<1) | (a4>>(31));
+    a4  = LROT(a4,1);
 
 #define ADD_CONSTANT(a0,b0,c0,c1)\
     a0 ^= c0;\
     b0 ^= c1;
 
 /* initial values of chaining variables */
-__constant__ uint32_t c_IV[40];
+__device__ __constant__ uint32_t c_IV[40];
 const uint32_t h_IV[40] = {
     0x6d251e69,0x44b051e0,0x4eaa6fb4,0xdbf78465,
     0x6e292011,0x90152df4,0xee058139,0xdef610bb,
@@ -111,8 +106,8 @@ const uint32_t h_IV[40] = {
     0x6c68e9be,0x5ec41e22,0xc825b7c7,0xaffb4363,
     0xf5df3999,0x0fc688f1,0xb07224cc,0x03e86cea};
 
-__constant__ uint32_t c_CNS[80];
-uint32_t h_CNS[80] = {
+__device__ __constant__ uint32_t c_CNS[80];
+const uint32_t h_CNS[80] = {
     0x303994a6,0xe0337818,0xc0e65299,0x441ba90d,
     0x6cc33a12,0x7f34d442,0xdc56983e,0x9389217f,
     0x1e00108f,0xe5a8bce6,0x7800423d,0x5274baf4,
@@ -136,7 +131,8 @@ uint32_t h_CNS[80] = {
 
 
 /***************************************************/
-__device__ __forceinline__ void rnd512(hashState *state)
+__device__ __forceinline__
+void rnd512(hashState *state)
 {
     int i,j;
     uint32_t t[40];
@@ -282,20 +278,22 @@ __device__ __forceinline__ void rnd512(hashState *state)
 }
 
 
-__device__ __forceinline__ void Update512(hashState *state, const BitSequence *data) 
+__device__ __forceinline__
+void Update512(hashState *state, const BitSequence *data)
 {
 #pragma unroll 8
-    for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)data)[i]);
+    for(int i=0;i<8;i++) state->buffer[i] = cuda_swab32(((uint32_t*)data)[i]);
     rnd512(state);
 
 #pragma unroll 8
-    for(int i=0;i<8;i++) state->buffer[i] = BYTES_SWAP32(((uint32_t*)(data+32))[i]);
+    for(int i=0;i<8;i++) state->buffer[i] = cuda_swab32(((uint32_t*)(data+32))[i]);
     rnd512(state);
 }
 
 
 /***************************************************/
-__device__ __forceinline__ void finalization512(hashState *state, uint32_t *b)
+__device__ __forceinline__
+void finalization512(hashState *state, uint32_t *b)
 {
     int i,j;
 
@@ -316,7 +314,7 @@ __device__ __forceinline__ void finalization512(hashState *state, uint32_t *b)
         for(j=0;j<5;j++) {
             b[i] ^= state->chainv[i+8*j];
         }
-        b[i] = BYTES_SWAP32((b[i]));
+        b[i] = cuda_swab32((b[i]));
     }
 
 #pragma unroll 8
@@ -330,16 +328,16 @@ __device__ __forceinline__ void finalization512(hashState *state, uint32_t *b)
         for(j=0;j<5;j++) {
             b[8+i] ^= state->chainv[i+8*j];
         }
-        b[8+i] = BYTES_SWAP32((b[8+i]));
+        b[8 + i] = cuda_swab32((b[8 + i]));
     }
 }
 
 
 /***************************************************/
 // Die Hash-Funktion
-__global__ void x11_luffa512_gpu_hash_64(int threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
+__global__ void x11_luffa512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
-    int thread = (blockDim.x * blockIdx.x + threadIdx.x);
+    uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
     if (thread < threads)
     {
         uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
@@ -358,22 +356,23 @@ __global__ void x11_luffa512_gpu_hash_64(int threads, uint32_t startNounce, uint
 }
 
 
-// Setup-Funktionen
-__host__ void x11_luffa512_cpu_init(int thr_id, int threads)
+// Setup Function
+__host__
+void x11_luffa512_cpu_init(int thr_id, uint32_t threads)
 {
-    cudaMemcpyToSymbol( c_IV, h_IV, sizeof(h_IV), 0, cudaMemcpyHostToDevice );
-    cudaMemcpyToSymbol( c_CNS, h_CNS, sizeof(h_CNS), 0, cudaMemcpyHostToDevice );
+    CUDA_CALL_OR_RET(cudaMemcpyToSymbol(c_IV, h_IV, sizeof(h_IV), 0, cudaMemcpyHostToDevice));
+    CUDA_CALL_OR_RET(cudaMemcpyToSymbol(c_CNS, h_CNS, sizeof(h_CNS), 0, cudaMemcpyHostToDevice));
 }
 
-__host__ void x11_luffa512_cpu_hash_64(int thr_id, int threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
+__host__ void x11_luffa512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
 {
-    const int threadsperblock = 256;
+    const uint32_t threadsperblock = 256;
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((threads + threadsperblock-1)/threadsperblock);
     dim3 block(threadsperblock);
 
-    // Größe des dynamischen Shared Memory Bereichs
+    // GrÃ¶ÃŸe des dynamischen Shared Memory Bereichs
     size_t shared_size = 0;
 
     x11_luffa512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
