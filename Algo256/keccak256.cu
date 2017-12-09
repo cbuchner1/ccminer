@@ -53,6 +53,12 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21); // 256*256*8*4
+	if(!use_compat_kernels[thr_id]) {
+		uint32_t intensity = 23;
+		if (strstr(device_name[dev_id], "GTX 1070")) intensity = 25;
+		if (strstr(device_name[dev_id], "GTX 1080")) intensity = 26;
+		throughput = cuda_default_throughput(thr_id, 1U << intensity);
+	}
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
@@ -71,10 +77,6 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500);
 
 		if(!use_compat_kernels[thr_id]) {
-			uint32_t intensity = 23;
-			if (strstr(device_name[dev_id], "GTX 1070")) intensity = 25;
-			if (strstr(device_name[dev_id], "GTX 1080")) intensity = 26;
-			throughput = cuda_default_throughput(thr_id, 1U << intensity);
 			keccak256_cpu_init(thr_id);
 		} else {
 			// really useful ?
