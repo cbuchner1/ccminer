@@ -231,6 +231,7 @@ uint32_t keccak256_sm3_hash_80(int thr_id, uint32_t threads, uint32_t startNounc
 	return result;
 }
 
+#if 0
 __global__ __launch_bounds__(256,3)
 void keccak256_sm3_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint64_t *outputHash)
 {
@@ -282,6 +283,7 @@ void keccak256_sm3_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, u
 	keccak256_sm3_gpu_hash_32 <<<grid, block>>> (threads, startNounce, d_outputHash);
 	MyStreamSynchronize(NULL, order, thr_id);
 }
+#endif
 
 __host__
 void keccak256_sm3_setBlock_80(void *pdata,const void *pTargetIn)

@@ -14,12 +14,14 @@ static uint64_t *d_hash[MAX_GPUS];
 static uint64_t* d_matrix[MAX_GPUS];
 
 extern void blake256_cpu_init(int thr_id, uint32_t threads);
-extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 extern void blake256_cpu_setBlock_80(uint32_t *pdata);
+//extern void blake256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 
-extern void keccak256_sm3_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
-extern void keccak256_sm3_init(int thr_id, uint32_t threads);
-extern void keccak256_sm3_free(int thr_id);
+//extern void keccak256_sm3_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+//extern void keccak256_sm3_init(int thr_id, uint32_t threads);
+//extern void keccak256_sm3_free(int thr_id);
+
+extern void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 
 extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
 extern void skein256_cpu_init(int thr_id, uint32_t threads);
@@ -103,9 +105,11 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 		blake256_cpu_init(thr_id, throughput);
-		keccak256_sm3_init(thr_id,throughput);
+		//keccak256_sm3_init(thr_id,throughput);
 		skein256_cpu_init(thr_id, throughput);
 		bmw256_cpu_init(thr_id, throughput);
+
+		cuda_get_arch(thr_id); // cuda_arch[] also used in cubehash256
 
 		// SM 3 implentation requires a bit more memory
 		if (device_sm[dev_id] < 500 || cuda_arch[dev_id] < 500)
@@ -130,8 +134,9 @@ extern "C" int scanhash_lyra2v2(int thr_id, struct work* work, uint32_t max_nonc
 	do {
 		int order = 0;
 
-		blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		keccak256_sm3_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		//blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		//keccak256_sm3_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2v2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
@@ -196,7 +201,7 @@ extern "C" void free_lyra2v2(int thr_id)
 	cudaFree(d_matrix[thr_id]);
 
 	bmw256_cpu_free(thr_id);
-	keccak256_sm3_free(thr_id);
+	//keccak256_sm3_free(thr_id);
 
 	init[thr_id] = false;
 

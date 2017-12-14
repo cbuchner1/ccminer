@@ -267,9 +267,9 @@ void Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 }
 
 #if __CUDA_ARCH__ >= 500
-__global__	__launch_bounds__(TPB50, 1)
+__global__ __launch_bounds__(TPB50, 1)
 #else
-__global__	__launch_bounds__(TPB35, 1)
+__global__ __launch_bounds__(TPB35, 1)
 #endif
 void cubehash256_gpu_hash_32(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
 {
@@ -354,8 +354,9 @@ void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce,
 	dim3 grid((threads + tpb - 1) / tpb);
 	dim3 block(tpb);
 
-	cubehash256_gpu_hash_32 << <grid, block >> > (threads, startNounce, (uint2*)d_hash);
+	cubehash256_gpu_hash_32 <<<grid, block >>> (threads, startNounce, (uint2*)d_hash);
 }
+
 __host__
 void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash, int order, cudaStream_t stream)
 {
@@ -365,5 +366,5 @@ void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce,
 	dim3 grid((threads + tpb - 1) / tpb);
 	dim3 block(tpb);
 
-	cubehash256_gpu_hash_32 << <grid, block, 0, stream >> > (threads, startNounce, (uint2*)d_hash);
+	cubehash256_gpu_hash_32 <<<grid, block, 0, stream >>> (threads, startNounce, (uint2*)d_hash);
 }

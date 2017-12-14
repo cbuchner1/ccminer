@@ -212,6 +212,7 @@ void keccak256_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, ui
 	memcpy(resNonces, h_nonces[thr_id], NBN*sizeof(uint32_t));
 }
 
+#if 0
 #if __CUDA_ARCH__ <= 500
 __global__ __launch_bounds__(TPB50, 2)
 #else
@@ -306,6 +307,7 @@ void keccak256_cpu_hash_32(const int thr_id,const uint32_t threads, uint2* d_has
 
 	keccak256_gpu_hash_32 <<<grid, block>>> (threads, d_hash);
 }
+#endif
 
 __host__
 void keccak256_setBlock_80(uint64_t *endiandata)

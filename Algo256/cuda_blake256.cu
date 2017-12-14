@@ -1,8 +1,10 @@
 /**
-* Blake-256 Cuda Kernel (Tested on SM 5.0)
-*
-* Tanguy Pruvot - Nov. 2014
-*/
+ * Blake-256 Cuda Kernel (Tested on SM 5.0)
+ *
+ * Tanguy Pruvot - Nov. 2014
+ *
+ * + merged blake+keccak kernel for lyra2v2
+ */
 extern "C" {
 #include "sph/sph_blake.h"
 }
@@ -14,19 +16,16 @@ extern "C" {
 #ifdef __INTELLISENSE__
 /* just for vstudio code colors */
 __device__ uint32_t __byte_perm(uint32_t a, uint32_t b, uint32_t c);
-
 #endif
+
 #define UINT2(x,y) make_uint2(x,y)
 
-__device__ __inline__ uint2 ROR8(const uint2 a)
-{
+__device__ __inline__ uint2 ROR8(const uint2 a) {
 	uint2 result;
 	result.x = __byte_perm(a.y, a.x, 0x0765);
 	result.y = __byte_perm(a.x, a.y, 0x0765);
-
 	return result;
 }
-
 
 static __device__ uint64_t cuda_swab32ll(uint64_t x) {
 	return MAKE_ULONGLONG(cuda_swab32(_LODWORD(x)), cuda_swab32(_HIDWORD(x)));
@@ -193,12 +192,12 @@ static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint3
 	m[2] = block[2];
 	m[3] = block[3];
 
-#pragma unroll
+	#pragma unroll
 	for (int i = 4; i < 16; i++) {
 		m[i] = c_Padding[i];
 	}
 
-#pragma unroll 8
+	#pragma unroll 8
 	for (int i = 0; i < 8; i++)
 		v[i] = h[i];
 
@@ -212,7 +211,7 @@ static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint3
 	v[14] = u256[6];
 	v[15] = u256[7];
 
-#pragma unroll 14
+	#pragma unroll 14
 	for (int r = 0; r < 14; r++) {
 		/* column step */
 		GS2(0, 4, 0x8, 0xC, 0x0);
@@ -226,7 +225,7 @@ static void blake256_compress2nd(uint32_t *h, const uint32_t *block, const uint3
 		GS2(3, 4, 0x9, 0xE, 0xE);
 	}
 
-#pragma unroll 16
+	#pragma unroll 16
 	for (int i = 0; i < 16; i++) {
 		int j = i & 7;
 		h[j] ^= v[i];
@@ -238,10 +237,10 @@ static void __forceinline__ __device__ keccak_block(uint2 *s)
 	uint2 bc[5], tmpxor[5], u, v;
 	//	uint2 s[25];
 
-#pragma unroll 1
+	#pragma unroll 1
 	for (int i = 0; i < 24; i++)
 	{
-#pragma unroll
+		#pragma unroll
 		for (uint32_t x = 0; x < 5; x++)
 			tmpxor[x] = s[x] ^ s[x + 5] ^ s[x + 10] ^ s[x + 15] ^ s[x + 20];
 
@@ -297,10 +296,10 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 	if (thread < threads)
 	{
 		const uint32_t nonce = startNonce + thread;
-		uint32_t h[8];
-		//		uint32_t input[4];
 		const uint32_t T0 = 640;
-#pragma unroll 8
+
+		uint32_t h[8];
+		#pragma unroll 8
 		for (int i = 0; i<8; i++) { h[i] = cpu_h[i]; }
 
 		uint32_t v[16];
@@ -311,8 +310,7 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 			0, 1, 0, 640
 		};
 
-		const uint32_t  u256[16] =
-		{
+		const uint32_t  u256[16] = {
 			0x243F6A88, 0x85A308D3,
 			0x13198A2E, 0x03707344,
 			0xA4093822, 0x299F31D0,
@@ -323,15 +321,14 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 			0x3F84D5B5, 0xB5470917
 		};
 
-		uint32_t m[16] =
-		{
+		uint32_t m[16] = {
 			c_data[0], c_data[1], c_data[2], nonce,
 			c_Padding[0], c_Padding[1], c_Padding[2], c_Padding[3],
 			c_Padding[4], c_Padding[5], c_Padding[6], c_Padding[7],
 			c_Padding[8], c_Padding[9], c_Padding[10], c_Padding[11]
 		};
 
-#pragma unroll 8
+		#pragma unroll 8
 		for (int i = 0; i < 8; i++)
 			v[i] = h[i];
 
@@ -380,7 +377,6 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		GSPREC(1, 6, 0xB, 0xC, 5, 10);
 		GSPREC(2, 7, 0x8, 0xD, 4, 0);
 		GSPREC(3, 4, 0x9, 0xE, 15, 8);
-
 		//	{ 9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13 },
 		GSPREC(0, 4, 0x8, 0xC, 9, 0);
 		GSPREC(1, 5, 0x9, 0xD, 5, 7);
@@ -399,7 +395,6 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		GSPREC(1, 6, 0xB, 0xC, 7, 5);
 		GSPREC(2, 7, 0x8, 0xD, 15, 14);
 		GSPREC(3, 4, 0x9, 0xE, 1, 9);
-
 		//	{ 12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11 },
 		GSPREC(0, 4, 0x8, 0xC, 12, 5);
 		GSPREC(1, 5, 0x9, 0xD, 1, 15);
@@ -409,7 +404,6 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		GSPREC(1, 6, 0xB, 0xC, 6, 3);
 		GSPREC(2, 7, 0x8, 0xD, 9, 2);
 		GSPREC(3, 4, 0x9, 0xE, 8, 11);
-
 		//	{ 13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10 },
 		GSPREC(0, 4, 0x8, 0xC, 13, 11);
 		GSPREC(1, 5, 0x9, 0xD, 7, 14);
@@ -446,7 +440,6 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		GSPREC(1, 6, 0xB, 0xC, 10, 11);
 		GSPREC(2, 7, 0x8, 0xD, 12, 13);
 		GSPREC(3, 4, 0x9, 0xE, 14, 15);
-
 		//	{ 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
 		GSPREC(0, 4, 0x8, 0xC, 14, 10);
 		GSPREC(1, 5, 0x9, 0xD, 4, 8);
@@ -456,7 +449,6 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		GSPREC(1, 6, 0xB, 0xC, 0, 2);
 		GSPREC(2, 7, 0x8, 0xD, 11, 7);
 		GSPREC(3, 4, 0x9, 0xE, 5, 3);
-
 		//	{ 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
 		GSPREC(0, 4, 0x8, 0xC, 11, 8);
 		GSPREC(1, 5, 0x9, 0xD, 12, 0);
@@ -475,9 +467,6 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 		GSPREC(1, 6, 0xB, 0xC, 5, 10);
 		GSPREC(2, 7, 0x8, 0xD, 4, 0);
 		GSPREC(3, 4, 0x9, 0xE, 15, 8);
-
-
-
 
 		h[0] = cuda_swab32(h[0] ^ v[0] ^ v[8]);
 		h[1] = cuda_swab32(h[1] ^ v[1] ^ v[9]);
@@ -501,14 +490,12 @@ void blakeKeccak256_gpu_hash_80(const uint32_t threads, const uint32_t startNonc
 
 		keccak_gpu_state[16] = UINT2(0, 0x80000000);
 		keccak_block(keccak_gpu_state);
+
 		uint64_t *outputHash = (uint64_t *)Hash;
-#pragma unroll 4
+		#pragma unroll 4
 		for (int i = 0; i<4; i++)
 			outputHash[i*threads + thread] = devectorize(keccak_gpu_state[i]);
 	}
-
-
-
 }
 
 __global__ __launch_bounds__(256, 3)
@@ -520,16 +507,16 @@ void blake256_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uin
 		uint32_t h[8];
 		uint32_t input[4];
 
-#pragma unroll
+		#pragma unroll
 		for (int i = 0; i < 8; i++) h[i] = cpu_h[i];
 
-#pragma unroll
+		#pragma unroll
 		for (int i = 0; i < 3; ++i) input[i] = c_data[i];
 
 		input[3] = startNonce + thread;
 		blake256_compress2nd(h, input, 640);
 
-#pragma unroll
+		#pragma unroll
 		for (int i = 0; i<4; i++) {
 			Hash[i*threads + thread] = cuda_swab32ll(MAKE_ULONGLONG(h[2 * i], h[2 * i + 1]));
 		}
@@ -568,6 +555,8 @@ void blake256_cpu_init(int thr_id, uint32_t threads)
 	cudaMemcpyToSymbol(sigma, c_sigma, sizeof(c_sigma), 0, cudaMemcpyHostToDevice);
 }
 
+/** for lyra2v2 **/
+
 __host__
 void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order)
 {
@@ -576,7 +565,7 @@ void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	blakeKeccak256_gpu_hash_80 << <grid, block >> > (threads, startNonce, (uint32_t *)Hash);
+	blakeKeccak256_gpu_hash_80 <<<grid, block>>> (threads, startNonce, (uint32_t *)Hash);
 }
 
 __host__
@@ -587,5 +576,5 @@ void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	blakeKeccak256_gpu_hash_80 << <grid, block, 0, stream >> > (threads, startNonce, (uint32_t *)Hash);
+	blakeKeccak256_gpu_hash_80 <<<grid, block, 0, stream>>> (threads, startNonce, (uint32_t *)Hash);
 }
