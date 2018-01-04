@@ -25,7 +25,7 @@ extern void keccak256_setOutput(int thr_id);
 extern void keccak256_sm3_init(int thr_id, uint32_t threads);
 extern void keccak256_sm3_free(int thr_id);
 extern void keccak256_sm3_setBlock_80(void *pdata, const void *ptarget);
-extern uint32_t keccak256_sm3_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces, int order);
+extern void keccak256_sm3_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces, int order);
 
 // CPU Hash
 extern "C" void keccak256_hash(void *state, const void *input)
