@@ -1,5 +1,5 @@
 
-ccminer 2.2.3 (Dec. 2017)    "polytimos algo and keccakc (opt)"
+ccminer 2.2.4 (Jan. 2018)     "lyra2v2 and keccak improvements"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -278,6 +278,11 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  Jan. 04th 2017  v2.2.4
+                  Improve lyra2v2
+                  Higher keccak default intensity
+                  Drop SM 2.x support by default, for CUDA 9 and more recent
+
   Dec. 04th 2017  v2.2.3
                   Polytimos Algo
                   Handle keccakc variant (with refreshed sha256d merkle)
