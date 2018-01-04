@@ -14,8 +14,6 @@ extern "C"
 
 #include "cuda_helper.h"
 
-static uint32_t *d_hash[MAX_GPUS];
-
 // SM5+ cuda
 extern void keccak256_cpu_init(int thr_id);
 extern void keccak256_cpu_free(int thr_id);
@@ -27,7 +25,7 @@ extern void keccak256_setOutput(int thr_id);
 extern void keccak256_sm3_init(int thr_id, uint32_t threads);
 extern void keccak256_sm3_free(int thr_id);
 extern void keccak256_sm3_setBlock_80(void *pdata, const void *ptarget);
-extern uint32_t keccak256_sm3_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_hash, int order);
+extern uint32_t keccak256_sm3_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t* resNonces, int order);
 
 // CPU Hash
 extern "C" void keccak256_hash(void *state, const void *input)
@@ -52,13 +50,13 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
-	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 21); // 256*256*8*4
+	uint32_t throughput;
+	uint32_t intensity = 23;
 	if(!use_compat_kernels[thr_id]) {
-		uint32_t intensity = 23;
 		if (strstr(device_name[dev_id], "GTX 1070")) intensity = 25;
 		if (strstr(device_name[dev_id], "GTX 1080")) intensity = 26;
-		throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	}
+	throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (opt_benchmark)
@@ -80,7 +78,6 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 			keccak256_cpu_init(thr_id);
 		} else {
 			// really useful ?
-			CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], throughput * 64));
 			keccak256_sm3_init(thr_id, throughput);
 		}
 
@@ -107,7 +104,7 @@ extern "C" int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_no
 		*hashes_done = pdata[19] - first_nonce + throughput;
 
 		if(use_compat_kernels[thr_id])
-			work->nonces[0] = keccak256_sm3_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+			keccak256_sm3_hash_80(thr_id, throughput, pdata[19], work->nonces, order++);
 		else {
 			keccak256_cpu_hash_80(thr_id, throughput, pdata[19], work->nonces, highTarget);
 		}
@@ -170,7 +167,6 @@ extern "C" void free_keccak256(int thr_id)
 	if(!use_compat_kernels[thr_id])
 		keccak256_cpu_free(thr_id);
 	else {
-		cudaFree(d_hash[thr_id]);
 		keccak256_sm3_free(thr_id);
 	}
 
