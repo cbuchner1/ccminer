@@ -11,7 +11,8 @@
 
 #include <map>
 
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
+#include <cuda_helper.h>
 
 #include "miner.h"
 #include "salsa_kernel.h"
@@ -176,13 +177,14 @@ static __device__ uint4& operator^=(uint4& left, const uint4& right)
 	return left;
 }
 
-__device__ __forceinline__ uint4 __shfl(const uint4 val, unsigned int lane, unsigned int width)
+__device__ __forceinline__ uint4 shfl4(const uint4 val, unsigned int lane, unsigned int width)
 {
 	return make_uint4(
 		(unsigned int)__shfl((int)val.x, lane, width),
 		(unsigned int)__shfl((int)val.y, lane, width),
 		(unsigned int)__shfl((int)val.z, lane, width),
-		(unsigned int)__shfl((int)val.w, lane, width));
+		(unsigned int)__shfl((int)val.w, lane, width)
+	);
 }
 
 __device__ __forceinline__ void __transposed_write_BC(uint4 (&B)[4], uint4 (&C)[4], uint4 *D, int spacing)
@@ -208,13 +210,13 @@ __device__ __forceinline__ void __transposed_write_BC(uint4 (&B)[4], uint4 (&C)[
 
 	// rotate rows
 	T1[0] = B[0];
-	T1[1] = __shfl(B[1], lane8 + 7, 8);
-	T1[2] = __shfl(B[2], lane8 + 6, 8);
-	T1[3] = __shfl(B[3], lane8 + 5, 8);
-	T1[4] = __shfl(C[0], lane8 + 4, 8);
-	T1[5] = __shfl(C[1], lane8 + 3, 8);
-	T1[6] = __shfl(C[2], lane8 + 2, 8);
-	T1[7] = __shfl(C[3], lane8 + 1, 8);
+	T1[1] = shfl4(B[1], lane8 + 7, 8);
+	T1[2] = shfl4(B[2], lane8 + 6, 8);
+	T1[3] = shfl4(B[3], lane8 + 5, 8);
+	T1[4] = shfl4(C[0], lane8 + 4, 8);
+	T1[5] = shfl4(C[1], lane8 + 3, 8);
+	T1[6] = shfl4(C[2], lane8 + 2, 8);
+	T1[7] = shfl4(C[3], lane8 + 1, 8);
 
 	/* Matrix after row rotates:
 
@@ -301,13 +303,13 @@ template <int TEX_DIM> __device__ __forceinline__ void __transposed_read_BC(cons
 
 	// rotate rows
 	B[0] = T2[0];
-	B[1] = __shfl(T2[1], lane8 + 1, 8);
-	B[2] = __shfl(T2[2], lane8 + 2, 8);
-	B[3] = __shfl(T2[3], lane8 + 3, 8);
-	C[0] = __shfl(T2[4], lane8 + 4, 8);
-	C[1] = __shfl(T2[5], lane8 + 5, 8);
-	C[2] = __shfl(T2[6], lane8 + 6, 8);
-	C[3] = __shfl(T2[7], lane8 + 7, 8);
+	B[1] = shfl4(T2[1], lane8 + 1, 8);
+	B[2] = shfl4(T2[2], lane8 + 2, 8);
+	B[3] = shfl4(T2[3], lane8 + 3, 8);
+	C[0] = shfl4(T2[4], lane8 + 4, 8);
+	C[1] = shfl4(T2[5], lane8 + 5, 8);
+	C[2] = shfl4(T2[6], lane8 + 6, 8);
+	C[3] = shfl4(T2[7], lane8 + 7, 8);
 
 }
 

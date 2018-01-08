@@ -10,6 +10,7 @@
 #include <map>
 
 #include <cuda_runtime.h>
+#include <cuda_helper.h>
 #include "miner.h"
 
 #include "salsa_kernel.h"
@@ -26,6 +27,12 @@ typedef enum
 #if __CUDA_ARCH__ < 320
 	// Kepler (Compute 3.0)
 	#define __ldg(x) (*(x))
+#endif
+
+#if CUDA_VERSION >= 9000 && __CUDA_ARCH__ >= 300
+#define __shfl2(var, srcLane)  __shfl_sync(0xFFFFFFFFu, var, srcLane)
+#else
+#define __shfl2 __shfl
 #endif
 
 #if !defined(__CUDA_ARCH__) ||  __CUDA_ARCH__ >= 300
@@ -59,8 +66,12 @@ static __host__ __device__ uint4& operator += (uint4& left, const uint4& right) 
 	return left;
 }
 
-static __device__ uint4 __shfl(const uint4 bx, int target_thread) {
-	return make_uint4(__shfl((int)bx.x, target_thread), __shfl((int)bx.y, target_thread), __shfl((int)bx.z, target_thread), __shfl((int)bx.w, target_thread));
+
+static __device__ uint4 shfl4(const uint4 bx, int target_thread) {
+	return make_uint4(
+		__shfl2((int)bx.x, target_thread), __shfl2((int)bx.y, target_thread),
+		__shfl2((int)bx.z, target_thread), __shfl2((int)bx.w, target_thread)
+	);
 }
 
 /* write_keys writes the 8 keys being processed by a warp to the global
@@ -93,8 +104,8 @@ void write_keys_direct(const uint4 &b, const uint4 &bx, uint32_t start)
 	uint32_t *scratch = c_V[(blockIdx.x*blockDim.x + threadIdx.x)/32];
 	if (SCHEME == ANDERSEN) {
 		int target_thread = (threadIdx.x + 4)&31;
-		uint4 t=b, t2=__shfl(bx, target_thread);
-		int t2_start = __shfl((int)start, target_thread) + 4;
+		uint4 t = b, t2 = shfl4(bx, target_thread);
+		int t2_start = __shfl2((int)start, target_thread) + 4;
 		bool c = (threadIdx.x & 0x4);
 		*((uint4 *)(&scratch[c ? t2_start : start])) = (c ? t2 : t);
 		*((uint4 *)(&scratch[c ? start : t2_start])) = (c ? t : t2);
@@ -109,12 +120,12 @@ void read_keys_direct(uint4 &b, uint4 &bx, uint32_t start)
 {
 	uint32_t *scratch = c_V[(blockIdx.x*blockDim.x + threadIdx.x)/32];
 	if (SCHEME == ANDERSEN) {
-		int t2_start = __shfl((int)start, (threadIdx.x + 4)&31) + 4;
+		int t2_start = __shfl2((int)start, (threadIdx.x + 4)&31) + 4;
 		bool c = (threadIdx.x & 0x4);
 		b  = __ldg((uint4 *)(&scratch[c ? t2_start : start]));
 		bx = __ldg((uint4 *)(&scratch[c ? start : t2_start]));
 		uint4 tmp = b; b = (c ? bx : b); bx = (c ? tmp : bx);
-		bx = __shfl(bx, (threadIdx.x + 28)&31);
+		bx = shfl4(bx, (threadIdx.x + 28)&31);
 	} else {
 		b = *((uint4 *)(&scratch[start]));
 		bx = *((uint4 *)(&scratch[start+16]));
@@ -128,14 +139,14 @@ void primary_order_shuffle(uint32_t b[4], uint32_t bx[4]) {
 	int x2 = (threadIdx.x & 0xfc) + (((threadIdx.x & 3)+2)&3);
 	int x3 = (threadIdx.x & 0xfc) + (((threadIdx.x & 3)+3)&3);
 
-	b[3] = __shfl((int)b[3], x1);
-	b[2] = __shfl((int)b[2], x2);
-	b[1] = __shfl((int)b[1], x3);
+	b[3] = __shfl2((int)b[3], x1);
+	b[2] = __shfl2((int)b[2], x2);
+	b[1] = __shfl2((int)b[1], x3);
 	uint32_t tmp = b[1]; b[1] = b[3]; b[3] = tmp;
 
-	bx[3] = __shfl((int)bx[3], x1);
-	bx[2] = __shfl((int)bx[2], x2);
-	bx[1] = __shfl((int)bx[1], x3);
+	bx[3] = __shfl2((int)bx[3], x1);
+	bx[2] = __shfl2((int)bx[2], x2);
+	bx[1] = __shfl2((int)bx[1], x3);
 	tmp = bx[1]; bx[1] = bx[3]; bx[3] = tmp;
 }
 
@@ -146,14 +157,14 @@ void primary_order_shuffle(uint4 &b, uint4 &bx) {
 	int x2 = (threadIdx.x & 0x1c) + (((threadIdx.x & 3)+2)&3);
 	int x3 = (threadIdx.x & 0x1c) + (((threadIdx.x & 3)+3)&3);
 
-	b.w = __shfl((int)b.w, x1);
-	b.z = __shfl((int)b.z, x2);
-	b.y = __shfl((int)b.y, x3);
+	b.w = __shfl2((int)b.w, x1);
+	b.z = __shfl2((int)b.z, x2);
+	b.y = __shfl2((int)b.y, x3);
 	uint32_t tmp = b.y; b.y = b.w; b.w = tmp;
 
-	bx.w = __shfl((int)bx.w, x1);
-	bx.z = __shfl((int)bx.z, x2);
-	bx.y = __shfl((int)bx.y, x3);
+	bx.w = __shfl2((int)bx.w, x1);
+	bx.z = __shfl2((int)bx.z, x2);
+	bx.y = __shfl2((int)bx.y, x3);
 	tmp = bx.y; bx.y = bx.w; bx.w = tmp;
 }
 
@@ -327,9 +338,9 @@ void salsa_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int x
 		/* Unclear if this optimization is needed: These are ordered based
 		 * upon the dependencies needed in the later xors. Compiler should be
 		 * able to figure this out, but might as well give it a hand. */
-		x.y = __shfl((int)x.y, x3);
-		x.w = __shfl((int)x.w, x1);
-		x.z = __shfl((int)x.z, x2);
+		x.y = __shfl2((int)x.y, x3);
+		x.w = __shfl2((int)x.w, x1);
+		x.z = __shfl2((int)x.z, x2);
 
 		/* The next XOR_ROTATE_ADDS could be written to be a copy-paste of the first,
 		 * but the register targets are rewritten here to swap x[1] and x[3] so that
@@ -342,9 +353,9 @@ void salsa_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int x
 		XOR_ROTATE_ADD(x.y, x.z, x.w, 13);
 		XOR_ROTATE_ADD(x.x, x.y, x.z, 18);
 
-		x.w = __shfl((int)x.w, x3);
-		x.y = __shfl((int)x.y, x1);
-		x.z = __shfl((int)x.z, x2);
+		x.w = __shfl2((int)x.w, x3);
+		x.y = __shfl2((int)x.y, x1);
+		x.z = __shfl2((int)x.z, x2);
 	}
 
 	b += x;
@@ -362,18 +373,18 @@ void salsa_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int x
 		XOR_ROTATE_ADD(x.w, x.z, x.y, 13);
 		XOR_ROTATE_ADD(x.x, x.w, x.z, 18);
 
-		x.y = __shfl((int)x.y, x3);
-		x.w = __shfl((int)x.w, x1);
-		x.z = __shfl((int)x.z, x2);
+		x.y = __shfl2((int)x.y, x3);
+		x.w = __shfl2((int)x.w, x1);
+		x.z = __shfl2((int)x.z, x2);
 
 		XOR_ROTATE_ADD(x.w, x.x, x.y, 7);
 		XOR_ROTATE_ADD(x.z, x.w, x.x, 9);
 		XOR_ROTATE_ADD(x.y, x.z, x.w, 13);
 		XOR_ROTATE_ADD(x.x, x.y, x.z, 18);
 
-		x.w = __shfl((int)x.w, x3);
-		x.y = __shfl((int)x.y, x1);
-		x.z = __shfl((int)x.z, x2);
+		x.w = __shfl2((int)x.w, x3);
+		x.y = __shfl2((int)x.y, x1);
+		x.z = __shfl2((int)x.z, x2);
 	}
 
 	// At the end of these iterations, the data is in primary order again.
@@ -424,9 +435,9 @@ void chacha_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int 
 		CHACHA_PRIMITIVE(x.x ,x.w, x.y,  8)
 		CHACHA_PRIMITIVE(x.z ,x.y, x.w,  7)
 
-		x.y = __shfl((int)x.y, x1);
-		x.z = __shfl((int)x.z, x2);
-		x.w = __shfl((int)x.w, x3);
+		x.y = __shfl2((int)x.y, x1);
+		x.z = __shfl2((int)x.z, x2);
+		x.w = __shfl2((int)x.w, x3);
 
 		// Diagonal Mixing phase of chacha
 		CHACHA_PRIMITIVE(x.x ,x.w, x.y, 16)
@@ -434,9 +445,9 @@ void chacha_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int 
 		CHACHA_PRIMITIVE(x.x ,x.w, x.y,  8)
 		CHACHA_PRIMITIVE(x.z ,x.y, x.w,  7)
 
-		x.y = __shfl((int)x.y, x3);
-		x.z = __shfl((int)x.z, x2);
-		x.w = __shfl((int)x.w, x1);
+		x.y = __shfl2((int)x.y, x3);
+		x.z = __shfl2((int)x.z, x2);
+		x.w = __shfl2((int)x.w, x1);
 	}
 
 	b += x;
@@ -454,9 +465,9 @@ void chacha_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int 
 		CHACHA_PRIMITIVE(x.x ,x.w, x.y,  8)
 		CHACHA_PRIMITIVE(x.z ,x.y, x.w,  7)
 
-		x.y = __shfl((int)x.y, x1);
-		x.z = __shfl((int)x.z, x2);
-		x.w = __shfl((int)x.w, x3);
+		x.y = __shfl2((int)x.y, x1);
+		x.z = __shfl2((int)x.z, x2);
+		x.w = __shfl2((int)x.w, x3);
 
 		// Diagonal Mixing phase of chacha
 		CHACHA_PRIMITIVE(x.x ,x.w, x.y, 16)
@@ -464,9 +475,9 @@ void chacha_xor_core(uint4 &b, uint4 &bx, const int x1, const int x2, const int 
 		CHACHA_PRIMITIVE(x.x ,x.w, x.y,  8)
 		CHACHA_PRIMITIVE(x.z ,x.y, x.w,  7)
 
-		x.y = __shfl((int)x.y, x3);
-		x.z = __shfl((int)x.z, x2);
-		x.w = __shfl((int)x.w, x1);
+		x.y = __shfl2((int)x.y, x3);
+		x.z = __shfl2((int)x.z, x2);
+		x.w = __shfl2((int)x.w, x1);
 	}
 
 #undef CHACHA_PRIMITIVE
@@ -589,7 +600,7 @@ void titan_scrypt_core_kernelB(uint32_t *d_odata, int begin, int end)
 	} else load_key<ALGO>(d_odata, b, bx);
 
 	for (int i = begin; i < end; i++) {
-		int j = (__shfl((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
+		int j = (__shfl2((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
 		uint4 t, tx; read_keys_direct<SCHEME>(t, tx, start+32*j);
 		b ^= t; bx ^= tx;
 		block_mixer<ALGO>(b, bx, x1, x2, x3);
@@ -623,7 +634,7 @@ void titan_scrypt_core_kernelB_LG(uint32_t *d_odata, int begin, int end, unsigne
 	{
 		// better divergent thread handling submitted by nVidia engineers, but
 		// supposedly this does not run with the ANDERSEN memory access scheme
-		int j = (__shfl((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
+		int j = (__shfl2((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
 		int pos = j/LOOKUP_GAP;
 		int loop = -1;
 		uint4 t, tx;
@@ -632,7 +643,7 @@ void titan_scrypt_core_kernelB_LG(uint32_t *d_odata, int begin, int end, unsigne
 		while(i < end)
 		{
 			if (loop == -1) {
-				j = (__shfl((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
+				j = (__shfl2((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
 				pos = j/LOOKUP_GAP;
 				loop = j-pos*LOOKUP_GAP;
 				read_keys_direct<SCHEME>(t, tx, start+32*pos);
@@ -655,7 +666,7 @@ void titan_scrypt_core_kernelB_LG(uint32_t *d_odata, int begin, int end, unsigne
 		// this is my original implementation, now used with the ANDERSEN
 		// memory access scheme only.
 		for (int i = begin; i < end; i++) {
-			int j = (__shfl((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
+			int j = (__shfl2((int)bx.x, (threadIdx.x & 0x1c)) & (c_N_1));
 			int pos = j/LOOKUP_GAP, loop = j-pos*LOOKUP_GAP;
 			uint4 t, tx; read_keys_direct<SCHEME>(t, tx, start+32*pos);
 			while (loop--)
