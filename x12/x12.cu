@@ -1,19 +1,18 @@
 /*
  * X12 algorithm
  */
-extern "C"
-{
+extern "C" {
 #include "sph/sph_blake.h"
 #include "sph/sph_bmw.h"
-#include "sph/sph_groestl.h"
-#include "sph/sph_skein.h"
-#include "sph/sph_jh.h"
-#include "sph/sph_keccak.h"
 #include "sph/sph_luffa.h"
 #include "sph/sph_cubehash.h"
 #include "sph/sph_shavite.h"
 #include "sph/sph_simd.h"
 #include "sph/sph_echo.h"
+#include "sph/sph_groestl.h"
+#include "sph/sph_skein.h"
+#include "sph/sph_jh.h"
+#include "sph/sph_keccak.h"
 #include "sph/sph_hamsi.h"
 }
 #include "miner.h"
@@ -29,20 +28,18 @@ extern void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t star
 // X12 CPU Hash
 extern "C" void x12hash(void *output, const void *input)
 {
-	// blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11-hamsi12
-
-	sph_blake512_context ctx_blake;
-	sph_bmw512_context ctx_bmw;
-	sph_groestl512_context ctx_groestl;
-	sph_jh512_context ctx_jh;
-	sph_keccak512_context ctx_keccak;
-	sph_skein512_context ctx_skein;
-	sph_luffa512_context ctx_luffa;
+	sph_blake512_context    ctx_blake;
+	sph_bmw512_context      ctx_bmw;
+	sph_luffa512_context    ctx_luffa;
 	sph_cubehash512_context ctx_cubehash;
-	sph_shavite512_context ctx_shavite;
-	sph_simd512_context ctx_simd;
-	sph_echo512_context ctx_echo;
-	sph_hamsi512_context ctx_hamsi;
+	sph_shavite512_context  ctx_shavite;
+	sph_simd512_context     ctx_simd;
+	sph_echo512_context     ctx_echo;
+	sph_groestl512_context  ctx_groestl;
+	sph_skein512_context    ctx_skein;
+	sph_jh512_context       ctx_jh;
+	sph_keccak512_context   ctx_keccak;
+	sph_hamsi512_context    ctx_hamsi;
 
 	uint32_t hash[32];
 	memset(hash, 0, sizeof hash);
@@ -52,7 +49,7 @@ extern "C" void x12hash(void *output, const void *input)
 	sph_blake512_close(&ctx_blake, (void*) hash);
 
 	sph_bmw512_init(&ctx_bmw);
-	sph_bmw512 (&ctx_bmw, (const void*) hash, 64);
+	sph_bmw512(&ctx_bmw, (const void*) hash, 64);
 	sph_bmw512_close(&ctx_bmw, (void*) hash);
 
 	sph_luffa512_init(&ctx_luffa);
@@ -76,23 +73,23 @@ extern "C" void x12hash(void *output, const void *input)
 	sph_echo512_close(&ctx_echo, (void*)hash);
 
 	sph_groestl512_init(&ctx_groestl);
-	sph_groestl512 (&ctx_groestl, (const void*) hash, 64);
+	sph_groestl512(&ctx_groestl, (const void*) hash, 64);
 	sph_groestl512_close(&ctx_groestl, (void*) hash);
 
 	sph_skein512_init(&ctx_skein);
-	sph_skein512 (&ctx_skein, (const void*) hash, 64);
+	sph_skein512(&ctx_skein, (const void*) hash, 64);
 	sph_skein512_close(&ctx_skein, (void*) hash);
 
 	sph_jh512_init(&ctx_jh);
-	sph_jh512 (&ctx_jh, (const void*) hash, 64);
+	sph_jh512(&ctx_jh, (const void*) hash, 64);
 	sph_jh512_close(&ctx_jh, (void*) hash);
 
 	sph_keccak512_init(&ctx_keccak);
-	sph_keccak512 (&ctx_keccak, (const void*) hash, 64);
+	sph_keccak512(&ctx_keccak, (const void*) hash, 64);
 	sph_keccak512_close(&ctx_keccak, (void*) hash);
 
 	sph_hamsi512_init(&ctx_hamsi);
-	sph_hamsi512 (&ctx_hamsi, (const void*) hash, 64);
+	sph_hamsi512(&ctx_hamsi, (const void*) hash, 64);
 	sph_hamsi512_close(&ctx_hamsi, (void*) hash);
 
 	memcpy(output, hash, 32);
@@ -105,7 +102,7 @@ extern "C" int scanhash_x12(int thr_id, struct work* work, uint32_t max_nonce, u
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-	int intensity = 19; // (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 20 : 19;
+	int intensity = (device_sm[device_map[thr_id]] > 500 && !is_windows()) ? 20 : 19;
 	uint32_t throughput =  cuda_default_throughput(thr_id, 1 << intensity); // 19=256*256*8;
 	//if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
@@ -196,7 +193,7 @@ extern "C" int scanhash_x12(int thr_id, struct work* work, uint32_t max_nonce, u
 			else if (vhash[7] > Htarg) {
 				gpu_increment_reject(thr_id);
 				if (!opt_quiet)
-				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
+					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
 				pdata[19] = work->nonces[0] + 1;
 				continue;
 			}
