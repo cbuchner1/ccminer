@@ -1,5 +1,5 @@
 /*
- * X13 algorithm
+ * X12 algorithm
  */
 extern "C"
 {
@@ -9,15 +9,12 @@ extern "C"
 #include "sph/sph_skein.h"
 #include "sph/sph_jh.h"
 #include "sph/sph_keccak.h"
-
 #include "sph/sph_luffa.h"
 #include "sph/sph_cubehash.h"
 #include "sph/sph_shavite.h"
 #include "sph/sph_simd.h"
 #include "sph/sph_echo.h"
-
 #include "sph/sph_hamsi.h"
-#include "sph/sph_fugue.h"
 }
 #include "miner.h"
 
@@ -29,10 +26,10 @@ static uint32_t *d_hash[MAX_GPUS];
 extern void x13_hamsi512_cpu_init(int thr_id, uint32_t threads);
 extern void x13_hamsi512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order);
 
-// X13 CPU Hash
+// X12 CPU Hash
 extern "C" void x12hash(void *output, const void *input)
 {
-	// blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11-hamsi12-fugue13
+	// blake1-bmw2-grs3-skein4-jh5-keccak6-luffa7-cubehash8-shavite9-simd10-echo11-hamsi12
 
 	sph_blake512_context ctx_blake;
 	sph_bmw512_context ctx_bmw;
@@ -187,7 +184,7 @@ extern "C" int scanhash_x12(int thr_id, struct work* work, uint32_t max_nonce, u
 				work_set_target_ratio(work, vhash);
 				if (work->nonces[1] != 0) {
 					be32enc(&endiandata[19], work->nonces[1]);
-					x13hash(vhash, endiandata);
+					x12hash(vhash, endiandata);
 					bn_set_target_ratio(work, vhash, 1);
 					work->valid_nonces++;
 					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
