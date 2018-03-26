@@ -435,12 +435,6 @@
     <CudaCompile Include="sha256\sha256d.cu" />
     <CudaCompile Include="sha256\cuda_sha256t.cu" />
     <CudaCompile Include="sha256\sha256t.cu" />
-    <CudaCompile Include="x15\cuda_x15_whirlpool_sm3.cu" />
-    <CudaCompile Include="x16r\x16r.cu" />
-    <CudaCompile Include="x16r\cuda_x16_echo512.cu" />
-    <CudaCompile Include="x16r\cuda_x16_fugue512.cu" />
-    <CudaCompile Include="x16r\cuda_x16_shabal512.cu" />
-    <CudaCompile Include="x16r\cuda_x16_simd512_80.cu" />
     <CudaCompile Include="zr5.cu" />
     <CudaCompile Include="heavy\cuda_blake512.cu">
     </CudaCompile>
@@ -580,6 +574,7 @@
     <CudaCompile Include="x11\veltor.cu" />
     <CudaCompile Include="x11\x11.cu" />
     <CudaCompile Include="x11\x11evo.cu" />
+    <CudaCompile Include="x12\x12.cu" />
     <CudaCompile Include="x13\cuda_x13_hamsi512.cu">
       <MaxRegCount>72</MaxRegCount>
     </CudaCompile>
@@ -594,6 +589,12 @@
     <CudaCompile Include="x17\hmq17.cu" />
     <CudaCompile Include="x15\x15.cu" />
     <CudaCompile Include="x15\whirlpool.cu" />
+    <CudaCompile Include="x15\cuda_x15_whirlpool_sm3.cu" />
+    <CudaCompile Include="x16r\x16r.cu" />
+    <CudaCompile Include="x16r\cuda_x16_echo512.cu" />
+    <CudaCompile Include="x16r\cuda_x16_fugue512.cu" />
+    <CudaCompile Include="x16r\cuda_x16_shabal512.cu" />
+    <CudaCompile Include="x16r\cuda_x16_simd512_80.cu" />
     <CudaCompile Include="x17\x17.cu" />
     <CudaCompile Include="x17\cuda_x17_haval256.cu">
     </CudaCompile>
