@@ -997,6 +997,9 @@
     <CudaCompile Include="x16r\x16r.cu">
       <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
+    <CudaCompile Include="x16r\x16s.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">

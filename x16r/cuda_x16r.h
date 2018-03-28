@@ -73,3 +73,4 @@ void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t
 
 void x16_sha512_setBlock_80(void *pdata);
 void x16_sha512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash);
+

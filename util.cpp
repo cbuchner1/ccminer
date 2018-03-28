@@ -2314,25 +2314,28 @@ void print_hash_tests(void)
 	printpfx("x11evo", hash);
 
 	x11hash(&hash[0], &buf[0]);
-	printpfx("X11", hash);
+	printpfx("x11", hash);
 
 	x12hash(&hash[0], &buf[0]);
-	printpfx("X12", hash);
+	printpfx("x12", hash);
 
 	x13hash(&hash[0], &buf[0]);
-	printpfx("X13", hash);
+	printpfx("x13", hash);
 
 	x14hash(&hash[0], &buf[0]);
-	printpfx("X14", hash);
+	printpfx("x14", hash);
 
 	x15hash(&hash[0], &buf[0]);
-	printpfx("X15", hash);
+	printpfx("x15", hash);
 
 	x16r_hash(&hash[0], &buf[0]);
-	printpfx("X16r", hash);
+	printpfx("x16r", hash);
+
+	x16s_hash(&hash[0], &buf[0]);
+	printpfx("x16s", hash);
 
 	x17hash(&hash[0], &buf[0]);
-	printpfx("X17", hash);
+	printpfx("x17", hash);
 
 	//memcpy(buf, zrtest, 80);
 	zr5hash(&hash[0], &buf[0]);
