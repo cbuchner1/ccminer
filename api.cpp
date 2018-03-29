@@ -1252,7 +1252,7 @@ static void api()
 			char *wskey = NULL;
 			n = recv(c, &buf[0], SOCK_REC_BUFSZ, 0);
 
-			fail = SOCKETFAIL(n);
+			fail = SOCKETFAIL(n) || n < 0;
 			if (fail)
 				buf[0] = '\0';
 			else if (n > 0 && buf[n-1] == '\n') {
@@ -1261,7 +1261,7 @@ static void api()
 				if (n > 0 && buf[n-1] == '\r')
 					buf[n-1] = '\0';
 			}
-			buf[n] = '\0';
+			else buf[n] = '\0';
 
 			//if (opt_debug && opt_protocol && n > 0)
 			//	applog(LOG_DEBUG, "API: recv command: (%d) '%s'+char(%x)", n, buf, buf[n-1]);
