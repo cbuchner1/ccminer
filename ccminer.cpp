@@ -3161,6 +3161,7 @@ void parse_arg(int key, char *arg)
 		if (v < 1 || v > 65535) // sanity check
 			show_usage_and_exit(1);
 		opt_api_mcast_port = v;
+		break;
 	case 'B':
 		opt_background = true;
 		break;
