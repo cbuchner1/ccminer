@@ -1,5 +1,5 @@
 
-ccminer 2.2.5 (Mar 2018)                   "x12 and x16r algos"
+ccminer 2.2.5 (Apr 2018)             "x12, x16r and x16s algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -125,6 +125,7 @@ its command line interface and options.
                           x14         use to mine X14
                           x15         use to mine Halcyon
                           x16r        use to mine Raven
+                          x16s        use to mine Pigeon and Eden
                           x17         use to mine X17
                           vanilla     use to mine Vanilla (Blake256)
                           veltor      use to mine VeltorCoin
@@ -280,8 +281,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
-  Mar. 2018       v2.2.5
+  Apr. 02nd 2018  v2.2.5
                   New x16r algo for Raven
+                  New x16s algo for Pigeon and Eden
                   New x12 algo for Galaxycash
                   Equihash (SIMT) sync issues for the Volta generation
 
