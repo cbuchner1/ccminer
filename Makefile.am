@@ -78,6 +78,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x15/whirlpool.cu x15/cuda_x15_whirlpool_sm3.cu \
 			  x16r/x16r.cu x16r/x16s.cu x16r/cuda_x16_echo512.cu x16r/cuda_x16_fugue512.cu \
 			  x16r/cuda_x16_shabal512.cu x16r/cuda_x16_simd512_80.cu \
+			  x16r/cuda_x16_echo512_64.cu \
 			  x17/x17.cu x17/hmq17.cu x17/cuda_x17_haval256.cu x17/cuda_x17_sha512.cu \
 			  x11/phi.cu x11/cuda_streebog_maxwell.cu \
 			  x11/c11.cu x11/s3.cu x11/sib.cu x11/veltor.cu x11/cuda_streebog.cu

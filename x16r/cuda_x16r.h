@@ -22,6 +22,10 @@ extern void x17_haval256_cpu_hash_64(int thr_id, uint32_t threads, uint32_t star
 
 void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_nonceVector, uint32_t *d_outputHash, int order);
 
+// ---- optimised but non compatible kernels
+
+void x16_echo512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
+
 // ---- 80 bytes kernels
 
 void quark_bmw512_cpu_setBlock_80(void *pdata);

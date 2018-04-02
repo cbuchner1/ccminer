@@ -985,6 +985,9 @@
     <CudaCompile Include="x16r\cuda_x16_echo512.cu">
       <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>
+    <CudaCompile Include="x16r\cuda_x16_echo512_64.cu">
+      <Filter>Source Files\CUDA\x16r</Filter>
+    </CudaCompile>
     <CudaCompile Include="x16r\cuda_x16_fugue512.cu">
       <Filter>Source Files\CUDA\x16r</Filter>
     </CudaCompile>

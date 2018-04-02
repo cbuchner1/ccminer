@@ -596,6 +596,9 @@
     <CudaCompile Include="x16r\cuda_x16_fugue512.cu" />
     <CudaCompile Include="x16r\cuda_x16_shabal512.cu" />
     <CudaCompile Include="x16r\cuda_x16_simd512_80.cu" />
+    <CudaCompile Include="x16r\cuda_x16_echo512_64.cu">
+      <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
+    </CudaCompile>
     <CudaCompile Include="x17\x17.cu" />
     <CudaCompile Include="x17\cuda_x17_haval256.cu">
     </CudaCompile>

@@ -229,6 +229,7 @@ void whirlpool_midstate(void *state, const void *input)
 #endif
 
 static bool init[MAX_GPUS] = { 0 };
+static bool use_compat_kernels[MAX_GPUS] = { 0 };
 
 //#define _DEBUG
 #define _DEBUG_PREFIX "x16s-"
@@ -255,6 +256,11 @@ extern "C" int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, 
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
+		cuda_get_arch(thr_id);
+		use_compat_kernels[thr_id] = (cuda_arch[dev_id] < 500);
+		if (use_compat_kernels[thr_id])
+			x11_echo512_cpu_init(thr_id, throughput);
+
 		quark_blake512_cpu_init(thr_id, throughput);
 		quark_bmw512_cpu_init(thr_id, throughput);
 		quark_groestl512_cpu_init(thr_id, throughput);
@@ -265,7 +271,6 @@ extern "C" int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, 
 		x11_luffa512_cpu_init(thr_id, throughput); // 64
 		x11_shavite512_cpu_init(thr_id, throughput);
 		x11_simd512_cpu_init(thr_id, throughput); // 64
-		x11_echo512_cpu_init(thr_id, throughput);
 		x16_echo512_cuda_init(thr_id, throughput);
 		x13_hamsi512_cpu_init(thr_id, throughput);
 		x13_fugue512_cpu_init(thr_id, throughput);
@@ -482,7 +487,10 @@ extern "C" int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, 
 				TRACE("simd   :");
 				break;
 			case ECHO:
-				x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+				if (use_compat_kernels[thr_id])
+					x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+				else
+					x16_echo512_cpu_hash_64(thr_id, throughput, d_hash[thr_id]); order++;
 				TRACE("echo   :");
 				break;
 			case HAMSI:
