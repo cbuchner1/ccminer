@@ -489,8 +489,9 @@ extern "C" int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, 
 			case ECHO:
 				if (use_compat_kernels[thr_id])
 					x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-				else
+				else {
 					x16_echo512_cpu_hash_64(thr_id, throughput, d_hash[thr_id]); order++;
+				}
 				TRACE("echo   :");
 				break;
 			case HAMSI:
