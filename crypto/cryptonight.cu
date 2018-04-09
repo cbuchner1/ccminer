@@ -50,6 +50,10 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 			gpulog_init(LOG_INFO, thr_id, "%s, %d MB available, %hd SMX", device_name[dev_id],
 				mem, device_mpcount[dev_id]);
 
+		if (!device_config[thr_id] && strcmp(device_name[dev_id], "TITAN V") == 0) {
+			device_config[thr_id] = strdup("80x24");
+		}
+
 		if (device_config[thr_id]) {
 			int res = sscanf(device_config[thr_id], "%ux%u", &cn_blocks, &cn_threads);
 			throughput = cuda_default_throughput(thr_id, cn_blocks*cn_threads);
@@ -71,7 +75,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 			exit(1);
 		}
 
-		cudaSetDevice(device_map[thr_id]);
+		cudaSetDevice(dev_id);
 		if (opt_cudaschedule == -1 && gpu_threads == 1) {
 			cudaDeviceReset();
 			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);

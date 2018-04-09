@@ -270,7 +270,7 @@ Options:\n\
 			lyra2v2     VertCoin\n\
 			lyra2z      ZeroCoin (3rd impl)\n\
 			myr-gr      Myriad-Groestl\n\
-			monero      XMR cryptonight v7 (new)\n\
+			monero      XMR cryptonight (v7)\n\
 			neoscrypt   FeatherCoin, Phoenix, UFO...\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
@@ -578,13 +578,10 @@ static bool get_blocktemplate(CURL *curl, struct work *work);
 
 void get_currentalgo(char* buf, int sz)
 {
-  int algo = opt_algo;
-
-  if (algo == ALGO_CRYPTONIGHT) {
-    algo = get_cryptonight_algo(cryptonight_fork);
-  }
-
-  snprintf(buf, sz, "%s", algo_names[algo]);
+	int algo = opt_algo;
+	if (algo == ALGO_CRYPTONIGHT)
+		algo = get_cryptonight_algo(cryptonight_fork);
+	snprintf(buf, sz, "%s", algo_names[algo]);
 }
 
 void format_hashrate(double hashrate, char *output)
@@ -1849,7 +1846,6 @@ static void *miner_thread(void *userdata)
 	bool extrajob = false;
 	char s[16];
 	int rc = 0;
-  int variant;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
@@ -2387,14 +2383,13 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_cryptolight(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_CRYPTONIGHT:
-      variant = 0;
-
-      if (cryptonight_fork > 1) {
-        variant = ((((unsigned char*)work.data)[0] >= cryptonight_fork) ? ((unsigned char*)work.data)[0] - cryptonight_fork + 1 : 0 );
-      }
-
-			rc = scanhash_cryptonight(thr_id, &work, max_nonce, &hashes_done, variant);
+		{
+			int cn_variant = 0;
+			if (cryptonight_fork > 1 && ((unsigned char*)work.data)[0] >= cryptonight_fork)
+				cn_variant = ((unsigned char*)work.data)[0] - cryptonight_fork + 1;
+			rc = scanhash_cryptonight(thr_id, &work, max_nonce, &hashes_done, cn_variant);
 			break;
+		}
 		case ALGO_DECRED:
 			rc = scanhash_decred(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -3157,27 +3152,24 @@ void parse_arg(int key, char *arg)
 			}
 		}
 
-    //fix cryptonight
-    switch (opt_algo) {
-      case ALGO_MONERO:
-        opt_algo = ALGO_CRYPTONIGHT;
-        cryptonight_fork = 7;
-        break;
-
-      case ALGO_GRAFT:
-        opt_algo = ALGO_CRYPTONIGHT;
-        cryptonight_fork = 8;
-        break;
-
-      case ALGO_STELLITE:
-        opt_algo = ALGO_CRYPTONIGHT;
-        cryptonight_fork = 3;
-        break;
-
-      case ALGO_CRYPTONIGHT:
-        cryptonight_fork = 1;
-        break;
-    }
+		// cryptonight variants
+		switch (opt_algo) {
+		case ALGO_MONERO:
+			opt_algo = ALGO_CRYPTONIGHT;
+			cryptonight_fork = 7;
+			break;
+		case ALGO_GRAFT:
+			opt_algo = ALGO_CRYPTONIGHT;
+			cryptonight_fork = 8;
+			break;
+		case ALGO_STELLITE:
+			opt_algo = ALGO_CRYPTONIGHT;
+			cryptonight_fork = 3;
+			break;
+		case ALGO_CRYPTONIGHT:
+			cryptonight_fork = 1;
+			break;
+		}
 
 		break;
 	case 'b':
