@@ -10,6 +10,11 @@
 #include <unistd.h>
 #endif
 
+#if CUDA_VERSION >= 9000 && __CUDA_ARCH__ >= 300
+#undef __shfl
+#define __shfl(var, srcLane, width)  __shfl_sync(0xFFFFFFFFu, var, srcLane, width)
+#endif
+
 extern int device_bfactor[MAX_GPUS];
 
 #include "cn_aes.cuh"
@@ -25,8 +30,12 @@ __device__ __forceinline__ T loadGlobal64(T * const addr)
 {
 	T x;
 	asm volatile(
+#if UINTPTR_MAX == UINT64_MAX
 		"ld.global.cg.u64 %0, [%1];" : "=l"(x) : "l"(addr)
-		);
+#else
+		"ld.global.cg.u64 %0, [%1];" : "=l"(x) : "r"(addr)
+#endif
+	);
 	return x;
 }
 
@@ -35,8 +44,12 @@ __device__ __forceinline__ T loadGlobal32(T * const addr)
 {
 	T x;
 	asm volatile(
+#if UINTPTR_MAX == UINT64_MAX
 		"ld.global.cg.u32 %0, [%1];" : "=r"(x) : "l"(addr)
-		);
+#else
+		"ld.global.cg.u32 %0, [%1];" : "=r"(x) : "r"(addr)
+#endif
+	);
 	return x;
 }
 
@@ -44,12 +57,16 @@ template< typename T >
 __device__ __forceinline__ void storeGlobal32(T* addr, T const & val)
 {
 	asm volatile(
+#if UINTPTR_MAX == UINT64_MAX
 		"st.global.cg.u32 [%0], %1;" : : "l"(addr), "r"(val)
-		);
-
+#else
+		"st.global.cg.u32 [%0], %1;" : : "r"(addr), "r"(val)
+#endif
+	);
 }
 
-__global__ void cryptonight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state, uint32_t * __restrict__ ctx_state, uint32_t * __restrict__ ctx_key1)
+__global__
+void cryptonight_core_gpu_phase1(int threads, uint32_t * __restrict__ long_state, uint32_t * __restrict__ ctx_state, uint32_t * __restrict__ ctx_key1)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -93,7 +110,8 @@ __device__ __forceinline__ void MUL_SUM_XOR_DST(uint64_t a, uint64_t *__restrict
 	dst[1] = lo;
 }
 
-__global__ void cryptonight_core_gpu_phase2(uint32_t threads, int bfactor, int partidx, uint32_t * __restrict__ d_long_state, uint32_t * __restrict__ d_ctx_a, uint32_t * __restrict__ d_ctx_b, int variant, const uint32_t * d_tweak1_2)
+__global__
+void cryptonight_core_gpu_phase2(uint32_t threads, int bfactor, int partidx, uint32_t * __restrict__ d_long_state, uint32_t * __restrict__ d_ctx_a, uint32_t * __restrict__ d_ctx_b, int variant, const uint32_t * d_tweak1_2)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -182,7 +200,8 @@ __global__ void cryptonight_core_gpu_phase2(uint32_t threads, int bfactor, int p
 	}
 }
 
-__global__ void cryptonight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long_state, uint32_t * __restrict__ d_ctx_state, const uint32_t * __restrict__ d_ctx_key2)
+__global__
+void cryptonight_core_gpu_phase3(int threads, const uint32_t * __restrict__ long_state, uint32_t * __restrict__ d_ctx_state, const uint32_t * __restrict__ d_ctx_key2)
 {
 	__shared__ uint32_t sharedMemory[1024];
 
@@ -212,7 +231,8 @@ __global__ void cryptonight_core_gpu_phase3(int threads, const uint32_t * __rest
 	}
 }
 
-__host__ void cryptonight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2, int variant, uint32_t *d_ctx_tweak1_2)
+__host__
+void cryptonight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2, int variant, uint32_t *d_ctx_tweak1_2)
 {
 	dim3 grid(blocks);
 	dim3 block(threads);
