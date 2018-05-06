@@ -236,6 +236,7 @@ static char const usage[] = "\
 Usage: " PROGRAM_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the hash algorithm to use\n\
+			allium      Garlic double lyra2\n\
 			bastion     Hefty bastion\n\
 			bitcore     Timetravel-10\n\
 			blake       Blake 256 (SFR)\n\

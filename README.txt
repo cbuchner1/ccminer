@@ -1,5 +1,5 @@
 
-ccminer 2.2.5 (Apr 2018)             "x12, x16r and x16s algos"
+ccminer 2.2.6 (Under Dev)
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -73,6 +73,7 @@ This code is based on the pooler cpuminer and inherits
 its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
+                          allium      use to mine Garlic
                           bastion     use to mine Joincoin
                           bitcore     use to mine Bitcore's Timetravel10
                           blake       use to mine Saffroncoin (Blake256)
@@ -281,6 +282,9 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  2018            v2.2.6
+                  New allium algo for Garlic
+
   Apr. 02nd 2018  v2.2.5
                   New x16r algo for Raven
                   New x16s algo for Pigeon and Eden
