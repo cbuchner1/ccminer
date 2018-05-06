@@ -273,6 +273,7 @@ void sha256d(unsigned char *hash, const unsigned char *data, int len);
 
 struct work;
 
+extern int scanhash_allium(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_bastion(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_blake256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds);
 extern int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -339,6 +340,7 @@ extern int scanhash_scrypt_jane(int thr_id, struct work *work, uint32_t max_nonc
 /* free device allocated memory per algo */
 void algo_free_all(int thr_id);
 
+extern void free_allium(int thr_id);
 extern void free_bastion(int thr_id);
 extern void free_bitcore(int thr_id);
 extern void free_blake256(int thr_id);
@@ -887,6 +889,7 @@ void applog_hash64(void *hash);
 void applog_compare_hash(void *hash, void *hash_ref);
 
 void print_hash_tests(void);
+void allium_hash(void *state, const void *input);
 void bastionhash(void* output, const unsigned char* input);
 void blake256hash(void *output, const void *input, int8_t rounds);
 void blake2b_hash(void *output, const void *input);

@@ -39,6 +39,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  lyra2/lyra2RE.cu lyra2/cuda_lyra2.cu \
 		          lyra2/lyra2REv2.cu lyra2/cuda_lyra2v2.cu \
 			  lyra2/Lyra2Z.c lyra2/lyra2Z.cu lyra2/cuda_lyra2Z.cu \
+			  lyra2/allium.cu \
 			  Algo256/cuda_bmw256.cu Algo256/cuda_cubehash256.cu \
 			  Algo256/cuda_blake256.cu Algo256/cuda_groestl256.cu \
 			  Algo256/cuda_keccak256_sm3.cu Algo256/cuda_keccak256.cu Algo256/cuda_skein256.cu \

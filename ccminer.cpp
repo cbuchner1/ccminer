@@ -1698,6 +1698,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_SCRYPT_JANE:
 			work_set_target(work, sctx->job.diff / (65536.0 * opt_difficulty));
 			break;
+		case ALGO_ALLIUM:
 		case ALGO_DMD_GR:
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
@@ -2234,6 +2235,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_TRIBUS:
 				minmax = 0x1000000;
 				break;
+			case ALGO_ALLIUM:
 			case ALGO_C11:
 			case ALGO_DEEP:
 			case ALGO_HEAVY:
@@ -2323,6 +2325,9 @@ static void *miner_thread(void *userdata)
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
 
+		case ALGO_ALLIUM:
+			rc = scanhash_allium(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_BASTION:
 			rc = scanhash_bastion(thr_id, &work, max_nonce, &hashes_done);
 			break;

@@ -49,6 +49,7 @@ void bench_free()
 void algo_free_all(int thr_id)
 {
 	// only initialized algos will be freed
+	free_allium(thr_id);
 	free_bastion(thr_id);
 	free_bitcore(thr_id);
 	free_blake256(thr_id);

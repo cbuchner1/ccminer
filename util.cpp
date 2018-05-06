@@ -2164,6 +2164,9 @@ void print_hash_tests(void)
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
+	allium_hash(&hash[0], &buf[0]);
+	printpfx("allium", hash);
+
 	bastionhash(&hash[0], &buf[0]);
 	printpfx("bastion", hash);
 

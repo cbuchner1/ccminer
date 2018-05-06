@@ -519,6 +519,7 @@
     <CudaCompile Include="qubit\luffa.cu" />
     <CudaCompile Include="qubit\qubit.cu" />
     <CudaCompile Include="qubit\qubit_luffa512.cu" />
+    <CudaCompile Include="lyra2\allium.cu" />
     <CudaCompile Include="lyra2\lyra2RE.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2.cu" />
     <CudaCompile Include="lyra2\lyra2REv2.cu" />
