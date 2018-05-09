@@ -20,11 +20,6 @@ extern "C" {
 #include "sph/sph_keccak.h"
 #include "sph/sph_luffa.h"
 #include "sph/sph_cubehash.h"
-#if HASH_FUNC_COUNT > 8
-#include "sph/sph_shavite.h"
-#include "sph/sph_simd.h"
-#include "sph/sph_echo.h"
-#endif
 }
 
 #include "miner.h"
@@ -42,11 +37,6 @@ enum Algo {
 	KECCAK,
 	LUFFA,
 	CUBEHASH,
-#if HASH_FUNC_COUNT > 8
-	SHAVITE,
-	SIMD,
-	ECHO,
-#endif
 	MAX_ALGOS_COUNT
 };
 
@@ -153,11 +143,6 @@ extern "C" void timetravel_hash(void *output, const void *input)
 	sph_keccak512_context    ctx_keccak;
 	sph_luffa512_context     ctx_luffa1;
 	sph_cubehash512_context  ctx_cubehash1;
-#if HASH_FUNC_COUNT > 8
-	sph_shavite512_context   ctx_shavite1;
-	sph_simd512_context      ctx_simd1;
-	sph_echo512_context      ctx_echo1;
-#endif
 
 	if (s_sequence == UINT32_MAX) {
 		uint32_t *data = (uint32_t*) input;
@@ -175,11 +160,6 @@ extern "C" void timetravel_hash(void *output, const void *input)
 		const char elem = hashOrder[i];
 		uint8_t algo = elem >= 'A' ? elem - 'A' + 10 : elem - '0';
 
-		if (i > 0) {
-			in = (void*) hash;
-			size = 64;
-		}
-
 		switch (algo) {
 		case BLAKE:
 			sph_blake512_init(&ctx_blake);
@@ -195,7 +175,6 @@ extern "C" void timetravel_hash(void *output, const void *input)
 			sph_groestl512_init(&ctx_groestl);
 			sph_groestl512(&ctx_groestl, in, size);
 			sph_groestl512_close(&ctx_groestl, hash);
-			//applog_hex((void*)hash, 32);
 			break;
 		case SKEIN:
 			sph_skein512_init(&ctx_skein);
@@ -222,24 +201,10 @@ extern "C" void timetravel_hash(void *output, const void *input)
 			sph_cubehash512(&ctx_cubehash1, in, size);
 			sph_cubehash512_close(&ctx_cubehash1, hash);
 			break;
-#if HASH_FUNC_COUNT > 8
-		case SHAVITE:
-			sph_shavite512_init(&ctx_shavite1);
-			sph_shavite512(&ctx_shavite1, in, size);
-			sph_shavite512_close(&ctx_shavite1, hash);
-			break;
-		case SIMD:
-			sph_simd512_init(&ctx_simd1);
-			sph_simd512(&ctx_simd1, in, size);
-			sph_simd512_close(&ctx_simd1, hash);
-			break;
-		case ECHO:
-			sph_echo512_init(&ctx_echo1);
-			sph_echo512(&ctx_echo1, in, size);
-			sph_echo512_close(&ctx_echo1, hash);
-			break;
-#endif
 		}
+
+		in = (void*) hash;
+		size = 64;
 	}
 
 	memcpy(output, hash, 32);
@@ -330,13 +295,7 @@ extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_n
 		qubit_luffa512_cpu_init(thr_id, throughput); // only constants (480 bytes)
 		x11_luffa512_cpu_init(thr_id, throughput);
 		x11_cubehash512_cpu_init(thr_id, throughput);
-#if HASH_FUNC_COUNT > 8
-		x11_shavite512_cpu_init(thr_id, throughput);
-		x11_echo512_cpu_init(thr_id, throughput);
-		if (x11_simd512_cpu_init(thr_id, throughput) != 0) {
-			return 0;
-		}
-#endif
+
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), -1);
 		CUDA_CALL_OR_RET_X(cudaMemset(d_hash[thr_id], 0, (size_t) 64 * throughput), -1);
 
@@ -471,20 +430,6 @@ extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_n
 				x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 				TRACE("cube   :");
 				break;
-#if HASH_FUNC_COUNT > 8
-			case SHAVITE:
-				x11_shavite512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-				TRACE("shavite:");
-				break;
-			case SIMD:
-				x11_simd512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-				TRACE("simd   :");
-				break;
-			case ECHO:
-				x11_echo512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
-				TRACE("echo   :");
-				break;
-#endif
 			}
 		}
 
@@ -544,9 +489,7 @@ extern "C" void free_timetravel(int thr_id)
 
 	quark_blake512_cpu_free(thr_id);
 	quark_groestl512_cpu_free(thr_id);
-#if HASH_FUNC_COUNT > 8
-	x11_simd512_cpu_free(thr_id);
-#endif
+
 	cuda_check_cpu_free(thr_id);
 	init[thr_id] = false;
 
