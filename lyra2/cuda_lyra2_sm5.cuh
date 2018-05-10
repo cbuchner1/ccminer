@@ -589,7 +589,7 @@ void reduceDuplexRowV50_8(const int rowInOut, uint2 state[4], const uint32_t thr
 }
 
 __global__ __launch_bounds__(64, 1)
-void lyra2_gpu_hash_32_1_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
+void lyra2_gpu_hash_32_1_sm5(uint32_t threads, uint2 *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -622,7 +622,7 @@ void lyra2_gpu_hash_32_1_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_ha
 }
 
 __global__ __launch_bounds__(TPB50, 1)
-void lyra2_gpu_hash_32_2_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
+void lyra2_gpu_hash_32_2_sm5(uint32_t threads, uint2 *g_hash)
 {
 	const uint32_t thread = (blockDim.y * blockIdx.x + threadIdx.y);
 
@@ -662,7 +662,7 @@ void lyra2_gpu_hash_32_2_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_ha
 }
 
 __global__ __launch_bounds__(64, 1)
-void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
+void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint2 *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -687,7 +687,7 @@ void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_ha
 
 #else
 /* if __CUDA_ARCH__ != 500 .. host */
-__global__ void lyra2_gpu_hash_32_1_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_hash) {}
-__global__ void lyra2_gpu_hash_32_2_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_hash) {}
-__global__ void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint32_t startNounce, uint2 *g_hash) {}
+__global__ void lyra2_gpu_hash_32_1_sm5(uint32_t threads, uint2 *g_hash) {}
+__global__ void lyra2_gpu_hash_32_2_sm5(uint32_t threads, uint2 *g_hash) {}
+__global__ void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint2 *g_hash) {}
 #endif

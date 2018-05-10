@@ -131,7 +131,7 @@ void reduceDuplexRowSetup(const int rowIn, const int rowInOut, const int rowOut,
 }
 
 __global__ __launch_bounds__(TPB30, 1)
-void lyra2_gpu_hash_32_sm2(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void lyra2_gpu_hash_32_sm2(uint32_t threads, uint64_t *g_hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -224,5 +224,5 @@ void lyra2_gpu_hash_32_sm2(uint32_t threads, uint32_t startNounce, uint64_t *g_h
 
 #else
 /* if __CUDA_ARCH__ < 200 .. host */
-__global__ void lyra2_gpu_hash_32_sm2(uint32_t threads, uint32_t startNounce, uint64_t *g_hash) {}
+__global__ void lyra2_gpu_hash_32_sm2(uint32_t threads, uint64_t *g_hash) {}
 #endif

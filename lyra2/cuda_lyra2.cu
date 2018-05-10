@@ -409,7 +409,7 @@ __constant__ uint2x4 blake2b_IV[2] = {
 };
 
 __global__ __launch_bounds__(64, 1)
-void lyra2_gpu_hash_32_1(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
+void lyra2_gpu_hash_32_1(uint32_t threads, uint2 *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 
@@ -436,7 +436,7 @@ void lyra2_gpu_hash_32_1(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
 
 __global__
 __launch_bounds__(TPB52, 1)
-void lyra2_gpu_hash_32_2(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
+void lyra2_gpu_hash_32_2(uint32_t threads, uint64_t *g_hash)
 {
 	const uint32_t thread = blockDim.y * blockIdx.x + threadIdx.y;
 
@@ -481,7 +481,7 @@ void lyra2_gpu_hash_32_2(uint32_t threads, uint32_t startNounce, uint64_t *g_has
 }
 
 __global__ __launch_bounds__(64, 1)
-void lyra2_gpu_hash_32_3(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
+void lyra2_gpu_hash_32_3(uint32_t threads, uint2 *g_hash)
 {
 	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -502,7 +502,7 @@ void lyra2_gpu_hash_32_3(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
 		g_hash[thread + threads * 2] = state[0].z;
 		g_hash[thread + threads * 3] = state[0].w;
 
-	} //thread
+	}
 }
 #else
 #if __CUDA_ARCH__ < 500
@@ -510,9 +510,9 @@ void lyra2_gpu_hash_32_3(uint32_t threads, uint32_t startNounce, uint2 *g_hash)
 /* for unsupported SM arch */
 __device__ void* DMatrix;
 #endif
-__global__ void lyra2_gpu_hash_32_1(uint32_t threads, uint32_t startNounce, uint2 *g_hash) {}
-__global__ void lyra2_gpu_hash_32_2(uint32_t threads, uint32_t startNounce, uint64_t *g_hash) {}
-__global__ void lyra2_gpu_hash_32_3(uint32_t threads, uint32_t startNounce, uint2 *g_hash) {}
+__global__ void lyra2_gpu_hash_32_1(uint32_t threads, uint2 *g_hash) {}
+__global__ void lyra2_gpu_hash_32_2(uint32_t threads, uint64_t *g_hash) {}
+__global__ void lyra2_gpu_hash_32_3(uint32_t threads, uint2 *g_hash) {}
 #endif
 
 __host__
@@ -523,7 +523,7 @@ void lyra2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_matrix)
 }
 
 __host__
-void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash, bool gtx750ti)
+void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint64_t *d_hash, bool gtx750ti)
 {
 	int dev_id = device_map[thr_id % MAX_GPUS];
 
@@ -544,11 +544,11 @@ void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint6
 
 	if (cuda_arch[dev_id] >= 520)
 	{
-		lyra2_gpu_hash_32_1 <<< grid2, block2 >>> (threads, startNounce, (uint2*)d_hash);
+		lyra2_gpu_hash_32_1 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
 
-		lyra2_gpu_hash_32_2 <<< grid1, block1, 24 * (8 - 0) * sizeof(uint2) * tpb >>> (threads, startNounce, d_hash);
+		lyra2_gpu_hash_32_2 <<< grid1, block1, 24 * (8 - 0) * sizeof(uint2) * tpb >>> (threads, d_hash);
 
-		lyra2_gpu_hash_32_3 <<< grid2, block2 >>> (threads, startNounce, (uint2*)d_hash);
+		lyra2_gpu_hash_32_3 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
 	}
 	else if (cuda_arch[dev_id] >= 500)
 	{
@@ -561,12 +561,12 @@ void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint6
 			// suitable amount to adjust for 10warp
 			shared_mem = 6144;
 
-		lyra2_gpu_hash_32_1_sm5 <<< grid2, block2 >>> (threads, startNounce, (uint2*)d_hash);
+		lyra2_gpu_hash_32_1_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
 
-		lyra2_gpu_hash_32_2_sm5 <<< grid1, block1, shared_mem >>> (threads, startNounce, (uint2*)d_hash);
+		lyra2_gpu_hash_32_2_sm5 <<< grid1, block1, shared_mem >>> (threads, (uint2*)d_hash);
 
-		lyra2_gpu_hash_32_3_sm5 <<< grid2, block2 >>> (threads, startNounce, (uint2*)d_hash);
+		lyra2_gpu_hash_32_3_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
 	}
 	else
-		lyra2_gpu_hash_32_sm2 <<< grid3, block3 >>> (threads, startNounce, d_hash);
+		lyra2_gpu_hash_32_sm2 <<< grid3, block3 >>> (threads, d_hash);
 }

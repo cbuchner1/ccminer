@@ -30,7 +30,7 @@ extern void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t start
 extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
 extern void lyra2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_matrix);
-extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, bool gtx750ti);
+extern void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint64_t *d_outputHash, bool gtx750ti);
 
 extern void groestl256_cpu_init(int thr_id, uint32_t threads);
 extern void groestl256_cpu_free(int thr_id);
@@ -141,9 +141,9 @@ extern "C" int scanhash_allium(int thr_id, struct work* work, uint32_t max_nonce
 		//blake256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		//keccak256_sm3_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], gtx750ti);
+		lyra2_cpu_hash_32(thr_id, throughput, d_hash[thr_id], gtx750ti);
 		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		lyra2_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], gtx750ti);
+		lyra2_cpu_hash_32(thr_id, throughput, d_hash[thr_id], gtx750ti);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
