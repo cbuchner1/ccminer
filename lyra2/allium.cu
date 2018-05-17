@@ -95,7 +95,11 @@ extern "C" int scanhash_allium(int thr_id, struct work* work, uint32_t max_nonce
 	{
 		int dev_id = device_map[thr_id];
 		cudaSetDevice(dev_id);
-		CUDA_LOG_ERROR();
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 17 : 16;
 		if (device_sm[device_map[thr_id]] == 500) intensity = 15;
