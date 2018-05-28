@@ -19,7 +19,7 @@ extern "C" {
 
 #include "miner.h"
 #include "cuda_helper.h"
-#include "cuda_x11.h"
+#include "x11/cuda_x11.h"
 
 extern void skein512_cpu_setBlock_80(void *pdata);
 extern void skein512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_hash, int swap);
@@ -38,7 +38,7 @@ extern void tribus_echo512_final(int thr_id, uint32_t threads, uint32_t *d_hash,
 static uint32_t *d_hash[MAX_GPUS];
 static uint32_t *d_resNonce[MAX_GPUS];
 
-extern "C" void phihash(void *output, const void *input)
+extern "C" void phi_hash(void *output, const void *input)
 {
 	unsigned char _ALIGN(128) hash[128] = { 0 };
 
@@ -162,7 +162,7 @@ extern "C" int scanhash_phi(int thr_id, struct work* work, uint32_t max_nonce, u
 			uint32_t _ALIGN(64) vhash[8];
 			if (!use_compat_kernels[thr_id]) work->nonces[0] += startNonce;
 			be32enc(&endiandata[19], work->nonces[0]);
-			phihash(vhash, endiandata);
+			phi_hash(vhash, endiandata);
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				work->valid_nonces = 1;
@@ -173,7 +173,7 @@ extern "C" int scanhash_phi(int thr_id, struct work* work, uint32_t max_nonce, u
 				if (work->nonces[1] != UINT32_MAX) {
 					work->nonces[1] += startNonce;
 					be32enc(&endiandata[19], work->nonces[1]);
-					phihash(vhash, endiandata);
+					phi_hash(vhash, endiandata);
 					bn_set_target_ratio(work, vhash, 1);
 					work->valid_nonces++;
 					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;

@@ -207,7 +207,7 @@ __launch_bounds__(TPB, 3)
 #else
 __launch_bounds__(TPB, 3)
 #endif
-void streebog_gpu_hash_64_maxwell(uint64_t *g_hash)
+void streebog_gpu_hash_64_sm5(uint64_t *g_hash, uint32_t* const d_filter, const uint32_t filter_val)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint2 buf[8], t[8], temp[8], K0[8], hash[8];
@@ -222,12 +222,15 @@ void streebog_gpu_hash_64_maxwell(uint64_t *g_hash)
 	shared[6][threadIdx.x] = __ldg(&T62[threadIdx.x]);
 	shared[7][threadIdx.x] = __ldg(&T72[threadIdx.x]);
 
+	//__threadfence_block();
+	__syncthreads();
+
+	if (d_filter && d_filter[thread] != filter_val) return;
+
 	uint64_t* inout = &g_hash[thread<<3];
 
 	*(uint2x4*)&hash[0] = __ldg4((uint2x4*)&inout[0]);
 	*(uint2x4*)&hash[4] = __ldg4((uint2x4*)&inout[4]);
-
-	__threadfence_block();
 
 	K0[0] = vectorize(0x74a5d4ce2efc83b3);
 
@@ -301,9 +304,17 @@ void streebog_gpu_hash_64_maxwell(uint64_t *g_hash)
 }
 
 __host__
-void streebog_hash_64_maxwell(int thr_id, uint32_t threads, uint32_t *d_hash)
+void streebog_hash_64_maxwell(int thr_id, uint32_t threads, uint32_t *g_hash)
 {
 	dim3 grid((threads + TPB-1) / TPB);
 	dim3 block(TPB);
-	streebog_gpu_hash_64_maxwell <<<grid, block>>> ((uint64_t*)d_hash);
+	streebog_gpu_hash_64_sm5 <<<grid, block>>> ((uint64_t*)g_hash, NULL, 0);
+}
+
+__host__
+void phi_streebog_hash_64_filtered(int thr_id, const uint32_t threads, uint32_t *g_hash, uint32_t *d_filter)
+{
+	dim3 grid((threads + TPB-1) / TPB);
+	dim3 block(TPB);
+	streebog_gpu_hash_64_sm5 <<<grid, block>>> ((uint64_t*)g_hash, d_filter, 1);
 }

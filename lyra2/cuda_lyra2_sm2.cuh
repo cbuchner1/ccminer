@@ -3,7 +3,7 @@
 #ifdef __INTELLISENSE__
 /* just for vstudio code colors, only uncomment that temporary, dont commit it */
 //#undef __CUDA_ARCH__
-//#define __CUDA_ARCH__ 500
+//#define __CUDA_ARCH__ 300
 #endif
 
 #include "cuda_helper.h"
@@ -226,3 +226,66 @@ void lyra2_gpu_hash_32_sm2(uint32_t threads, uint64_t *g_hash)
 /* if __CUDA_ARCH__ < 200 .. host */
 __global__ void lyra2_gpu_hash_32_sm2(uint32_t threads, uint64_t *g_hash) {}
 #endif
+
+// -------------------------------------------------------------------------------------------------------------------------
+
+// lyra2 cant be used as-is in 512-bits hash chains, tx to djm for these weird offsets since first lyra2 algo...
+
+#if __CUDA_ARCH__ >= 200 && __CUDA_ARCH__ <= 350
+
+__global__ __launch_bounds__(128, 8)
+void hash64_to_lyra32_gpu(const uint32_t threads, const uint32_t* d_hash64, uint2* d_hash_lyra, const uint32_t round)
+{
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		const size_t offset = (size_t) 16 * thread + (round * 8U);
+		uint2 *psrc = (uint2*) (&d_hash64[offset]);
+		uint2 *pdst = (uint2*) (&d_hash_lyra[thread]);
+		pdst[threads*0] = __ldg(&psrc[0]);
+		pdst[threads*1] = __ldg(&psrc[1]);
+		pdst[threads*2] = __ldg(&psrc[2]);
+		pdst[threads*3] = __ldg(&psrc[3]);
+	}
+}
+
+__global__ __launch_bounds__(128, 8)
+void hash64_from_lyra32_gpu(const uint32_t threads, const uint32_t* d_hash64, uint2* d_hash_lyra, const uint32_t round)
+{
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		const size_t offset = (size_t) 16 * thread + (round * 8U);
+		uint2 *psrc = (uint2*) (&d_hash_lyra[thread]);
+		uint2 *pdst = (uint2*) (&d_hash64[offset]);
+		pdst[0] = psrc[0];
+		pdst[1] = psrc[threads*1];
+		pdst[2] = psrc[threads*2];
+		pdst[3] = psrc[threads*3];
+	}
+}
+#else
+/* if __CUDA_ARCH__ < 200 .. host */
+__global__ void hash64_to_lyra32_gpu(const uint32_t threads, const uint32_t* d_hash64, uint2* d_hash_lyra, const uint32_t round) {}
+__global__ void hash64_from_lyra32_gpu(const uint32_t threads, const uint32_t* d_hash64, uint2* d_hash_lyra, const uint32_t round) {}
+#endif
+
+__host__
+void hash64_to_lyra32(int thr_id, const uint32_t threads, uint32_t* d_hash64, uint64_t* d_hash_lyra, const uint32_t round)
+{
+	const uint32_t threadsperblock = 128;
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	hash64_to_lyra32_gpu <<<grid, block>>> (threads, d_hash64, (uint2*) d_hash_lyra, round);
+}
+
+__host__
+void hash64_from_lyra32(int thr_id, const uint32_t threads, uint32_t* d_hash64, uint64_t* d_hash_lyra, const uint32_t round)
+{
+	const uint32_t threadsperblock = 128;
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
+	dim3 block(threadsperblock);
+
+	hash64_from_lyra32_gpu <<<grid, block>>> (threads, d_hash64, (uint2*) d_hash_lyra, round);
+}

@@ -591,13 +591,12 @@ void reduceDuplexRowV50_8(const int rowInOut, uint2 state[4], const uint32_t thr
 __global__ __launch_bounds__(64, 1)
 void lyra2_gpu_hash_32_1_sm5(uint32_t threads, uint2 *g_hash)
 {
-	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
 	const uint2x4 blake2b_IV[2] = {
 		{ { 0xf3bcc908, 0x6a09e667 }, { 0x84caa73b, 0xbb67ae85 }, { 0xfe94f82b, 0x3c6ef372 }, { 0x5f1d36f1, 0xa54ff53a } },
 		{ { 0xade682d1, 0x510e527f }, { 0x2b3e6c1f, 0x9b05688c }, { 0xfb41bd6b, 0x1f83d9ab }, { 0x137e2179, 0x5be0cd19 } }
 	};
 
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint2x4 state[4];
@@ -629,7 +628,6 @@ void lyra2_gpu_hash_32_2_sm5(uint32_t threads, uint2 *g_hash)
 	if (thread < threads)
 	{
 		uint2 state[4];
-
 		state[0] = __ldg(&DMatrix[(0 * threads + thread)*blockDim.x + threadIdx.x]);
 		state[1] = __ldg(&DMatrix[(1 * threads + thread)*blockDim.x + threadIdx.x]);
 		state[2] = __ldg(&DMatrix[(2 * threads + thread)*blockDim.x + threadIdx.x]);
@@ -669,7 +667,6 @@ void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint2 *g_hash)
 	if (thread < threads)
 	{
 		uint2x4 state[4];
-
 		state[0] = __ldg4(&((uint2x4*)DMatrix)[0 * threads + thread]);
 		state[1] = __ldg4(&((uint2x4*)DMatrix)[1 * threads + thread]);
 		state[2] = __ldg4(&((uint2x4*)DMatrix)[2 * threads + thread]);
@@ -685,9 +682,68 @@ void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint2 *g_hash)
 	}
 }
 
+__global__ __launch_bounds__(64, 1)
+void lyra2_gpu_hash_64_1_sm5(uint32_t threads, uint2* const d_hash_512, const uint32_t round)
+{
+	const uint2x4 blake2b_IV[2] = {
+		{ { 0xf3bcc908, 0x6a09e667 }, { 0x84caa73b, 0xbb67ae85 }, { 0xfe94f82b, 0x3c6ef372 }, { 0x5f1d36f1, 0xa54ff53a } },
+		{ { 0xade682d1, 0x510e527f }, { 0x2b3e6c1f, 0x9b05688c }, { 0xfb41bd6b, 0x1f83d9ab }, { 0x137e2179, 0x5be0cd19 } }
+	};
+	// This kernel loads 2x 256-bits hashes from 512-bits chain offsets in 2 steps
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint2x4 state[4];
+		const size_t offset = (size_t)8 * thread + (round * 4U);
+		uint2 *psrc = (uint2*)(&d_hash_512[offset]);
+		state[0].x = state[1].x = __ldg(&psrc[0]);
+		state[0].y = state[1].y = __ldg(&psrc[1]);
+		state[0].z = state[1].z = __ldg(&psrc[2]);
+		state[0].w = state[1].w = __ldg(&psrc[3]);
+
+		state[1] = state[0];
+		state[2] = blake2b_IV[0];
+		state[3] = blake2b_IV[1];
+
+		for (int i = 0; i<24; i++)
+			round_lyra(state);
+
+		((uint2x4*)DMatrix)[threads * 0 + thread] = state[0];
+		((uint2x4*)DMatrix)[threads * 1 + thread] = state[1];
+		((uint2x4*)DMatrix)[threads * 2 + thread] = state[2];
+		((uint2x4*)DMatrix)[threads * 3 + thread] = state[3];
+	}
+}
+
+__global__ __launch_bounds__(64, 1)
+void lyra2_gpu_hash_64_3_sm5(uint32_t threads, uint2 *d_hash_512, const uint32_t round)
+{
+	// This kernel outputs 2x 256-bits hashes in 512-bits chain offsets in 2 steps
+	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
+	if (thread < threads)
+	{
+		uint2x4 state[4];
+		state[0] = __ldg4(&((uint2x4*)DMatrix)[threads * 0 + thread]);
+		state[1] = __ldg4(&((uint2x4*)DMatrix)[threads * 1 + thread]);
+		state[2] = __ldg4(&((uint2x4*)DMatrix)[threads * 2 + thread]);
+		state[3] = __ldg4(&((uint2x4*)DMatrix)[threads * 3 + thread]);
+
+		for (int i = 0; i < 12; i++)
+			round_lyra(state);
+
+		const size_t offset = (size_t)8 * thread + (round * 4U);
+		uint2 *pdst = (uint2*)(&d_hash_512[offset]);
+		pdst[0] = state[0].x;
+		pdst[1] = state[0].y;
+		pdst[2] = state[0].z;
+		pdst[3] = state[0].w;
+	}
+}
 #else
 /* if __CUDA_ARCH__ != 500 .. host */
 __global__ void lyra2_gpu_hash_32_1_sm5(uint32_t threads, uint2 *g_hash) {}
 __global__ void lyra2_gpu_hash_32_2_sm5(uint32_t threads, uint2 *g_hash) {}
 __global__ void lyra2_gpu_hash_32_3_sm5(uint32_t threads, uint2 *g_hash) {}
+__global__ void lyra2_gpu_hash_64_1_sm5(uint32_t threads, uint2* const d_hash_512, const uint32_t round) {}
+__global__ void lyra2_gpu_hash_64_3_sm5(uint32_t threads, uint2 *d_hash_512, const uint32_t round) {}
 #endif

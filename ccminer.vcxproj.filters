@@ -115,7 +115,10 @@
     <Filter Include="Source Files\CUDA\tribus">
       <UniqueIdentifier>{1e548d79-c217-4203-989a-a592fe2b2de3}</UniqueIdentifier>
     </Filter>
-        <Filter Include="Source Files\CUDA\x12">
+    <Filter Include="Source Files\CUDA\phi">
+      <UniqueIdentifier>{311e8d79-1612-4f0f-8591-23a592f2b2d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CUDA\x12">
       <UniqueIdentifier>{xde48d89-fx12-1323-129a-b592fe2b2de3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -545,6 +548,9 @@
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </ClInclude>
+    <ClInclude Include="lyra2\cuda_lyra2_sm5.cuh">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </ClInclude>
     <ClInclude Include="lyra2\cuda_lyra2Z_sm5.cuh">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </ClInclude>
@@ -781,6 +787,15 @@
     <CudaCompile Include="polytimos.cu">
       <Filter>Source Files\CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="phi\phi.cu">
+      <Filter>Source Files\CUDA\phi</Filter>
+    </CudaCompile>
+    <CudaCompile Include="phi\phi2.cu">
+      <Filter>Source Files\CUDA\phi</Filter>
+    </CudaCompile>
+    <CudaCompile Include="phi\cuda_phi2.cu">
+      <Filter>Source Files\CUDA\phi</Filter>
+    </CudaCompile>
     <CudaCompile Include="skunk\skunk.cu">
       <Filter>Source Files\CUDA\skunk</Filter>
     </CudaCompile>
@@ -799,9 +814,6 @@
     <ClInclude Include="tribus\cuda_echo512_aes.cuh">
       <Filter>Source Files\CUDA\tribus</Filter>
     </ClInclude>
-    <CudaCompile Include="x11\phi.cu">
-      <Filter>Source Files\CUDA\x11</Filter>
-    </CudaCompile>
     <CudaCompile Include="x11\sib.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>

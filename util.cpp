@@ -2250,7 +2250,7 @@ void print_hash_tests(void)
 	pentablakehash(&hash[0], &buf[0]);
 	printpfx("pentablake", hash);
 
-	phihash(&hash[0], &buf[0]);
+	phi2_hash(&hash[0], &buf[0]);
 	printpfx("phi", hash);
 
 	polytimos_hash(&hash[0], &buf[0]);

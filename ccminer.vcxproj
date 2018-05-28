@@ -525,6 +525,7 @@
     <CudaCompile Include="lyra2\lyra2REv2.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2v2.cu" />
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh" />
+    <ClInclude Include="lyra2\cuda_lyra2_sm5.cuh" />
     <ClInclude Include="lyra2\cuda_lyra2v2_sm3.cuh" />
     <CudaCompile Include="lyra2\lyra2Z.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2Z.cu" />
@@ -537,6 +538,9 @@
     <CudaCompile Include="cuda_skeincoin.cu">
       <MaxRegCount>48</MaxRegCount>
     </CudaCompile>
+    <CudaCompile Include="phi\phi.cu" />
+    <CudaCompile Include="phi\phi2.cu" />
+    <CudaCompile Include="phi\cuda_phi2.cu" />
     <CudaCompile Include="skunk\skunk.cu" />
     <CudaCompile Include="skunk\cuda_skunk.cu">
       <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
@@ -567,7 +571,6 @@
     <CudaCompile Include="x11\cuda_streebog_maxwell.cu" />
     <CudaCompile Include="x11\c11.cu" />
     <CudaCompile Include="x11\fresh.cu" />
-    <CudaCompile Include="x11\phi.cu" />
     <CudaCompile Include="x11\sib.cu" />
     <CudaCompile Include="x11\s3.cu" />
     <CudaCompile Include="x11\timetravel.cu" />

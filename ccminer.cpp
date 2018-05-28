@@ -269,7 +269,8 @@ Options:\n\
 			neoscrypt   FeatherCoin, Phoenix, UFO...\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
-			phi         BHCoin\n\
+			phi         LUX initial algo\n\
+			phi2        LUX v2 with lyra2\n\
 			polytimos   Politimos\n\
 			quark       Quark\n\
 			qubit       Qubit\n\
@@ -1708,6 +1709,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_LBRY:
 		case ALGO_LYRA2v2:
 		case ALGO_LYRA2Z:
+		case ALGO_PHI2:
 		case ALGO_TIMETRAVEL:
 		case ALGO_BITCORE:
 		case ALGO_X16R:
@@ -2245,6 +2247,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_HSR:
 			case ALGO_LYRA2v2:
 			case ALGO_PHI:
+			case ALGO_PHI2:
 			case ALGO_POLYTIMOS:
 			case ALGO_S3:
 			case ALGO_SKUNK:
@@ -2435,6 +2438,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_PHI:
 			rc = scanhash_phi(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_PHI2:
+			rc = scanhash_phi2(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_POLYTIMOS:
 			rc = scanhash_polytimos(thr_id, &work, max_nonce, &hashes_done);

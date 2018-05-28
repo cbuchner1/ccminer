@@ -1,6 +1,7 @@
 /**
  * Lyra2 (v1) cuda implementation based on djm34 work
  * tpruvot@github 2015, Nanashi 08/2016 (from 1.8-r2)
+ * tpruvot@github 2018 for phi2 double lyra2-32 support
  */
 
 #include <stdio.h>
@@ -228,9 +229,7 @@ void reduceDuplex(uint2 state[4], uint32_t thread, const uint32_t threads)
 {
 	uint2 state1[3];
 
-#if __CUDA_ARCH__ > 500
-#pragma unroll
-#endif
+	#pragma unroll
 	for (int i = 0; i < Nrow; i++)
 	{
 		ST4S(0, Ncol - i - 1, state, thread, threads);
@@ -305,7 +304,7 @@ void reduceDuplexRowt(const int rowIn, const int rowInOut, const int rowOut, uin
 		LD4S(state1, rowIn, i, thread, threads);
 		LD4S(state2, rowInOut, i, thread, threads);
 
-#pragma unroll
+		#pragma unroll
 		for (int j = 0; j < 3; j++)
 			state[j] ^= state1[j] + state2[j];
 
@@ -334,7 +333,7 @@ void reduceDuplexRowt(const int rowIn, const int rowInOut, const int rowOut, uin
 
 		LD4S(state1, rowOut, i, thread, threads);
 
-#pragma unroll
+		#pragma unroll
 		for (int j = 0; j < 3; j++)
 			state1[j] ^= state[j];
 
@@ -412,11 +411,9 @@ __global__ __launch_bounds__(64, 1)
 void lyra2_gpu_hash_32_1(uint32_t threads, uint2 *g_hash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
 	if (thread < threads)
 	{
 		uint2x4 state[4];
-
 		state[0].x = state[1].x = __ldg(&g_hash[thread + threads * 0]);
 		state[0].y = state[1].y = __ldg(&g_hash[thread + threads * 1]);
 		state[0].z = state[1].z = __ldg(&g_hash[thread + threads * 2]);
@@ -436,10 +433,9 @@ void lyra2_gpu_hash_32_1(uint32_t threads, uint2 *g_hash)
 
 __global__
 __launch_bounds__(TPB52, 1)
-void lyra2_gpu_hash_32_2(uint32_t threads, uint64_t *g_hash)
+void lyra2_gpu_hash_32_2(const uint32_t threads, uint64_t *g_hash)
 {
 	const uint32_t thread = blockDim.y * blockIdx.x + threadIdx.y;
-
 	if (thread < threads)
 	{
 		uint2 state[4];
@@ -484,11 +480,9 @@ __global__ __launch_bounds__(64, 1)
 void lyra2_gpu_hash_32_3(uint32_t threads, uint2 *g_hash)
 {
 	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
-
-	uint28 state[4];
-
 	if (thread < threads)
 	{
+		uint2x4 state[4];
 		state[0] = __ldg4(&((uint2x4*)DMatrix)[threads * 0 + thread]);
 		state[1] = __ldg4(&((uint2x4*)DMatrix)[threads * 1 + thread]);
 		state[2] = __ldg4(&((uint2x4*)DMatrix)[threads * 2 + thread]);
@@ -501,7 +495,57 @@ void lyra2_gpu_hash_32_3(uint32_t threads, uint2 *g_hash)
 		g_hash[thread + threads * 1] = state[0].y;
 		g_hash[thread + threads * 2] = state[0].z;
 		g_hash[thread + threads * 3] = state[0].w;
+	}
+}
 
+__global__ __launch_bounds__(64, 1)
+void lyra2_gpu_hash_64_1(uint32_t threads, uint2* const d_hash_512, const uint32_t round)
+{
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		uint2x4 state[4];
+		const size_t offset = (size_t)8 * thread + (round * 4U);
+		uint2 *psrc = (uint2*)(&d_hash_512[offset]);
+		state[0].x = state[1].x = __ldg(&psrc[0]);
+		state[0].y = state[1].y = __ldg(&psrc[1]);
+		state[0].z = state[1].z = __ldg(&psrc[2]);
+		state[0].w = state[1].w = __ldg(&psrc[3]);
+		state[2] = blake2b_IV[0];
+		state[3] = blake2b_IV[1];
+
+		for (int i = 0; i<24; i++)
+			round_lyra(state);
+
+		((uint2x4*)DMatrix)[threads * 0 + thread] = state[0];
+		((uint2x4*)DMatrix)[threads * 1 + thread] = state[1];
+		((uint2x4*)DMatrix)[threads * 2 + thread] = state[2];
+		((uint2x4*)DMatrix)[threads * 3 + thread] = state[3];
+	}
+}
+
+__global__ __launch_bounds__(64, 1)
+void lyra2_gpu_hash_64_3(uint32_t threads, uint2 *d_hash_512, const uint32_t round)
+{
+	// This kernel outputs 2x 256-bits hashes in 512-bits chain offsets in 2 rounds
+	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
+	if (thread < threads)
+	{
+		uint2x4 state[4];
+		state[0] = __ldg4(&((uint2x4*)DMatrix)[threads * 0 + thread]);
+		state[1] = __ldg4(&((uint2x4*)DMatrix)[threads * 1 + thread]);
+		state[2] = __ldg4(&((uint2x4*)DMatrix)[threads * 2 + thread]);
+		state[3] = __ldg4(&((uint2x4*)DMatrix)[threads * 3 + thread]);
+
+		for (int i = 0; i < 12; i++)
+			round_lyra(state);
+
+		const size_t offset = (size_t)8 * thread + (round * 4U);
+		uint2 *pdst = (uint2*)(&d_hash_512[offset]);
+		pdst[0] = state[0].x;
+		pdst[1] = state[0].y;
+		pdst[2] = state[0].z;
+		pdst[3] = state[0].w;
 	}
 }
 #else
@@ -513,6 +557,8 @@ __device__ void* DMatrix;
 __global__ void lyra2_gpu_hash_32_1(uint32_t threads, uint2 *g_hash) {}
 __global__ void lyra2_gpu_hash_32_2(uint32_t threads, uint64_t *g_hash) {}
 __global__ void lyra2_gpu_hash_32_3(uint32_t threads, uint2 *g_hash) {}
+__global__ void lyra2_gpu_hash_64_1(uint32_t threads, uint2* const d_hash_512, const uint32_t round) {}
+__global__ void lyra2_gpu_hash_64_3(uint32_t threads, uint2 *d_hash_512, const uint32_t round) {}
 #endif
 
 __host__
@@ -545,9 +591,7 @@ void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint64_t *d_hash, bool gtx7
 	if (cuda_arch[dev_id] >= 520)
 	{
 		lyra2_gpu_hash_32_1 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
-
 		lyra2_gpu_hash_32_2 <<< grid1, block1, 24 * (8 - 0) * sizeof(uint2) * tpb >>> (threads, d_hash);
-
 		lyra2_gpu_hash_32_3 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
 	}
 	else if (cuda_arch[dev_id] >= 500)
@@ -562,11 +606,57 @@ void lyra2_cpu_hash_32(int thr_id, uint32_t threads, uint64_t *d_hash, bool gtx7
 			shared_mem = 6144;
 
 		lyra2_gpu_hash_32_1_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
-
 		lyra2_gpu_hash_32_2_sm5 <<< grid1, block1, shared_mem >>> (threads, (uint2*)d_hash);
-
 		lyra2_gpu_hash_32_3_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash);
 	}
 	else
 		lyra2_gpu_hash_32_sm2 <<< grid3, block3 >>> (threads, d_hash);
+}
+
+__host__
+void lyra2_cuda_hash_64(int thr_id, const uint32_t threads, uint64_t* d_hash_256, uint32_t* d_hash_512, bool gtx750ti)
+{
+	int dev_id = device_map[thr_id % MAX_GPUS];
+	uint32_t tpb = TPB52;
+	if (cuda_arch[dev_id] >= 520) tpb = TPB52;
+	else if (cuda_arch[dev_id] >= 500) tpb = TPB50;
+	else if (cuda_arch[dev_id] >= 200) tpb = TPB20;
+
+	dim3 grid1((size_t(threads) * 4 + tpb - 1) / tpb);
+	dim3 block1(4, tpb >> 2);
+
+	dim3 grid2((threads + 64 - 1) / 64);
+	dim3 block2(64);
+
+	if (cuda_arch[dev_id] >= 520)
+	{
+		const size_t shared_mem = sizeof(uint2) * tpb * 192; // 49152;
+		lyra2_gpu_hash_64_1 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 0);
+		lyra2_gpu_hash_32_2 <<< grid1, block1, shared_mem >>> (threads, d_hash_256);
+		lyra2_gpu_hash_64_3 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 0);
+
+		lyra2_gpu_hash_64_1 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 1);
+		lyra2_gpu_hash_32_2 <<< grid1, block1, shared_mem >>> (threads, d_hash_256);
+		lyra2_gpu_hash_64_3 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 1);
+	}
+	else if (cuda_arch[dev_id] >= 500)
+	{
+		size_t shared_mem = gtx750ti ? 8192 : 6144; // 8 or 10 warps
+		lyra2_gpu_hash_64_1_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 0);
+		lyra2_gpu_hash_32_2_sm5 <<< grid1, block1, shared_mem >>> (threads, (uint2*)d_hash_256);
+		lyra2_gpu_hash_64_3_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 0);
+
+		lyra2_gpu_hash_64_1_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 1);
+		lyra2_gpu_hash_32_2_sm5 <<< grid1, block1, shared_mem >>> (threads, (uint2*)d_hash_256);
+		lyra2_gpu_hash_64_3_sm5 <<< grid2, block2 >>> (threads, (uint2*)d_hash_512, 1);
+	}
+	else {
+		// alternative method for SM 3.x
+		hash64_to_lyra32(thr_id, threads, d_hash_512, d_hash_256, 0);
+		lyra2_cpu_hash_32(thr_id, threads, d_hash_256, gtx750ti);
+		hash64_from_lyra32(thr_id, threads, d_hash_512, d_hash_256, 0);
+		hash64_to_lyra32(thr_id, threads, d_hash_512, d_hash_256, 1);
+		lyra2_cpu_hash_32(thr_id, threads, d_hash_256, gtx750ti);
+		hash64_from_lyra32(thr_id, threads, d_hash_512, d_hash_256, 1);
+	}
 }
