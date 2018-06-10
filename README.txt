@@ -1,5 +1,5 @@
 
-ccminer 2.2.6 (Under Dev)
+ccminer 2.2.6                                 "phi2 and allium"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -103,7 +103,7 @@ its command line interface and options.
                           neoscrypt   use to mine FeatherCoin, Trezarcoin, Orbitcoin, etc
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
-                          phi         use to mine LUXCoin
+                          phi2        use to mine LUXCoin
                           polytimos   use to mine Polytimos
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit
@@ -282,7 +282,8 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
-  2018            v2.2.6
+  June 10th 2018  v2.2.6
+                  New phi2 algo for LUX
                   New allium algo for Garlic
 
   Apr. 02nd 2018  v2.2.5
