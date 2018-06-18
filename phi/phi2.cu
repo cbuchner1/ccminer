@@ -1,5 +1,5 @@
 //
-//  PHI2 algo
+//  PHI2 algo (with smart contracts header)
 //  CubeHash + Lyra2 x2 + JH + Gost or Echo + Skein
 //
 //  Implemented by tpruvot in May 2018
@@ -24,6 +24,9 @@ extern "C" {
 extern void cubehash512_setBlock_80(int thr_id, uint32_t* endiandata);
 extern void cubehash512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash);
 
+extern void cubehash512_setBlock_144(int thr_id, uint32_t* endiandata);
+extern void cubehash512_cuda_hash_144(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash);
+
 extern void lyra2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_matrix);
 extern void lyra2_cuda_hash_64(int thr_id, const uint32_t threads, uint64_t* d_hash_256, uint32_t* d_hash_512, bool gtx750ti);
 
@@ -41,11 +44,13 @@ static uint64_t* d_hash_256[MAX_GPUS];
 static uint32_t* d_hash_br2[MAX_GPUS];
 static uint32_t* d_nonce_br[MAX_GPUS];
 
+static bool has_roots;
+
 extern "C" void phi2_hash(void *output, const void *input)
 {
-	unsigned char _ALIGN(128) hash[128] = { 0 };
-	unsigned char _ALIGN(128) hashA[64] = { 0 };
-	unsigned char _ALIGN(128) hashB[64] = { 0 };
+	unsigned char _ALIGN(128) hash[64];
+	unsigned char _ALIGN(128) hashA[64];
+	unsigned char _ALIGN(128) hashB[64];
 
 	sph_cubehash512_context ctx_cubehash;
 	sph_jh512_context ctx_jh;
@@ -54,7 +59,7 @@ extern "C" void phi2_hash(void *output, const void *input)
 	sph_skein512_context ctx_skein;
 
 	sph_cubehash512_init(&ctx_cubehash);
-	sph_cubehash512(&ctx_cubehash, input, 80);
+	sph_cubehash512(&ctx_cubehash, input, has_roots ? 144 : 80);
 	sph_cubehash512_close(&ctx_cubehash, (void*)hashB);
 
 	LYRA2(&hashA[ 0], 32, &hashB[ 0], 32, &hashB[ 0], 32, 1, 8, 8);
@@ -137,7 +142,6 @@ extern "C" int scanhash_phi2(int thr_id, struct work* work, uint32_t max_nonce, 
 			CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash_br2[thr_id], (size_t)64 * throughput), -1);
 		}
 
-		x11_cubehash512_cpu_init(thr_id, throughput);
 		lyra2_cpu_init(thr_id, throughput, d_matrix[thr_id]);
 		quark_jh512_cpu_init(thr_id, throughput);
 		quark_skein512_cpu_init(thr_id, throughput);
@@ -147,17 +151,26 @@ extern "C" int scanhash_phi2(int thr_id, struct work* work, uint32_t max_nonce, 
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
-	for (int k = 0; k < 20; k++)
+	has_roots = false;
+	uint32_t endiandata[36];
+	for (int k = 0; k < 36; k++) {
 		be32enc(&endiandata[k], pdata[k]);
+		if (k >= 20 && pdata[k]) has_roots = true;
+	}
 
 	cuda_check_cpu_setTarget(ptarget);
-	cubehash512_setBlock_80(thr_id, endiandata);
+	if (has_roots)
+		cubehash512_setBlock_144(thr_id, endiandata);
+	else
+		cubehash512_setBlock_80(thr_id, endiandata);
 
 	do {
 		int order = 0;
-
-		cubehash512_cuda_hash_80(thr_id, throughput, pdata[19], d_hash_512[thr_id]); order++;
+		if (has_roots)
+			cubehash512_cuda_hash_144(thr_id, throughput, pdata[19], d_hash_512[thr_id]);
+		else
+			cubehash512_cuda_hash_80(thr_id, throughput, pdata[19], d_hash_512[thr_id]);
+		order++;
 		TRACE("cube   ");
 
 		lyra2_cuda_hash_64(thr_id, throughput, d_hash_256[thr_id], d_hash_512[thr_id], gtx750ti);

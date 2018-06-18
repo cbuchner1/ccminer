@@ -81,7 +81,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x16/cuda_x16_shabal512.cu x16/cuda_x16_simd512_80.cu \
 			  x16/cuda_x16_echo512_64.cu \
 			  x17/x17.cu x17/hmq17.cu x17/cuda_x17_haval256.cu x17/cuda_x17_sha512.cu \
-			  phi/phi.cu phi/phi2.cu phi/cuda_phi2.cu x11/cuda_streebog_maxwell.cu \
+			  phi/phi.cu phi/phi2.cu phi/cuda_phi2.cu phi/cuda_phi2_cubehash512.cu x11/cuda_streebog_maxwell.cu \
 			  x11/c11.cu x11/s3.cu x11/sib.cu x11/veltor.cu x11/cuda_streebog.cu
 
 # scrypt

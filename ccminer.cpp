@@ -103,6 +103,7 @@ bool submit_old = false;
 bool use_syslog = false;
 bool use_colors = true;
 int use_pok = 0;
+int use_roots = 0;
 static bool opt_background = false;
 bool opt_quiet = false;
 int opt_maxlograte = 3;
@@ -698,6 +699,10 @@ static bool work_decode(const json_t *val, struct work *work)
 		data_size = 192;
 		adata_sz = 180/4;
 		break;
+	case ALGO_PHI2:
+		data_size = 144;
+		adata_sz = data_size / 4;
+		break;
 	case ALGO_NEOSCRYPT:
 	case ALGO_ZR5:
 		data_size = 80;
@@ -742,6 +747,12 @@ static bool work_decode(const json_t *val, struct work *work)
 		work->data[i] = le32dec(work->data + i);
 	for (i = 0; i < atarget_sz; i++)
 		work->target[i] = le32dec(work->target + i);
+
+	if (opt_algo == ALGO_PHI2) {
+		for (i = 20; i < 36; i++) if (work->data[i]) {
+			use_roots = 1; break;
+		}
+	}
 
 	if ((opt_showdiff || opt_max_diff > 0.) && !allow_mininginfo)
 		calc_network_diff(work);
@@ -1065,6 +1076,9 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		}
 		else if (opt_algo == ALGO_DECRED) {
 			data_size = 192; adata_sz = 180/4;
+		}
+		else if (opt_algo == ALGO_PHI2 && use_roots) {
+			data_size = 144; adata_sz = 36;
 		}
 		else if (opt_algo == ALGO_SIA) {
 			return sia_submit(curl, pool, work);
@@ -1629,10 +1643,17 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 		for (i = 0; i < 8; i++)
-			work->data[17 + i] = ((uint32_t*)sctx->job.claim)[i];
+			work->data[17 + i] = ((uint32_t*)sctx->job.extra)[i];
 		work->data[25] = le32dec(sctx->job.ntime);
 		work->data[26] = le32dec(sctx->job.nbits);
 		work->data[28] = 0x80000000;
+	} else if (opt_algo == ALGO_PHI2) {
+		for (i = 0; i < 8; i++)
+			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
+		work->data[17] = le32dec(sctx->job.ntime);
+		work->data[18] = le32dec(sctx->job.nbits);
+		for (i = 0; i < 16; i++)
+			work->data[20 + i] = be32dec((uint32_t*)sctx->job.extra + i);
 	} else if (opt_algo == ALGO_SIA) {
 		uint32_t extra = 0;
 		memcpy(&extra, &sctx->job.coinbase[32], 2);

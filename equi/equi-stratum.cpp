@@ -101,7 +101,7 @@ bool equi_stratum_set_target(struct stratum_ctx *sctx, json_t *params)
 		target_be[31-i] = target_bin[i];
 		if (target_bin[i]) filled++;
 	}
-	memcpy(sctx->job.claim, target_be, 32); // hack, unused struct field
+	memcpy(sctx->job.extra, target_be, 32);
 
 	pthread_mutex_lock(&stratum_work_lock);
 	sctx->next_diff = target_to_diff_equi((uint32_t*) &target_be);

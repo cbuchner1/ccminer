@@ -541,6 +541,7 @@
     <CudaCompile Include="phi\phi.cu" />
     <CudaCompile Include="phi\phi2.cu" />
     <CudaCompile Include="phi\cuda_phi2.cu" />
+    <CudaCompile Include="phi\cuda_phi2_cubehash512.cu" />
     <CudaCompile Include="skunk\skunk.cu" />
     <CudaCompile Include="skunk\cuda_skunk.cu">
       <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
