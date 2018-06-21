@@ -1653,7 +1653,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[17] = le32dec(sctx->job.ntime);
 		work->data[18] = le32dec(sctx->job.nbits);
 		for (i = 0; i < 16; i++)
-			work->data[20 + i] = be32dec((uint32_t*)sctx->job.extra + i);
+			work->data[20 + i] = ((uint32_t*)sctx->job.extra)[i];
 	} else if (opt_algo == ALGO_SIA) {
 		uint32_t extra = 0;
 		memcpy(&extra, &sctx->job.coinbase[32], 2);
