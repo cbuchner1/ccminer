@@ -13,21 +13,12 @@ extern "C" {
 }
 
 #define VARIANT1_1(p) \
-  do if (variant > 0) \
-  { \
+	if (variant > 0) { \
 		const uint8_t tmp = ((const uint8_t*)(p))[11]; \
-    static const uint32_t table = 0x75310; \
-    const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1; \
-    ((uint8_t*)(p))[11] = tmp ^ ((table >> index) & 0x30); \
-  } while(0)
-
-#define VARIANT1_INIT() \
- if (variant > 0 && len < 43) \
-  { \
-    return 0; \
-  } \
-  const uint64_t tweak1_2 = variant > 0 ? *((const uint64_t*) (((const uint8_t*)input) + 35)) ^ ctx->state.hs.w[24] : 0
-
+		static const uint32_t table = 0x75310; \
+		const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1; \
+		((uint8_t*)(p))[11] = tmp ^ ((table >> index) & 0x30); \
+	}
 
 struct cryptonight_ctx {
 	uint8_t long_state[MEMORY];
@@ -154,7 +145,7 @@ static void mul_sum_xor_dst(const uint8_t* a, uint8_t* c, uint8_t* dst, const in
 	((uint64_t*) c)[0] = ((uint64_t*) dst)[0] ^ hi;
 	((uint64_t*) c)[1] = ((uint64_t*) dst)[1] ^ lo;
 	((uint64_t*) dst)[0] = hi;
-	((uint64_t*) dst)[1] = variant > 0 ? lo ^ tweak1_2 : lo;
+	((uint64_t*) dst)[1] = variant ? lo ^ tweak1_2 : lo;
 }
 
 static void copy_block(uint8_t* dst, const uint8_t* src) {
@@ -172,14 +163,17 @@ static void xor_blocks_dst(const uint8_t* a, const uint8_t* b, uint8_t* dst) {
 	((uint64_t*) dst)[1] = ((uint64_t*) a)[1] ^ ((uint64_t*) b)[1];
 }
 
-static int cryptonight_hash_ctx(void* output, const void* input, size_t len, struct cryptonight_ctx* ctx, int variant)
+static int cryptonight_hash_ctx(void* output, const void* input, const size_t len, struct cryptonight_ctx* ctx, const int variant)
 {
 	size_t i, j;
+	if (variant && len < 43)
+		return 0;
+
 	keccak_hash_process(&ctx->state.hs, (const uint8_t*) input, len);
 	ctx->aes_ctx = (oaes_ctx*) oaes_alloc();
 	memcpy(ctx->text, ctx->state.init, INIT_SIZE_BYTE);
 
-	VARIANT1_INIT();
+	const uint64_t tweak1_2 = variant ? *((uint64_t*) (((uint8_t*)input) + 35)) ^ ctx->state.hs.w[24] : 0;
 
 	oaes_key_import_data(ctx->aes_ctx, ctx->state.hs.b, AES_KEY_SIZE);
 	for (i = 0; likely(i < MEMORY); i += INIT_SIZE_BYTE) {

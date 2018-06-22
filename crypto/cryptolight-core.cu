@@ -8,7 +8,7 @@
 #define LONG_SHL_IDX 18
 #define LONG_LOOPS32 0x40000
 
-#include "cl_aes.cuh"
+#include "cn_aes.cuh"
 
 #define MUL_SUM_XOR_DST(a,c,dst) { \
 	uint64_t hi, lo = cuda_mul128(((uint64_t *)a)[0], ((uint64_t *)dst)[0], &hi) + ((uint64_t *)c)[1]; \
@@ -251,7 +251,7 @@ void cryptolight_core_gpu_phase3(int threads, const uint32_t * long_state, uint3
 extern int device_bfactor[MAX_GPUS];
 
 __host__
-void cryptolight_core_cpu_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state,
+void cryptolight_core_hash(int thr_id, int blocks, int threads, uint32_t *d_long_state, uint32_t *d_ctx_state,
 	uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2)
 {
 	dim3 grid(blocks);
