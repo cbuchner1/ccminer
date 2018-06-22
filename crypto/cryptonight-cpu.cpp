@@ -15,9 +15,8 @@ extern "C" {
 #define VARIANT1_1(p) \
 	if (variant > 0) { \
 		const uint8_t tmp = ((const uint8_t*)(p))[11]; \
-		static const uint32_t table = 0x75310; \
 		const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1; \
-		((uint8_t*)(p))[11] = tmp ^ ((table >> index) & 0x30); \
+		((uint8_t*)(p))[11] = tmp ^ ((0x75310 >> index) & 0x30); \
 	}
 
 struct cryptonight_ctx {

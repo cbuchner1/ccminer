@@ -274,13 +274,14 @@ void cn_groestl_final(groestlHashState*  __restrict__ ctx, BitSequence* __restri
 	for (i = GROESTL_SIZE512-hashbytelen; i < GROESTL_SIZE512; i++,j++) {
 		output[j] = s[i];
 	}
-
+#if 0
 	for (i = 0; i < GROESTL_COLS512; i++) {
 		ctx->chaining[i] = 0;
 	}
 	for (i = 0; i < GROESTL_SIZE512; i++) {
 		ctx->buffer[i] = 0;
 	}
+#endif
 }
 
 __device__

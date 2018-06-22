@@ -7,15 +7,15 @@
 
 #include <miner.h>
 #include <cuda_helper.h>
+
 #include "cryptonight.h"
 
-typedef uint8_t BitSequence;
-typedef uint64_t DataLength;
-
-static uint32_t *d_input[MAX_GPUS] = { 0 };
+static uint32_t *d_input[MAX_GPUS];
 static uint32_t *d_target[MAX_GPUS];
 static uint32_t *d_result[MAX_GPUS];
 
+typedef uint8_t BitSequence;
+typedef uint64_t DataLength;
 #include "cn_keccak.cuh"
 #include "cn_blake.cuh"
 #include "cn_groestl.cuh"
@@ -72,21 +72,19 @@ void cryptonight_aes_set_key(uint32_t * __restrict__ key, const uint32_t * __res
 }
 
 __global__
-void cryptonight_extra_gpu_prepare(int threads, const uint32_t * __restrict__ d_input, uint32_t startNonce,
+void cryptonight_extra_gpu_prepare(const uint32_t threads, const uint32_t * __restrict__ d_input, uint32_t startNonce,
 	uint32_t * __restrict__ d_ctx_state, uint32_t * __restrict__ d_ctx_a, uint32_t * __restrict__ d_ctx_b,
 	uint32_t * __restrict__ d_ctx_key1, uint32_t * __restrict__ d_ctx_key2, int variant, uint64_t * d_ctx_tweak)
 {
-	int thread = (blockDim.x * blockIdx.x + threadIdx.x);
-
+	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if(thread < threads)
 	{
 		uint64_t ctx_state[25];
 		uint32_t ctx_a[4];
 		uint32_t ctx_b[4];
-		uint32_t ctx_key1[40] = {0};
-		uint32_t ctx_key2[40] = {0};
+		uint32_t ctx_key1[40];
+		uint32_t ctx_key2[40];
 		uint32_t input[19];
-		uint32_t tweak1_2[2];
 
 		MEMCPY4(input, d_input, 19);
 
@@ -97,44 +95,43 @@ void cryptonight_extra_gpu_prepare(int threads, const uint32_t * __restrict__ d_
 		*(((uint8_t *)input) + 42) = (nonce >> 24) & 0xff;
 
 		cn_keccak(input, ctx_state);
-		cryptonight_aes_set_key(ctx_key1, (uint32_t*)ctx_state);
-		cryptonight_aes_set_key(ctx_key2, (uint32_t*)(ctx_state + 4));
-		XOR_BLOCKS_DST(ctx_state, ctx_state + 4, ctx_a);
-		XOR_BLOCKS_DST(ctx_state + 2, ctx_state + 6, ctx_b);
+		MEMCPY4(&d_ctx_state[thread * 50U], ctx_state, 50);
+
+		cryptonight_aes_set_key(ctx_key1, (uint32_t*)(&ctx_state[0]));
+		cryptonight_aes_set_key(ctx_key2, (uint32_t*)(&ctx_state[4]));
+		MEMCPY4(&d_ctx_key1[thread * 40U], ctx_key1, 40);
+		MEMCPY4(&d_ctx_key2[thread * 40U], ctx_key2, 40);
+
+		XOR_BLOCKS_DST(&ctx_state[0], &ctx_state[4], ctx_a);
+		XOR_BLOCKS_DST(&ctx_state[2], &ctx_state[6], ctx_b);
+		MEMCPY4(&d_ctx_a[thread * 4U], ctx_a, 4);
+		MEMCPY4(&d_ctx_b[thread * 4U], ctx_b, 4);
 
 		if (variant) {
-			tweak1_2[0] = (input[8] >> 24) | (input[9] << 8);
-			tweak1_2[0] ^= (ctx_state[24] & 0xffffffff);
-			tweak1_2[1] = (input[9] >> 24) | (input[10] << 8);
-			tweak1_2[1] ^= (ctx_state[24] >> 32);
-			MEMCPY4(&d_ctx_tweak[thread], tweak1_2, 2);
+			uint2 tweak;
+			//tweak.x = (input[8] >> 24) | (input[9] << 8);
+			tweak.x = __byte_perm(input[8], input[ 9], 0x6543);
+			tweak.y = __byte_perm(input[9], input[10], 0x6543);
+			tweak ^= AS_UINT2(&ctx_state[24]);
+			MEMCPY4(&d_ctx_tweak[thread], &tweak, 2);
 		}
-
-		MEMCPY4(d_ctx_state + thread * 50, ctx_state, 50);
-		MEMCPY4(d_ctx_a + thread * 4, ctx_a, 4);
-		MEMCPY4(d_ctx_b + thread * 4, ctx_b, 4);
-		MEMCPY4(d_ctx_key1 + thread * 40, ctx_key1, 40);
-		MEMCPY4(d_ctx_key2 + thread * 40, ctx_key2, 40);
 	}
 }
 
 __global__
-void cryptonight_extra_gpu_final(int threads, uint32_t startNonce, const uint32_t * __restrict__ d_target,
-	uint32_t * __restrict__ resNonce, uint32_t * __restrict__ d_ctx_state)
+void cryptonight_extra_gpu_final(const uint32_t threads, uint32_t startNonce, const uint32_t * __restrict__ d_target,
+	uint32_t * __restrict__ resNonces, uint32_t * __restrict__ d_ctx_state)
 {
-	const int thread = blockDim.x * blockIdx.x + threadIdx.x;
-
+	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
 	if(thread < threads)
 	{
-		int i;
-		const uint32_t nonce = startNonce + thread;
-		const uint32_t * __restrict__ ctx_state = d_ctx_state + thread * 50;
+		uint32_t *ctx_state = &d_ctx_state[thread * 50U];
 		uint32_t hash[8];
 		uint32_t state[50];
 
-#pragma unroll
-		for(i = 0; i < 50; i++)
-			state[i] = ctx_state[i];
+		#pragma unroll 25
+		for(int i = 0; i < 50; i+=2)
+			AS_UINT2(&state[i]) = AS_UINT2(&ctx_state[i]);
 
 		cn_keccakf2((uint64_t *)state);
 
@@ -148,44 +145,22 @@ void cryptonight_extra_gpu_final(int threads, uint32_t startNonce, const uint32_
 		if(branch == 3)
 			cn_skein((const uint8_t *)state, 200, (uint8_t *)hash);
 
-		int position = -1;
-		bool rc = true;
-
-#pragma unroll 8
-		for(i = 7; i >= 0; i--)
+		if(hash[7] <= d_target[1] && hash[6] <= d_target[0])
 		{
-			if(hash[i] > d_target[i])
-			{
-				if(position < i)
-				{
-					position = i;
-					rc = false;
-				}
-			}
-			if(hash[i] < d_target[i])
-			{
-				if(position < i)
-				{
-					position = i;
-					rc = true;
-				}
-			}
-		}
-
-		if(rc == true)
-		{
-			uint32_t tmp = atomicExch(resNonce, nonce);
+			const uint32_t nonce = startNonce + thread;
+			uint32_t tmp = atomicExch(resNonces, nonce);
 			if(tmp != UINT32_MAX)
-				resNonce[1] = tmp;
+				resNonces[1] = tmp;
 		}
 	}
 }
 
 __host__
-void cryptonight_extra_setData(int thr_id, const void *data, const void *pTargetIn)
+void cryptonight_extra_setData(int thr_id, const void *data, const void *ptarget)
 {
-	cudaMemcpy(d_input[thr_id], data, 19 * sizeof(uint32_t), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_target[thr_id], pTargetIn, 8 * sizeof(uint32_t), cudaMemcpyHostToDevice);
+	uint32_t *pTargetIn = (uint32_t*) ptarget;
+	cudaMemcpy(d_input[thr_id], data, 20 * sizeof(uint32_t), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_target[thr_id], &pTargetIn[6], 2 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	cudaMemset(d_result[thr_id], 0xFF, 2 * sizeof(uint32_t));
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 }
@@ -193,16 +168,16 @@ void cryptonight_extra_setData(int thr_id, const void *data, const void *pTarget
 __host__
 void cryptonight_extra_init(int thr_id)
 {
-	cudaMalloc(&d_input[thr_id], 19 * sizeof(uint32_t));
-	cudaMalloc(&d_target[thr_id], 8 * sizeof(uint32_t));
+	cudaMalloc(&d_input[thr_id], 20 * sizeof(uint32_t));
+	cudaMalloc(&d_target[thr_id], 2 * sizeof(uint32_t));
 	cudaMalloc(&d_result[thr_id], 2 * sizeof(uint32_t));
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 }
 
 __host__
-void cryptonight_extra_prepare(int thr_id, int threads, uint32_t startNonce, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2, int variant, uint64_t *d_ctx_tweak)
+void cryptonight_extra_prepare(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2, int variant, uint64_t *d_ctx_tweak)
 {
-	int threadsperblock = 128;
+	uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
@@ -212,9 +187,9 @@ void cryptonight_extra_prepare(int thr_id, int threads, uint32_t startNonce, uin
 }
 
 __host__
-void cryptonight_extra_final(int thr_id, int threads, uint32_t startNonce, uint32_t *resnonce, uint32_t *d_ctx_state)
+void cryptonight_extra_final(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *resNonces, uint32_t *d_ctx_state)
 {
-	int threadsperblock = 128;
+	uint32_t threadsperblock = 128;
 
 	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
@@ -222,7 +197,7 @@ void cryptonight_extra_final(int thr_id, int threads, uint32_t startNonce, uint3
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 	cryptonight_extra_gpu_final <<<grid, block>>> (threads, startNonce, d_target[thr_id], d_result[thr_id], d_ctx_state);
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
-	cudaMemcpy(resnonce, d_result[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(resNonces, d_result[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 }
 

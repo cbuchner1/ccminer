@@ -36,7 +36,7 @@ void cryptolight_core_gpu_phase1(int threads, uint32_t * long_state, uint32_t * 
 
 	if(thread < threads)
 	{
-		const int oft = thread * 52 + sub + 16; // not aligned 16!
+		const int oft = thread * 50 + sub + 16; // not aligned 16!
 		const int long_oft = (thread << LONG_SHL_IDX) + sub;
 		uint32_t __align__(16) key[40];
 		uint32_t __align__(16) text[4];
@@ -222,7 +222,7 @@ void cryptolight_core_gpu_phase3(int threads, const uint32_t * long_state, uint3
 	if(thread < threads)
 	{
 		const int long_oft = (thread << LONG_SHL_IDX) + sub;
-		const int oft = thread * 52 + sub + 16;
+		const int oft = thread * 50 + sub + 16;
 		uint32_t __align__(16) key[40];
 		uint32_t __align__(16) text[4];
 
