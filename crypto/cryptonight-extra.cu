@@ -145,7 +145,7 @@ void cryptonight_extra_gpu_final(int threads, uint32_t startNonce, const uint32_
 		if(branch == 1)
 			cn_groestl((const BitSequence *)state, 200, (BitSequence *)hash);
 		if(branch == 2)
-			cn_jh((const BitSequence *)state, 200, (BitSequence *)hash);
+			cn_jh((const uint8_t *)state, 200, (uint8_t *)hash);
 		if(branch == 3)
 			cn_skein((const uint8_t *)state, 200, (uint8_t *)hash);
 
