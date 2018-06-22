@@ -27,7 +27,7 @@ extern "C" {
     return 0; \
   } \
   const uint64_t tweak1_2 = variant > 0 ? *((const uint64_t*) (((const uint8_t*)input) + 35)) ^ ctx->state.hs.w[24] : 0
- 
+
 
 struct cryptonight_ctx {
 	uint8_t long_state[MEMORY];
