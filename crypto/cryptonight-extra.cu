@@ -147,7 +147,7 @@ void cryptonight_extra_gpu_final(int threads, uint32_t startNonce, const uint32_
 		if(branch == 2)
 			cn_jh((const BitSequence *)state, 200, (BitSequence *)hash);
 		if(branch == 3)
-			cn_skein((const BitSequence *)state, 200, (BitSequence *)hash);
+			cn_skein((const uint8_t *)state, 200, (uint8_t *)hash);
 
 		int position = -1;
 		bool rc = true;
