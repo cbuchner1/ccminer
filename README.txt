@@ -41,19 +41,21 @@ Keccak (Maxcoin)
 Pentablake (Blake 512 x5)
 1Coin Triple S
 Neoscrypt (FeatherCoin)
-Revolver (X11evo)
+x11evo (Revolver)
+phi2 (LUXCoin)
 Scrypt and Scrypt:N
 Scrypt-Jane (Chacha)
-Sibcoin (sib)
+sib (Sibcoin)
 Skein (Skein + SHA)
 Signatum (Skein cubehash fugue Streebog)
+SonoA (Sono)
 Tribus (JH, keccak, simd)
 Woodcoin (Double Skein)
 Vanilla (Blake256 8-rounds - double sha256)
 Vertcoin Lyra2RE
 Ziftrcoin (ZR5)
 Boolberry (Wild Keccak)
-Monero (Cryptonight)
+Monero (Cryptonight v7 with -a monero)
 Aeon (Cryptonight-lite)
 
 where some of these coins have a VERY NOTABLE nVidia advantage
@@ -119,6 +121,7 @@ its command line interface and options.
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
                           skunk       use to mine Signatum
+                          sonoa       use to mine Sono
                           stellite    use to mine Stellite (a cryptonight variant)
                           timetravel  use to mine MachineCoin
                           tribus      use to mine Denarius
@@ -288,6 +291,7 @@ features.
   June 23th 2018  v2.3
                   Handle phi2 header variation for smart contracts
                   Handle monero, stellite, graft and cryptolight variants
+                  Handle SonoA algo
 
   June 10th 2018  v2.2.6
                   New phi2 algo for LUX

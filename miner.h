@@ -315,6 +315,7 @@ extern int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_nonce,
 extern int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_skunk(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_s3(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_sonoa(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_tribus(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_bitcore(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -384,6 +385,7 @@ extern void free_skeincoin(int thr_id);
 extern void free_skein2(int thr_id);
 extern void free_skunk(int thr_id);
 extern void free_s3(int thr_id);
+extern void free_sonoa(int thr_id);
 extern void free_timetravel(int thr_id);
 extern void free_tribus(int thr_id);
 extern void free_bitcore(int thr_id);

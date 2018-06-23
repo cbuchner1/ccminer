@@ -274,7 +274,7 @@ Options:\n\
 			neoscrypt   FeatherCoin, Phoenix, UFO...\n\
 			nist5       NIST5 (TalkCoin)\n\
 			penta       Pentablake hash (5x Blake 512)\n\
-			phi         LUX initial algo\n\
+			phi1612     LUX initial algo, for Seraph\n\
 			phi2        LUX v2 with lyra2\n\
 			polytimos   Politimos\n\
 			quark       Quark\n\
@@ -288,6 +288,7 @@ Options:\n\
 			skein       Skein SHA2 (Skeincoin)\n\
 			skein2      Double Skein (Woodcoin)\n\
 			skunk       Skein Cube Fugue Streebog\n\
+			sonoa       97 hashes based on X17 ones (Sono)\n\
 			stellite    Cryptonight v3\n\
 			s3          S3 (1Coin)\n\
 			timetravel  Machinecoin permuted x8\n\
@@ -2299,6 +2300,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_NEOSCRYPT:
 			case ALGO_SIB:
 			case ALGO_SCRYPT:
+			case ALGO_SONOA:
 			case ALGO_VELTOR:
 				minmax = 0x80000;
 				break;
@@ -2507,6 +2509,9 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_SIB:
 			rc = scanhash_sib(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_SONOA:
+			rc = scanhash_sonoa(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_S3:
 			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);

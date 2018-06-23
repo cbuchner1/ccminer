@@ -82,6 +82,7 @@ void algo_free_all(int thr_id)
 	free_nist5(thr_id);
 	free_pentablake(thr_id);
 	free_phi(thr_id);
+	free_phi2(thr_id);
 	free_polytimos(thr_id);
 	free_quark(thr_id);
 	free_qubit(thr_id);
@@ -92,6 +93,7 @@ void algo_free_all(int thr_id)
 	free_sha256t(thr_id);
 	free_sia(thr_id);
 	free_sib(thr_id);
+	free_sonoa(thr_id);
 	free_s3(thr_id);
 	free_vanilla(thr_id);
 	free_veltor(thr_id);

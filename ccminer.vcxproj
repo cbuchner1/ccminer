@@ -591,7 +591,6 @@
     <CudaCompile Include="x15\x14.cu" />
     <CudaCompile Include="x15\cuda_x14_shabal512.cu" />
     <CudaCompile Include="x15\cuda_x15_whirlpool.cu" />
-    <CudaCompile Include="x17\hmq17.cu" />
     <CudaCompile Include="x15\x15.cu" />
     <CudaCompile Include="x15\whirlpool.cu" />
     <CudaCompile Include="x15\cuda_x15_whirlpool_sm3.cu" />
@@ -604,6 +603,8 @@
     <CudaCompile Include="x16\cuda_x16_echo512_64.cu">
       <CodeGeneration>compute_50,sm_50;compute_52,sm_52</CodeGeneration>
     </CudaCompile>
+    <CudaCompile Include="x17\hmq17.cu" />
+    <CudaCompile Include="x17\sonoa.cu" />
     <CudaCompile Include="x17\x17.cu" />
     <CudaCompile Include="x17\cuda_x17_haval256.cu">
     </CudaCompile>
