@@ -274,13 +274,14 @@ void cn_groestl_final(groestlHashState*  __restrict__ ctx, BitSequence* __restri
 	for (i = GROESTL_SIZE512-hashbytelen; i < GROESTL_SIZE512; i++,j++) {
 		output[j] = s[i];
 	}
-
+#if 0
 	for (i = 0; i < GROESTL_COLS512; i++) {
 		ctx->chaining[i] = 0;
 	}
 	for (i = 0; i < GROESTL_SIZE512; i++) {
 		ctx->buffer[i] = 0;
 	}
+#endif
 }
 
 __device__
@@ -336,12 +337,12 @@ void cn_groestl_init(groestlHashState* ctx)
 }
 
 __device__
-void cn_groestl(const BitSequence * __restrict__ data, DataLength len, BitSequence * __restrict__ hashval)
+void cn_groestl(const uint8_t * __restrict__ data, DataLength len, uint32_t * hashval)
 {
 	DataLength databitlen = len << 3;
 	groestlHashState context;
 
 	cn_groestl_init(&context);
-	cn_groestl_update(&context, data, databitlen);
-	cn_groestl_final(&context, hashval);
+	cn_groestl_update(&context, (BitSequence*) data, databitlen);
+	cn_groestl_final(&context, (BitSequence*) hashval);
 }

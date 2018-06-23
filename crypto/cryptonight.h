@@ -20,7 +20,6 @@ struct uint3  blockDim;
 #define __umul64hi(a,b) a*b
 #endif
 
-
 #define MEMORY         (1U << 21) // 2 MiB / 2097152 B
 #define ITER           (1U << 20) // 1048576
 #define E2I_MASK       0x1FFFF0u
@@ -136,10 +135,10 @@ static inline void exit_if_cudaerror(int thr_id, const char *src, int line)
 		exit(1);
 	}
 }
-void cryptonight_core_cuda(int thr_id, int blocks, int threads, uint64_t *d_long_state, uint64_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2);
+void cryptonight_core_cuda(int thr_id, uint32_t blocks, uint32_t threads, uint64_t *d_long_state, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2, int variant, uint64_t *d_ctx_tweak);
 
-void cryptonight_extra_cpu_setData(int thr_id, const void *data, const void *pTargetIn);
-void cryptonight_extra_cpu_init(int thr_id, uint32_t threads);
-void cryptonight_extra_cpu_free(int thr_id);
-void cryptonight_extra_cpu_prepare(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2);
-void cryptonight_extra_cpu_final(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *nonce, uint64_t *d_ctx_state);
+void cryptonight_extra_setData(int thr_id, const void *data, const void *ptarget);
+void cryptonight_extra_init(int thr_id);
+void cryptonight_extra_free(int thr_id);
+void cryptonight_extra_prepare(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *d_ctx_state, uint32_t *d_ctx_a, uint32_t *d_ctx_b, uint32_t *d_ctx_key1, uint32_t *d_ctx_key2, int variant, uint64_t *d_ctx_tweak);
+void cryptonight_extra_final(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *resnonce, uint32_t *d_ctx_state);

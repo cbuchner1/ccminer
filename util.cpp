@@ -2193,10 +2193,10 @@ void print_hash_tests(void)
 	c11hash(&hash[0], &buf[0]);
 	printpfx("c11", hash);
 
-	cryptolight_hash(&hash[0], &buf[0], 76);
+	cryptolight_hash(&hash[0], &buf[0]);
 	printpfx("cryptolight", hash);
 
-	cryptonight_hash(&hash[0], &buf[0], 76);
+	cryptonight_hash(&hash[0], &buf[0]);
 	printpfx("cryptonight", hash);
 
 	memset(buf, 0, 180);
@@ -2245,6 +2245,9 @@ void print_hash_tests(void)
 
 	lyra2Z_hash(&hash[0], &buf[0]);
 	printpfx("lyra2z", hash);
+
+	monero_hash(&hash[0], &buf[0]);
+	printpfx("monero", hash);
 
 	myriadhash(&hash[0], &buf[0]);
 	printpfx("myriad", hash);
@@ -2296,6 +2299,9 @@ void print_hash_tests(void)
 
 	skunk_hash(&hash[0], &buf[0]);
 	printpfx("skunk", hash);
+
+	stellite_hash(&hash[0], &buf[0]);
+	printpfx("stelitte", hash);
 
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);

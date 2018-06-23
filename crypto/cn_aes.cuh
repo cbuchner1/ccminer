@@ -138,6 +138,7 @@ static const __device__ __align__(16) uint32_t d_t_fn[1024] = {
 */
 
 #define AS_U32(addr) *((uint32_t*)(addr))
+#define AS_U64(addr) *((uint64_t*)(addr))
 #define AS_UINT2(addr) *((uint2*)(addr))
 #define AS_UINT4(addr) *((uint4*)(addr))
 #define AS_UL2(addr) *((ulonglong2*)(addr))

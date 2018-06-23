@@ -198,8 +198,9 @@ void cn_jh_update(jhHashState * __restrict__ state, const uint8_t * __restrict__
 		databitlen = 0;
 	}
 
-	if ( (state->datasize_in_buffer > 0 ) && (( state->datasize_in_buffer + databitlen) >= 512)  ) {
-		memcpy( state->buffer + (state->datasize_in_buffer >> 3), data, 64-(state->datasize_in_buffer >> 3) ) ;
+	if ( (state->datasize_in_buffer > 0 ) && (( state->datasize_in_buffer + databitlen) >= 512)  )
+	{
+		memcpy( state->buffer + (state->datasize_in_buffer >> 3), data, 64-(state->datasize_in_buffer >> 3) );
 		index = 64-(state->datasize_in_buffer >> 3);
 		databitlen = databitlen - (512 - state->datasize_in_buffer);
 		cn_jh_F8(state);
@@ -222,7 +223,7 @@ void cn_jh_update(jhHashState * __restrict__ state, const uint8_t * __restrict__
 
 /* pad the message, process the padded block(s), truncate the hash value H to obtain the message digest */
 __device__
-void cn_jh_final(jhHashState * __restrict__ state, uint32_t * __restrict__ hashval)
+void cn_jh_final(jhHashState * __restrict__ state, uint8_t * __restrict__ hashval)
 {
 	unsigned int i;
 	//uint32_t *bufptr = (uint32_t *)state->buffer;
@@ -244,7 +245,7 @@ void cn_jh_final(jhHashState * __restrict__ state, uint32_t * __restrict__ hashv
 
 	} else {
 
-		/*set the rest of the bytes in the buffer to 0*/
+		/* set the rest of the bytes in the buffer to 0 */
 		if ( (state->datasize_in_buffer & 7) == 0) {
 			for (i = (state->databitlen & 0x1ff) >> 3; i < 64; i++) state->buffer[i] = 0;
 		} else {
@@ -268,7 +269,8 @@ void cn_jh_final(jhHashState * __restrict__ state, uint32_t * __restrict__ hashv
 		cn_jh_F8(state);
 	}
 
-	MEMCPY4(hashval, ((unsigned char*)state->x) + 64 + 32, 8);
+	memcpy(hashval, ((unsigned char*)state->x) + 64 + 32, 32);
+	//MEMCPY4(hashval, ((unsigned char*)state->x) + 64 + 32, 8);
 }
 
 __device__
@@ -277,12 +279,12 @@ void cn_jh_init(jhHashState *state, int hashbitlen)
 	state->databitlen = 0;
 	state->datasize_in_buffer = 0;
 	state->hashbitlen = hashbitlen;
-	//memcpy(state->x, d_JH256_H0, 128);
-	MEMCPY8(state->x, d_JH256_H0, 128 / 8);
+	memcpy(state->x, d_JH256_H0, 128);
+	//MEMCPY8(state->x, d_JH256_H0, 128 / 8);
 }
 
 __device__
-void cn_jh256(const uint8_t * __restrict__ data, DataLength len, uint32_t * __restrict__ hashval)
+void cn_jh(const uint8_t * __restrict__ data, DataLength len, uint32_t * hashval)
 {
 	const int hashbitlen = 256;
 	DataLength databitlen = len << 3;
@@ -290,5 +292,5 @@ void cn_jh256(const uint8_t * __restrict__ data, DataLength len, uint32_t * __re
 
 	cn_jh_init(&state, hashbitlen);
 	cn_jh_update(&state, data, databitlen);
-	cn_jh_final(&state, hashval);
+	cn_jh_final(&state, (uint8_t*) hashval);
 }

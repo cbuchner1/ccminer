@@ -195,7 +195,7 @@ void cn_keccakf(uint64_t *s)
 }
 
 __device__ __forceinline__
-void cn_keccak(const uint8_t * __restrict__ in, uint8_t * __restrict__ md)
+void cn_keccak(const uint32_t * __restrict__ in, uint64_t * __restrict__ md)
 {
 	uint64_t st[25];
 

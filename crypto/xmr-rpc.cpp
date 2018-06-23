@@ -550,18 +550,24 @@ bool rpc2_stratum_submit(struct pool_infos *pool, struct work *work)
 	}
 
 	else if (opt_algo == ALGO_CRYPTOLIGHT) {
+		int variant = 1;
 		uint32_t nonce = work->nonces[idnonce];
 		noncestr = bin2hex((unsigned char*) &nonce, 4);
 		last_found_nonce = nonce;
-		cryptolight_hash(hash, data, 76);
+		//if (cryptonight_fork > 1 && ((unsigned char*)work->data)[0] >= cryptonight_fork)
+		//	variant = ((unsigned char*)work->data)[0] - cryptonight_fork + 1;
+		cryptolight_hash_variant(hash, data, 76, variant);
 		work_set_target_ratio(work, (uint32_t*) hash);
 	}
 
 	else if (opt_algo == ALGO_CRYPTONIGHT) {
+		int variant = 0;
 		uint32_t nonce = work->nonces[idnonce];
 		noncestr = bin2hex((unsigned char*) &nonce, 4);
 		last_found_nonce = nonce;
-		cryptonight_hash(hash, data, 76);
+		if (cryptonight_fork > 1 && ((unsigned char*)work->data)[0] >= cryptonight_fork)
+			variant = ((unsigned char*)work->data)[0] - cryptonight_fork + 1;
+		cryptonight_hash_variant(hash, data, 76, variant);
 		work_set_target_ratio(work, (uint32_t*) hash);
 	}
 
