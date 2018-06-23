@@ -2380,7 +2380,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_c11(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_CRYPTOLIGHT:
-			rc = scanhash_cryptolight(thr_id, &work, max_nonce, &hashes_done);
+			rc = scanhash_cryptolight(thr_id, &work, max_nonce, &hashes_done, 1);
 			break;
 		case ALGO_CRYPTONIGHT:
 		{
