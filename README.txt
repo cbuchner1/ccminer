@@ -1,5 +1,5 @@
 
-ccminer 2.2.6                                 "phi2 and allium"
+ccminer 2.3                     "phi2 and cryptonight variants"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -80,8 +80,8 @@ its command line interface and options.
                           blakecoin   use to mine Old Blake 256
                           blake2s     use to mine Nevacoin (Blake2-S 256)
                           bmw         use to mine Midnight
-                          cryptolight use to mine AEON cryptonight (MEM/2)
-                          cryptonight use to mine XMR cryptonight, Bytecoin, Dash, DigitalNote, etc
+                          cryptolight use to mine AEON cryptonight variant 1 (MEM/2)
+                          cryptonight use to mine original cryptonight
                           c11/flax    use to mine Chaincoin and Flax
                           decred      use to mine Decred 180 bytes Blake256-14
                           deep        use to mine Deepcoin
@@ -99,10 +99,12 @@ its command line interface and options.
                           lyra2       use to mine CryptoCoin
                           lyra2v2     use to mine Vertcoin
                           lyra2z      use to mine Zerocoin (XZC)
+                          monero      use to mine Monero (XMR)
                           myr-gr      use to mine Myriad-Groest
                           neoscrypt   use to mine FeatherCoin, Trezarcoin, Orbitcoin, etc
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
+                          phi1612     use to mine Seraph
                           phi2        use to mine LUXCoin
                           polytimos   use to mine Polytimos
                           quark       use to mine Quarkcoin
@@ -117,6 +119,7 @@ its command line interface and options.
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
                           skunk       use to mine Signatum
+                          stellite    use to mine Stellite (a cryptonight variant)
                           timetravel  use to mine MachineCoin
                           tribus      use to mine Denarius
                           x11evo      use to mine Revolver
@@ -282,6 +285,10 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  June 23th 2018  v2.3
+                  Handle phi2 header variation for smart contracts
+                  Handle monero, stellite, graft and cryptolight variants
+
   June 10th 2018  v2.2.6
                   New phi2 algo for LUX
                   New allium algo for Garlic
