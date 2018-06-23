@@ -564,7 +564,7 @@ bool rpc2_stratum_submit(struct pool_infos *pool, struct work *work)
 		last_found_nonce = nonce;
 		if (cryptonight_fork > 1 && ((unsigned char*)work->data)[0] >= cryptonight_fork)
 			variant = ((unsigned char*)work->data)[0] - cryptonight_fork + 1;
-		cryptonight_hash(hash, data, 76, variant);
+		cryptonight_hash_variant(hash, data, 76, variant);
 		work_set_target_ratio(work, (uint32_t*) hash);
 	}
 

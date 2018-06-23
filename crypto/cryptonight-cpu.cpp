@@ -12,12 +12,19 @@ extern "C" {
 #include "cpu/c_keccak.h"
 }
 
-#define VARIANT1_1(p) \
-	if (variant > 0) { \
-		const uint8_t tmp = ((const uint8_t*)(p))[11]; \
-		const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1; \
-		((uint8_t*)(p))[11] = tmp ^ ((0x75310 >> index) & 0x30); \
+static void cryptonight_store_variant(void* state, int variant) {
+	if (variant == 1 || cryptonight_fork == 8) {
+		// monero, and graft ?
+		const uint8_t tmp = ((const uint8_t*)(state))[11];
+		const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1;
+		((uint8_t*)(state))[11] = tmp ^ ((0x75310 >> index) & 0x30);
+	} else if (variant == 2 && cryptonight_fork == 3) {
+		// stellite
+		const uint8_t tmp = ((const uint8_t*)(state))[11];
+		const uint8_t index = (((tmp >> 4) & 6) | (tmp & 1)) << 1;
+		((uint8_t*)(state))[11] = tmp ^ ((0x75312 >> index) & 0x30);
 	}
+}
 
 struct cryptonight_ctx {
 	uint8_t long_state[MEMORY];
@@ -196,14 +203,14 @@ static int cryptonight_hash_ctx(void* output, const void* input, const size_t le
 		j = e2i(ctx->a) * AES_BLOCK_SIZE;
 		aesb_single_round(&ctx->long_state[j], ctx->c, ctx->a);
 		xor_blocks_dst(ctx->c, ctx->b, &ctx->long_state[j]);
-		VARIANT1_1(&ctx->long_state[j]);
+		cryptonight_store_variant(&ctx->long_state[j], variant);
 
 		mul_sum_xor_dst(ctx->c, ctx->a, &ctx->long_state[e2i(ctx->c) * AES_BLOCK_SIZE], variant, tweak1_2);
 
 		j = e2i(ctx->a) * AES_BLOCK_SIZE;
 		aesb_single_round(&ctx->long_state[j], ctx->b, ctx->a);
 		xor_blocks_dst(ctx->b, ctx->c, &ctx->long_state[j]);
-		VARIANT1_1(&ctx->long_state[j]);
+		cryptonight_store_variant(&ctx->long_state[j], variant);
 
 		mul_sum_xor_dst(ctx->b, ctx->a, &ctx->long_state[e2i(ctx->b) * AES_BLOCK_SIZE], variant, tweak1_2);
 	}
@@ -234,10 +241,35 @@ static int cryptonight_hash_ctx(void* output, const void* input, const size_t le
 	return 1;
 }
 
-int cryptonight_hash(void* output, const void* input, size_t len, int variant)
+int cryptonight_hash_variant(void* output, const void* input, size_t len, int variant)
 {
 	struct cryptonight_ctx *ctx = (struct cryptonight_ctx*)malloc(sizeof(struct cryptonight_ctx));
 	int rc = cryptonight_hash_ctx(output, input, len, ctx, variant);
 	free(ctx);
 	return rc;
 }
+
+void cryptonight_hash(void* output, const void* input)
+{
+	cryptonight_fork = 1;
+	cryptonight_hash_variant(output, input, 76, 0);
+}
+
+void graft_hash(void* output, const void* input)
+{
+	cryptonight_fork = 8;
+	cryptonight_hash_variant(output, input, 76, 1);
+}
+
+void monero_hash(void* output, const void* input)
+{
+	cryptonight_fork = 7;
+	cryptonight_hash_variant(output, input, 76, 1);
+}
+
+void stellite_hash(void* output, const void* input)
+{
+	cryptonight_fork = 3;
+	cryptonight_hash_variant(output, input, 76, 2);
+}
+

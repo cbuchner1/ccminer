@@ -133,6 +133,14 @@ __device__ __forceinline__ void store_variant1(uint64_t* long_state, uint4 Z)
 	AS_UINT4(long_state) = Z;
 }
 
+__device__ __forceinline__ void store_variant2(uint64_t* long_state, uint4 Z)
+{
+	const uint32_t tmp = (Z.z >> 24); // __byte_perm(src, 0, 0x7773);
+	const uint32_t index = (((tmp >> 4) & 6u) | (tmp & 1u)) << 1;
+	Z.z = (Z.z & 0x00ffffffu) | ((tmp ^ ((0x75312u >> index) & 0x30u)) << 24);
+	AS_UINT4(long_state) = Z;
+}
+
 __device__ __forceinline__ void MUL_SUM_XOR_DST_1(const uint64_t m, uint4 &a, void* far_dst, uint64_t tweak)
 {
 	ulonglong2 d = AS_UL2(far_dst);
@@ -153,13 +161,11 @@ void monero_gpu_phase2(const uint32_t threads, const uint16_t bfactor, const uin
 	__syncthreads();
 
 	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
-
 	if (thread < threads)
 	{
 		const uint32_t batchsize = ITER >> (2 + bfactor);
 		const uint32_t start = partidx * batchsize;
 		const uint32_t end = start + batchsize;
-
 		uint64_t tweak = d_tweak[thread];
 
 		void * ctx_a = (void*)(&d_ctx_a[thread << 2]);
@@ -171,7 +177,6 @@ void monero_gpu_phase2(const uint32_t threads, const uint16_t bfactor, const uin
 		for (int i = start; i < end; i++) // end = 262144
 		{
 			uint4 C;
-
 			uint32_t j = (A.x & E2I_MASK) >> 3;
 			cn_aes_single_round_b((uint8_t*)sharedMemory, &long_state[j], A, &C);
 			store_variant1(&long_state[j], C ^ B); // st.global
@@ -182,7 +187,51 @@ void monero_gpu_phase2(const uint32_t threads, const uint16_t bfactor, const uin
 			store_variant1(&long_state[j], C ^ B);
 			MUL_SUM_XOR_DST_1((AS_UL2(&B)).x, A, &long_state[(B.x & E2I_MASK) >> 3], tweak);
 		}
+		if (bfactor) {
+			AS_UINT4(ctx_a) = A;
+			AS_UINT4(ctx_b) = B;
+		}
+	}
+}
 
+// --------------------------------------------------------------------------------------------------------------
+
+__global__
+void stellite_gpu_phase2(const uint32_t threads, const uint16_t bfactor, const uint32_t partidx,
+	uint64_t * __restrict__ d_long_state, uint32_t * __restrict__ d_ctx_a, uint32_t * __restrict__ d_ctx_b,
+	uint64_t * __restrict__ d_tweak)
+{
+	__shared__ __align__(16) uint32_t sharedMemory[1024];
+	cn_aes_gpu_init(sharedMemory);
+	__syncthreads();
+
+	const uint32_t thread = blockDim.x * blockIdx.x + threadIdx.x;
+	if (thread < threads)
+	{
+		const uint32_t batchsize = ITER >> (2 + bfactor);
+		const uint32_t start = partidx * batchsize;
+		const uint32_t end = start + batchsize;
+		uint64_t tweak = d_tweak[thread];
+
+		void * ctx_a = (void*)(&d_ctx_a[thread << 2]);
+		void * ctx_b = (void*)(&d_ctx_b[thread << 2]);
+		uint4 A = AS_UINT4(ctx_a); // ld.global.u32.v4
+		uint4 B = AS_UINT4(ctx_b);
+
+		uint64_t * long_state = &d_long_state[thread << LONG_SHL64];
+		for (int i = start; i < end; i++) // end = 262144
+		{
+			uint4 C;
+			uint32_t j = (A.x & E2I_MASK) >> 3;
+			cn_aes_single_round_b((uint8_t*)sharedMemory, &long_state[j], A, &C);
+			store_variant2(&long_state[j], C ^ B); // st.global
+			MUL_SUM_XOR_DST_1((AS_UL2(&C)).x, A, &long_state[(C.x & E2I_MASK) >> 3], tweak);
+
+			j = (A.x & E2I_MASK) >> 3;
+			cn_aes_single_round_b((uint8_t*)sharedMemory, &long_state[j], A, &B);
+			store_variant2(&long_state[j], C ^ B);
+			MUL_SUM_XOR_DST_1((AS_UL2(&B)).x, A, &long_state[(B.x & E2I_MASK) >> 3], tweak);
+		}
 		if (bfactor) {
 			AS_UINT4(ctx_a) = A;
 			AS_UINT4(ctx_b) = B;
@@ -253,8 +302,10 @@ void cryptonight_core_cuda(int thr_id, uint32_t blocks, uint32_t threads, uint64
 		dim3 b = device_sm[dev_id] >= 300 ? block4 : block;
 		if (variant == 0)
 			cryptonight_gpu_phase2 <<<grid, b>>> (throughput, bfactor, i, d_long_state, d_ctx_a, d_ctx_b);
-		else
+		else if (variant == 1 || cryptonight_fork == 8)
 			monero_gpu_phase2 <<<grid, b>>> (throughput, bfactor, i, d_long_state, d_ctx_a, d_ctx_b, d_ctx_tweak);
+		else if (variant == 2 && cryptonight_fork == 3)
+			stellite_gpu_phase2 <<<grid, b>>> (throughput, bfactor, i, d_long_state, d_ctx_a, d_ctx_b, d_ctx_tweak);
 		exit_if_cudaerror(thr_id, __FUNCTION__, __LINE__);
 		if(partcount > 1) usleep(bsleep);
 	}
