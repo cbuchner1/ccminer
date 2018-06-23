@@ -15,7 +15,7 @@ static uint32_t *d_target[MAX_GPUS];
 static uint32_t *d_result[MAX_GPUS];
 
 typedef uint8_t BitSequence;
-typedef uint64_t DataLength;
+typedef uint32_t DataLength;
 #include "cn_keccak.cuh"
 #include "cn_blake.cuh"
 #include "cn_groestl.cuh"
@@ -108,11 +108,10 @@ void cryptonight_extra_gpu_prepare(const uint32_t threads, const uint32_t * __re
 		MEMCPY4(&d_ctx_b[thread * 4U], ctx_b, 4);
 
 		if (variant) {
-			uint2 tweak;
-			//tweak.x = (input[8] >> 24) | (input[9] << 8);
-			tweak.x = __byte_perm(input[8], input[ 9], 0x6543);
-			tweak.y = __byte_perm(input[9], input[10], 0x6543);
-			tweak ^= AS_UINT2(&ctx_state[24]);
+			uint2 tweak = AS_UINT2(&ctx_state[24]);
+			//tweak.x ^= (input[8] >> 24) | (input[9] << 8);
+			tweak.x ^= __byte_perm(input[8], input[ 9], 0x6543);
+			tweak.y ^= __byte_perm(input[9], input[10], 0x6543);
 			MEMCPY4(&d_ctx_tweak[thread], &tweak, 2);
 		}
 	}
@@ -137,13 +136,13 @@ void cryptonight_extra_gpu_final(const uint32_t threads, uint32_t startNonce, co
 
 		int branch = ((uint8_t *)state)[0] & 0x03;
 		if(branch == 0)
-			cn_blake((const uint8_t *)state, 200, (uint8_t *)hash);
+			cn_blake((const uint8_t *)state, 200, hash);
 		if(branch == 1)
-			cn_groestl((const BitSequence *)state, 200, (BitSequence *)hash);
+			cn_groestl((const uint8_t *)state, 200, hash);
 		if(branch == 2)
-			cn_jh((const uint8_t *)state, 200, (uint8_t *)hash);
+			cn_jh((const uint8_t *)state, 200, hash);
 		if(branch == 3)
-			cn_skein((const uint8_t *)state, 200, (uint8_t *)hash);
+			cn_skein((const uint8_t *)state, 200, hash);
 
 		if(hash[7] <= d_target[1] && hash[6] <= d_target[0])
 		{

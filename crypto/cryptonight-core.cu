@@ -2,8 +2,12 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/time.h>
-#include "cuda.h"
-#include "cuda_runtime.h"
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 #if CUDA_VERSION >= 9000 && __CUDA_ARCH__ >= 300
 #undef __shfl
@@ -15,10 +19,6 @@
 #define LONG_SHL32 19 // 1<<19 (uint32_t* index)
 #define LONG_SHL64 18 // 1<<18 (uint64_t* index)
 #define LONG_LOOPS32 0x80000U
-
-#ifndef _WIN32
-#include <unistd.h>
-#endif
 
 #include "cn_aes.cuh"
 
@@ -34,13 +34,12 @@ void cryptonight_gpu_phase1(const uint32_t threads, uint32_t * __restrict__ d_lo
 		cn_aes_gpu_init(sharedMemory);
 		__syncthreads();
 
-		const int sub = (threadIdx.x & 7) << 2;
+		const uint32_t sub = (threadIdx.x & 0x7U) << 2;
 		uint32_t *longstate = &d_long_state[(thread << LONG_SHL32) + sub];
-
-		uint32_t key[40], text[4];
-
-		MEMCPY8(key, ctx_key1 + thread * 40, 20);
-		MEMCPY8(text, ctx_state + thread * 50 + sub + 16, 2);
+		uint32_t __align__(8) key[40];
+		MEMCPY8(key, &ctx_key1[thread * 40U], 20);
+		uint32_t __align__(8) text[4];
+		MEMCPY8(text, &ctx_state[thread * 50U + sub + 16U], 2);
 
 		for(int i = 0; i < LONG_LOOPS32; i += 32)
 		{
@@ -175,12 +174,12 @@ void monero_gpu_phase2(const uint32_t threads, const uint16_t bfactor, const uin
 
 			uint32_t j = (A.x & E2I_MASK) >> 3;
 			cn_aes_single_round_b((uint8_t*)sharedMemory, &long_state[j], A, &C);
-			store_variant1(&long_state[j], C ^ B); // st.global.u32.v4
+			store_variant1(&long_state[j], C ^ B); // st.global
 			MUL_SUM_XOR_DST_1((AS_UL2(&C)).x, A, &long_state[(C.x & E2I_MASK) >> 3], tweak);
 
 			j = (A.x & E2I_MASK) >> 3;
 			cn_aes_single_round_b((uint8_t*)sharedMemory, &long_state[j], A, &B);
-			store_variant1(&long_state[j], C ^ B); // st.global.u32.v4
+			store_variant1(&long_state[j], C ^ B);
 			MUL_SUM_XOR_DST_1((AS_UL2(&B)).x, A, &long_state[(B.x & E2I_MASK) >> 3], tweak);
 		}
 

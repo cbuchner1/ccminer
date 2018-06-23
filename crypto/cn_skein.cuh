@@ -4,19 +4,15 @@ typedef unsigned int    uint_t;             /* native unsigned integer */
 
 #define SKEIN_256_STATE_WORDS ( 4)
 #define SKEIN_512_STATE_WORDS ( 8)
-#define SKEIN1024_STATE_WORDS (16)
 
 #define SKEIN_256_STATE_BYTES ( 8*SKEIN_256_STATE_WORDS)
 #define SKEIN_512_STATE_BYTES ( 8*SKEIN_512_STATE_WORDS)
-#define SKEIN1024_STATE_BYTES ( 8*SKEIN1024_STATE_WORDS)
 
 #define SKEIN_256_STATE_BITS  (64*SKEIN_256_STATE_WORDS)
 #define SKEIN_512_STATE_BITS  (64*SKEIN_512_STATE_WORDS)
-#define SKEIN1024_STATE_BITS  (64*SKEIN1024_STATE_WORDS)
 
 #define SKEIN_256_BLOCK_BYTES ( 8*SKEIN_256_STATE_WORDS)
 #define SKEIN_512_BLOCK_BYTES ( 8*SKEIN_512_STATE_WORDS)
-#define SKEIN1024_BLOCK_BYTES ( 8*SKEIN1024_STATE_WORDS)
 
 #define SKEIN_MK_64(hi32,lo32)  ((lo32) + (((uint64_t) (hi32)) << 32))
 #define SKEIN_KS_PARITY         SKEIN_MK_64(0x1BD11BDA,0xA9FC1A22)
@@ -110,18 +106,11 @@ typedef struct {
 } Skein_512_Ctxt_t;
 
 typedef struct {
-  Skein_Ctxt_Hdr_t h;
-  uint64_t  X[SKEIN1024_STATE_WORDS];
-  uint8_t  b[SKEIN1024_BLOCK_BYTES];
-} Skein1024_Ctxt_t;
-
-typedef struct {
   uint_t  statebits;
   union {
 	Skein_Ctxt_Hdr_t h;
 	Skein_256_Ctxt_t ctx_256;
 	Skein_512_Ctxt_t ctx_512;
-	Skein1024_Ctxt_t ctx1024; // required ?
   } u;
 } skeinHashState;
 
@@ -316,7 +305,7 @@ void cn_skein_final(skeinHashState * __restrict__ state, uint8_t * __restrict__ 
 }
 
 __device__
-void cn_skein(const uint8_t * __restrict__ data, DataLength len, uint8_t * __restrict__ hashval)
+void cn_skein(const uint8_t * __restrict__ data, DataLength len, uint32_t * hashval)
 {
 	int hashbitlen = 256;
 	DataLength databitlen = len << 3;
@@ -326,5 +315,5 @@ void cn_skein(const uint8_t * __restrict__ data, DataLength len, uint8_t * __res
 
 	cn_skein_init(&state, hashbitlen);
 	cn_skein_update(&state, data, databitlen);
-	cn_skein_final(&state, hashval);
+	cn_skein_final(&state, (uint8_t*) hashval);
 }

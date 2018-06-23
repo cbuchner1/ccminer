@@ -164,7 +164,7 @@ void cn_blake_final(blake_state * __restrict__ S, uint8_t * __restrict__ digest)
 }
 
 __device__
-void cn_blake(const uint8_t * __restrict__ in, uint64_t inlen, uint8_t * __restrict__ out)
+void cn_blake(const uint8_t * __restrict__ in, uint64_t inlen, uint32_t * out)
 {
 	blake_state bs;
 	blake_state *S = (blake_state *)&bs;

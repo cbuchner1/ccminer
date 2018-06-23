@@ -245,7 +245,7 @@ void cn_jh_final(jhHashState * __restrict__ state, uint8_t * __restrict__ hashva
 
 	} else {
 
-		/*set the rest of the bytes in the buffer to 0*/
+		/* set the rest of the bytes in the buffer to 0 */
 		if ( (state->datasize_in_buffer & 7) == 0) {
 			for (i = (state->databitlen & 0x1ff) >> 3; i < 64; i++) state->buffer[i] = 0;
 		} else {
@@ -284,7 +284,7 @@ void cn_jh_init(jhHashState *state, int hashbitlen)
 }
 
 __device__
-void cn_jh(const uint8_t * __restrict__ data, DataLength len, uint8_t * __restrict__ hashval)
+void cn_jh(const uint8_t * __restrict__ data, DataLength len, uint32_t * hashval)
 {
 	const int hashbitlen = 256;
 	DataLength databitlen = len << 3;
@@ -292,5 +292,5 @@ void cn_jh(const uint8_t * __restrict__ data, DataLength len, uint8_t * __restri
 
 	cn_jh_init(&state, hashbitlen);
 	cn_jh_update(&state, data, databitlen);
-	cn_jh_final(&state, hashval);
+	cn_jh_final(&state, (uint8_t*) hashval);
 }
