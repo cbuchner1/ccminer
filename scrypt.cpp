@@ -50,7 +50,17 @@ using namespace Concurrency;
 
 #if _MSC_VER > 1800
 #undef _THROW1
+#if __cplusplus < 201101L
 #define _THROW1(x) throw(std::bad_alloc)
+#else
+#define _THROW1(x) noexcept(false)
+#endif
+#elif !defined(_MSC_VER)
+#if __cplusplus < 201101L
+#define _THROW1(x) throw(std::bad_alloc)
+#else
+#define _THROW1(x) noexcept(false)
+#endif
 #endif
 
 // A thin wrapper around the builtin __m128i type
@@ -63,9 +73,9 @@ public:
 	void * operator new[](size_t size) _THROW1(_STD bad_alloc) { void *p; if ((p = _aligned_malloc(size, 16)) == 0) { static const std::bad_alloc nomem; _RAISE(nomem); } return (p); }
 	void operator delete[](void *p) { _aligned_free(p); }
 #else
-	void * operator new(size_t size) throw(std::bad_alloc) { void *p; if (posix_memalign(&p, 16, size) < 0) { static const std::bad_alloc nomem; throw nomem; } return (p); }
+	void * operator new(size_t size) _THROW1(_STD bad_alloc) { void *p; if (posix_memalign(&p, 16, size) < 0) { static const std::bad_alloc nomem; throw nomem; } return (p); }
 	void operator delete(void *p) { free(p); }
-	void * operator new[](size_t size) throw(std::bad_alloc) { void *p; if (posix_memalign(&p, 16, size) < 0) { static const std::bad_alloc nomem; throw nomem; } return (p); }
+	void * operator new[](size_t size) _THROW1(_STD bad_alloc) { void *p; if (posix_memalign(&p, 16, size) < 0) { static const std::bad_alloc nomem; throw nomem; } return (p); }
 	void operator delete[](void *p) { free(p); }
 #endif
 	uint32x4_t() { };

@@ -74,10 +74,10 @@ char* sia_getheader(CURL *curl, struct pool_infos *pool)
 	struct data_buffer all_data = { 0 };
 	struct curl_slist *headers = NULL;
 	char data[256] = { 0 };
-	char url[512];
+	char url[512*3];
 
 	// nanopool
-	snprintf(url, 512, "%s/miner/header?address=%s&worker=%s", //&longpoll
+	snprintf(url, sizeof(url), "%s/miner/header?address=%s&worker=%s", //&longpoll
 		pool->url, pool->user, pool->pass);
 
 	if (opt_protocol)
@@ -148,7 +148,7 @@ bool sia_submit(CURL *curl, struct pool_infos *pool, struct work *work)
 	struct data_buffer all_data = { 0 };
 	struct curl_slist *headers = NULL;
 	char buf[256] = { 0 };
-	char url[512];
+	char url[512*3];
 
 	if (opt_protocol)
 		applog_hex(work->data, 80);
@@ -156,7 +156,7 @@ bool sia_submit(CURL *curl, struct pool_infos *pool, struct work *work)
 	//applog_hex(&work->data[10], 4);
 
 	// nanopool
-	snprintf(url, 512, "%s/miner/header?address=%s&worker=%s",
+	snprintf(url, sizeof(url), "%s/miner/header?address=%s&worker=%s",
 		pool->url, pool->user, pool->pass);
 
 	if (opt_protocol)

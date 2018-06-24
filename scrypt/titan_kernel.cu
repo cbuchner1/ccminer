@@ -50,7 +50,7 @@ __constant__ uint32_t c_SCRATCH_WU_PER_WARP_1; // (SCRATCH * WU_PER_WARP)-1
 
 template <int ALGO> __device__  __forceinline__ void block_mixer(uint4 &b, uint4 &bx, const int x1, const int x2, const int x3);
 
-static __host__ __device__ uint4& operator ^= (uint4& left, const uint4& right) {
+static __device__ uint4& operator ^= (uint4& left, const uint4& right) {
 	left.x ^= right.x;
 	left.y ^= right.y;
 	left.z ^= right.z;
@@ -58,7 +58,7 @@ static __host__ __device__ uint4& operator ^= (uint4& left, const uint4& right) 
 	return left;
 }
 
-static __host__ __device__ uint4& operator += (uint4& left, const uint4& right) {
+static __device__ uint4& operator += (uint4& left, const uint4& right) {
 	left.x += right.x;
 	left.y += right.y;
 	left.z += right.z;

@@ -257,7 +257,7 @@ static char *getpoolnfo(char *params)
 
 static void gpuhwinfos(int gpu_id)
 {
-	char buf[256];
+	char buf[512];
 	char pstate[8];
 	char* card;
 	struct cgpu_info *cgpu = NULL;

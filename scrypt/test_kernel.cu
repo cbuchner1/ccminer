@@ -47,7 +47,7 @@ texture<uint4, 2, cudaReadModeElementType> texRef2D_4_V;
 
 template <int ALGO> __device__  __forceinline__ void block_mixer(uint4 &b, uint4 &bx, const int x1, const int x2, const int x3);
 
-static __host__ __device__ uint4& operator^=(uint4& left, const uint4& right) {
+static __device__ uint4& operator^=(uint4& left, const uint4& right) {
 	left.x ^= right.x;
 	left.y ^= right.y;
 	left.z ^= right.z;
@@ -55,14 +55,13 @@ static __host__ __device__ uint4& operator^=(uint4& left, const uint4& right) {
 	return left;
 }
 
-static __host__ __device__ uint4& operator+=(uint4& left, const uint4& right) {
+static __device__ uint4& operator+=(uint4& left, const uint4& right) {
 	left.x += right.x;
 	left.y += right.y;
 	left.z += right.z;
 	left.w += right.w;
 	return left;
 }
-
 
 /* write_keys writes the 8 keys being processed by a warp to the global
  * scratchpad. To effectively use memory bandwidth, it performs the writes
