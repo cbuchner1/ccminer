@@ -128,8 +128,8 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 			uint32_t *tempnonceptr = (uint32_t*)(((char*)tempdata) + 39);
 			memcpy(tempdata, pdata, 76);
 			*tempnonceptr = resNonces[0];
-			const int rc = cryptonight_hash_variant(vhash, tempdata, 76, variant);
-			if(rc && (vhash[7] <= Htarg) && fulltest(vhash, ptarget))
+			cryptonight_hash_variant(vhash, tempdata, 76, variant);
+			if(vhash[7] <= Htarg && fulltest(vhash, ptarget))
 			{
 				res = 1;
 				work->nonces[0] = resNonces[0];
@@ -138,8 +138,8 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 				if(resNonces[1] != UINT32_MAX)
 				{
 					*tempnonceptr = resNonces[1];
-					const int rc = cryptonight_hash_variant(vhash, tempdata, 76, variant);
-					if(rc && (vhash[7] <= Htarg) && fulltest(vhash, ptarget)) {
+					cryptonight_hash_variant(vhash, tempdata, 76, variant);
+					if(vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 						res++;
 						work->nonces[1] = resNonces[1];
 					} else {
