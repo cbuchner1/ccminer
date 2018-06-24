@@ -22,16 +22,6 @@ struct cryptonight_ctx {
 	oaes_ctx* aes_ctx;
 };
 
-
-static void cryptolight_store_variant(void* state, int variant) {
-	if (variant == 1) {
-		// use variant 1 like monero since june 2018
-		const uint8_t tmp = ((const uint8_t*)(state))[11];
-		const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1;
-		((uint8_t*)(state))[11] = tmp ^ ((0x75310 >> index) & 0x30);
-	}
-}
-
 static void do_blake_hash(const void* input, int len, void* output)
 {
 	uchar hash[32];
@@ -145,7 +135,6 @@ static void mul_sum_dst(const uint8_t* a, const uint8_t* b, const uint8_t* c, ui
 static void mul_sum_xor_dst(const uint8_t* a, uint8_t* c, uint8_t* dst, const int variant, const uint64_t tweak) {
 	uint64_t hi, lo = mul128(((uint64_t*) a)[0], ((uint64_t*) dst)[0], &hi) + ((uint64_t*) c)[1];
 	hi += ((uint64_t*) c)[0];
-
 	((uint64_t*) c)[0] = ((uint64_t*) dst)[0] ^ hi;
 	((uint64_t*) c)[1] = ((uint64_t*) dst)[1] ^ lo;
 	((uint64_t*) dst)[0] = hi;
@@ -167,11 +156,18 @@ static void xor_blocks_dst(const uint8_t* a, const uint8_t* b, uint8_t* dst) {
 	((uint64_t*) dst)[1] = ((uint64_t*) a)[1] ^ ((uint64_t*) b)[1];
 }
 
-static int cryptolight_hash_ctx(void* output, const void* input, const int len, struct cryptonight_ctx* ctx, const int variant)
+static void cryptolight_store_variant(void* state, int variant) {
+	if (variant == 1) {
+		// use variant 1 like monero since june 2018
+		const uint8_t tmp = ((const uint8_t*)(state))[11];
+		const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1;
+		((uint8_t*)(state))[11] = tmp ^ ((0x75310 >> index) & 0x30);
+	}
+}
+
+static void cryptolight_hash_ctx(void* output, const void* input, const int len, struct cryptonight_ctx* ctx, const int variant)
 {
 	size_t i, j;
-	if (variant && len < 43)
-		return 0;
 
 	keccak_hash_process(&ctx->state.hs, (const uint8_t*) input, len);
 	ctx->aes_ctx = (oaes_ctx*) oaes_alloc();
@@ -181,8 +177,8 @@ static int cryptolight_hash_ctx(void* output, const void* input, const int len, 
 
 	oaes_key_import_data(ctx->aes_ctx, ctx->state.hs.b, AES_KEY_SIZE);
 	for (i = 0; likely(i < MEMORY); i += INIT_SIZE_BYTE) {
-#undef RND
-#define RND(p) aesb_pseudo_round_mut(&ctx->text[AES_BLOCK_SIZE * p], ctx->aes_ctx->key->exp_data);
+		#undef RND
+		#define RND(p) aesb_pseudo_round_mut(&ctx->text[AES_BLOCK_SIZE * p], ctx->aes_ctx->key->exp_data);
 		RND(0);
 		RND(1);
 		RND(2);
@@ -202,23 +198,21 @@ static int cryptolight_hash_ctx(void* output, const void* input, const int len, 
 		aesb_single_round(&ctx->long_state[j], ctx->c, ctx->a);
 		xor_blocks_dst(ctx->c, ctx->b, &ctx->long_state[j]);
 		cryptolight_store_variant(&ctx->long_state[j], variant);
-
 		mul_sum_xor_dst(ctx->c, ctx->a, &ctx->long_state[e2i(ctx->c)], variant, tweak);
 
 		j = e2i(ctx->a);
 		aesb_single_round(&ctx->long_state[j], ctx->b, ctx->a);
 		xor_blocks_dst(ctx->b, ctx->c, &ctx->long_state[j]);
 		cryptolight_store_variant(&ctx->long_state[j], variant);
-
 		mul_sum_xor_dst(ctx->b, ctx->a, &ctx->long_state[e2i(ctx->b)], variant, tweak);
 	}
 
 	memcpy(ctx->text, ctx->state.init, INIT_SIZE_BYTE);
 	oaes_key_import_data(ctx->aes_ctx, &ctx->state.hs.b[32], AES_KEY_SIZE);
 	for (i = 0; likely(i < MEMORY); i += INIT_SIZE_BYTE) {
-#undef RND
-#define RND(p) xor_blocks(&ctx->text[p * AES_BLOCK_SIZE], &ctx->long_state[i + p * AES_BLOCK_SIZE]); \
-		aesb_pseudo_round_mut(&ctx->text[p * AES_BLOCK_SIZE], ctx->aes_ctx->key->exp_data);
+		#undef RND
+		#define RND(p) xor_blocks(&ctx->text[p * AES_BLOCK_SIZE], &ctx->long_state[i + p * AES_BLOCK_SIZE]); \
+			aesb_pseudo_round_mut(&ctx->text[p * AES_BLOCK_SIZE], ctx->aes_ctx->key->exp_data);
 		RND(0);
 		RND(1);
 		RND(2);
@@ -236,15 +230,13 @@ static int cryptolight_hash_ctx(void* output, const void* input, const int len, 
 	if (opt_debug) applog(LOG_DEBUG, "extra algo=%d", extra_algo);
 
 	oaes_free((OAES_CTX **) &ctx->aes_ctx);
-	return 1;
 }
 
-int cryptolight_hash_variant(void* output, const void* input, int len, int variant)
+void cryptolight_hash_variant(void* output, const void* input, int len, int variant)
 {
 	struct cryptonight_ctx *ctx = (struct cryptonight_ctx*)malloc(sizeof(struct cryptonight_ctx));
-	int rc = cryptolight_hash_ctx(output, input, len, ctx, variant);
+	cryptolight_hash_ctx(output, input, len, ctx, variant);
 	free(ctx);
-	return rc;
 }
 
 void cryptolight_hash(void* output, const void* input)
