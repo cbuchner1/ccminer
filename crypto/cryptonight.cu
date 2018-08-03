@@ -50,8 +50,11 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 			gpulog_init(LOG_INFO, thr_id, "%s, %d MB available, %hd SMX", device_name[dev_id],
 				mem, device_mpcount[dev_id]);
 
-		if (!device_config[thr_id] && strcmp(device_name[dev_id], "TITAN V") == 0) {
-			device_config[thr_id] = strdup("80x24");
+		if (!device_config[thr_id]) {
+			if(strcmp(device_name[dev_id], "TITAN V") == 0)
+				device_config[thr_id] = strdup("80x24");
+			if(strstr(device_name[dev_id], "V100"))
+				device_config[thr_id] = strdup("80x24");
 		}
 
 		if (device_config[thr_id]) {
@@ -83,7 +86,7 @@ extern "C" int scanhash_cryptonight(int thr_id, struct work* work, uint32_t max_
 			CUDA_LOG_ERROR();
 		}
 
-		const size_t alloc = MEMORY * throughput;
+		const size_t alloc = MEMORY * size_t(throughput);
 		cryptonight_extra_init(thr_id);
 
 		cudaMalloc(&d_long_state[thr_id], alloc);

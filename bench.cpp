@@ -156,6 +156,22 @@ bool bench_algo_switch_next(int thr_id)
 	if (algo == ALGO_SCRYPT) algo++;
 	if (algo == ALGO_SCRYPT_JANE) algo++;
 
+	// Set cryptonight variant
+	switch (algo) {
+		case ALGO_MONERO:
+			cryptonight_fork = 7;
+			break;
+		case ALGO_GRAFT:
+			cryptonight_fork = 8;
+			break;
+		case ALGO_STELLITE:
+			cryptonight_fork = 3;
+			break;
+		case ALGO_CRYPTONIGHT:
+			cryptonight_fork = 1;
+			break;
+	}
+
 	// free current algo memory and track mem usage
 	mused = cuda_available_memory(thr_id);
 	algo_free_all(thr_id);

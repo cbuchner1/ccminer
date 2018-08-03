@@ -183,8 +183,7 @@ extern "C" int scanhash_equihash(int thr_id, struct work *work, uint32_t max_non
 				return -1;
 			}
 			size_t memSz = solvers[thr_id]->equi_mem_sz / (1024*1024);
-			gpus_intensity[thr_id] = (uint32_t) solvers[thr_id]->throughput;
-			api_set_throughput(thr_id, gpus_intensity[thr_id]);
+			api_set_throughput(thr_id, (uint32_t) solvers[thr_id]->throughput);
 			gpulog(LOG_DEBUG, thr_id, "Allocated %u MB of context memory", (u32) memSz);
 			cuda_get_arch(thr_id);
 			init[thr_id] = true;

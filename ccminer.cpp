@@ -2384,6 +2384,9 @@ static void *miner_thread(void *userdata)
 		case ALGO_CRYPTOLIGHT:
 			rc = scanhash_cryptolight(thr_id, &work, max_nonce, &hashes_done, 1);
 			break;
+		case ALGO_MONERO:
+		case ALGO_STELLITE:
+		case ALGO_GRAFT:
 		case ALGO_CRYPTONIGHT:
 		{
 			int cn_variant = 0;
