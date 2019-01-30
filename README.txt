@@ -52,8 +52,7 @@ SonoA (Sono)
 Tribus (JH, keccak, simd)
 Woodcoin (Double Skein)
 Vanilla (Blake256 8-rounds - double sha256)
-Vertcoin Lyra2RE
-Ziftrcoin (ZR5)
+Vertcoin Lyra2REv3
 Boolberry (Wild Keccak)
 Monero (Cryptonight v7 with -a monero)
 Aeon (Cryptonight-lite)
@@ -291,6 +290,12 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  Jan. 30th 2019  v2.3.1
+                  Handle Lyra2v3 algo
+                  Handle sha256q algo
+                  Handle exosis algo
+                  Handle blake2b standard algo
+
   June 23th 2018  v2.3
                   Handle phi2 header variation for smart contracts
                   Handle monero, stellite, graft and cryptolight variants
