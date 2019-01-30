@@ -1,5 +1,5 @@
 
-ccminer 2.3                     "phi2 and cryptonight variants"
+ccminer 2.3.1                     "lyra2v3, exosis and sha256q"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -100,7 +100,8 @@ its command line interface and options.
                           lbry        use to mine LBRY Credits
                           luffa       use to mine Joincoin
                           lyra2       use to mine CryptoCoin
-                          lyra2v2     use to mine Vertcoin
+                          lyra2v2     use to mine Monacoin
+                          lyra2v3     use to mine Vertcoin
                           lyra2z      use to mine Zerocoin (XZC)
                           monero      use to mine Monero (XMR)
                           myr-gr      use to mine Myriad-Groest
@@ -117,7 +118,7 @@ its command line interface and options.
                           scrypt-jane use to mine Chacha coins like Cache and Ultracoin
                           s3          use to mine 1coin (ONE)
                           sha256t     use to mine OneCoin (OC)
-			  sha256q     use to mine Pyrite
+                          sha256q     use to mine Pyrite
                           sia         use to mine SIA
                           sib         use to mine Sibcoin
                           skein       use to mine Skeincoin

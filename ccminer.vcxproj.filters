@@ -946,6 +946,15 @@
     <CudaCompile Include="lyra2\lyra2REv2.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2v3.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <ClInclude Include="lyra2\cuda_lyra2v3_sm3.cuh">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </ClInclude>
+    <CudaCompile Include="lyra2\lyra2REv3.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
     <CudaCompile Include="lyra2\cuda_lyra2Z.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>

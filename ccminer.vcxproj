@@ -530,6 +530,9 @@
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh" />
     <ClInclude Include="lyra2\cuda_lyra2_sm5.cuh" />
     <ClInclude Include="lyra2\cuda_lyra2v2_sm3.cuh" />
+    <CudaCompile Include="lyra2\lyra2REv3.cu" />
+    <CudaCompile Include="lyra2\cuda_lyra2v3.cu" />
+    <ClInclude Include="lyra2\cuda_lyra2v3_sm3.cuh" />
     <CudaCompile Include="lyra2\lyra2Z.cu" />
     <CudaCompile Include="lyra2\cuda_lyra2Z.cu" />
     <ClInclude Include="lyra2\cuda_lyra2Z_sm5.cuh" />
