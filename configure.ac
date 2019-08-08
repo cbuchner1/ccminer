@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [2.3.1], [], [ccminer], [http://github.com/tpruvot/ccminer])
+AC_INIT([ccminer], [2.3.2], [], [ccminer], [http://github.com/tpruvot/ccminer])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM
@@ -52,6 +52,9 @@ case $target in
     have_x86=true
     have_x86_64=true
     ;;
+  aarch64-*)
+    have_arm64=true
+    ;;
 esac
 
 PTHREAD_FLAGS="-pthread"
@@ -85,6 +88,7 @@ AM_CONDITIONAL([HAVE_WINDOWS], [test x$have_win32 = xtrue])
 AM_CONDITIONAL([HAVE_OSX], [test x$have_osx = xtrue])
 AM_CONDITIONAL([ARCH_x86], [test x$have_x86 = xtrue])
 AM_CONDITIONAL([ARCH_x86_64], [test x$have_x86_64 = xtrue])
+AM_CONDITIONAL([ARCH_ARM64], [test x$have_arm64 = xtrue])
 
 if test x$request_jansson = xtrue
 then
@@ -133,17 +137,18 @@ AM_CONDITIONAL([HAVE_NVML], [test -n "$with_nvml"])
 NVCC="nvcc"
 
 if test -n "$with_cuda" ; then
-  CUDA_INCLUDES="-I$with_cuda/include"
-  CUDA_LIBS="-lcudart"
-  CUDA_LDFLAGS="-L$with_cuda/lib$SUFFIX"
+  CUDA_LOCAL_PATH=$with_cuda
   if test -x "$with_cuda/bin/nvcc" ; then
     NVCC="$with_cuda/bin/nvcc"
   fi
 else
-  CUDA_INCLUDES="-I/usr/local/cuda/include"
-  CUDA_LIBS="-lcudart -static-libstdc++"
-  CUDA_LDFLAGS="-L/usr/local/cuda/lib$SUFFIX"
+  CUDA_LOCAL_PATH=/usr/local/cuda
 fi
+AC_SUBST(CUDA_LOCAL_PATH)
+
+CUDA_INCLUDES="-I$CUDA_LOCAL_PATH/include"
+CUDA_LDFLAGS="-L$CUDA_LOCAL_PATH/lib$SUFFIX"
+CUDA_LIBS="-lcudart -static-libstdc++"
 
 if test -n "$with_nvml" ; then
   NVML_LIBPATH=$with_nvml

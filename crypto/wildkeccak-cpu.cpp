@@ -22,7 +22,7 @@
 #include "bignum.hpp"
 #endif
 #include "int128_c.h"
-#else
+#elif !defined(ARM64)
 #include <x86intrin.h>
 #endif
 
@@ -51,6 +51,10 @@ static inline int fls64(uint64_t x)
 		_BitScanReverse(&bitpos, (uint32_t) x);
 	}
 	return (int) hipos ? hipos + 33 : bitpos + 1;
+#elif defined(ARM64)
+	#warning "Unimplemented on ARM"
+	register uint64_t bitpos = -1; // todo: __arm_clz(__arm_rbit(x))
+	return bitpos + 1;
 #else
 	/*
 	* AMD64 says BSRQ won't clobber the dest reg if x==0; Intel64 says the
@@ -82,13 +86,12 @@ static inline struct reciprocal_value64 reciprocal_val64(uint64_t d)
 	Increment(&v);
 	R.m = (uint64_t)v.Hi;
 #else
-    __uint128_t m;
-    m = (((__uint128_t)1 << 64) * ((1ULL << l) - d));
-    m /= d;
+	__uint128_t m;
+	m = (((__uint128_t)1 << 64) * ((1ULL << l) - d));
+	m /= d;
 	++m;
 	R.m = (uint64_t)m;
 #endif
-
 	R.sh1 = min(l, 1);
 	R.sh2 = max(l - 1, 0);
 
@@ -98,11 +101,11 @@ static inline struct reciprocal_value64 reciprocal_val64(uint64_t d)
 static inline uint64_t reciprocal_divide64(uint64_t a, struct reciprocal_value64 R)
 {
 #ifdef _MSC_VER
-    uint128 v;
+	uint128 v;
 	mult64to128(a,R.m,&v.Hi,&v.Lo);
 	uint64_t t = v.Hi;
 #else
-    uint64_t t = (uint64_t)(((__uint128_t)a * R.m) >> 64);
+	uint64_t t = (uint64_t)(((__uint128_t)a * R.m) >> 64);
 #endif
 	return (t + ((a - t) >> R.sh1)) >> R.sh2;
 }
@@ -209,7 +212,10 @@ static inline void scr_mix(uint64_t *st, uint64_t scr_size, struct reciprocal_va
 #define KK_MIXIN_SIZE 24
 	uint64_t _ALIGN(128) idx[KK_MIXIN_SIZE];
 
-#ifdef _MSC_VER
+#if defined(ARM64)
+	#warning "Unimplemented on ARM64"
+
+#elif defined(_MSC_VER)
 	#define pscr pscratchpad_buff
 	int x;
 

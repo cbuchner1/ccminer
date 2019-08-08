@@ -59,9 +59,13 @@ void algo_free_all(int thr_id)
 	free_c11(thr_id);
 	free_cryptolight(thr_id);
 	free_cryptonight(thr_id);
+#ifndef ARM64
+	free_equihash(thr_id);
+	free_scrypt(thr_id);
+	free_scrypt_jane(thr_id);
+#endif
 	free_decred(thr_id);
 	free_deep(thr_id);
-	free_equihash(thr_id);
 	free_exosis(thr_id);
 	free_keccak256(thr_id);
 	free_fresh(thr_id);
@@ -114,8 +118,6 @@ void algo_free_all(int thr_id)
 	free_x16s(thr_id);
 	free_x17(thr_id);
 	free_zr5(thr_id);
-	free_scrypt(thr_id);
-	free_scrypt_jane(thr_id);
 	free_timetravel(thr_id);
 	free_tribus(thr_id);
 	free_bitcore(thr_id);
