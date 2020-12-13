@@ -194,21 +194,25 @@ JHA/cuda_jha_compactionTest.o: JHA/cuda_jha_compactionTest.cu
 
 # This object does not use cuda device code but call the different kernels (autotune)
 scrypt/salsa_kernel.o: scrypt/salsa_kernel.cu
-	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
+	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
 
 # These kernels are for older devices (SM)
 
+# Originally sm_20
 scrypt/test_kernel.o: scrypt/test_kernel.cu
-	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
+	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
 
+# Originally sm_20
 scrypt/fermi_kernel.o: scrypt/fermi_kernel.cu
-	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
+	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
 
+# Originally sm_30
 scrypt/kepler_kernel.o: scrypt/kepler_kernel.cu
-	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
+	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
 
+# Originally sm_30
 scrypt/nv_kernel.o: scrypt/nv_kernel.cu
-	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_30,code=\"sm_30,compute_30\" -o $@ -c $<
+	$(NVCC) $(JANSSON_INCLUDES) -I. @CUDA_INCLUDES@ @CUDA_CFLAGS@ -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
 
 scrypt/titan_kernel.o: scrypt/titan_kernel.cu
 	$(NVCC) $(nvcc_FLAGS) -gencode=arch=compute_35,code=\"sm_35,compute_35\" -o $@ -c $<
