@@ -1,0 +1,130 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script src="http://code.highcharts.com/highcharts.js"></script>
+	<script src="http://code.highcharts.com/modules/exporting.js"></script>
+</head>
+<body>
+	<div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+<script type="text/javascript">
+
+var hashrates = [];
+
+function drawChart(ip) {
+
+	$('#container').highcharts({
+		chart: {
+			type: 'spline'
+		},
+		title: {
+			text: 'ccMiner WebSocket Sample - ' + ip,
+			x: -20 //center
+		},
+		subtitle: {
+			text: 'By <a href="http://github.com/tpruvot/ccminer">tpruvot@github</a> 2014',
+			x: -20
+		},
+		xAxis: {
+			type: 'datetime',
+		},
+		yAxis: {
+			title: {
+				text: 'Hash Rate (KH/s)'
+			},
+			plotLines: [{
+				value: 0,
+				width: 1,
+				color: '#808080'
+			}],
+			min: 0
+		},
+		tooltip: {
+			valueSuffix: ' KH'
+		},
+		legend: {
+			layout: 'vertical',
+			align: 'right',
+			verticalAlign: 'middle',
+			borderWidth: 0
+		},
+		series: [
+			{
+				name: 'GPU0',
+				data: hashrates[0]
+			},
+			{
+				name: 'GPU1',
+				data: hashrates[1]
+			}
+		]
+	});
+}
+
+function getData(ip, port) {
+	if ("WebSocket" in window) {
+		var ws = new WebSocket('ws://'+ip+':'+port+'/histo','text');
+		var rates = [];
+		for (var gpu=0; gpu<8; gpu++) {
+			hashrates[gpu] = [];
+			rates[gpu] = [];
+		}
+		ws.onmessage = function (evt) {
+			var now = new Date();
+			var ts = Math.round(now/1000);
+			var data = evt.data.split('|');
+			for (n in data) {
+				var map = data[n].split(';');
+				var gpu = 0;
+				var uid = 0;
+				var plot = {};
+				for (k in map) {
+					var kv = map[k].split('=');
+					if (kv.length == 1)
+						continue;
+					if (kv[0] === 'GPU')
+						gpu = parseInt(kv[1], 10);
+					else if (kv[0] === 'ID')
+						uid = parseInt(kv[1], 10);
+					else if (kv[0] === 'TS')
+						plot.timestamp = parseInt(kv[1], 10);
+					else if (kv[0] === 'KHS')
+						plot.hashrate = parseInt(kv[1], 10) / 1000.0;
+					console.log('Data received: #GPU'+gpu+': '+kv[0]+' = '+kv[1]);
+				}
+				if (uid == 0)
+					continue;
+				rates[gpu][uid] = [+new Date(plot.timestamp*1000), plot.hashrate];
+			}
+
+			// sort values with id
+			for (gpu in rates) {
+				for (uid in rates[gpu])
+					hashrates[gpu].push(rates[gpu][uid]);
+			}
+
+			drawChart(ip);
+		};
+		ws.onerror = function (evt) {
+			var w = evt.target;
+			console.log('Error! readyState=' + w.readyState); //log errors
+			$('#container').html('Error! Unable to get WebSocket data from '+ip); //log errors
+			return false;
+		};
+		ws.onclose = function() {
+			// websocket is closed.
+		};
+	} else {
+		// The browser doesn't support WebSocket
+		alert("WebSocket NOT supported by your Browser!");
+	}
+}
+
+$(function () {
+	//getData('192.168.0.110', 4068);
+	getData('localhost', 4068);
+});
+
+</script>
+</body>
+</html>

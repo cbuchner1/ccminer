@@ -1,10 +1,10 @@
-AC_INIT([ccminer], [2014.06.15])
+AC_INIT([ccminer], [2.3.2], [], [ccminer], [http://github.com/tpruvot/ccminer])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM
-AC_CONFIG_SRCDIR([cpu-miner.c])
-AM_INIT_AUTOMAKE([gnu])
-AC_CONFIG_HEADERS([cpuminer-config.h])
+AC_CONFIG_SRCDIR([ccminer.cpp])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
+AC_CONFIG_HEADERS([ccminer-config.h])
 
 dnl Make sure anyone changing configure.ac/Makefile.am has a clue
 AM_MAINTAINER_MODE
@@ -52,6 +52,9 @@ case $target in
     have_x86=true
     have_x86_64=true
     ;;
+  aarch64-*)
+    have_arm64=true
+    ;;
 esac
 
 PTHREAD_FLAGS="-pthread"
@@ -63,35 +66,11 @@ case $target in
     PTHREAD_FLAGS=""
     WS2_LIBS="-lws2_32"
     ;;
+  *86*-apple-darwin*)
+    have_osx=true
+    PTHREAD_FLAGS=""
+    ;;
 esac
-
-if test x$have_x86 = xtrue
-then
-  AC_MSG_CHECKING(whether we can compile AVX code)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM(,[asm ("vmovdqa %ymm0, %ymm1");])],
-    AC_DEFINE(USE_AVX, 1, [Define to 1 if AVX assembly is available.])
-    AC_MSG_RESULT(yes)
-    AC_MSG_CHECKING(whether we can compile XOP code)
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM(,[asm ("vprotd \$7, %xmm0, %xmm1");])],
-      AC_DEFINE(USE_XOP, 1, [Define to 1 if XOP assembly is available.])
-      AC_MSG_RESULT(yes)
-    ,
-      AC_MSG_RESULT(no)
-      AC_MSG_WARN([The assembler does not support the XOP instruction set.])
-    )
-    AC_MSG_CHECKING(whether we can compile AVX2 code)
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM(,[asm ("vpaddd %ymm0, %ymm1, %ymm2");])],
-      AC_DEFINE(USE_AVX2, 1, [Define to 1 if AVX2 assembly is available.])
-      AC_MSG_RESULT(yes)
-    ,
-      AC_MSG_RESULT(no)
-      AC_MSG_WARN([The assembler does not support the AVX2 instruction set.])
-    )
-  ,
-    AC_MSG_RESULT(no)
-    AC_MSG_WARN([The assembler does not support the AVX instruction set.])
-  )
-fi
 
 AC_CHECK_LIB(jansson, json_loads, request_jansson=false, request_jansson=true)
 AC_CHECK_LIB([pthread], [pthread_create], PTHREAD_LIBS="-lpthread",
@@ -100,13 +79,16 @@ AC_CHECK_LIB([pthread], [pthread_create], PTHREAD_LIBS="-lpthread",
       AC_CHECK_LIB([pthreadGC], [pthread_create], PTHREAD_LIBS="-lpthreadGC"
 ))))
 
-AC_CHECK_LIB([ssl],[SSL_library_init], [], [AC_MSG_ERROR([OpenSSL library required])])
+AC_CHECK_LIB([z],[gzopen], [], [])
+AC_CHECK_LIB([ssl],[SSL_free], [], [AC_MSG_ERROR([OpenSSL library required])])
 AC_CHECK_LIB([crypto],[EVP_DigestFinal_ex], [], [AC_MSG_ERROR([OpenSSL library required])])
 
 AM_CONDITIONAL([WANT_JANSSON], [test x$request_jansson = xtrue])
 AM_CONDITIONAL([HAVE_WINDOWS], [test x$have_win32 = xtrue])
+AM_CONDITIONAL([HAVE_OSX], [test x$have_osx = xtrue])
 AM_CONDITIONAL([ARCH_x86], [test x$have_x86 = xtrue])
 AM_CONDITIONAL([ARCH_x86_64], [test x$have_x86_64 = xtrue])
+AM_CONDITIONAL([ARCH_ARM64], [test x$have_arm64 = xtrue])
 
 if test x$request_jansson = xtrue
 then
@@ -138,23 +120,44 @@ else
   SUFFIX=""
 fi
 
+if test x$have_osx = xtrue
+then
+  SUFFIX=""
+fi
+
 dnl Setup CUDA paths
 AC_ARG_WITH([cuda],
    [  --with-cuda=PATH    prefix where cuda is installed [default=/usr/local/cuda]])
 
-if test -n "$with_cuda"
-then
-   CUDA_CFLAGS="-I$with_cuda/include"
-   CUDA_LIBS="-lcudart"
-   CUDA_LDFLAGS="-L$with_cuda/lib$SUFFIX"
-   NVCC="$with_cuda/bin/nvcc"
+AC_ARG_WITH([nvml],
+   [  --with-nvml=PATH    prefix where libnvml is installed [default=/usr/lib]])
+
+AM_CONDITIONAL([HAVE_NVML], [test -n "$with_nvml"])
+
+NVCC="nvcc"
+
+if test -n "$with_cuda" ; then
+  CUDA_LOCAL_PATH=$with_cuda
+  if test -x "$with_cuda/bin/nvcc" ; then
+    NVCC="$with_cuda/bin/nvcc"
+  fi
 else
-   CUDA_CFLAGS="-I/usr/local/cuda/include"
-   CUDA_LIBS="-lcudart -static-libstdc++"
-   CUDA_LDFLAGS="-L/usr/local/cuda/lib$SUFFIX"
-   NVCC="nvcc"
+  CUDA_LOCAL_PATH=/usr/local/cuda
 fi
+AC_SUBST(CUDA_LOCAL_PATH)
+
+CUDA_INCLUDES="-I$CUDA_LOCAL_PATH/include"
+CUDA_LDFLAGS="-L$CUDA_LOCAL_PATH/lib$SUFFIX"
+CUDA_LIBS="-lcudart -static-libstdc++"
+
+if test -n "$with_nvml" ; then
+  NVML_LIBPATH=$with_nvml
+  CUDA_LDFLAGS="$CUDA_LDFLAGS -ldl"
+fi
+AC_SUBST(NVML_LIBPATH)
+
 AC_SUBST(CUDA_CFLAGS)
+AC_SUBST(CUDA_INCLUDES)
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(CUDA_LDFLAGS)
 AC_SUBST(NVCC)
