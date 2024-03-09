@@ -4,17 +4,13 @@ ENV TZ=Etc/UTC
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
-    apt-get install libcurl4-openssl-dev \
+    apt-get install libcurl4 libcurl4-openssl-dev \
     libssl-dev \
     libjansson-dev \
     automake \
     autotools-dev \
     build-essential \
     git \
-    freeglut3 \
-    freeglut3-dev \
-    libxi-dev \
-    libxmu-dev \
     wget \
     -y
 RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
@@ -25,18 +21,15 @@ RUN apt-key add /var/cuda-repo-ubuntu2204-11-8-local/*.pub
 RUN cp /var/cuda-repo-ubuntu2204-11-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
 RUN apt-get update
 RUN apt-get -y install cuda
+RUN rm *.deb
 RUN git clone https://github.com/tpruvot/ccminer
 WORKDIR ccminer
 RUN git checkout linux
 RUN ./build.sh
+RUN strip -s ccminer
+RUN make install
 RUN ldconfig /usr/local/cuda/lib64
-#RUN ./ccminer --version
-RUN apt-get remove libcurl4-openssl-dev \
-    libssl-dev \
-    libjansson-dev \
-    freeglut3 \
-    freeglut3-dev \
-    libxi-dev \
-    libxmu-dev \
-    -y
+RUN make clean
+#RUN ccminer --version
+RUN apt-get remove -y libcurl4-openssl-dev libssl-dev libjansson-dev
 #ENTRYPOINT [ "./ccminer" ]
