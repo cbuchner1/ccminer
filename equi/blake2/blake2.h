@@ -52,7 +52,7 @@ extern "C" {
     uint8_t  personal[BLAKE2B_PERSONALBYTES];  // 64
   } blake2b_param;
 
-  ALIGN( 64 ) typedef struct __blake2b_state
+  typedef struct ALIGN(64) __blake2b_state
   {
     uint64_t h[8];
     uint8_t  buf[BLAKE2B_BLOCKBYTES];
