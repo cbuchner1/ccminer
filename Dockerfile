@@ -20,15 +20,15 @@ RUN dpkg -i cuda-repo-ubuntu2204-11-8-local_11.8.0-520.61.05-1_amd64.deb
 RUN apt-key add /var/cuda-repo-ubuntu2204-11-8-local/*.pub
 RUN cp /var/cuda-repo-ubuntu2204-11-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
 RUN apt-get update
-RUN apt-get -y install cuda
+RUN apt-get -y install cuda-toolkit-11-8 cuda-cudart-11-8 libnvidia-compute-520
 RUN rm *.deb
+RUN ldconfig
 RUN git clone https://github.com/tpruvot/ccminer
 WORKDIR ccminer
 RUN git checkout linux
 RUN ./build.sh
 RUN strip -s ccminer
 RUN make install
-RUN ldconfig /usr/local/cuda/lib64
 RUN make clean
 #RUN ccminer --version
 RUN apt-get remove -y libcurl4-openssl-dev libssl-dev libjansson-dev
