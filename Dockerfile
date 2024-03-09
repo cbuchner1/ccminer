@@ -1,6 +1,6 @@
-FROM ubuntu:rolling
+FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
-ENV TZ=Europe/London
+ENV TZ=Etc/UTC
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
@@ -16,13 +16,13 @@ RUN apt-get update && \
     libxi-dev \
     libxmu-dev \
     wget \
-    nvidia-driver-455 \    
-    -y 
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
-RUN mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
-RUN wget https://developer.download.nvidia.com/compute/cuda/11.2.1/local_installers/cuda-repo-ubuntu2004-11-2-local_11.2.1-460.32.03-1_amd64.deb
-RUN dpkg -i cuda-repo-ubuntu2004-11-2-local_11.2.1-460.32.03-1_amd64.deb
-RUN apt-key add /var/cuda-repo-ubuntu2004-11-2-local/7fa2af80.pub
+    -y
+RUN wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
+RUN mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
+RUN wget -q https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda-repo-ubuntu2204-11-8-local_11.8.0-520.61.05-1_amd64.deb
+RUN dpkg -i cuda-repo-ubuntu2204-11-8-local_11.8.0-520.61.05-1_amd64.deb
+RUN apt-key add /var/cuda-repo-ubuntu2204-11-8-local/*.pub
+RUN cp /var/cuda-repo-ubuntu2204-11-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
 RUN apt-get update
 RUN apt-get -y install cuda
 RUN git clone https://github.com/tpruvot/ccminer
@@ -38,5 +38,5 @@ RUN apt-get remove libcurl4-openssl-dev \
     freeglut3-dev \
     libxi-dev \
     libxmu-dev \
-    -y 
+    -y
 #ENTRYPOINT [ "./ccminer" ]
